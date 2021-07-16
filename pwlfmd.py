@@ -67,8 +67,10 @@ class MDFit(object):
 				else:
 					break_points.append(i)
 					break_point_idx=i
+		if break_points[-1]+1!=len(self.x_data):
 
-		break_points.append(-1)
+			break_points.append(-1)
+
 		return break_points
 
 
@@ -162,7 +164,7 @@ def main():
 	# my_pwlf.fit_with_breaks(break_points)
 
 	###fit by error thresholding
-	my_pwlf.fit_under_error(10)
+	my_pwlf.fit_under_error(1)
 
 	###predict for the determined points
 	xHat = np.linspace(np.min(curve[:,0]),np.max(curve[:,0]), num=1000)
@@ -179,7 +181,7 @@ def main():
 	plt.show()
 
 	###output to csv
-	df=DataFrame({'x':xHat,'y':pred[:,0], 'z':pred[:,1]})
+	df=DataFrame({'x':np.flip(xHat),'y':np.flip(pred[:,0]), 'z':np.flip(pred[:,1])})
 	df.to_csv('fit.csv')
 
 if __name__ == "__main__":
