@@ -14,7 +14,7 @@ p3=np.array([[0],[0],[0.2]])
 p4=np.array([[1.592],[0],[0]])
 p5=np.array([[0.2],[0],[0]])
 p6=np.array([[0.0],[0],[0.0]])
-# p6=np.array([[0.19],[0],[0.06]])	#TCP
+# p6=np.array([[0.45],[0],[0.05]])	#TCP Paint gun
 P=np.concatenate((p0,p1,p2,p3,p4,p5,p6),axis=1)
 joint_type=np.zeros(6)
 upper_limit=np.array([2.967,2.269,1.222,4.712,2.269,6.283])
