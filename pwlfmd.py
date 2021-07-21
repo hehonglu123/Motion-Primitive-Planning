@@ -1,11 +1,9 @@
 import numpy as np
-from pandas import *
 import traceback, copy
 from scipy.optimize import differential_evolution
 from scipy.optimize import fmin_l_bfgs_b
 from scipy import linalg
-import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
+
 
 
 ###multi dimension piece-wise linear fit
@@ -188,75 +186,3 @@ class MDFit(object):
 			error=self.calc_max_error()
 			print('error: ',error,'num breakpoints: ',len(break_points))
 		return error
-
-
-def main():
-	col_names=['X', 'Y', 'Z','r', 'p', 'y'] 
-	data = read_csv("../Curve.csv", names=col_names)
-	curve_x=data['X'].tolist()
-	curve_y=data['Y'].tolist()
-	curve_z=data['Z'].tolist()
-	curve=np.vstack((curve_x, curve_y, curve_z)).T
-
-	###x ref, yz out
-	my_pwlf=MDFit(curve[:,0],curve[:,1:])
-
-	###arbitrary breakpoints
-	# break_points=[np.min(curve[:,0]),500,1000,np.max(curve[:,0])]
-
-	###slope calc breakpoints
-	# break_points=my_pwlf.x_data[my_pwlf.break_slope()]
-	# my_pwlf.fit_with_breaks(break_points)
-
-	###fit by error thresholding
-	my_pwlf.fit_under_error(1)
-
-	###predict for the determined points
-	xHat = np.linspace(np.min(curve[:,0]),np.max(curve[:,0]), num=1000)
-	pred = my_pwlf.predict(xHat)
-
-	print('maximum error: ',my_pwlf.calc_max_error())
-
-	#plot results
-	fig = plt.figure()
-	ax = plt.axes(projection='3d')
-	ax.plot3D(xHat, pred[:,0], pred[:,1], 'gray')
-	ax.scatter3D(curve_x, curve_y, curve_z, c=curve_z, cmap='Accent');
-	
-	plt.show()
-
-	###output to csv
-	df=DataFrame({'x':np.flip(xHat),'y':np.flip(pred[:,0]), 'z':np.flip(pred[:,1])})
-	df.to_csv('fit.csv')
-
-def main2():
-	col_names=['q1', 'q2', 'q3','q4', 'q5', 'q6'] 
-	data = read_csv("data/Curve_js.csv", names=col_names)
-	curve_q1=data['q1'].tolist()
-	curve_q2=data['q2'].tolist()
-	curve_q3=data['q3'].tolist()
-	curve_q4=data['q4'].tolist()
-	curve_q5=data['q5'].tolist()
-	curve_q6=data['q6'].tolist()
-	curve=np.vstack((curve_q1, curve_q2, curve_q3,curve_q4,curve_q5,curve_q6)).T
-
-	###x ref, yz out
-	my_pwlf=MDFit(curve[:,0],curve[:,1:])
-
-	###arbitrary breakpoints
-	# break_points=[np.min(curve[:,0]),500,1000,np.max(curve[:,0])]
-
-	###slope calc breakpoints
-	# break_points=my_pwlf.x_data[my_pwlf.break_slope()]
-	# my_pwlf.fit_with_breaks(break_points)
-
-	###fit by error thresholding
-	my_pwlf.fit_under_error_simplified(0.01)
-
-	###predict for the determined points
-	q1Hat = np.linspace(np.min(curve[:,0]),np.max(curve[:,0]), num=1000)
-	pred = my_pwlf.predict(q1Hat)
-
-	print('maximum error: ',my_pwlf.calc_max_error())
-if __name__ == "__main__":
-	main2()
