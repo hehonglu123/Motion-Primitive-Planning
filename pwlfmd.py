@@ -77,12 +77,12 @@ class MDFit(object):
 
 		for i in range(1,len(self.x_data)-1):
 			###calc slope vector of both groups
-			vec1=np.hstack((self.x_data[i],self.data[i]))-np.hstack((self.x_data[i-1],self.data[i-1]))
+			vec1=np.hstack((self.x_data[i],self.data[i]))-np.hstack((self.x_data[break_points[-1]],self.data[break_points[-1]]))
 			slope = vec1 / np.linalg.norm(vec1)
 
 			vec2=np.hstack((self.x_data[i+1],self.data[i+1]))-np.hstack((self.x_data[i],self.data[i]))
 			next_slope = vec2 / np.linalg.norm(vec2)
-			###trigger breakpoint by dotproduct of 2 eig
+			###trigger breakpoint by dotproduct of 2 slope vector
 
 			if 1-abs(np.dot(slope,next_slope))>min_threshold:
 				break_points.append(i)

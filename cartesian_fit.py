@@ -2,11 +2,14 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 from pandas import *
 from pwlfmd import *
-
+import sys
+import numpy as np
+sys.path.append('toolbox')
+from error_check import *
 
 
 def main():
-	col_names=['X', 'Y', 'Z','r', 'p', 'y'] 
+	col_names=['X', 'Y', 'Z','direction_x', 'direction_y', 'direction_z'] 
 	data = read_csv("../Curve.csv", names=col_names)
 	curve_x=data['X'].tolist()
 	curve_y=data['Y'].tolist()
@@ -30,7 +33,10 @@ def main():
 	xHat = np.linspace(np.min(curve[:,0]),np.max(curve[:,0]), num=1000)
 	pred = my_pwlf.predict(xHat)
 
-	print('maximum error: ',my_pwlf.calc_max_error())
+	# print('maximum error: ',my_pwlf.calc_max_error())
+	curve_fit=np.hstack((np.array([xHat]).T,pred))
+	print('maximum error: ',calc_max_error(curve_fit,curve))
+	print('average error: ',calc_avg_error(curve_fit,curve))
 
 	#plot results
 	fig = plt.figure()
@@ -40,9 +46,6 @@ def main():
 
 	plt.show()
 
-	###output to csv
-	# df=DataFrame({'x':np.flip(xHat),'y':np.flip(pred[:,0]), 'z':np.flip(pred[:,1])})
-	# df.to_csv('fit.csv')
-
+	
 if __name__ == "__main__":
 	main()

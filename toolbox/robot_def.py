@@ -43,6 +43,4 @@ def fwd(q):
 def inv(p,R=np.eye(3)):
 	pose=Transform(R,p)
 	q_all=robot6_sphericalwrist_invkin(ABB_def,pose)
-	return q_all[0]
-
-print(fwd(np.zeros(6)))
+	return q_all
