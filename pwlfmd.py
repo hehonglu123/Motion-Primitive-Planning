@@ -84,12 +84,11 @@ class MDFit(object):
 			next_slope = vec2 / np.linalg.norm(vec2)
 			###trigger breakpoint by dotproduct of 2 slope vector
 
-			if 1-abs(np.dot(slope,next_slope))>min_threshold:
+			if 1-abs(np.dot(slope,next_slope))>min_threshold:	#valued from 0 to 2
 				break_points.append(i)
 
 
 		break_points.append(-1)
-
 		return break_points
 
 
@@ -164,7 +163,7 @@ class MDFit(object):
 		return error
 
 	def fit_under_error_simplified(self,max_error):
-		min_threshold=0.5
+		min_threshold=2
 		break_points=self.x_data[self.break_slope_simplified(min_threshold)]
 		self.fit_with_breaks(break_points)
 		error=self.calc_max_error()

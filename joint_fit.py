@@ -9,6 +9,7 @@ from error_check import *
 from robot_def import *
 
 def main():
+	###read actual curve
 	col_names=['X', 'Y', 'Z','direction_x', 'direction_y', 'direction_z'] 
 	data = read_csv("data/Curve.csv", names=col_names)
 	curve_x=data['X'].tolist()
@@ -16,7 +17,7 @@ def main():
 	curve_z=data['Z'].tolist()
 	curve=np.vstack((curve_x, curve_y, curve_z)).T
 
-
+	###read interpolated curves in joint space
 	col_names=['q1', 'q2', 'q3','q4', 'q5', 'q6'] 
 	data = read_csv("data/Curve_js.csv", names=col_names)
 	curve_q1=data['q1'].tolist()
@@ -35,7 +36,7 @@ def main():
 	# my_pwlf.fit_with_breaks(break_points)
 
 	###fit by error thresholding
-	my_pwlf.fit_under_error_simplified(0.01)
+	my_pwlf.fit_under_error_simplified(0.1)
 
 	###predict for the determined points
 	q1Hat = np.linspace(np.min(curve_js[:,0]),np.max(curve_js[:,0]), num=1000)
@@ -56,7 +57,6 @@ def main():
 	for i in range(len(curve_cartesian_pred)):
 		curve_cartesian_pred[i]=np.dot(H,np.hstack((curve_cartesian_pred[i],[1])).T)[:-1]
 
-	print(curve_cartesian_pred)
 	print('maximum error: ',calc_max_error(curve_cartesian_pred,curve))
 	print('average error: ',calc_avg_error(curve_cartesian_pred,curve))
 

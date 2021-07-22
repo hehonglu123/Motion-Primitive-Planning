@@ -28,7 +28,7 @@ def direction2R(v_norm,v_tang):
 
 
 col_names=['X', 'Y', 'Z','direction_x','direction_y','direction_z'] 
-data = read_csv("Curve_interp.csv", names=col_names)
+data = read_csv("Curve.csv", names=col_names)
 curve_x=data['X'].tolist()
 curve_y=data['Y'].tolist()
 curve_z=data['Z'].tolist()
@@ -80,20 +80,19 @@ for i in range(len(curve_base)):
 		temp_q=q_all-curve_js[i-1]
 		order=np.argsort(np.linalg.norm(temp_q,axis=1))
 		curve_js[i]=q_all[order[0]]
-###checkpoint2
-# print(np.degrees(curve_js[50]),curve_R_base[i])
 
-
-###checkpoint3
+###checkpoint2 #check reference frame conversion
 # H=np.vstack((np.hstack((R.T,-np.dot(R.T,T))),np.array([0,0,0,1])))
 # curve_base_temp=np.zeros(curve.shape)
 # for i in range(len(curve_js)):
-# 	curve_base_temp[i]=(np.dot(H,np.hstack((1000.*fwd(curve_js[i]).p,[1])).T)[:-1])
+# 	curve_base_temp[i]=(np.dot(H,np.hstack((1000.*curve_base[i],[1])).T)[:-1])
 # print(curve_base_temp)
 
-
-
-
-###output to csv
-df=DataFrame({'q0':curve_js[:,0],'q1':curve_js[:,1],'q2':curve_js[:,2],'q3':curve_js[:,3],'q4':curve_js[:,4],'q5':curve_js[:,5]})
-df.to_csv('Curve_js.csv',header=False,index=False)
+###checkpoint3	#check invkin
+H=np.vstack((np.hstack((R.T,-np.dot(R.T,T))),np.array([0,0,0,1])))
+curve_base_temp=np.zeros(curve.shape)
+error_in_base=np.zeros(curve.shape)
+for i in range(len(curve_js)):
+	curve_base_temp[i]=(np.dot(H,np.hstack((1000.*fwd(curve_js[i]).p,[1])).T)[:-1])
+	error_in_base[i]=1000.*fwd(curve_js[i]).p-1000.*curve_base[i]
+print(np.linalg.norm(error_in_base,axis=1))
