@@ -14,7 +14,8 @@ def direction2R(v_norm,v_tang):
 	v_norm=v_norm/np.linalg.norm(v_norm)
 	theta1 = np.arccos(np.dot(v_norm,np.array([0,0,1])))
 	###rotation to align z axis with opposite of curve normal
-	R1=rot(np.cross(v_norm,np.array([0,0,1])),theta1)
+	axis_temp=np.cross(v_norm,np.array([0,0,1]))
+	R1=rot(axis_temp/np.linalg.norm(axis_temp),theta1)
 
 	###find correct x direction
 	v_temp=v_tang-np.dot(v_tang,np.array([0,0,1]))
@@ -71,6 +72,7 @@ q_init=np.radians([35.406892, 12.788519, 27.907507, -89.251430, 52.417435, -128.
 
 for i in range(len(curve_base)):
 	q_all=inv(curve_base[i],curve_R_base[i])
+
 	###choose inv_kin closest to previous joints
 	if i==0:
 		temp_q=q_all-q_init

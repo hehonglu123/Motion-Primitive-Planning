@@ -14,7 +14,8 @@ def direction2R(v_norm,v_tang):
 	v_norm=v_norm/np.linalg.norm(v_norm)
 	theta1 = np.arccos(np.dot(v_norm,np.array([0,0,1])))
 	###rotation to align z axis with opposite of curve normal
-	R1=rot(np.cross(v_norm,np.array([0,0,1])),theta1)
+	axis_temp=np.cross(v_norm,np.array([0,0,1]))
+	R1=rot(axis_temp/np.linalg.norm(axis_temp),theta1)
 
 	###find correct x direction
 	v_temp=v_tang-np.dot(v_tang,np.array([0,0,1]))
@@ -28,13 +29,24 @@ def direction2R(v_norm,v_tang):
 
 
 col_names=['X', 'Y', 'Z','direction_x','direction_y','direction_z'] 
-data = read_csv("Curve.csv", names=col_names)
+data = read_csv("Curve_interp.csv", names=col_names)
 curve_x=data['X'].tolist()
 curve_y=data['Y'].tolist()
 curve_z=data['Z'].tolist()
 curve_direction_x=data['direction_x'].tolist()
 curve_direction_y=data['direction_y'].tolist()
 curve_direction_z=data['direction_z'].tolist()
+
+###read interpolated curves in joint space
+col_names=['q1', 'q2', 'q3','q4', 'q5', 'q6'] 
+data = read_csv("Curve_js.csv", names=col_names)
+curve_q1=data['q1'].tolist()
+curve_q2=data['q2'].tolist()
+curve_q3=data['q3'].tolist()
+curve_q4=data['q4'].tolist()
+curve_q5=data['q5'].tolist()
+curve_q6=data['q6'].tolist()
+curve_js=np.vstack((curve_q1, curve_q2, curve_q3,curve_q4,curve_q5,curve_q6)).T
 
 curve=np.vstack((curve_x, curve_y, curve_z)).T
 curve_direction=np.vstack((curve_direction_x, curve_direction_y, curve_direction_z)).T
@@ -66,27 +78,21 @@ for i in range(len(curve)):
 ###units
 curve_base=curve_base/1000.
 
-curve_js=np.zeros((len(curve),6))
-q_init=np.radians([35.406892, 12.788519, 27.907507, -89.251430, 52.417435, -128.363215])
+# curve_js=np.zeros((len(curve),6))
+# q_init=np.radians([35.406892, 12.788519, 27.907507, -89.251430, 52.417435, -128.363215])
 
-for i in range(len(curve_base)):
-	q_all=inv(curve_base[i],curve_R_base[i])
-	###choose inv_kin closest to previous joints
-	if i==0:
-		temp_q=q_all-q_init
-		order=np.argsort(np.linalg.norm(temp_q,axis=1))
-		curve_js[i]=q_all[order[0]]
-	else:
-		temp_q=q_all-curve_js[i-1]
-		order=np.argsort(np.linalg.norm(temp_q,axis=1))
-		curve_js[i]=q_all[order[0]]
+# for i in range(len(curve_base)):
+# 	q_all=inv(curve_base[i],curve_R_base[i])
+# 	###choose inv_kin closest to previous joints
+# 	if i==0:
+# 		temp_q=q_all-q_init
+# 		order=np.argsort(np.linalg.norm(temp_q,axis=1))
+# 		curve_js[i]=q_all[order[0]]
+# 	else:
+# 		temp_q=q_all-curve_js[i-1]
+# 		order=np.argsort(np.linalg.norm(temp_q,axis=1))
+# 		curve_js[i]=q_all[order[0]]
 
-###checkpoint2 #check reference frame conversion
-# H=np.vstack((np.hstack((R.T,-np.dot(R.T,T))),np.array([0,0,0,1])))
-# curve_base_temp=np.zeros(curve.shape)
-# for i in range(len(curve_js)):
-# 	curve_base_temp[i]=(np.dot(H,np.hstack((1000.*curve_base[i],[1])).T)[:-1])
-# print(curve_base_temp)
 
 ###checkpoint3	#check invkin
 H=np.vstack((np.hstack((R.T,-np.dot(R.T,T))),np.array([0,0,0,1])))
@@ -95,4 +101,4 @@ error_in_base=np.zeros(curve.shape)
 for i in range(len(curve_js)):
 	curve_base_temp[i]=(np.dot(H,np.hstack((1000.*fwd(curve_js[i]).p,[1])).T)[:-1])
 	error_in_base[i]=1000.*fwd(curve_js[i]).p-1000.*curve_base[i]
-print(np.linalg.norm(error_in_base,axis=1))
+print(np.max(np.linalg.norm(error_in_base,axis=1)))

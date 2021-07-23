@@ -2,13 +2,9 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 from pandas import *
 import sys
-sys.path.append('../')
-from pwlfmd import *
-
-
+import numpy as np
 
 def main():
-	num_interp=1000
 	col_names=['X', 'Y', 'Z','direction_x', 'direction_y', 'direction_z'] 
 	data = read_csv("Curve.csv", names=col_names)
 	curve_x=data['X'].tolist()
@@ -17,23 +13,16 @@ def main():
 	curve_direction_x=data['direction_x'].tolist()
 	curve_direction_y=data['direction_y'].tolist()
 	curve_direction_z=data['direction_z'].tolist()
-
 	curve=np.vstack((curve_x, curve_y, curve_z)).T
 	curve_direction=np.vstack((curve_direction_x, curve_direction_y, curve_direction_z)).T
 
-	###x ref, yz out
-	my_pwlf=MDFit(curve[:,0],curve[:,1:])
+	col_names=['X', 'Y', 'Z'] 
+	data = read_csv("Curve_interp.csv", names=col_names)
+	curve_x=data['X'].tolist()
+	curve_y=data['Y'].tolist()
+	curve_z=data['Z'].tolist()
+	curve_interp=np.vstack((curve_x, curve_y, curve_z)).T
 
-	###fit by error thresholding
-	my_pwlf.fit_under_error(1)
-
-	###predict for the determined points
-	xHat = np.linspace(np.max(curve[:,0]),np.min(curve[:,0]), num=num_interp)
-	pred = my_pwlf.predict(xHat)
-
-	print('maximum error: ',my_pwlf.calc_max_error())
-
-	curve_interp=np.hstack((np.array([xHat]).T,pred))
 	curve_direction_interp=np.zeros(curve_interp.shape)
 
 	###orientation interpolation

@@ -11,7 +11,11 @@ def calc_error(p,curve):
 	order=np.argsort(dist)
 	error=get_distance(curve[order[0]],curve[order[1]],p)
 	return error
-
+# def calc_error(p,curve):
+# 	dist=np.linalg.norm(curve-np.tile(p,(len(curve),1)),axis=1)
+# 	order=np.argsort(dist)
+# 	return dist[order[0]]
+	
 ###calculate maximum error between fit curve and original curve in cartesian space, distance only
 def calc_max_error(fit,curve):
 	max_error=0

@@ -10,7 +10,7 @@ from error_check import *
 
 def main():
 	col_names=['X', 'Y', 'Z','direction_x', 'direction_y', 'direction_z'] 
-	data = read_csv("../Curve.csv", names=col_names)
+	data = read_csv("data/Curve_interp.csv", names=col_names)
 	curve_x=data['X'].tolist()
 	curve_y=data['Y'].tolist()
 	curve_z=data['Z'].tolist()
@@ -27,7 +27,7 @@ def main():
 	# my_pwlf.fit_with_breaks(break_points)
 
 	###fit by error thresholding
-	my_pwlf.fit_under_error(1)
+	my_pwlf.fit_under_error_simplified(1)
 
 	###predict for the determined points
 	xHat = np.linspace(np.min(curve[:,0]),np.max(curve[:,0]), num=1000)
