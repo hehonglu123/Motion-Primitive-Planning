@@ -29,7 +29,7 @@ def direction2R(v_norm,v_tang):
 
 
 col_names=['X', 'Y', 'Z','direction_x','direction_y','direction_z'] 
-data = read_csv("Curve_interp.csv", names=col_names)
+data = read_csv("Curve_dense.csv", names=col_names)
 curve_x=data['X'].tolist()
 curve_y=data['Y'].tolist()
 curve_z=data['Z'].tolist()

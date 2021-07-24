@@ -10,7 +10,7 @@ from error_check import *
 
 def main():
 	col_names=['X', 'Y', 'Z','direction_x', 'direction_y', 'direction_z'] 
-	data = read_csv("data/Curve_interp.csv", names=col_names)
+	data = read_csv("data/Curve_dense.csv", names=col_names)
 	curve_x=data['X'].tolist()
 	curve_y=data['Y'].tolist()
 	curve_z=data['Z'].tolist()
@@ -38,13 +38,13 @@ def main():
 	print('maximum error: ',calc_max_error(curve_fit,curve))
 	print('average error: ',calc_avg_error(curve_fit,curve))
 
-	#plot results
-	fig = plt.figure()
-	ax = plt.axes(projection='3d')
-	ax.plot3D(xHat, pred[:,0], pred[:,1], 'gray')
-	ax.scatter3D(curve_x, curve_y, curve_z, c=curve_z, cmap='Accent');
+	###plot results
+	# fig = plt.figure()
+	# ax = plt.axes(projection='3d')
+	# ax.plot3D(xHat, pred[:,0], pred[:,1], 'gray')
+	# ax.scatter3D(curve_x, curve_y, curve_z, c=curve_z, cmap='Accent');
 
-	plt.show()
+	# plt.show()
 
 	
 if __name__ == "__main__":
