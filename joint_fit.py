@@ -36,7 +36,7 @@ def main():
 	# my_pwlf.fit_with_breaks(break_points)
 
 	###fit by error thresholding
-	my_pwlf.fit_under_error_simplified(0.001)
+	my_pwlf.fit_under_error_simplified(0.005)
 
 	###predict for the determined points
 	xHat = np.linspace(0,len(curve), num=1000)

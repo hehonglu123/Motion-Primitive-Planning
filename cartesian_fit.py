@@ -27,25 +27,25 @@ def main():
 	# my_pwlf.fit_with_breaks(break_points)
 
 	###fit by error thresholding
-	my_pwlf.fit_under_error_simplified(1)
+	my_pwlf.fit_under_error_simplified(0.5)
 
-	###predict for the determined points
-	xHat = np.linspace(0,len(curve), num=1000)
-	pred = my_pwlf.predict_arb(xHat)
+	# ###predict for the determined points
+	# xHat = np.linspace(0,len(curve), num=1000)
+	# pred = my_pwlf.predict_arb(xHat)
 
-	# print('maximum error: ',my_pwlf.calc_max_error())
-	curve_fit=pred
+	# # print('maximum error: ',my_pwlf.calc_max_error())
+	# curve_fit=pred
 
-	# print('maximum error: ',calc_max_error(curve_fit,curve))
-	# print('average error: ',calc_avg_error(curve_fit,curve))
+	# # print('maximum error: ',calc_max_error(curve_fit,curve))
+	# # print('average error: ',calc_avg_error(curve_fit,curve))
 
-	###plot results
-	fig = plt.figure()
-	ax = plt.axes(projection='3d')
-	ax.plot3D(pred[:,0], pred[:,1], pred[:,2], 'gray')
-	ax.scatter3D(curve_x, curve_y, curve_z, c=curve_z, cmap='Accent');
+	# ###plot results
+	# fig = plt.figure()
+	# ax = plt.axes(projection='3d')
+	# ax.plot3D(pred[:,0], pred[:,1], pred[:,2], 'gray')
+	# ax.scatter3D(curve_x, curve_y, curve_z, c=curve_z, cmap='Accent');
 
-	plt.show()
+	# plt.show()
 
 	
 if __name__ == "__main__":

@@ -1,9 +1,11 @@
 import numpy as np
-import traceback, copy
+import traceback, copy, sys
 from scipy.optimize import differential_evolution
 from scipy.optimize import fmin_l_bfgs_b
 from scipy import linalg
-
+sys.path.append('toolbox')
+from error_check import *
+from robot_def import *
 
 
 ###multi dimension piece-wise linear fit
@@ -138,17 +140,40 @@ class MDFit(object):
 		return data_hat
 
 	def calc_max_error1(self):
-		#calculate worst case error at each index
+		#calculate worst case error at each index in 3D space
 		print('calculating error')
-		max_error=0
-		curve_fit=self.predict()
 
-		for i in range(len(curve_fit)):
-			error=np.linalg.norm(curve_fit[i]-self.data[i])
-			if error>max_error:
-				max_error=copy.deepcopy(error)
+		fit=self.predict()
+
+		# if len(self.data[0])>3:
+		# 	#if in joint space
+		# 	errors=np.zeros((len(fit),3))
+		# 	for i in range(len(fit)):
+		# 		errors[i]=1000.*(fwd(fit[i]).p-fwd(self.data[i]).p)
+		# else:
+		#else in cartesian space
+		errors=fit-self.data
+		
+		max_error=np.max(np.linalg.norm(errors,axis=1))
+
 		print('error calculating finished')
 		return max_error
+
+	def calc_max_error2(self):
+		#calculate worst case error at each index in 3D space
+		print('calculating error')
+
+		fit=self.predict()
+		if len(self.data[0])>3:
+			#if in joint space
+			fit_cartesian=[]
+			curve_cartesian=[]
+			for i in range(len(fit)):
+				fit_cartesian.append(1000.*fwd(fit[i]).p)
+				curve_cartesian.append(1000.*fwd(self.data[i]).p)
+			return calc_max_error(fit_cartesian,curve_cartesian)
+		else:
+			return calc_max_error(fit,self.data)
 
 	def fit_under_error(self,max_error):
 		min_threshold=0.3
