@@ -11,7 +11,7 @@ from robot_def import *
 def main():
 	###read actual curve
 	col_names=['X', 'Y', 'Z','direction_x', 'direction_y', 'direction_z'] 
-	data = read_csv("data/Curve.csv", names=col_names)
+	data = read_csv("data/Curve_dense.csv", names=col_names)
 	curve_x=data['X'].tolist()
 	curve_y=data['Y'].tolist()
 	curve_z=data['Z'].tolist()
@@ -29,7 +29,7 @@ def main():
 	curve_js=np.vstack((curve_q1, curve_q2, curve_q3,curve_q4,curve_q5,curve_q6)).T
 
 	###x ref, yz out
-	my_pwlf=MDFit(curve_js[:,0],curve_js[:,1:])
+	my_pwlf=MDFit(np.arange(len(curve_js)),curve_js)
 
 	###slope calc breakpoints
 	# break_points=my_pwlf.x_data[my_pwlf.break_slope()]
@@ -39,10 +39,9 @@ def main():
 	my_pwlf.fit_under_error_simplified(0.001)
 
 	###predict for the determined points
-	q1Hat = np.linspace(np.min(curve_js[:,0]),np.max(curve_js[:,0]), num=1000)
-	pred = my_pwlf.predict(q1Hat)
+	xHat = np.linspace(0,len(curve), num=1000)
+	curve_js_pred = my_pwlf.predict_arb(xHat)
 
-	curve_js_pred=np.hstack((np.array([q1Hat]).T,pred))
 	curve_cartesian_pred=[]
 	for q in curve_js_pred:
 		curve_cartesian_pred.append(fwd(q).p)

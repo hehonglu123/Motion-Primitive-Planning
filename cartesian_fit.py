@@ -17,7 +17,7 @@ def main():
 	curve=np.vstack((curve_x, curve_y, curve_z)).T
 
 	###x ref, yz out
-	my_pwlf=MDFit(curve[:,0],curve[:,1:])
+	my_pwlf=MDFit(np.arange(len(curve)),curve)
 
 	###arbitrary breakpoints
 	# break_points=[np.min(curve[:,0]),500,1000,np.max(curve[:,0])]
@@ -30,21 +30,22 @@ def main():
 	my_pwlf.fit_under_error_simplified(1)
 
 	###predict for the determined points
-	xHat = np.linspace(np.min(curve[:,0]),np.max(curve[:,0]), num=1000)
-	pred = my_pwlf.predict(xHat)
+	xHat = np.linspace(0,len(curve), num=1000)
+	pred = my_pwlf.predict_arb(xHat)
 
 	# print('maximum error: ',my_pwlf.calc_max_error())
-	curve_fit=np.hstack((np.array([xHat]).T,pred))
-	print('maximum error: ',calc_max_error(curve_fit,curve))
-	print('average error: ',calc_avg_error(curve_fit,curve))
+	curve_fit=pred
+
+	# print('maximum error: ',calc_max_error(curve_fit,curve))
+	# print('average error: ',calc_avg_error(curve_fit,curve))
 
 	###plot results
-	# fig = plt.figure()
-	# ax = plt.axes(projection='3d')
-	# ax.plot3D(xHat, pred[:,0], pred[:,1], 'gray')
-	# ax.scatter3D(curve_x, curve_y, curve_z, c=curve_z, cmap='Accent');
+	fig = plt.figure()
+	ax = plt.axes(projection='3d')
+	ax.plot3D(pred[:,0], pred[:,1], pred[:,2], 'gray')
+	ax.scatter3D(curve_x, curve_y, curve_z, c=curve_z, cmap='Accent');
 
-	# plt.show()
+	plt.show()
 
 	
 if __name__ == "__main__":

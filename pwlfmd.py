@@ -13,6 +13,10 @@ class MDFit(object):
 		self.x_data=x
 		self.data=data
 		self.lapack_driver='gelsd'
+		self.break_points=[0,-1]
+
+	def clear_breakpoints(self):
+		self.break_points=[0,-1]
 
 	def assemble_regression_matrix(self, breaks, x):
 
@@ -72,12 +76,13 @@ class MDFit(object):
 		return break_points
 
 	def break_slope_simplified(self,min_threshold=0.05):
-		
-		break_points=[0]
-
+		last_breakpoint=0
 		for i in range(1,len(self.x_data)-1):
+			if i in self.break_points:
+				last_breakpoint=copy.deepcopy(i)
+				continue
 			###calc slope vector of both groups
-			vec1=np.hstack((self.x_data[i],self.data[i]))-np.hstack((self.x_data[break_points[-1]],self.data[break_points[-1]]))
+			vec1=np.hstack((self.x_data[i],self.data[i]))-np.hstack((self.x_data[last_breakpoint],self.data[last_breakpoint]))
 			slope = vec1 / np.linalg.norm(vec1)
 
 			vec2=np.hstack((self.x_data[i+1],self.data[i+1]))-np.hstack((self.x_data[i],self.data[i]))
@@ -85,12 +90,12 @@ class MDFit(object):
 			###trigger breakpoint by dotproduct of 2 slope vector
 
 			if 1-abs(np.dot(slope,next_slope))>min_threshold:	#valued from 0 to 2
-				break_points.append(i)
+				self.break_points.append(i)
+				last_breakpoint=i
 
 
-		break_points.append(-1)
-		return break_points
-
+		self.break_points.sort()
+		self.break_points.append(self.break_points.pop(0))
 
 	def lstsq(self, A):
 		"""
@@ -104,35 +109,45 @@ class MDFit(object):
 
 
 	def fit_with_breaks(self, breaks):
-
-		A = self.assemble_regression_matrix(np.array(breaks), self.x_data)
+		print('fitting')
+		self.A = self.assemble_regression_matrix(np.array(breaks), self.x_data)
 
 		# try to solve the regression problem
 		try:
-			self.beta = self.lstsq(A)
+			print('solving lstsq')
+			self.beta = self.lstsq(self.A)
 
 		except:
 			traceback.print_exc()
-
+		print('fitting finished')
 		return
 
-	def predict(self, x):
+	def predict(self):
+		# solve the regression problem
+		data_hat = np.dot(self.A, self.beta)
+		return data_hat
+
+	def predict_arb(self, x):
 
 		x = np.array(x)
 
-		A = self.assemble_regression_matrix(self.fit_breaks, x)
+		A = self.assemble_regression_matrix(self.x_data[self.break_points], x)
 
 		# solve the regression problem
 		data_hat = np.dot(A, self.beta)
 		return data_hat
 
-	def calc_max_error(self):
+	def calc_max_error1(self):
+		#calculate worst case error at each index
+		print('calculating error')
 		max_error=0
-		for i in range(len(self.x_data)):
-			pred=self.predict(self.x_data[i])
-			error=np.linalg.norm(pred-self.data[i])
+		curve_fit=self.predict()
+
+		for i in range(len(curve_fit)):
+			error=np.linalg.norm(curve_fit[i]-self.data[i])
 			if error>max_error:
 				max_error=copy.deepcopy(error)
+		print('error calculating finished')
 		return max_error
 
 	def fit_under_error(self,max_error):
@@ -140,7 +155,7 @@ class MDFit(object):
 		step_size=10
 		break_points=self.x_data[self.break_slope(min_threshold=min_threshold,step_size=step_size)]
 		self.fit_with_breaks(break_points)
-		error=self.calc_max_error()
+		error=self.calc_max_error1()
 		while error>max_error:
 			###tune slope threshold first, then step size
 			if min_threshold<0.01:
@@ -150,7 +165,7 @@ class MDFit(object):
 					min_threshold=-1
 					break_points=self.x_data[self.break_slope(min_threshold=min_threshold,step_size=step_size)]
 					self.fit_with_breaks(break_points)
-					error=self.calc_max_error()
+					error=self.calc_max_error1()
 					return error
 				else:
 					step_size=int(step_size/2)
@@ -159,29 +174,30 @@ class MDFit(object):
 
 			break_points=self.x_data[self.break_slope(min_threshold=min_threshold,step_size=step_size)]
 			self.fit_with_breaks(break_points)
-			error=self.calc_max_error()
+			error=self.calc_max_error1()
 		return error
 
 	def fit_under_error_simplified(self,max_error):
 		min_threshold=2
-		break_points=self.x_data[self.break_slope_simplified(min_threshold)]
-		self.fit_with_breaks(break_points)
-		error=self.calc_max_error()
+		self.break_slope_simplified(min_threshold)
+		self.fit_with_breaks(self.x_data[self.break_points])
+		error=self.calc_max_error1()
 		while error>max_error:
 			###tune slope threshold first, then step size
 			if min_threshold<0.0000001:
 		
 				print('finest fitting')
 				min_threshold=-1
-				break_points=self.x_data[self.break_slope_simplified(min_threshold)]
-				self.fit_with_breaks(break_points)
-				error=self.calc_max_error()
+				self.break_slope_simplified(min_threshold)
+				self.fit_with_breaks(self.x_data[self.break_points])
+				error=self.calc_max_error1()
 				return error
 			else:
 				min_threshold=min_threshold/2
 
-			break_points=self.x_data[self.break_slope_simplified(min_threshold)]
-			self.fit_with_breaks(break_points)
-			error=self.calc_max_error()
-			print('error: ',error,'num breakpoints: ',len(break_points))
+			self.break_slope_simplified(min_threshold)
+			print(self.break_points)
+			self.fit_with_breaks(self.x_data[self.break_points])
+			error=self.calc_max_error1()
+			print('error: ',error,'num breakpoints: ',len(self.break_points))
 		return error
