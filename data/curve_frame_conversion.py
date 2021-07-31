@@ -6,7 +6,7 @@ from general_robotics_toolbox import *
 
 
 col_names=['X', 'Y', 'Z','direction_x','direction_y','direction_z'] 
-data = read_csv("Curve.csv", names=col_names)
+data = read_csv("Curve_dense.csv", names=col_names)
 curve_x=data['X'].tolist()
 curve_y=data['Y'].tolist()
 curve_z=data['Z'].tolist()

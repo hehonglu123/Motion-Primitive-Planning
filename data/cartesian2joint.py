@@ -1,6 +1,6 @@
 import numpy as np
 from pandas import *
-import sys
+import sys, traceback
 from general_robotics_toolbox import *
 
 sys.path.append('../toolbox')
@@ -12,19 +12,35 @@ def cross(v):
 					[-v[1],v[0],0]])
 def direction2R(v_norm,v_tang):
 	v_norm=v_norm/np.linalg.norm(v_norm)
-	theta1 = np.arccos(np.dot(v_norm,np.array([0,0,1])))
-	###rotation to align z axis with opposite of curve normal
-	axis_temp=np.cross(v_norm,np.array([0,0,1]))
+	theta1 = np.arccos(np.dot(np.array([0,0,1]),v_norm))
+	###rotation to align z axis with curve normal
+	axis_temp=np.cross(np.array([0,0,1]),v_norm)
 	R1=rot(axis_temp/np.linalg.norm(axis_temp),theta1)
 
 	###find correct x direction
-	v_temp=v_tang-np.dot(v_tang,np.array([0,0,1]))
+	v_temp=v_tang-v_norm * np.dot(v_tang, v_norm) / np.linalg.norm(v_norm)
 
-	theta2 = np.arccos(np.dot(v_temp/np.linalg.norm(v_temp),np.array([1,0,0])))
+	###get as ngle to rotate
+	theta2 = np.arccos(np.dot(R1[:,0],v_temp/np.linalg.norm(v_temp)))
+
+
+	axis_temp=np.cross(R1[:,0],v_temp)
+	axis_temp=axis_temp/np.linalg.norm(axis_temp)
+
 	###rotation about z axis to minimize x direction error
-	R2=rot(np.sign(np.cross(v_temp/np.linalg.norm(v_temp),np.array([1,0,0]))),theta2)
+	R2=rot(np.array([0,0,np.sign(np.dot(axis_temp,v_norm))]),theta2)
 
-	return np.dot(R2,R1)
+
+	return np.dot(R1,R2)
+
+
+
+###reference frame transformation
+R=np.array([[0,0,1.],
+			[1.,0,0],
+			[0,1.,0]])
+T=np.array([[2700.],[-800.],[500.]])
+H=np.vstack((np.hstack((R,T)),np.array([0,0,0,1])))
 
 
 
@@ -38,60 +54,67 @@ curve_direction_y=data['direction_y'].tolist()
 curve_direction_z=data['direction_z'].tolist()
 
 curve=np.vstack((curve_x, curve_y, curve_z)).T
-curve_direction=np.vstack((curve_direction_x, curve_direction_y, curve_direction_z)).T
+curve_direction=np.vstack((curve_direction_x, curve_direction_y, curve_direction_z))
+
+#convert curve direction to base frame
+curve_direction=np.dot(R,curve_direction).T
+
+
+
+
 
 curve_base=np.zeros(curve.shape)
 curve_R_base=[]
 
 
-###reference frame transformation
-R=np.array([[0,0,1.],
-			[1.,0,0],
-			[0,1.,0]])
-T=np.array([[2700.],[-800.],[500.]])
-H=np.vstack((np.hstack((R,T)),np.array([0,0,0,1])))
-
-###checkpoint1
-# print(np.dot(R,direction2R(curve_direction[0],curve[1]-curve[0])))
 for i in range(len(curve)):
 	curve_base[i]=np.dot(H,np.hstack((curve[i],[1])).T)[:-1]
 	try:
-		R_curve=direction2R(curve_direction[i],curve[i+1]-curve[i])
+		R_curve=direction2R(curve_direction[i],-curve_base[i]+curve_base[i-1])
 
 	except:
+		traceback.print_exc()
 		pass
-	curve_R_base.append(np.dot(R,R_curve))
-	
+	curve_R_base.append(R_curve)
 
+###insert initial orientation
+curve_R_base.insert(0,curve_R_base[0])
 
 ###units
 curve_base=curve_base/1000.
 
 curve_js=np.zeros((len(curve),6))
-q_init=np.radians([35.406892, 12.788519, 27.907507, -89.251430, 52.417435, -128.363215])
+curve_js1=np.zeros((len(curve),6))
+
+q_init=np.radians([33.340200, 19.794526, 36.587148, -140.737677, 79.139957, -177.061128])
 
 for i in range(len(curve_base)):
-	q_all=inv(curve_base[i],curve_R_base[i])
-
+	try:
+		q_all=np.array(inv(curve_base[i],curve_R_base[i]))
+	except:
+		pass
 	###choose inv_kin closest to previous joints
 	if i==0:
 		temp_q=q_all-q_init
 		order=np.argsort(np.linalg.norm(temp_q,axis=1))
 		curve_js[i]=q_all[order[0]]
-	else:
-		temp_q=q_all-curve_js[i-1]
-		order=np.argsort(np.linalg.norm(temp_q,axis=1))
-		curve_js[i]=q_all[order[0]]
-###checkpoint2
-# print(np.degrees(curve_js[50]),curve_R_base[i])
 
+	else:
+		try:
+			temp_q=q_all-curve_js[i-1]
+			order=np.argsort(np.linalg.norm(temp_q,axis=1))
+			curve_js[i]=q_all[order[0]]
+
+		except:
+			pass
 
 ###checkpoint3
+###make sure fwd(joint) and original curve match
 # H=np.vstack((np.hstack((R.T,-np.dot(R.T,T))),np.array([0,0,0,1])))
 # curve_base_temp=np.zeros(curve.shape)
 # for i in range(len(curve_js)):
 # 	curve_base_temp[i]=(np.dot(H,np.hstack((1000.*fwd(curve_js[i]).p,[1])).T)[:-1])
-# print(curve_base_temp)
+# print(np.max(np.linalg.norm(curve-curve_base_temp,axis=1)))
 
 
 
@@ -99,3 +122,4 @@ for i in range(len(curve_base)):
 ###output to csv
 df=DataFrame({'q0':curve_js[:,0],'q1':curve_js[:,1],'q2':curve_js[:,2],'q3':curve_js[:,3],'q4':curve_js[:,4],'q5':curve_js[:,5]})
 df.to_csv('Curve_js.csv',header=False,index=False)
+
