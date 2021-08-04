@@ -27,13 +27,12 @@ def main():
 	# my_pwlf.fit_with_breaks(break_points)
 
 	###fit by error thresholding
-	my_pwlf.fit_under_error_simplified(0.5)
+	my_pwlf.fit_under_error_simplified(1)
 
-	# ###predict for the determined points
-	# xHat = np.linspace(0,len(curve), num=1000)
-	# pred = my_pwlf.predict_arb(xHat)
+	###predict for the determined points
+	xHat = np.linspace(0,len(curve), num=1000)
+	pred = my_pwlf.predict_arb(xHat)
 
-	# # print('maximum error: ',my_pwlf.calc_max_error())
 	# curve_fit=pred
 
 	# # print('maximum error: ',calc_max_error(curve_fit,curve))
@@ -47,6 +46,8 @@ def main():
 
 	# plt.show()
 
+	print('maximum error: ',calc_max_error(pred,curve))
+	print('average error: ',calc_avg_error(pred,curve))
 	
 if __name__ == "__main__":
 	main()

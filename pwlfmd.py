@@ -207,7 +207,7 @@ class MDFit(object):
 		self.break_slope_simplified(min_threshold)
 		self.fit_with_breaks(self.x_data[self.break_points])
 		error=self.calc_max_error1()
-		print('error: ',error,'num breakpoints: ',len(self.break_points))
+		print('error: ',error,'num breakpoints: ',len(self.break_points), 'threshold: ',min_threshold)
 		while error>max_error:
 			###tune slope threshold first, then step size
 			if min_threshold<0.0000001:
@@ -217,7 +217,7 @@ class MDFit(object):
 				self.break_slope_simplified(min_threshold)
 				self.fit_with_breaks(self.x_data[self.break_points])
 				error=self.calc_max_error1()
-				print('error: ',error,'num breakpoints: ',len(self.break_points))
+				print('error: ',error,'num breakpoints: ',len(self.break_points), 'threshold: ',min_threshold)
 				return error
 			else:
 				min_threshold=min_threshold/2
@@ -226,5 +226,5 @@ class MDFit(object):
 			print(self.break_points)
 			self.fit_with_breaks(self.x_data[self.break_points])
 			error=self.calc_max_error1()
-			print('error: ',error,'num breakpoints: ',len(self.break_points))
+			print('error: ',error,'num breakpoints: ',len(self.break_points), 'threshold: ',min_threshold)
 		return error
