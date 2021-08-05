@@ -202,8 +202,8 @@ class MDFit(object):
 			error=self.calc_max_error1()
 		return error
 
-	def fit_under_error_simplified(self,max_error):
-		min_threshold=-1
+	def fit_under_error_simplified(self,max_error=0.1,starting_threshold=0.05):
+		min_threshold=starting_threshold
 		self.break_slope_simplified(min_threshold)
 		self.fit_with_breaks(self.x_data[self.break_points])
 		error=self.calc_max_error1()

@@ -32,11 +32,9 @@ def main():
 	my_pwlf=MDFit(np.arange(len(curve_js)),curve_js)
 
 	###slope calc breakpoints
-	# break_points=my_pwlf.x_data[my_pwlf.break_slope()]
-	# my_pwlf.fit_with_breaks(break_points)
-
-	###fit by error thresholding
-	my_pwlf.fit_under_error_simplified(max_error=0.02,starting_threshold=0.005)
+	my_pwlf.break_slope_simplified(-1)
+	print(len(my_pwlf.break_points))
+	my_pwlf.fit_with_breaks(my_pwlf.x_data[my_pwlf.break_points])
 
 	###predict at every data index
 	xHat = np.arange(len(curve_js))

@@ -1,5 +1,6 @@
 import numpy as np
 import copy
+from general_robotics_toolbox import *
 
 ###calculate distance between point to line
 def get_distance(p1,p2,p3):
@@ -30,3 +31,13 @@ def calc_avg_error(fit,curve):
 	for p in fit:
 		error+=calc_error(p,curve)
 	return error/len(fit)
+
+def complete_points_check(fit,curve,R_fit,R_curve):
+	max_cartesian_error=np.max(np.linalg.norm(fit-curve,axis=1))
+	rotation_error=[]
+	for i in range(len(R_fit)):
+		R=np.dot(R_fit[i],R_curve[i].T)
+		k,theta=R2rot(R)
+		rotation_error.append(theta)
+	return max_cartesian_error,np.max(np.array(rotation_error))
+
