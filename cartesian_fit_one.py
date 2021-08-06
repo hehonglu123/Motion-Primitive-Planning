@@ -24,8 +24,9 @@ def LinePlaneCollision(planeNormal, planePoint, rayDirection, rayPoint, epsilon=
 
 
 def main():
+	###All in base frame
 	col_names=['X', 'Y', 'Z','direction_x', 'direction_y', 'direction_z'] 
-	data = read_csv("data/Curve_dense.csv", names=col_names)
+	data = read_csv("data/Curve_in_base_frame.csv", names=col_names)
 	curve_x=data['X'].tolist()
 	curve_y=data['Y'].tolist()
 	curve_z=data['Z'].tolist()
@@ -33,41 +34,28 @@ def main():
 	curve_direction_y=data['direction_y'].tolist()
 	curve_direction_z=data['direction_z'].tolist()
 	curve=np.vstack((curve_x, curve_y, curve_z)).T
-	curve_direction=np.vstack((curve_direction_x, curve_direction_y, curve_direction_z))
-	curve_direction_ref=curve_direction.T
+	curve_direction=np.vstack((curve_direction_x, curve_direction_y, curve_direction_z)).T
 	
 	###back projection
 	d=50			###offset
-	curve_backproj=curve-d*curve_direction_ref
+	curve_backproj=curve-d*curve_direction
 
-	###reference frame transformation
-	R=np.array([[0,0,1.],
-				[1.,0,0],
-				[0,1.,0]])
-	T=np.array([[2700.],[-800.],[500.]])
-	H=np.vstack((np.hstack((R,T)),np.array([0,0,0,1])))
-	#convert curve direction to base frame
-	curve_direction_base=np.dot(R,curve_direction).T
+	#get orientation
 	curve_R=[]
-	curve_base=np.zeros(curve.shape)
 	for i in range(len(curve)):
-		curve_base[i]=np.dot(H,np.hstack((curve_backproj[i],[1])).T)[:-1]
 		try:
-			R_curve=direction2R(curve_direction_base[i],-curve_base[i]+curve_base[i-1])
+			R_curve=direction2R(curve_direction[i],-curve[i+1]+curve[i])
 		except:
 			traceback.print_exc()
 			pass
-		curve_R.append(np.dot(R.T,R_curve))
-
-	###insert initial orientation
-	curve_R.insert(0,curve_R[0])
+		curve_R.append(R_curve)
 
 	#########################fitting####################################
 	###fitting back projection curve
 	my_pwlf=MDFit(np.arange(len(curve_backproj)),curve_backproj)
 
 	###slope calc breakpoints
-	my_pwlf.break_slope_simplified(0.00001)
+	my_pwlf.break_slope_simplified(-1)
 	print('num breakpoints: ',len(my_pwlf.break_points))
 
 	my_pwlf.fit_with_breaks(my_pwlf.x_data[my_pwlf.break_points])
@@ -80,13 +68,28 @@ def main():
 	curve_R_pred=[]	
 	curve_final_projection=np.zeros(np.shape(curve_cartesian_pred))
 	for i in range(len(my_pwlf.break_points)-1):
-		q_start=Quaternion(matrix=curve_R[my_pwlf.break_points[i]])
-		q_end=Quaternion(matrix=curve_R[my_pwlf.break_points[i+1]])
-		for j in range(my_pwlf.break_points[i],my_pwlf.break_points[i+1]):
-			q_temp=Quaternion.slerp(q_start, q_end, float(j-my_pwlf.break_points[i])/float(my_pwlf.break_points[i+1]-my_pwlf.break_points[i])) 
+		start=my_pwlf.break_points[i]
+		if my_pwlf.break_points[i+1]==-1:
+			end=len(curve)-1
+		else:
+			end=my_pwlf.break_points[i+1]-1
+
+		if end==start:
+			#no interpolation needed
+			curve_R_pred.append(curve_R[start])
+			curve_final_projection[start]=LinePlaneCollision(planeNormal=curve_direction[start], planePoint=curve[start], rayDirection=curve_R_pred[-1][:,-1], rayPoint=curve_cartesian_pred[start])
+			continue
+
+
+		q_start=Quaternion(matrix=curve_R[start])
+		q_end=Quaternion(matrix=curve_R[end])
+		for j in range(start,end+1):
+
+			q_temp=Quaternion.slerp(q_start, q_end, float(j-start)/float(end-start)) 
 			curve_R_pred.append(q_temp.rotation_matrix)
-			print(curve_direction_ref[i],curve_R_pred[-1])
-			curve_final_projection[i]=LinePlaneCollision(planeNormal=curve_direction_ref[i], planePoint=curve[i], rayDirection=curve_R_pred[-1][:,-1], rayPoint=curve_cartesian_pred[i])
+			curve_final_projection[j]=LinePlaneCollision(planeNormal=curve_direction[j], planePoint=curve[j], rayDirection=curve_R_pred[-1][:,-1], rayPoint=curve_cartesian_pred[j])
+
+
 
 	####################################error checking####################################################
 	print('calcualting final error')
