@@ -11,7 +11,7 @@ clear all;close all;
 
 % generate target robot pose 
 % T=readtable('Curve.csv');
-T=readtable('Curve_dense.csv');
+T=readtable('Curve_in_base_frame.csv');
 %load curve
 
 x=T.Var1;y=T.Var2;z=T.Var3;

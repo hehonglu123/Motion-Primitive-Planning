@@ -88,10 +88,10 @@ def main():
 
 
 	print('calcualting final error')
-	max_cartesian_error,max_orientation_error=complete_points_check(curve_final_projection,curve,curve_R_pred,curve_R)
+	max_cartesian_error,max_cartesian_error_index,avg_cartesian_error,max_orientation_error=complete_points_check(curve_final_projection,curve,curve_R_pred,curve_R)
 	print('maximum cartesian error: ',max_cartesian_error)
 	print('max orientation error: ', max_orientation_error)
-	print('average error: ',calc_avg_error(curve_final_projection,curve))
+	print('average error: ',avg_cartesian_error)
 
 if __name__ == "__main__":
 	main()

@@ -23,6 +23,64 @@ def LinePlaneCollision(planeNormal, planePoint, rayDirection, rayPoint, epsilon=
 	return Psi
 
 
+def fit_test(curve,curve_backproj,curve_R,thresholds):
+	results_max_cartesian_error_index=[]
+	results_max_cartesian_error=[]
+	results_max_orientation_error=[]
+	results_avg_cartesian_error=[]
+	results_num_breakpoints=[]
+	for threshold in thresholds:
+		#########################fitting####################################
+		###fitting back projection curve
+		my_pwlf=MDFit(np.arange(len(curve_backproj)),curve_backproj)
+
+		###slope calc breakpoints
+		my_pwlf.break_slope_simplified(threshold)
+		results_num_breakpoints.append(len(my_pwlf.break_points))
+
+		my_pwlf.fit_with_breaks(my_pwlf.x_data[my_pwlf.break_points])
+
+		###predict for the determined points
+		xHat = np.arange(len(curve_backproj))
+		curve_cartesian_pred = my_pwlf.predict_arb(xHat)
+
+		####################################interpolate orientation##############################
+		curve_R_pred=[]	
+		curve_final_projection=np.zeros(np.shape(curve_cartesian_pred))
+		for i in range(len(my_pwlf.break_points)-1):
+
+			###determine start and end interpolation index
+			start=my_pwlf.break_points[i]
+			if my_pwlf.break_points[i+1]==-1:
+				end=len(curve)-1
+			else:
+				end=my_pwlf.break_points[i+1]-1
+
+			if end==start:
+				#no interpolation needed
+				curve_R_pred.append(curve_R[start])
+				curve_final_projection[start]=LinePlaneCollision(planeNormal=curve_R[start][:,-1], planePoint=curve[start], rayDirection=curve_R_pred[-1][:,-1], rayPoint=curve_cartesian_pred[start])
+				continue
+
+			###quaternion spherical linear interpolation
+			q_start=Quaternion(matrix=curve_R[start])
+			q_end=Quaternion(matrix=curve_R[end])
+			for j in range(start,end+1):
+				###calculate orientation
+				q_temp=Quaternion.slerp(q_start, q_end, float(j-start)/float(end-start)) 
+				curve_R_pred.append(q_temp.rotation_matrix)
+				###get line/surface intersection point
+				curve_final_projection[j]=LinePlaneCollision(planeNormal=curve_R[j][:,-1], planePoint=curve[j], rayDirection=curve_R_pred[-1][:,-1], rayPoint=curve_cartesian_pred[j])
+		###calculating error
+		max_cartesian_error,max_cartesian_error_index,avg_cartesian_error,max_orientation_error=complete_points_check(curve_final_projection,curve,curve_R_pred,curve_R)
+		###attach to results
+		results_max_cartesian_error.append(max_cartesian_error)
+		results_max_cartesian_error_index.append(max_cartesian_error_index)
+		results_avg_cartesian_error.append(avg_cartesian_error)
+		results_max_orientation_error.append(max_orientation_error)
+
+	return results_num_breakpoints,results_max_cartesian_error,results_max_cartesian_error_index,results_avg_cartesian_error,results_max_orientation_error
+		
 def main():
 	###All in base frame
 	col_names=['X', 'Y', 'Z','direction_x', 'direction_y', 'direction_z'] 
@@ -50,53 +108,13 @@ def main():
 			pass
 		curve_R.append(R_curve)
 
-	#########################fitting####################################
-	###fitting back projection curve
-	my_pwlf=MDFit(np.arange(len(curve_backproj)),curve_backproj)
+	#########################fitting tests####################################
+	thresholds=[5.00E-04,1.00E-04,1.00E-05,7.81E-06,3.91E-06,3.20E-06,1.95E-06,1.00E-06,8.00E-07,5.00E-07,4.00E-07]
+	results_num_breakpoints,results_max_cartesian_error,results_max_cartesian_error_index,results_avg_cartesian_error,results_max_orientation_error=\
+		fit_test(curve,curve_backproj,curve_R,thresholds)
 
-	###slope calc breakpoints
-	my_pwlf.break_slope_simplified(-1)
-	print('num breakpoints: ',len(my_pwlf.break_points))
-
-	my_pwlf.fit_with_breaks(my_pwlf.x_data[my_pwlf.break_points])
-
-	###predict for the determined points
-	xHat = np.arange(len(curve_backproj))
-	curve_cartesian_pred = my_pwlf.predict_arb(xHat)
-
-	####################################interpolate orientation##############################
-	curve_R_pred=[]	
-	curve_final_projection=np.zeros(np.shape(curve_cartesian_pred))
-	for i in range(len(my_pwlf.break_points)-1):
-		start=my_pwlf.break_points[i]
-		if my_pwlf.break_points[i+1]==-1:
-			end=len(curve)-1
-		else:
-			end=my_pwlf.break_points[i+1]-1
-
-		if end==start:
-			#no interpolation needed
-			curve_R_pred.append(curve_R[start])
-			curve_final_projection[start]=LinePlaneCollision(planeNormal=curve_direction[start], planePoint=curve[start], rayDirection=curve_R_pred[-1][:,-1], rayPoint=curve_cartesian_pred[start])
-			continue
-
-
-		q_start=Quaternion(matrix=curve_R[start])
-		q_end=Quaternion(matrix=curve_R[end])
-		for j in range(start,end+1):
-
-			q_temp=Quaternion.slerp(q_start, q_end, float(j-start)/float(end-start)) 
-			curve_R_pred.append(q_temp.rotation_matrix)
-			curve_final_projection[j]=LinePlaneCollision(planeNormal=curve_direction[j], planePoint=curve[j], rayDirection=curve_R_pred[-1][:,-1], rayPoint=curve_cartesian_pred[j])
-
-
-
-	####################################error checking####################################################
-	print('calcualting final error')
-	max_cartesian_error,max_orientation_error=complete_points_check(curve_final_projection,curve,curve_R_pred,curve_R)
-	print('maximum cartesian error: ',max_cartesian_error)
-	print('max orientation error: ', max_orientation_error)
-	print('average error: ',calc_avg_error(curve_final_projection,curve))
-	
+	plt.figure()
+	plt.plot(results_num_breakpoints,results_max_cartesian_error)
+	plt.show()
 if __name__ == "__main__":
 	main()
