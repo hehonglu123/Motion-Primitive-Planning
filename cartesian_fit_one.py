@@ -6,21 +6,10 @@ import sys
 import numpy as np
 sys.path.append('toolbox')
 from error_check import *
+from projection import LinePlaneCollision
 sys.path.append('data')
 from cartesian2joint import direction2R
 from pyquaternion import Quaternion
-
-
-def LinePlaneCollision(planeNormal, planePoint, rayDirection, rayPoint, epsilon=1e-6):
- 
-	ndotu = planeNormal.dot(rayDirection)
-	if abs(ndotu) < epsilon:
-		raise RuntimeError("no intersection or line is within plane")
- 
-	w = rayPoint - planePoint
-	si = -planeNormal.dot(w) / ndotu
-	Psi = w + si * rayDirection + planePoint
-	return Psi
 
 
 def fit_test(curve,curve_backproj,curve_R,thresholds):

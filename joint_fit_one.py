@@ -7,22 +7,56 @@ import sys
 sys.path.append('toolbox')
 from error_check import *
 from robot_def import *
+from projection import LinePlaneCollision
 
 
+def fit_test(curve,curve_js,thresholds):
+	results_max_cartesian_error_index=[]
+	results_max_cartesian_error=[]
+	results_max_orientation_error=[]
+	results_avg_cartesian_error=[]
+	results_num_breakpoints=[]
+	for threshold in thresholds:
+		#########################fitting####################################
+		###fitting back projection curve in joint space
+		my_pwlf=MDFit(np.arange(len(curve_js)),curve_js)
 
-def LinePlaneCollision(planeNormal, planePoint, rayDirection, rayPoint, epsilon=1e-6):
- 
-	ndotu = planeNormal.dot(rayDirection)
-	if abs(ndotu) < epsilon:
-		raise RuntimeError("no intersection or line is within plane")
- 
-	w = rayPoint - planePoint
-	si = -planeNormal.dot(w) / ndotu
-	Psi = w + si * rayDirection + planePoint
-	return Psi
+		###slope calc breakpoints
+		my_pwlf.break_slope_simplified(threshold)
+		results_num_breakpoints.append(len(my_pwlf.break_points))
 
+		my_pwlf.fit_with_breaks(my_pwlf.x_data[my_pwlf.break_points])
 
+		###predict at every data index
+		xHat = np.arange(len(curve_js))
+		curve_js_pred = my_pwlf.predict_arb(xHat)
 
+		####################################get cartesian and orientation##############################
+		curve_cartesian_pred=[]
+		curve_R_pred=[]
+		curve_R=[]
+		curve_final_projection=[]
+		for i in range(len(curve_js_pred)):
+			fwdkin_result=fwd(curve_js_pred[i])
+			curve_cartesian_pred.append(1000.*fwdkin_result.p)
+			curve_R_pred.append(fwdkin_result.R)
+
+			curve_R.append(fwd(curve_js[i]).R)
+
+			###project forward onto curve surface, all in reference frame
+			curve_final_projection.append(LinePlaneCollision(planeNormal=curve_R[i][:,-1], planePoint=curve[i], rayDirection=curve_R_pred[i][:,-1], rayPoint=curve_cartesian_pred[i]))
+			
+
+		###calculating error
+		max_cartesian_error,max_cartesian_error_index,avg_cartesian_error,max_orientation_error=complete_points_check(curve_final_projection,curve,curve_R_pred,curve_R)
+		###attach to results
+		results_max_cartesian_error.append(max_cartesian_error)
+		results_max_cartesian_error_index.append(max_cartesian_error_index)
+		results_avg_cartesian_error.append(avg_cartesian_error)
+		results_max_orientation_error.append(max_orientation_error)
+
+	return results_num_breakpoints,results_max_cartesian_error,results_max_cartesian_error_index,results_avg_cartesian_error,results_max_orientation_error
+		
 
 def main():
 	###read actual curve
@@ -49,42 +83,15 @@ def main():
 	curve_q6=data['q6'].tolist()
 	curve_js=np.vstack((curve_q1, curve_q2, curve_q3,curve_q4,curve_q5,curve_q6)).T
 
-	###x ref, yz out
-	my_pwlf=MDFit(np.arange(len(curve_js)),curve_js)
+	#########################fitting tests####################################
+	thresholds=[0.000390625,9.77E-05,5.00E-05,4.00E-05,3.00E-05]
+	results_num_breakpoints,results_max_cartesian_error,results_max_cartesian_error_index,results_avg_cartesian_error,results_max_orientation_error=\
+		fit_test(curve,curve_js,thresholds)
 
-	###slope calc breakpoints
-	my_pwlf.break_slope_simplified(-1)
-	print('num breakpoints: ',len(my_pwlf.break_points))
-	my_pwlf.fit_with_breaks(my_pwlf.x_data[my_pwlf.break_points])
 
-	###predict at every data index
-	xHat = np.arange(len(curve_js))
-	curve_js_pred = my_pwlf.predict_arb(xHat)
 
-	curve_cartesian_pred=[]
-	curve_R_pred=[]
-	for q in curve_js_pred:
-		fwdkin_result=fwd(q)
-		curve_cartesian_pred.append(fwdkin_result.p)
-		curve_R_pred.append(fwdkin_result.R)
-	curve_R=[]
-	for q in curve_js:
-		curve_R.append(fwd(q).R)
-	###units
-	curve_cartesian_pred=np.array(curve_cartesian_pred)*1000.
-	###convert to reference frame
-	R=np.array([[0,0,1.],
-			[1.,0,0],
-			[0,1.,0]])
-	T=np.array([[2700.],[-800.],[500.]])
-	H=np.vstack((np.hstack((R.T,-np.dot(R.T,T))),np.array([0,0,0,1])))
+	
 
-	curve_final_projection=np.zeros(np.shape(curve_cartesian_pred))
-	for i in range(len(curve_cartesian_pred)):
-		curve_cartesian_pred[i]=np.dot(H,np.hstack((curve_cartesian_pred[i],[1])).T)[:-1]
-		###project forward onto curve surface, all in reference frame
-		curve_final_projection[i]=LinePlaneCollision(planeNormal=curve_direction[i], planePoint=curve[i], rayDirection=np.dot(R.T,curve_R[i][:,-1]), rayPoint=curve_cartesian_pred[i])
-		
 
 
 	print('calcualting final error')
@@ -92,6 +99,10 @@ def main():
 	print('maximum cartesian error: ',max_cartesian_error)
 	print('max orientation error: ', max_orientation_error)
 	print('average error: ',avg_cartesian_error)
+
+	plt.figure()
+	plt.plot(results_num_breakpoints,results_max_cartesian_error)
+	plt.show()
 
 if __name__ == "__main__":
 	main()
