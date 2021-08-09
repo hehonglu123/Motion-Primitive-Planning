@@ -92,8 +92,8 @@ def main():
 	curve_js=np.zeros((len(curve),6))
 	curve_js1=np.zeros((len(curve),6))
 
-	q_init=np.radians([33.340200, 19.794526, 36.587148, -140.737677, 79.139957, -177.061128])
-
+	# q_init=np.radians([33.340200, 19.794526, 36.587148, -140.737677, 79.139957, -177.061128])
+	q_init=np.array([0.627463700138299,0.17976842821744082,0.5196590573281621,1.6053098733278601,-0.8935105128511388,0.9174696574156079])
 	for i in range(len(curve_base)):
 		try:
 			q_all=np.array(inv(curve_base[i],curve_R_base[i]))

@@ -31,8 +31,8 @@ p_tool=np.array([0.45,0,-0.05])
 
 P=np.concatenate((p0,p1,p2,p3,p4,p5,p6),axis=1)
 joint_type=np.zeros(6)
-upper_limit=np.array([2.967,2.269,1.222,4.712,2.269,6.283])
-lowerer_limit=np.array([-2.967,-1.745,-3.491,-4.712,-2.269,-6.283])
+upper_limit=np.radians([220.,85.,70.,300.,120.,360.])
+lowerer_limit=np.radians([-220.,-65.,-180.,-300.,-120.,-360.])
 ABB_def=Robot(H,P,joint_type,joint_lower_limit = lowerer_limit, joint_upper_limit = upper_limit, R_tool=R_tool,p_tool=p_tool)
 
 

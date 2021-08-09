@@ -68,6 +68,13 @@ def fit_test(curve,curve_backproj,curve_R,thresholds):
 		results_avg_cartesian_error.append(avg_cartesian_error)
 		results_max_orientation_error.append(max_orientation_error)
 
+	plt.figure()
+	ax = plt.axes(projection='3d')
+	ax.plot3D(curve[:,0], curve[:,1],curve[:,2], 'gray')
+	ax.scatter3D(curve_final_projection[:,0], curve_final_projection[:,1], curve_final_projection[:,2], c=curve_final_projection[:,2], cmap='Greens')
+	ax.scatter3D(curve_cartesian_pred[:,0], curve_cartesian_pred[:,1], curve_cartesian_pred[:,2], c=curve_cartesian_pred[:,2], cmap='Blues')
+	plt.show()
+
 	return results_num_breakpoints,results_max_cartesian_error,results_max_cartesian_error_index,results_avg_cartesian_error,results_max_orientation_error
 		
 def main():
@@ -98,7 +105,8 @@ def main():
 		curve_R.append(R_curve)
 
 	#########################fitting tests####################################
-	thresholds=[5.00E-04,1.00E-04,1.00E-05,7.81E-06,3.91E-06,3.20E-06,1.95E-06,1.00E-06,8.00E-07,5.00E-07,4.00E-07]
+	# thresholds=[5.00E-04,1.00E-04,1.00E-05,7.81E-06,3.91E-06,3.20E-06,1.95E-06,1.00E-06,8.00E-07,5.00E-07,4.00E-07]
+	thresholds=[5.00E-07]
 	results_num_breakpoints,results_max_cartesian_error,results_max_cartesian_error_index,results_avg_cartesian_error,results_max_orientation_error=\
 		fit_test(curve,curve_backproj,curve_R,thresholds)
 
