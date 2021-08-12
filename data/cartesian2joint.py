@@ -35,17 +35,9 @@ def direction2R(v_norm,v_tang):
 
 
 def main():
-	###reference frame transformation
-	R=np.array([[0,0,1.],
-				[1.,0,0],
-				[0,1.,0]])
-	T=np.array([[2700.],[-800.],[500.]])
-	H=np.vstack((np.hstack((R,T)),np.array([0,0,0,1])))
-
-
 
 	col_names=['X', 'Y', 'Z','direction_x','direction_y','direction_z'] 
-	data = read_csv("Curve_dense.csv", names=col_names)
+	data = read_csv("Curve_in_base_frame.csv", names=col_names)
 	curve_x=data['X'].tolist()
 	curve_y=data['Y'].tolist()
 	curve_z=data['Z'].tolist()
@@ -54,49 +46,38 @@ def main():
 	curve_direction_z=data['direction_z'].tolist()
 
 	curve=np.vstack((curve_x, curve_y, curve_z)).T
-	curve_direction=np.vstack((curve_direction_x, curve_direction_y, curve_direction_z))
+	curve_direction=np.vstack((curve_direction_x, curve_direction_y, curve_direction_z)).T
 
 	###back projection
 	d=50			###offset
-	curve=curve-d*curve_direction.T
+	curve=curve-d*curve_direction
 
 
-
-	#convert curve direction to base frame
-	curve_direction=np.dot(R,curve_direction).T
-
-
-
-
-
-	curve_base=np.zeros(curve.shape)
-	curve_R_base=[]
+	curve_R=[]
 
 
 	for i in range(len(curve)):
-		curve_base[i]=np.dot(H,np.hstack((curve[i],[1])).T)[:-1]
 		try:
-			R_curve=direction2R(curve_direction[i],-curve_base[i]+curve_base[i-1])
+			R_curve=direction2R(curve_direction[i],-curve[i+1]+curve[i])
 
 		except:
 			traceback.print_exc()
 			pass
-		curve_R_base.append(R_curve)
+		curve_R.append(R_curve)
 
 	###insert initial orientation
-	curve_R_base.insert(0,curve_R_base[0])
+	curve_R.insert(0,curve_R[0])
 
 	###units
-	curve_base=curve_base/1000.
+	curve=curve/1000.
 
 	curve_js=np.zeros((len(curve),6))
-	curve_js1=np.zeros((len(curve),6))
 
-	# q_init=np.radians([33.340200, 19.794526, 36.587148, -140.737677, 79.139957, -177.061128])
+	# q_init=np.radians([35.414132, 12.483655, 27.914093, -89.255298, 51.405928, -128.026891])
 	q_init=np.array([0.627463700138299,0.17976842821744082,0.5196590573281621,1.6053098733278601,-0.8935105128511388,0.9174696574156079])
-	for i in range(len(curve_base)):
+	for i in range(len(curve)):
 		try:
-			q_all=np.array(inv(curve_base[i],curve_R_base[i]))
+			q_all=np.array(inv(curve[i],curve_R[i]))
 		except:
 			pass
 		###choose inv_kin closest to previous joints
@@ -117,10 +98,10 @@ def main():
 	###checkpoint3
 	###make sure fwd(joint) and original curve match
 	# H=np.vstack((np.hstack((R.T,-np.dot(R.T,T))),np.array([0,0,0,1])))
-	# curve_base_temp=np.zeros(curve.shape)
+	# curve_temp=np.zeros(curve.shape)
 	# for i in range(len(curve_js)):
-	# 	curve_base_temp[i]=(np.dot(H,np.hstack((1000.*fwd(curve_js[i]).p,[1])).T)[:-1])
-	# print(np.max(np.linalg.norm(curve-curve_base_temp,axis=1)))
+	# 	curve_temp[i]=(np.dot(H,np.hstack((1000.*fwd(curve_js[i]).p,[1])).T)[:-1])
+	# print(np.max(np.linalg.norm(curve-curve_temp,axis=1)))
 
 
 

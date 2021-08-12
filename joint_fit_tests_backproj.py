@@ -8,7 +8,7 @@ sys.path.append('toolbox')
 from error_check import *
 from robot_def import *
 from projection import LinePlaneCollision
-
+import traceback
 
 def fit_test(curve,curve_js,thresholds):
 	results_max_cartesian_error_index=[]
@@ -28,7 +28,7 @@ def fit_test(curve,curve_js,thresholds):
 		my_pwlf.fit_with_breaks(my_pwlf.x_data[my_pwlf.break_points])
 
 		###predict at every data index
-		xHat = np.arange(len(curve_js))
+		xHat = np.arange(0,len(curve_js))
 		curve_js_pred = my_pwlf.predict_arb(xHat)
 
 		####################################get cartesian and orientation##############################
@@ -41,14 +41,17 @@ def fit_test(curve,curve_js,thresholds):
 			fwdkin_result=fwd(curve_js_pred[i])
 			curve_cartesian_pred.append(1000.*fwdkin_result.p)
 			curve_R_pred.append(fwdkin_result.R)
+			try:
+				fwdkin_result2=fwd(curve_js[i])
+				curve_R.append(fwdkin_result2.R)
+				curve_js_cartesian.append(1000.*fwdkin_result2.p)
 
-			fwdkin_result2=fwd(curve_js[i])
-			curve_R.append(fwdkin_result2.R)
-			curve_js_cartesian.append(1000.*fwdkin_result2.p)
 
-			###project forward onto curve surface, all in reference frame
-			curve_final_projection.append(LinePlaneCollision(planeNormal=curve_R[i][:,-1], planePoint=curve[i], rayDirection=curve_R_pred[i][:,-1], rayPoint=curve_cartesian_pred[i]))
-			
+				###project forward onto curve surface, all in reference frame
+				curve_final_projection.append(LinePlaneCollision(planeNormal=curve_R[i][:,-1], planePoint=curve[i], rayDirection=curve_R_pred[i][:,-1], rayPoint=curve_cartesian_pred[i]))
+			except:
+				# traceback.print_exc()
+				pass
 
 		###calculating error
 		max_cartesian_error,max_cartesian_error_index,avg_cartesian_error,max_orientation_error=complete_points_check(curve_final_projection,curve,curve_R_pred,curve_R)
@@ -60,11 +63,11 @@ def fit_test(curve,curve_js,thresholds):
 
 	curve_final_projection=np.array(curve_final_projection)
 	curve_cartesian_pred=np.array(curve_cartesian_pred)
-	# curve_js_cartesian=np.array(curve_js_cartesian)
-	plt.figure()
-	plt.scatter(np.arange(len(curve_cartesian_pred)),curve_cartesian_pred[:,0],s=1)
-	plt.scatter(np.arange(len(curve_cartesian_pred)),curve_cartesian_pred[:,1],s=1)
-	plt.scatter(np.arange(len(curve_cartesian_pred)),curve_cartesian_pred[:,2],s=1)
+	curve_js_cartesian=np.array(curve_js_cartesian)
+	# plt.figure()
+	# plt.scatter(np.arange(len(curve_cartesian_pred)),curve_cartesian_pred[:,0],s=1)
+	# plt.scatter(np.arange(len(curve_cartesian_pred)),curve_cartesian_pred[:,1],s=1)
+	# plt.scatter(np.arange(len(curve_cartesian_pred)),curve_cartesian_pred[:,2],s=1)
 	# plt.scatter(np.arange(len(curve_cartesian_pred)),curve_js[:,0],s=1)
 	# plt.scatter(np.arange(len(curve_cartesian_pred)),curve_js[:,1],s=1)
 	# plt.scatter(np.arange(len(curve_cartesian_pred)),curve_js[:,2],s=1)
@@ -75,8 +78,7 @@ def fit_test(curve,curve_js,thresholds):
 	# ax.plot3D(curve[:,0], curve[:,1],curve[:,2], 'gray')
 	# ax.scatter3D(curve_final_projection[:,0], curve_final_projection[:,1], curve_final_projection[:,2], c=curve_final_projection[:,2], cmap='Greens')
 	# ax.scatter3D(curve_cartesian_pred[:,0], curve_cartesian_pred[:,1], curve_cartesian_pred[:,2], c=curve_cartesian_pred[:,2], cmap='Blues')
-	# ax.scatter3D(curve_js_cartesian[:,0], curve_js_cartesian[:,1], curve_js_cartesian[:,2], c=curve_js_cartesian[:,2], cmap='Blues')
-	plt.show()
+	# plt.show()
 
 	return results_num_breakpoints,results_max_cartesian_error,results_max_cartesian_error_index,results_avg_cartesian_error,results_max_orientation_error
 		
@@ -107,12 +109,14 @@ def main():
 	curve_js=np.vstack((curve_q1, curve_q2, curve_q3,curve_q4,curve_q5,curve_q6)).T
 
 	#########################fitting tests####################################
-	# thresholds=[0.000390625,9.77E-05,5.00E-05,4.00E-05,3.00E-05]
-	thresholds=[0.000390625]
+	thresholds=[0.000390625,9.77E-05,5.00E-05,4.00E-05,3.00E-05]
+	# thresholds=[0.000390625]
 	results_num_breakpoints,results_max_cartesian_error,results_max_cartesian_error_index,results_avg_cartesian_error,results_max_orientation_error=\
 		fit_test(curve,curve_js,thresholds)
 
-	print(results_max_cartesian_error)
+	###output to csv
+	df=DataFrame({'num_breakpoints':results_num_breakpoints,'max_cartesian_error':results_max_cartesian_error,'max_cartesian_error_index':results_max_cartesian_error_index,'avg_cartesian_error':results_avg_cartesian_error,'max_orientation_error':results_max_orientation_error})
+	df.to_csv('results/joint_fit_results.csv',header=True,index=False)
 
 	plt.figure()
 	plt.plot(results_num_breakpoints,results_max_cartesian_error)
