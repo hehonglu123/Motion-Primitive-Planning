@@ -80,7 +80,7 @@ def fit_test(curve,curve_backproj,curve_R,thresholds):
 def main():
 	###All in base frame
 	col_names=['X', 'Y', 'Z','direction_x', 'direction_y', 'direction_z'] 
-	data = read_csv("data/Curve_in_base_frame.csv", names=col_names)
+	data = read_csv("data/from_interp/Curve_in_base_frame.csv", names=col_names)
 	curve_x=data['X'].tolist()
 	curve_y=data['Y'].tolist()
 	curve_z=data['Z'].tolist()
@@ -112,7 +112,7 @@ def main():
 
 	###output to csv
 	df=DataFrame({'num_breakpoints':results_num_breakpoints,'max_cartesian_error':results_max_cartesian_error,'max_cartesian_error_index':results_max_cartesian_error_index,'avg_cartesian_error':results_avg_cartesian_error,'max_orientation_error':results_max_orientation_error})
-	df.to_csv('results/cartesian_fit_results.csv',header=True,index=False)
+	df.to_csv('results/from_interp/cartesian_fit_results.csv',header=True,index=False)
 
 
 	plt.figure()

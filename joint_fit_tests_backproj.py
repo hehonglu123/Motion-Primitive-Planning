@@ -86,7 +86,7 @@ def fit_test(curve,curve_js,thresholds):
 def main():
 	###read actual curve
 	col_names=['X', 'Y', 'Z','direction_x', 'direction_y', 'direction_z'] 
-	data = read_csv("data/Curve_in_base_frame.csv", names=col_names)
+	data = read_csv("data/from_interp/Curve_in_base_frame.csv", names=col_names)
 	curve_x=data['X'].tolist()
 	curve_y=data['Y'].tolist()
 	curve_z=data['Z'].tolist()
@@ -99,7 +99,7 @@ def main():
 	
 	###read interpolated curves in joint space
 	col_names=['q1', 'q2', 'q3','q4', 'q5', 'q6'] 
-	data = read_csv("data/Curve_backproj_js.csv", names=col_names)
+	data = read_csv("data/from_interp/Curve_backproj_js.csv", names=col_names)
 	curve_q1=data['q1'].tolist()
 	curve_q2=data['q2'].tolist()
 	curve_q3=data['q3'].tolist()
@@ -109,14 +109,15 @@ def main():
 	curve_js=np.vstack((curve_q1, curve_q2, curve_q3,curve_q4,curve_q5,curve_q6)).T
 
 	#########################fitting tests####################################
-	thresholds=[0.000390625,9.77E-05,5.00E-05,4.00E-05,3.00E-05]
+	# thresholds=[0.000390625,9.77E-05,5.00E-05,4.00E-05,3.00E-05]	#for cad points
+	thresholds=[5.00E-01,1.00E-01,5.00E-02,5.00E-03,5.00E-04,5.00E-05,5.00E-06,5.00E-07]	#for interp points
 	# thresholds=[0.000390625]
 	results_num_breakpoints,results_max_cartesian_error,results_max_cartesian_error_index,results_avg_cartesian_error,results_max_orientation_error=\
 		fit_test(curve,curve_js,thresholds)
 
 	###output to csv
 	df=DataFrame({'num_breakpoints':results_num_breakpoints,'max_cartesian_error':results_max_cartesian_error,'max_cartesian_error_index':results_max_cartesian_error_index,'avg_cartesian_error':results_avg_cartesian_error,'max_orientation_error':results_max_orientation_error})
-	df.to_csv('results/joint_fit_results.csv',header=True,index=False)
+	df.to_csv('results/from_interp/joint_fit_results.csv',header=True,index=False)
 
 	plt.figure()
 	plt.plot(results_num_breakpoints,results_max_cartesian_error)

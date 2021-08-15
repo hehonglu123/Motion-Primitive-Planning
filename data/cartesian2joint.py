@@ -37,7 +37,7 @@ def direction2R(v_norm,v_tang):
 def main():
 
 	col_names=['X', 'Y', 'Z','direction_x','direction_y','direction_z'] 
-	data = read_csv("Curve_in_base_frame.csv", names=col_names)
+	data = read_csv("from_interp/Curve_in_base_frame.csv", names=col_names)
 	curve_x=data['X'].tolist()
 	curve_y=data['Y'].tolist()
 	curve_z=data['Z'].tolist()
@@ -79,6 +79,7 @@ def main():
 		try:
 			q_all=np.array(inv(curve[i],curve_R[i]))
 		except:
+			traceback.print_exc()
 			pass
 		###choose inv_kin closest to previous joints
 		if i==0:
@@ -93,7 +94,10 @@ def main():
 				curve_js[i]=q_all[order[0]]
 
 			except:
+				q_all=np.array(inv(curve[i],curve_R[i]))
+				print(q_all)
 				pass
+
 
 	###checkpoint3
 	###make sure fwd(joint) and original curve match
@@ -108,7 +112,7 @@ def main():
 
 	###output to csv
 	df=DataFrame({'q0':curve_js[:,0],'q1':curve_js[:,1],'q2':curve_js[:,2],'q3':curve_js[:,3],'q4':curve_js[:,4],'q5':curve_js[:,5]})
-	df.to_csv('Curve_backproj_js.csv',header=False,index=False)
+	df.to_csv('from_interp/Curve_backproj_js.csv',header=False,index=False)
 
 
 
