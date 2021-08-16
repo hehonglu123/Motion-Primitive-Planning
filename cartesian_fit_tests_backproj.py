@@ -75,7 +75,7 @@ def fit_test(curve,curve_backproj,curve_R,thresholds):
 	# ax.scatter3D(curve_cartesian_pred[:,0], curve_cartesian_pred[:,1], curve_cartesian_pred[:,2], c=curve_cartesian_pred[:,2], cmap='Blues')
 	# plt.show()
 
-	return results_num_breakpoints,results_max_cartesian_error,results_max_cartesian_error_index,results_avg_cartesian_error,results_max_orientation_error
+	return np.array(results_num_breakpoints),np.array(results_max_cartesian_error),np.array(results_max_cartesian_error_index),np.array(results_avg_cartesian_error),np.array(results_max_orientation_error)
 		
 def main():
 	###All in base frame

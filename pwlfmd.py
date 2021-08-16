@@ -78,13 +78,10 @@ class MDFit(object):
 		return break_points
 
 	def break_slope_simplified(self,min_threshold=0.05):
-		last_breakpoint=0
 		for i in range(1,len(self.x_data)-1):
-			if i in self.break_points:
-				last_breakpoint=copy.deepcopy(i)
-				continue
+
 			###calc slope vector of both groups
-			vec1=np.hstack((self.x_data[i],self.data[i]))-np.hstack((self.x_data[last_breakpoint],self.data[last_breakpoint]))
+			vec1=np.hstack((self.x_data[i],self.data[i]))-np.hstack((self.x_data[i-1],self.data[i-1]))
 			slope = vec1 / np.linalg.norm(vec1)
 
 			vec2=np.hstack((self.x_data[i+1],self.data[i+1]))-np.hstack((self.x_data[i],self.data[i]))
@@ -93,7 +90,6 @@ class MDFit(object):
 
 			if 1-abs(np.dot(slope,next_slope))>min_threshold:	#valued from 0 to 2
 				self.break_points.append(i)
-				last_breakpoint=i
 
 
 		self.break_points.sort()
