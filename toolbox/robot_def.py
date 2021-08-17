@@ -15,7 +15,7 @@ ex=np.array([[1],[0],[0]])
 ey=np.array([[0],[1],[0]])
 ez=np.array([[0],[0],[1]])
 
-
+###ABB IRB 6650S 125/3.5 Robot Definition
 H=np.concatenate((ez,ey,ey,ex,ey,ex),axis=1)
 p0=np.array([[0],[0],[0.63]])
 p1=np.array([[0.6],[0],[0]])
@@ -31,9 +31,10 @@ p_tool=np.array([0.45,0,-0.05])
 
 P=np.concatenate((p0,p1,p2,p3,p4,p5,p6),axis=1)
 joint_type=np.zeros(6)
-upper_limit=np.radians([220.,85.,70.,300.,120.,360.])
-lowerer_limit=np.radians([-220.,-65.,-180.,-300.,-120.,-360.])
-ABB_def=Robot(H,P,joint_type,joint_lower_limit = lowerer_limit, joint_upper_limit = upper_limit, R_tool=R_tool,p_tool=p_tool)
+upper_limit=np.radians([220.,160.,70.,300.,120.,360.])
+lowerer_limit=np.radians([-220.,-40.,-180.,-300.,-120.,-360.])
+joint_vel_limit=np.radians([110,90,90,150,120,235])
+ABB_def=Robot(H,P,joint_type,joint_lower_limit = lowerer_limit, joint_upper_limit = upper_limit, joint_vel_limit=joint_vel_limit, R_tool=R_tool,p_tool=p_tool)
 
 
 
