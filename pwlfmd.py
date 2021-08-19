@@ -88,7 +88,7 @@ class MDFit(object):
 			next_slope = vec2 / np.linalg.norm(vec2)
 			###trigger breakpoint by dotproduct of 2 slope vector
 
-			if 1-abs(np.dot(slope,next_slope))>min_threshold:	#valued from 0 to 2
+			if 1-np.dot(slope,next_slope)>min_threshold:	#valued from 0 to 2
 				self.break_points.append(i)
 
 

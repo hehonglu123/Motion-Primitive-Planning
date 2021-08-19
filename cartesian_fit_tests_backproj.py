@@ -10,14 +10,17 @@ from projection import LinePlaneCollision
 sys.path.append('data')
 from cartesian2joint import direction2R
 from pyquaternion import Quaternion
+from general_robotics_toolbox import *
 
 
-def fit_test(curve,curve_backproj,curve_R,thresholds):
+def fit_test(curve,curve_backproj,curve_R,thresholds,d=50):
 	results_max_cartesian_error_index=[]
 	results_max_cartesian_error=[]
 	results_max_orientation_error=[]
 	results_avg_cartesian_error=[]
 	results_num_breakpoints=[]
+	results_max_dz_error=[]
+	results_avg_dz_error=[]
 	for threshold in thresholds:
 		#########################fitting####################################
 		###fitting back projection curve
@@ -35,6 +38,7 @@ def fit_test(curve,curve_backproj,curve_R,thresholds):
 
 		####################################interpolate orientation##############################
 		curve_R_pred=[]	
+		dz_error=[]
 		curve_final_projection=np.zeros(np.shape(curve_cartesian_pred))
 		for i in range(len(my_pwlf.break_points)-1):
 
@@ -52,14 +56,36 @@ def fit_test(curve,curve_backproj,curve_R,thresholds):
 				continue
 
 			###quaternion spherical linear interpolation
-			q_start=Quaternion(matrix=curve_R[start])
-			q_end=Quaternion(matrix=curve_R[end])
+			# q_start=Quaternion(matrix=curve_R[start])
+			# q_end=Quaternion(matrix=curve_R[end])
+			# for j in range(start,end+1):
+			# 	###calculate orientation
+			# 	q_temp=Quaternion.slerp(q_start, q_end, float(j-start)/float(end-start)) 
+			# 	curve_R_pred.append(q_temp.rotation_matrix)
+			# 	###get line/surface intersection point
+			# 	intersection=LinePlaneCollision(planeNormal=curve_R[j][:,-1], planePoint=curve[j], rayDirection=curve_R_pred[-1][:,-1], rayPoint=curve_cartesian_pred[j])
+			# 	curve_final_projection[j]=intersection
+			# 	d_z=np.linalg.norm(intersection-curve_cartesian_pred[j])
+			# 	dz_error.append(d_z)	
+
+			###axis-angle interpolation
+			R_temp=np.dot(curve_R[start].T,curve_R[end])
+			k,theta=R2rot(R_temp)
 			for j in range(start,end+1):
 				###calculate orientation
-				q_temp=Quaternion.slerp(q_start, q_end, float(j-start)/float(end-start)) 
-				curve_R_pred.append(q_temp.rotation_matrix)
+				theta_temp=theta*float(j-start)/float(end-start)
+				R_interp=q2R(rot2q(k,theta_temp))
+				curve_R_pred.append(np.dot(curve_R[start],R_interp))
 				###get line/surface intersection point
-				curve_final_projection[j]=LinePlaneCollision(planeNormal=curve_R[j][:,-1], planePoint=curve[j], rayDirection=curve_R_pred[-1][:,-1], rayPoint=curve_cartesian_pred[j])
+				intersection=LinePlaneCollision(planeNormal=curve_R[j][:,-1], planePoint=curve[j], rayDirection=curve_R_pred[-1][:,-1], rayPoint=curve_cartesian_pred[j])
+				curve_final_projection[j]=intersection
+				d_z=np.linalg.norm(intersection-curve_cartesian_pred[j])
+				dz_error.append(d_z)
+				
+
+
+
+		dz_error=np.array(dz_error)
 		###calculating error
 		max_cartesian_error,max_cartesian_error_index,avg_cartesian_error,max_orientation_error=complete_points_check(curve_final_projection,curve,curve_R_pred,curve_R)
 		###attach to results
@@ -67,6 +93,8 @@ def fit_test(curve,curve_backproj,curve_R,thresholds):
 		results_max_cartesian_error_index.append(max_cartesian_error_index)
 		results_avg_cartesian_error.append(avg_cartesian_error)
 		results_max_orientation_error.append(max_orientation_error)
+		results_max_dz_error.append(dz_error.max()-d)
+		results_avg_dz_error.append(dz_error.mean()-d)
 
 	# plt.figure()
 	# ax = plt.axes(projection='3d')
@@ -75,7 +103,8 @@ def fit_test(curve,curve_backproj,curve_R,thresholds):
 	# ax.scatter3D(curve_cartesian_pred[:,0], curve_cartesian_pred[:,1], curve_cartesian_pred[:,2], c=curve_cartesian_pred[:,2], cmap='Blues')
 	# plt.show()
 
-	return np.array(results_num_breakpoints),np.array(results_max_cartesian_error),np.array(results_max_cartesian_error_index),np.array(results_avg_cartesian_error),np.array(results_max_orientation_error)
+	return np.array(results_num_breakpoints),np.array(results_max_cartesian_error),np.array(results_max_cartesian_error_index),np.array(results_avg_cartesian_error),np.array(results_max_orientation_error), np.array(results_max_dz_error),np.array(results_avg_dz_error)
+		
 		
 def main():
 	###All in base frame
@@ -105,13 +134,14 @@ def main():
 		curve_R.append(R_curve)
 
 	#########################fitting tests####################################
-	thresholds=[5.00E-04,1.00E-04,1.00E-05,7.81E-06,3.91E-06,3.20E-06,1.95E-06,1.00E-06,8.00E-07,5.00E-07,4.00E-07]
+	# thresholds=[5.00E-04,1.00E-04,1.00E-05,7.81E-06,3.91E-06,3.20E-06,1.95E-06,1.00E-06,8.00E-07,5.00E-07,4.00E-07]#from cad
+	thresholds=[0.1,0.01,0.001,1.00E-04,1.00E-05,1.00E-06,1.00E-07]#from interp
 	# thresholds=[5.00E-07]
-	results_num_breakpoints,results_max_cartesian_error,results_max_cartesian_error_index,results_avg_cartesian_error,results_max_orientation_error=\
-		fit_test(curve,curve_backproj,curve_R,thresholds)
+	results_num_breakpoints,results_max_cartesian_error,results_max_cartesian_error_index,results_avg_cartesian_error,results_max_orientation_error, results_max_dz_error, results_avg_dz_error=\
+		fit_test(curve,curve_backproj,curve_R,thresholds,d=d)
 
 	###output to csv
-	df=DataFrame({'num_breakpoints':results_num_breakpoints,'max_cartesian_error':results_max_cartesian_error,'max_cartesian_error_index':results_max_cartesian_error_index,'avg_cartesian_error':results_avg_cartesian_error,'max_orientation_error':results_max_orientation_error})
+	df=DataFrame({'num_breakpoints':results_num_breakpoints,'max_cartesian_error (mm)':results_max_cartesian_error,'max_cartesian_error_index (mm)':results_max_cartesian_error_index,'avg_cartesian_error (mm)':results_avg_cartesian_error,'max_orientation_error  (rad)':results_max_orientation_error,'max_z_error (mm)':results_max_dz_error,'average_z_error (mm)':results_avg_dz_error})
 	df.to_csv('results/from_interp/cartesian_fit_results.csv',header=True,index=False)
 
 

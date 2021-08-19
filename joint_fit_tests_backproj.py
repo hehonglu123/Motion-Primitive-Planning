@@ -10,12 +10,14 @@ from robot_def import *
 from projection import LinePlaneCollision
 import traceback
 
-def fit_test(curve,curve_js,thresholds):
+def fit_test(curve,curve_js,thresholds,d=50):
 	results_max_cartesian_error_index=[]
 	results_max_cartesian_error=[]
 	results_max_orientation_error=[]
 	results_avg_cartesian_error=[]
 	results_num_breakpoints=[]
+	results_max_dz_error=[]
+	results_avg_dz_error=[]
 	for threshold in thresholds:
 		#########################fitting####################################
 		###fitting back projection curve in joint space
@@ -37,6 +39,7 @@ def fit_test(curve,curve_js,thresholds):
 		curve_R=[]
 		curve_final_projection=[]
 		curve_js_cartesian=[]
+		dz_error=[]
 		for i in range(len(curve_js_pred)):
 			fwdkin_result=fwd(curve_js_pred[i])
 			curve_cartesian_pred.append(1000.*fwdkin_result.p)
@@ -48,11 +51,15 @@ def fit_test(curve,curve_js,thresholds):
 
 
 				###project forward onto curve surface, all in reference frame
-				curve_final_projection.append(LinePlaneCollision(planeNormal=curve_R[i][:,-1], planePoint=curve[i], rayDirection=curve_R_pred[i][:,-1], rayPoint=curve_cartesian_pred[i]))
+				intersection=LinePlaneCollision(planeNormal=curve_R[i][:,-1], planePoint=curve[i], rayDirection=curve_R_pred[i][:,-1], rayPoint=curve_cartesian_pred[i])
+				d_z=np.linalg.norm(intersection-curve_cartesian_pred[i])
+				dz_error.append(d_z)
+				curve_final_projection.append(intersection)
 			except:
 				# traceback.print_exc()
 				pass
 
+		dz_error=np.array(dz_error)
 		###calculating error
 		max_cartesian_error,max_cartesian_error_index,avg_cartesian_error,max_orientation_error=complete_points_check(curve_final_projection,curve,curve_R_pred,curve_R)
 		###attach to results
@@ -60,6 +67,8 @@ def fit_test(curve,curve_js,thresholds):
 		results_max_cartesian_error_index.append(max_cartesian_error_index)
 		results_avg_cartesian_error.append(avg_cartesian_error)
 		results_max_orientation_error.append(max_orientation_error)
+		results_max_dz_error.append(dz_error.max()-d)
+		results_avg_dz_error.append(dz_error.mean()-d)
 
 	curve_final_projection=np.array(curve_final_projection)
 	curve_cartesian_pred=np.array(curve_cartesian_pred)
@@ -80,7 +89,7 @@ def fit_test(curve,curve_js,thresholds):
 	# ax.scatter3D(curve_cartesian_pred[:,0], curve_cartesian_pred[:,1], curve_cartesian_pred[:,2], c=curve_cartesian_pred[:,2], cmap='Blues')
 	# plt.show()
 
-	return np.array(results_num_breakpoints),np.array(results_max_cartesian_error),np.array(results_max_cartesian_error_index),np.array(results_avg_cartesian_error),np.array(results_max_orientation_error)
+	return np.array(results_num_breakpoints),np.array(results_max_cartesian_error),np.array(results_max_cartesian_error_index),np.array(results_avg_cartesian_error),np.array(results_max_orientation_error), np.array(results_max_dz_error),np.array(results_avg_dz_error)
 		
 
 def main():
@@ -110,13 +119,13 @@ def main():
 
 	#########################fitting tests####################################
 	# thresholds=[0.000390625,9.77E-05,5.00E-05,4.00E-05,3.00E-05]	#for cad points
-	thresholds=[5.00E-01,1.00E-01,5.00E-02,5.00E-03,5.00E-04,5.00E-05,5.00E-06,5.00E-07]	#for interp points
-	# thresholds=[0.000390625]
-	results_num_breakpoints,results_max_cartesian_error,results_max_cartesian_error_index,results_avg_cartesian_error,results_max_orientation_error=\
-		fit_test(curve,curve_js,thresholds)
+	thresholds=[1,0.5,1.00E-01,1.00E-02,1.00E-03,1.00E-04]#,1.00E-07]	#for interp points
+
+	results_num_breakpoints,results_max_cartesian_error,results_max_cartesian_error_index,results_avg_cartesian_error,results_max_orientation_error, results_max_dz_error, results_avg_dz_error=\
+		fit_test(curve,curve_js,thresholds,d=50)
 
 	###output to csv
-	df=DataFrame({'num_breakpoints':results_num_breakpoints,'max_cartesian_error':results_max_cartesian_error,'max_cartesian_error_index':results_max_cartesian_error_index,'avg_cartesian_error':results_avg_cartesian_error,'max_orientation_error':results_max_orientation_error})
+	df=DataFrame({'num_breakpoints':results_num_breakpoints,'max_cartesian_error (mm)':results_max_cartesian_error,'max_cartesian_error_index (mm)':results_max_cartesian_error_index,'avg_cartesian_error (mm)':results_avg_cartesian_error,'max_orientation_error  (rad)':results_max_orientation_error,'max_z_error (mm)':results_max_dz_error,'average_z_error (mm)':results_avg_dz_error})
 	df.to_csv('results/from_interp/joint_fit_results.csv',header=True,index=False)
 
 	plt.figure()
