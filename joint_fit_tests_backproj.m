@@ -26,7 +26,6 @@ results_avg_cartesian_error=double(fit_results{4})';
 results_max_orientation_error=double(fit_results{5})';
 
 
-% [results_num_breakpoints,results_max_cartesian_error,results_max_cartesian_error_index,results_avg_cartesian_error,results_max_orientation_error]=[double(fit_results{1}),double(fit_results{2}),double(fit_results{3}),double(fit_results{4}),double(fit_results{5})]
-csv_output=[results_num_breakpoints,results_max_cartesian_error,results_max_cartesian_error_index,results_avg_cartesian_error,results_max_orientation_error];
-% csv_output.Properties.VariableNames(1:6) = {'num_breakpoints','max_cartesian_error','max_cartesian_error_index','avg_cartesian_error','max_orientation_error'}
-writetable(csv_output,'results/from_interp/cartesian_fit_results.csv')
+%%%unable to write header yet
+% csv_output=[results_num_breakpoints,results_max_cartesian_error,results_max_cartesian_error_index,results_avg_cartesian_error,results_max_orientation_error];
+% writematrix(csv_output,'results/from_interp/cartesian_fit_results.csv')
