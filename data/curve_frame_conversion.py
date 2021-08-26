@@ -6,7 +6,7 @@ from general_robotics_toolbox import *
 
 
 col_names=['X', 'Y', 'Z','direction_x','direction_y','direction_z'] 
-data = read_csv("from_interp/Curve_interp.csv", names=col_names)
+data = read_csv("original/Curve.csv", names=col_names)
 curve_x=data['X'].tolist()
 curve_y=data['Y'].tolist()
 curve_z=data['Z'].tolist()
@@ -35,4 +35,4 @@ curve_direction=np.dot(R,curve_direction).T
 
 
 df=DataFrame({'x':curve_base[:,0],'y':curve_base[:,1], 'z':curve_base[:,2],'x_direction':curve_direction[:,0],'y_direction':curve_direction[:,1],'z_direction':curve_direction[:,2]})
-df.to_csv('from_interp/Curve_in_base_frame.csv',header=False,index=False)
+df.to_csv('original/Curve_in_base_frame.csv',header=False,index=False)
