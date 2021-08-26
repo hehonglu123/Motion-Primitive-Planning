@@ -1,6 +1,6 @@
 from general_robotics_toolbox import *
 import numpy as np
-
+from sympy import *
 
 def Rx(theta):
 	return np.array([[1,0,0],[0,np.cos(theta),-np.sin(theta)],[0,np.sin(theta),np.cos(theta)]])
@@ -46,3 +46,8 @@ def inv(p,R=np.eye(3)):
 	pose=Transform(R,p)
 	q_all=robot6_sphericalwrist_invkin(ABB_def,pose)
 	return q_all
+
+# q1,q2,q3,q4,q5,q6=symbols('q1 q2 q3 q4 q5 q6')
+# q=[q1,q2,q3,q4,q5,q6]
+# print(q)
+# print(jacobian(q))
