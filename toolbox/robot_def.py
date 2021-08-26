@@ -1,6 +1,5 @@
 from general_robotics_toolbox import *
 import numpy as np
-from sympy import *
 
 def Rx(theta):
 	return np.array([[1,0,0],[0,np.cos(theta),-np.sin(theta)],[0,np.sin(theta),np.cos(theta)]])
@@ -34,7 +33,7 @@ joint_type=np.zeros(6)
 upper_limit=np.radians([220.,160.,70.,300.,120.,360.])
 lowerer_limit=np.radians([-220.,-40.,-180.,-300.,-120.,-360.])
 joint_vel_limit=np.radians([110,90,90,150,120,235])
-ABB_def=Robot(H,P,joint_type,joint_lower_limit = lowerer_limit, joint_upper_limit = upper_limit, joint_vel_limit=joint_vel_limit, R_tool=R_tool,p_tool=p_tool)
+ABB_def=Robot(H,P,joint_type,joint_lower_limit = lowerer_limit, joint_upper_limit = upper_limit, joint_vel_limit=joint_vel_limit, R_tool=None,p_tool=None)
 
 
 def jacobian(q):
@@ -47,7 +46,5 @@ def inv(p,R=np.eye(3)):
 	q_all=robot6_sphericalwrist_invkin(ABB_def,pose)
 	return q_all
 
-# q1,q2,q3,q4,q5,q6=symbols('q1 q2 q3 q4 q5 q6')
-# q=[q1,q2,q3,q4,q5,q6]
-# print(q)
-# print(jacobian(q))
+
+print(jacobian(np.zeros(6)))
