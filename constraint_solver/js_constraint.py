@@ -28,6 +28,7 @@ def main():
 	dlam_max=[]
 	ddlam_max=[]
 	dlam_act=[0]
+	limiting_joint=[]
 	qd_prev=np.zeros(6)
 
 	for i in range(len(breakpoints)-1):
@@ -35,6 +36,7 @@ def main():
 		dq=np.abs(curve_js[breakpoints[i+1]]-curve_js[breakpoints[i]])
 
 		t=np.max(dq/joint_vel_limit)
+		limiting_joint.append(np.argmax(dq/joint_vel_limit))
 		qd_max=dq/t
 		q_prime=dq/1	
 		dlam_max+=[qd_max[0]/q_prime[0]]*(breakpoints[i+1]-breakpoints[i])
@@ -53,10 +55,11 @@ def main():
 			else:
 				dlam_act.append(dlam_max[-1])
 
+	print(limiting_joint)
 	dlam_act.pop(0)
 	lam=np.arange(0,len(curve_js)-1)
 	plt.plot(lam,dlam_max,label="lambda_dot_max")
-	plt.plot(lam,dlam_act,label="lambda_dot_act")
+	# plt.plot(lam,dlam_act,label="lambda_dot_act")
 	plt.legend()
 	plt.xlabel("lambda")
 	plt.ylabel("lambda_dot")
