@@ -26,7 +26,7 @@ def fit_test(curve,curve_R,thresholds):
 		###slope calc breakpoints
 		my_pwlf.break_slope_simplified(threshold)
 		results_num_breakpoints.append(len(my_pwlf.break_points))
-
+		print(my_pwlf.break_points,len(my_pwlf.break_points))
 		my_pwlf.fit_with_breaks(my_pwlf.x_data[my_pwlf.break_points])
 
 		###predict for the determined points
@@ -71,7 +71,7 @@ def fit_test(curve,curve_R,thresholds):
 def main():
 	###All in base frame
 	col_names=['X', 'Y', 'Z','direction_x', 'direction_y', 'direction_z'] 
-	data = read_csv("data/Curve_in_base_frame.csv", names=col_names)
+	data = read_csv("data/from_cad/Curve_in_base_frame.csv", names=col_names)
 	curve_x=data['X'].tolist()
 	curve_y=data['Y'].tolist()
 	curve_z=data['Z'].tolist()
@@ -93,14 +93,14 @@ def main():
 		curve_R.append(R_curve)
 
 	#########################fitting tests####################################
-	thresholds=[5.00E-04,1.00E-04,1.00E-05,7.81E-06,3.91E-06,3.20E-06,1.95E-06,1.00E-06,8.00E-07,5.00E-07,4.00E-07]
-	# thresholds=[5.00E-07]
+	# thresholds=[5.00E-04,1.00E-04,1.00E-05,7.81E-06,3.91E-06,3.20E-06,1.95E-06,1.00E-06,8.00E-07,5.00E-07,4.00E-07]
+	thresholds=[5.00E-07]
 	results_num_breakpoints,results_max_cartesian_error,results_max_cartesian_error_index,results_avg_cartesian_error,results_max_orientation_error=\
 		fit_test(curve,curve_R,thresholds)
 
 	###output to csv
-	df=DataFrame({'num_breakpoints':results_num_breakpoints,'max_cartesian_error':results_max_cartesian_error,'max_cartesian_error_index':results_max_cartesian_error_index,'avg_cartesian_error':results_avg_cartesian_error,'max_orientation_error':results_max_orientation_error})
-	df.to_csv('results/cartesian_fit_results.csv',header=True,index=False)
+	# df=DataFrame({'num_breakpoints':results_num_breakpoints,'max_cartesian_error':results_max_cartesian_error,'max_cartesian_error_index':results_max_cartesian_error_index,'avg_cartesian_error':results_avg_cartesian_error,'max_orientation_error':results_max_orientation_error})
+	# df.to_csv('results/cartesian_fit_results.csv',header=True,index=False)
 
 
 	plt.figure()
