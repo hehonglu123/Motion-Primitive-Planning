@@ -11,7 +11,7 @@ from robot_def import *
 def main():
 	###read actual curve
 	col_names=['q1', 'q2', 'q3','q4', 'q5', 'q6'] 
-	data = read_csv("../data/from_cad/Curve_js.csv", names=col_names)
+	data = read_csv("../data/execution/Curve_moveJ.csv", names=col_names)
 	curve_q1=data['q1'].tolist()
 	curve_q2=data['q2'].tolist()
 	curve_q3=data['q3'].tolist()
@@ -23,7 +23,8 @@ def main():
 	joint_vel_limit=np.radians([110,90,90,150,120,235])
 	joint_acc_limit=10*np.ones(6)
 
-	breakpoints=[0, 428, 854, 1279, 1714, 2166, 2643, 3154, 3714, 4344, 5096, 5986, 7405, 8368, 9129, 9781, 10362, 10892, 11385, 11852, 12303, 12743, 13182, 13583, 13993, 14418, 14863, 15335, 15838, 16379, 16947, 17580]
+	breakpoints=[0, 422, 1180, 1927, 2650, 3349, 4022, 4671, 5308, 5961, 6696, 7575, 9105, 10703, 11966, 13170, 14363, 15571, 16808, 18087, 19412, 20780, 22192, 23551, 24883, 26244, 27647, 29106, 30638, 32249, 33898, 34946]
+
 
 	dlam_max=[]
 	ddlam_max=[]
@@ -38,7 +39,7 @@ def main():
 		t=np.max(dq/joint_vel_limit)
 		limiting_joint.append(np.argmax(dq/joint_vel_limit))
 		qd_max=dq/t
-		q_prime=dq/1	
+		q_prime=dq/((breakpoints[i+1]-breakpoints[i])/len(curve_js))
 		dlam_max+=[qd_max[0]/q_prime[0]]*(breakpoints[i+1]-breakpoints[i])
 		###acc constraint
 		
@@ -57,7 +58,7 @@ def main():
 
 	print(limiting_joint)
 	dlam_act.pop(0)
-	lam=np.arange(0,len(curve_js)-1)
+	lam=np.arange(0,len(curve_js)-1)/(len(curve_js))
 	plt.plot(lam,dlam_max,label="lambda_dot_max")
 	# plt.plot(lam,dlam_act,label="lambda_dot_act")
 	plt.legend()

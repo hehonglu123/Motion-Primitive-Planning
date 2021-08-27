@@ -4,6 +4,8 @@ from pandas import *
 import sys
 import numpy as np
 from cartesian2joint import direction2R
+sys.path.append('../toolbox')
+from robot_def import *
 ##################################generate equaly divided cartesian path for moveJ and moveL
 def curve_moveJ(curve_js,d=0.0001):
 	curve_js_out=[curve_js[0]]
@@ -16,7 +18,8 @@ def curve_moveJ(curve_js,d=0.0001):
 			curve_js_out.append(curve_js_out[-1]+d*move_direction)
 			curve_cartesian.append(fwd(curve_js_out[-1]).p)
 
-		breakpoint_index.append(len(curve_js_out))
+		breakpoint_index.append(len(curve_js_out)-1)
+	print(breakpoint_index)
 
 	return np.array(curve_js_out)
 
@@ -25,6 +28,7 @@ def curve_moveJ(curve_js,d=0.0001):
 def curve_moveL(curve,curve_direction,d=0.1):
 	curve_out=[curve[0]]
 	curve_direction_out=[curve_direction[0]]
+	breakpoint_index=[0]
 
 	for i in range(len(curve)-1):
 		move_direction=(curve[i+1]-curve_out[-1])/np.linalg.norm(curve[i+1]-curve_out[-1])
@@ -38,9 +42,12 @@ def curve_moveL(curve,curve_direction,d=0.1):
 			curve_out.append(curve_out[-1]+d*move_direction)
 		###interpolate orientation second
 		for j in range(start_idx,len(curve_out)):
-			angle=rotate_angle*j/(len(curve_out)-start_idx)
+			angle=rotate_angle*(j-start_idx)/(len(curve_out)-start_idx)
 			R=rot(rotate_axis,angle)
 			curve_direction_out.append(np.dot(R,curve_direction[i]))
+		breakpoint_index.append(len(curve_out)-1)
+
+	print(breakpoint_index)
 
 	return np.array(curve_out),np.array(curve_direction_out)
 
@@ -69,11 +76,14 @@ def main():
 
 
 
-	# curve_out,curve_direction_out=curve_moveL(curve,curve_direction)
-	curve_js_out=curve_moveJ(curve_js)
+	curve_out,curve_direction_out=curve_moveL(curve,curve_direction)
+
+	# curve_js_out=curve_moveJ(curve_js)
 	###output to csv
-	df=DataFrame({'q0':curve_js_out[:,0],'q1':curve_js_out[:,1],'q2':curve_js_out[:,2],'q3':curve_js_out[:,3],'q4':curve_js_out[:,4],'q5':curve_js_out[:,5]})
-	df.to_csv('execution/Curve_moveJ.csv',header=False,index=False)
+	# df=DataFrame({'q0':curve_js_out[:,0],'q1':curve_js_out[:,1],'q2':curve_js_out[:,2],'q3':curve_js_out[:,3],'q4':curve_js_out[:,4],'q5':curve_js_out[:,5]})
+	# df.to_csv('execution/Curve_moveJ.csv',header=False,index=False)
+	df=DataFrame({'x':curve_out[:,0],'y':curve_out[:,1], 'z':curve_out[:,2],'x_direction':curve_direction_out[:,0],'y_direction':curve_direction_out[:,1],'z_direction':curve_direction_out[:,2]})
+	df.to_csv('execution/Curve_moveL.csv',header=False,index=False)
 
 if __name__ == "__main__":
 	main()
