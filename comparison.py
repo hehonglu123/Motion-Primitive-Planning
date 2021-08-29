@@ -48,7 +48,7 @@ def main():
 	curve_q6=data['q6'].tolist()
 	curve_js=np.vstack((curve_q1, curve_q2, curve_q3,curve_q4,curve_q5,curve_q6)).T
 
-	num_points=100		### try fitting every 100 points
+	num_points=500		### try fitting every 100 points
 
 
 	results_max_cartesian_error_index_joint=[]
@@ -64,8 +64,13 @@ def main():
 	results_max_dz_error_cartesian=[]
 	results_avg_dz_error_cartesian=[]
 
-	for i in range(0,len(curve),num_points):
-		end=min(i+num_points,len(curve))
+	breakpoints=[0, 427, 853, 1278, 1714, 2166, 2643, 3154, 3713, 4344, 5095, 5985, 7404, 8367, 9128, 9780, 10360, 10890, 11383, 11850, 12300, 12740, 13180, 13581, 13990, 14415, 14860, 15332, 15835, 16376, 16944, 17579]
+
+	# for i in range(0,len(curve),num_points):
+	# end=min(i+num_points,len(curve))
+	for r in range(len(breakpoints)-1):
+		i=breakpoints[r]
+		end=breakpoints[r+1]
 		act_num_points=len(curve[i:end])
 		x_data=np.arange(i,end)
 		###########################cartesian fit########################

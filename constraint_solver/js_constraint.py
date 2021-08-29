@@ -29,37 +29,29 @@ def main():
 	dlam_max=[]
 	ddlam_max=[]
 	dlam_act=[0]
-	limiting_joint=[]
 	qd_prev=np.zeros(6)
 
-	for i in range(len(breakpoints)-1):
+	###find path length
+	lam=[0]
+	for i in range(len(curve_js)-1):
+		ps=fwd(curve_js[i]).p
+		pe=fwd(curve_js[i+1]).p
+		lam.append(lam[-1]+np.linalg.norm(pe-ps))
 
-		dq=np.abs(curve_js[breakpoints[i+1]]-curve_js[breakpoints[i]])
+	###normalize lam
+	lam=np.array(lam)/lam[-1]
 
+
+	for i in range(len(curve_js)-1):
+		dq=np.abs(curve_js[i+1]-curve_js[i])
+		q_prime=dq/(lam[i+1]-lam[i])
 		t=np.max(dq/joint_vel_limit)
-		limiting_joint.append(np.argmax(dq/joint_vel_limit))
-		qd_max=dq/t
-		q_prime=dq/((breakpoints[i+1]-breakpoints[i])/len(curve_js))
-		dlam_max+=[qd_max[0]/q_prime[0]]*(breakpoints[i+1]-breakpoints[i])
-		###acc constraint
-		
-		t2qd_max=np.max(np.abs(qd_max-qd_prev)/joint_acc_limit)
-		qdd_max=qd_max/t2qd_max
+		qd_max=dq/t 		###approximated max qdot
+		dlam_max.append(qd_max[0]/q_prime[0])
 
-		qd_prev=qd_max
 
-		ddlam_max.append(qdd_max[0]/q_prime[0])
-
-		for r in range(breakpoints[i],breakpoints[i+1]):
-			if dlam_act[-1]!=dlam_max[-1]:
-				dlam_act.append(dlam_act[-1]+np.clip(dlam_max[-1]-dlam_act[-1],-np.abs(ddlam_max[-1]/(breakpoints[i+1]-breakpoints[i])),np.abs(ddlam_max[-1]/(breakpoints[i+1]-breakpoints[i]))))
-			else:
-				dlam_act.append(dlam_max[-1])
-
-	print(limiting_joint)
 	dlam_act.pop(0)
-	lam=np.arange(0,len(curve_js)-1)/(len(curve_js))
-	plt.plot(lam,dlam_max,label="lambda_dot_max")
+	plt.plot(lam[1:],dlam_max,label="lambda_dot_max")
 	# plt.plot(lam,dlam_act,label="lambda_dot_act")
 	plt.legend()
 	plt.xlabel("lambda")
