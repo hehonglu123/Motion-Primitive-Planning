@@ -30,7 +30,9 @@ def main():
 	ddlam_max=[]
 	dlam_act=[0]
 	qd_prev=np.zeros(6)
-
+	qd_max_ther=[]
+	qd_max_act=np.zeros(len(curve_js))
+	qd_max_act[breakpoints]=np.zeros(6)
 	###find path length
 	lam=[0]
 	for i in range(len(curve_js)-1):
@@ -49,11 +51,21 @@ def main():
 		qd_max=dq/t 		###approximated max qdot
 		dlam_max.append(qd_max[0]/q_prime[0])
 
+		qd_max_ther.append(qd_max)
+	
+	# for i in breakpoints:
+	# 	j=0
+
+	# 	t2qd_max=np.max(qd_max_ther[i]/joint_acc_limit)
+		
+	# 	while qd_max_act[i+j]!=qd_max_ther[i+j]:
+		
+
 
 	dlam_act.pop(0)
 	plt.plot(lam[1:],dlam_max,label="lambda_dot_max")
 	# plt.plot(lam,dlam_act,label="lambda_dot_act")
-	plt.legend()
+	# plt.legend(·)
 	plt.xlabel("lambda")
 	plt.ylabel("lambda_dot")
 	plt.title("max lambda_dot vs lambda (path index)")
