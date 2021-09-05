@@ -30,7 +30,7 @@ def fit_test(curve,curve_backproj,curve_R,thresholds,d=50):
 		my_pwlf.break_slope_simplified(threshold)
 		results_num_breakpoints.append(len(my_pwlf.break_points))
 
-		my_pwlf.fit_with_breaks(my_pwlf.x_data[my_pwlf.break_points])
+		my_pwlf.fit_with_breaks(my_pwlf.lam_data[my_pwlf.break_points])
 
 		###predict for the determined points
 		xHat = np.arange(len(curve_backproj))

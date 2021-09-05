@@ -27,7 +27,7 @@ def fit_test(curve,curve_js,thresholds,d=50):
 		my_pwlf.break_slope_simplified(threshold)
 		results_num_breakpoints.append(len(my_pwlf.break_points))
 
-		my_pwlf.fit_with_breaks(my_pwlf.x_data[my_pwlf.break_points])
+		my_pwlf.fit_with_breaks(my_pwlf.lam_data[my_pwlf.break_points])
 
 		###predict at every data index
 		xHat = np.arange(0,len(curve_js))
@@ -42,12 +42,12 @@ def fit_test(curve,curve_js,thresholds,d=50):
 		dz_error=[]
 		for i in range(len(curve_js_pred)):
 			fwdkin_result=fwd(curve_js_pred[i])
-			curve_cartesian_pred.append(1000.*fwdkin_result.p)
+			curve_cartesian_pred.append(fwdkin_result.p)
 			curve_R_pred.append(fwdkin_result.R)
 			try:
 				fwdkin_result2=fwd(curve_js[i])
 				curve_R.append(fwdkin_result2.R)
-				curve_js_cartesian.append(1000.*fwdkin_result2.p)
+				curve_js_cartesian.append(fwdkin_result2.p)
 
 
 				###project forward onto curve surface, all in reference frame

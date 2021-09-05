@@ -25,10 +25,10 @@ p5=np.array([[0.2],[0],[0]])
 p6=np.array([[0.0],[0],[0.0]])
 #TCP Paint gun
 R_tool=Ry(np.radians(120))
-p_tool=np.array([0.45,0,-0.05])
+p_tool=np.array([0.45,0,-0.05])*1000.
 
 
-P=np.concatenate((p0,p1,p2,p3,p4,p5,p6),axis=1)
+P=np.concatenate((p0,p1,p2,p3,p4,p5,p6),axis=1)*1000.
 joint_type=np.zeros(6)
 upper_limit=np.radians([220.,160.,70.,300.,120.,360.])
 lowerer_limit=np.radians([-220.,-40.,-180.,-300.,-120.,-360.])

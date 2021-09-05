@@ -23,7 +23,7 @@ def main():
 	# break_points=[np.min(curve[:,0]),500,1000,np.max(curve[:,0])]
 
 	###slope calc breakpoints
-	# break_points=my_pwlf.x_data[my_pwlf.break_slope()]
+	# break_points=my_pwlf.lam_data[my_pwlf.break_slope()]
 	# my_pwlf.fit_with_breaks(break_points)
 
 	###fit by error thresholding

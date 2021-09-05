@@ -67,10 +67,6 @@ def main():
 
 	###insert initial orientation
 	curve_R.insert(0,curve_R[0])
-
-	###units
-	curve=curve/1000.
-
 	curve_js=np.zeros((len(curve),6))
 
 	# q_init=np.radians([35.414132, 12.483655, 27.914093, -89.255298, 51.405928, -128.026891])
@@ -104,7 +100,7 @@ def main():
 	# H=np.vstack((np.hstack((R.T,-np.dot(R.T,T))),np.array([0,0,0,1])))
 	# curve_temp=np.zeros(curve.shape)
 	# for i in range(len(curve_js)):
-	# 	curve_temp[i]=(np.dot(H,np.hstack((1000.*fwd(curve_js[i]).p,[1])).T)[:-1])
+	# 	curve_temp[i]=(np.dot(H,np.hstack((fwd(curve_js[i]).p,[1])).T)[:-1])
 	# print(np.max(np.linalg.norm(curve-curve_temp,axis=1)))
 
 

@@ -68,7 +68,7 @@ def curve_moveL(curve,curve_direction,d=0.1):
 	q_prev=np.array([0.627463700138299,0.17976842821744082,0.5196590573281621,1.6053098733278601,-0.8935105128511388,0.9174696574156079])
 	for i in range(len(curve_out)):
 		try:
-			q_all=np.array(inv(curve_out[i]/1000.,curve_R_out[i]))
+			q_all=np.array(inv(curve_out[i],curve_R_out[i]))
 		except:
 			traceback.print_exc()
 			pass

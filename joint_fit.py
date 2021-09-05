@@ -32,7 +32,7 @@ def main():
 	my_pwlf=MDFit(np.arange(len(curve_js)),curve_js)
 
 	###slope calc breakpoints
-	# break_points=my_pwlf.x_data[my_pwlf.break_slope()]
+	# break_points=my_pwlf.lam_data[my_pwlf.break_slope()]
 	# my_pwlf.fit_with_breaks(break_points)
 
 	###fit by error thresholding
@@ -52,7 +52,7 @@ def main():
 	for q in curve_js:
 		curve_R.append(fwd(q).R)
 	###units
-	curve_cartesian_pred=np.array(curve_cartesian_pred)*1000.
+	curve_cartesian_pred=np.array(curve_cartesian_pred)
 	###convert to reference frame
 	R=np.array([[0,0,1.],
 			[1.,0,0],
