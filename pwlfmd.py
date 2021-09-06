@@ -149,7 +149,7 @@ class MDFit(object):
 		return max_error
 
 	def calc_max_error2(self):
-		#calculate worst case error at each index in 3D space
+		#calculate worst case error at each index in 3D space from joint space
 		print('calculating error')
 
 		fit=self.predict()
@@ -158,8 +158,8 @@ class MDFit(object):
 			fit_cartesian=[]
 			curve_cartesian=[]
 			for i in range(len(fit)):
-				fit_cartesian.append(1000.*fwd(fit[i]).p)
-				curve_cartesian.append(1000.*fwd(self.data[i]).p)
+				fit_cartesian.append(fwd(fit[i]).p)
+				curve_cartesian.append(fwd(self.data[i]).p)
 			return calc_max_error(fit_cartesian,curve_cartesian)
 		else:
 			return calc_max_error(fit,self.data)
