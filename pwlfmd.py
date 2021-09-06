@@ -141,13 +141,6 @@ class MDFit(object):
 
 		fit=self.predict()
 
-		# if len(self.data[0])>3:
-		# 	#if in joint space
-		# 	errors=np.zeros((len(fit),3))
-		# 	for i in range(len(fit)):
-		# 		errors[i]=1000.*(fwd(fit[i]).p-fwd(self.data[i]).p)
-		# else:
-		#else in cartesian space
 		errors=fit-self.data
 		
 		max_error=np.max(np.linalg.norm(errors,axis=1))
