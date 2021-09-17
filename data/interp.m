@@ -1,4 +1,4 @@
-A = readmatrix('Curve.csv');
+A = readmatrix('original/Curve_backproj_in_base_frame.csv');
 curve=A(1:end,1:3);
 curve_normal=A(1:end,4:6);
 distance=[0];
@@ -17,7 +17,7 @@ curve_normal_interp=[];
 
 %%%interp curve normal
 for i=1:length(curve_interp)
-   %%%find 2 points on original curve
+   %%%find closest 2 points on original curve
    curve_temp=curve-(curve_interp(i,:)'*ones(1,length(curve)))';
    [out,idx]=sort(vecnorm(curve_temp')');
    axis=cross(curve_normal(idx(1),:),curve_normal(idx(2),:));
@@ -35,4 +35,4 @@ end
 % plot3(curve_interp(:,1),curve_interp(:,2),curve_interp(:,3))
 
 
-writematrix([curve_interp curve_normal_interp],'from_interp/Curve_interp.csv')
+writematrix([curve_interp curve_normal_interp],'from_interp/Curve_backproj_in_base_frame.csv')

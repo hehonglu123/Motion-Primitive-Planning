@@ -2,7 +2,8 @@ import numpy as np
 from pandas import *
 import sys, traceback
 from general_robotics_toolbox import *
-
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
 sys.path.append('../toolbox')
 from robot_def import *
 
@@ -37,7 +38,7 @@ def direction2R(v_norm,v_tang):
 def main():
 
 	col_names=['X', 'Y', 'Z','direction_x','direction_y','direction_z'] 
-	data = read_csv("from_interp/Curve_in_base_frame.csv", names=col_names)
+	data = read_csv("from_interp/Curve_backproj_in_base_frame.csv", names=col_names)
 	curve_x=data['X'].tolist()
 	curve_y=data['Y'].tolist()
 	curve_z=data['Z'].tolist()
@@ -49,9 +50,13 @@ def main():
 	curve_direction=np.vstack((curve_direction_x, curve_direction_y, curve_direction_z)).T
 
 	###back projection
-	d=50			###offset
-	curve=curve-d*curve_direction
+	d=0			###offset
+	# plt.figure()
+	# ax = plt.axes(projection='3d')
+	# ax.plot3D(curve[:,0], curve[:,1],curve[:,2], 'gray')
+	# plt.show()
 
+	curve=curve-d*curve_direction
 
 	curve_R=[]
 
@@ -59,10 +64,15 @@ def main():
 	for i in range(len(curve)):
 		try:
 			R_curve=direction2R(curve_direction[i],-curve[i+1]+curve[i])
-
+			if i>0:
+				k,angle_of_change=R2rot(np.dot(curve_R[-1],R_curve.T))
+				if angle_of_change>0.1:
+					curve_R.append(curve_R[-1])
+					continue
 		except:
 			traceback.print_exc()
 			pass
+		
 		curve_R.append(R_curve)
 
 	###insert initial orientation
