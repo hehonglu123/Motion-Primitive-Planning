@@ -3,7 +3,7 @@ import traceback, copy, sys
 from scipy.optimize import differential_evolution
 from scipy.optimize import fmin_l_bfgs_b
 from scipy import linalg
-sys.path.append('toolbox')
+sys.path.append('../toolbox')
 from error_check import *
 from robot_def import *
 
