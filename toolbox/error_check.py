@@ -33,14 +33,22 @@ def calc_avg_error(fit,curve):
 	return error/len(fit)
 
 def complete_points_check(fit,curve,R_fit,R_curve):
-	error=np.linalg.norm(fit-curve,axis=1)
-	max_cartesian_error=np.max(error)
-	avg_cartesian_error=np.average(error)
-	max_cartesian_error_index=np.argmax(error)
+	error=[]
+	
 	rotation_error=[]
-	for i in range(len(R_fit)):
+	for i in range(len(fit)):
+		error_temp=np.linalg.norm(curve-fit[i],axis=1)
+		idx=np.argmin(error_temp)
+		error.append(error_temp[idx])
+
 		R=np.dot(R_fit[i],R_curve[i].T)
 		k,theta=R2rot(R)
 		rotation_error.append(theta)
+
+	error=np.array(error)
+	max_cartesian_error=np.max(error)
+	avg_cartesian_error=np.average(error)
+	max_cartesian_error_index=np.argmax(error)
+
 	return max_cartesian_error,max_cartesian_error_index,avg_cartesian_error,np.max(np.array(rotation_error))
 

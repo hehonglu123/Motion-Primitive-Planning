@@ -29,7 +29,7 @@ def fit_under_error(curve,curve_js,max_error_threshold,d=50):
 	results_max_dz_error=[]
 	results_avg_dz_error=[]
 
-	while max_error>max_error_threshold:
+	while max_error>max_error_threshold and len(breakpoints)<100:
 
 		if (max_error!=999):
 
@@ -66,7 +66,7 @@ def fit_under_error(curve,curve_js,max_error_threshold,d=50):
 				traceback.print_exc()
 				pass
 
-		dz_error=np.array(dz_error)
+		dz_error=np.clip(np.array(dz_error)-d,0,999)		###dz can't be smaller than 0
 		###calculating error
 		max_error,max_cartesian_error_index,avg_cartesian_error,max_orientation_error=complete_points_check(curve_final_projection,curve,curve_R_pred,curve_R)
 		###attach to results
@@ -74,8 +74,8 @@ def fit_under_error(curve,curve_js,max_error_threshold,d=50):
 		results_max_cartesian_error_index.append(max_cartesian_error_index)
 		results_avg_cartesian_error.append(avg_cartesian_error)
 		results_max_orientation_error.append(max_orientation_error)
-		results_max_dz_error.append(dz_error.max()-d)
-		results_avg_dz_error.append(dz_error.mean()-d)
+		results_max_dz_error.append(dz_error.max())
+		results_avg_dz_error.append(dz_error.mean())
 
 		if max_error>900:
 			curve_cartesian_pred=np.array(curve_cartesian_pred)
@@ -133,7 +133,7 @@ def main():
 	#########################fitting tests####################################
 	
 	results_max_cartesian_error,results_max_cartesian_error_index,results_avg_cartesian_error,results_max_orientation_error, results_max_dz_error, results_avg_dz_error=\
-		fit_under_error(curve,curve_js,10,d=50)
+		fit_under_error(curve,curve_js,1,d=50)
 
 	###output to csv
 	df=DataFrame({'max_cartesian_error (mm)':results_max_cartesian_error,'max_cartesian_error_index (mm)':results_max_cartesian_error_index,'avg_cartesian_error (mm)':results_avg_cartesian_error,'max_orientation_error  (rad)':results_max_orientation_error,'max_z_error (mm)':results_max_dz_error,'average_z_error (mm)':results_avg_dz_error})

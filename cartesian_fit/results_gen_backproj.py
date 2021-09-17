@@ -86,14 +86,16 @@ def fit_under_error(curve,curve_backproj,curve_R,max_error_threshold,d=50):
 		next_breakpoint=np.argsort(errors)[-1]
 
 		##############################check error (against fitting forward projected curve)##############################
-		dz_error=np.array(dz_error)
+		dz_error=np.clip(np.array(dz_error)-d,0,999)		###dz can't be smaller than 0
 		max_error,max_cartesian_error_index,avg_cartesian_error,max_orientation_error=complete_points_check(curve_final_projection,curve,curve_R_pred,curve_R)
 		results_max_cartesian_error.append(max_error)
 		results_max_cartesian_error_index.append(max_cartesian_error_index)
 		results_avg_cartesian_error.append(avg_cartesian_error)
 		results_max_orientation_error.append(max_orientation_error)
-		results_max_dz_error.append(dz_error.max()-d)
-		results_avg_dz_error.append(dz_error.mean()-d)
+		results_max_dz_error.append(dz_error.max())
+		results_avg_dz_error.append(dz_error.mean())
+
+		print(max_error,len(breakpoints))
 
 	return np.array(results_max_cartesian_error),np.array(results_max_cartesian_error_index),np.array(results_avg_cartesian_error),np.array(results_max_orientation_error), np.array(results_max_dz_error),np.array(results_avg_dz_error)
 
@@ -112,7 +114,16 @@ def main():
 	
 	###back projection
 	d=50			###offset
-	curve_backproj=curve-d*curve_direction
+	col_names=['X', 'Y', 'Z','direction_x', 'direction_y', 'direction_z'] 
+	data = read_csv("../data/from_interp/Curve_backproj_in_base_frame.csv", names=col_names)
+	curve_x=data['X'].tolist()
+	curve_y=data['Y'].tolist()
+	curve_z=data['Z'].tolist()
+	curve_direction_x=data['direction_x'].tolist()
+	curve_direction_y=data['direction_y'].tolist()
+	curve_direction_z=data['direction_z'].tolist()
+	curve_backproj=np.vstack((curve_x, curve_y, curve_z)).T
+	curve_backproj_direction=np.vstack((curve_direction_x, curve_direction_y, curve_direction_z)).T
 
 	#get orientation
 	curve_R=[]
@@ -130,7 +141,7 @@ def main():
 
 	###output to csv
 	df=DataFrame({'max_cartesian_error (mm)':results_max_cartesian_error,'max_cartesian_error_index (mm)':results_max_cartesian_error_index,'avg_cartesian_error (mm)':results_avg_cartesian_error,'max_orientation_error  (rad)':results_max_orientation_error,'max_z_error (mm)':results_max_dz_error,'average_z_error (mm)':results_avg_dz_error})
-	df.to_csv('../results/from_interp/cartesian_fit_results.csv',header=True,index=False)
+	df.to_csv('../results/from_interp/cartesian_fit_results_backproj.csv',header=True,index=False)
 
 
 	plt.figure()

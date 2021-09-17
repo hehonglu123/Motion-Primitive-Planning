@@ -111,8 +111,7 @@ def main():
 	curve_direction=np.vstack((curve_direction_x, curve_direction_y, curve_direction_z)).T
 	
 	###back projection
-	d=0			###offset
-	curve_backproj=curve-d*curve_direction
+	curve_backproj=curve
 
 	#get orientation
 	curve_R=[]
@@ -126,7 +125,7 @@ def main():
 
 	#########################fitting tests####################################
 	results_max_cartesian_error,results_max_cartesian_error_index,results_avg_cartesian_error,results_max_orientation_error, results_max_dz_error, results_avg_dz_error=\
-		fit_under_error(curve,curve_backproj,curve_R,1,d=d)
+		fit_under_error(curve,curve_backproj,curve_R,1,d=0)
 
 	###output to csv
 	df=DataFrame({'max_cartesian_error (mm)':results_max_cartesian_error,'max_cartesian_error_index (mm)':results_max_cartesian_error_index,'avg_cartesian_error (mm)':results_avg_cartesian_error,'max_orientation_error  (rad)':results_max_orientation_error,'max_z_error (mm)':results_max_dz_error,'average_z_error (mm)':results_avg_dz_error})
