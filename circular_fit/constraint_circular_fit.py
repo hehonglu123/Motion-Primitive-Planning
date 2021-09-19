@@ -42,7 +42,8 @@ data = [(2.2176383052987667, 4.218574252410221),
 (4.981264502955681, 7.823851404553242)]
 
 data=np.array(data).T
-fun = lambda x: np.linalg.norm(x[0]*data[0] + x[1]*data[1] + data[0][0]**2 - x[0]*data[0][0] + data[1][0]**2 - x[1]*data[1][0] - np.square(data[0]) - np.square(data[1]))
+p=data[:,0]
+fun = lambda x: np.linalg.norm(x[0]*data[0] + x[1]*data[1] + p[0]**2 - x[0]*p[0] + p[1]**2 - x[1]*p[1] - np.square(data[0]) - np.square(data[1]))
 res = minimize(fun, (0,0), method='SLSQP')
 
 center=res.x/2.

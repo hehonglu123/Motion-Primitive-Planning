@@ -3,6 +3,7 @@ from matplotlib.pyplot import *
 from mpl_toolkits.mplot3d.axes3d import Axes3D
 import matplotlib.pyplot as plt
 from pandas import *
+from scipy.optimize import minimize
 
 def generate_circle_by_vectors(t, C, r, n, u):
     n = n/np.linalg.norm(n)
@@ -10,26 +11,28 @@ def generate_circle_by_vectors(t, C, r, n, u):
     P_circle = r*np.cos(t)[:,np.newaxis]*u + r*np.sin(t)[:,np.newaxis]*np.cross(n,u) + C
     return P_circle
 
-def fit_circle_2d(x, y, w=[]):
-    
-    A = np.array([x, y, np.ones(len(x))]).T
-    b = x**2 + y**2
-    
-    # Modify A,b for weighted least squares
-    if len(w) == len(x):
-        W = np.diag(w)
-        A = np.dot(W,A)
-        b = np.dot(W,b)
-    
-    # Solve by method of least squares
-    c = np.linalg.lstsq(A,b,rcond=None)[0]
-    
-    # Get circle parameters from solution c
-    xc = c[0]/2
-    yc = c[1]/2
-    r = np.sqrt(c[2] + xc**2 + yc**2)
-    return xc, yc, r
+def fit_circle_2d(x, y, p=[]):
+    if len(p)==0:
+        A = np.array([x, y, np.ones(len(x))]).T
+        b = x**2 + y**2
+        
+        # Solve by method of least squares
+        c = np.linalg.lstsq(A,b,rcond=None)[0]
+        
+        # Get circle parameters from solution c
+        xc = c[0]/2
+        yc = c[1]/2
+        r = np.sqrt(c[2] + xc**2 + yc**2)
+        return xc, yc, r
+    else:
+        fun = lambda t: np.linalg.norm(t[0]*x + t[1]*y + p[0]**2 - t[0]*p[0] + p[1]**2 - t[1]*p[1] - np.square(x) - np.square(y))
+        
+        res = minimize(fun, (0,0), method='SLSQP')
 
+        center=res.x/2.
+        r=np.sqrt((p[0]-center[0])**2+(p[1]-center[1])**2)
+        return center[0], center[1], r
+        
 
 #-------------------------------------------------------------------------------
 # RODRIGUES ROTATION
@@ -83,113 +86,98 @@ def set_axes_equal_3d(ax):
     ax.set_ylim3d([centers[1]-radius, centers[1]+radius])
     ax.set_zlim3d([centers[2]-radius, centers[2]+radius])
 
+def circle_fit(curve,p=[]):
+    ###curve: 3D point data
+    ###p:   constraint point of the arc
+    ########################################
+    ###return curve_fit: 3D point data
+
+    if len(p)!=0:
+        ###fit on a plane first
+        curve_mean = curve.mean(axis=0)
+        curve_centered = curve - curve_mean
+        p_centered = p - curve_mean
+
+        ###constraint fitting
+        fun = lambda t: np.linalg.norm(t[0]*curve_centered[:,0] + t[1]*curve_centered[:,1] + t[2]*curve_centered[:,2] - np.ones(len(curve)))
+        cons = ({'type': 'eq', 'fun': lambda t:  t[0]*p_centered[0] + t[1]*p_centered[1] + t[2]*p_centered[2] - 1 })
+
+        res = minimize(fun, (0,0,0), method='SLSQP', constraints=cons)
+
+        normal=res.x
+
+        ###make sure constraint point is on plane
+        # print(normal[0]*p_centered[0]+normal[1]*p_centered[1]+normal[2]*p_centered[2])
+        ###normalize plane normal
+        normal=normal/np.linalg.norm(normal)
+        
+        curve_xy = rodrigues_rot(np.vstack((p_centered,curve_centered)), normal, [0,0,1])
+
+        xc, yc, r = fit_circle_2d(curve_xy[1:,0], curve_xy[1:,1],curve_xy[0])
+
+    else:
+        ###fit on a plane first
+        curve_mean = curve.mean(axis=0)
+        curve_centered = curve - curve_mean
+        U,s,V = np.linalg.svd(curve_centered)
+        # Normal vector of fitting plane is given by 3rd column in V
+        # Note linalg.svd returns V^T, so we need to select 3rd row from V^T
+        normal = V[2,:]
+
+        curve_xy = rodrigues_rot(curve_centered, normal, [0,0,1])
+        xc, yc, r = fit_circle_2d(curve_xy[:,0], curve_xy[:,1])
+   
+    ###convert to 3D coordinates
+    C = rodrigues_rot(np.array([xc,yc,0]), [0,0,1], normal) + curve_mean
+    C = C.flatten()
+    ###get 3D circular arc
+    u = curve[0] - C
+    v = curve[-1] - C
+    theta = angle_between(u, v, normal)
+
+    l = np.linspace(0, theta, 1000)
+    curve_fitarc = generate_circle_by_vectors(l, C, r, normal, u)
+    l = np.linspace(0, 2*np.pi, 1000)
+    curve_fitcircle = generate_circle_by_vectors(l, C, r, normal, u)
+    return curve_fitarc, curve_fitcircle
 
 ###read in points
 col_names=['X', 'Y', 'Z','direction_x', 'direction_y', 'direction_z'] 
-data = read_csv("data/from_interp/Curve_in_base_frame.csv", names=col_names)
+data = read_csv("../data/from_interp/Curve_in_base_frame.csv", names=col_names)
 curve_x=data['X'].tolist()
 curve_y=data['Y'].tolist()
 curve_z=data['Z'].tolist()
 curve=np.vstack((curve_x, curve_y, curve_z)).T
 
-fig = figure(figsize=(15,11))
-alpha_pts = 0.5
-figshape = (2,3)
-ax = [None]*4
-ax[0] = subplot2grid(figshape, loc=(0,0), colspan=2)
-ax[1] = subplot2grid(figshape, loc=(1,0))
-ax[2] = subplot2grid(figshape, loc=(1,1))
-ax[3] = subplot2grid(figshape, loc=(1,2))
-i = 0
-ax[i].set_title('Fitting circle in 2D coords projected onto fitting plane')
-ax[i].set_xlabel('x'); ax[i].set_ylabel('y');
-ax[i].set_aspect('equal', 'datalim'); ax[i].margins(.1, .1); ax[i].grid()
-i = 1
-ax[i].plot(curve[:,0], curve[:,1], 'y-', lw=3, label='Generating circle')
-ax[i].scatter(curve[:,0], curve[:,1], alpha=alpha_pts, label='Cluster points P')
-ax[i].set_title('View X-Y')
-ax[i].set_xlabel('x'); ax[i].set_ylabel('y');
-ax[i].set_aspect('equal', 'datalim'); ax[i].margins(.1, .1); ax[i].grid()
-i = 2
-ax[i].plot(curve[:,0], curve[:,2], 'y-', lw=3, label='Generating circle')
-ax[i].scatter(curve[:,0], curve[:,2], alpha=alpha_pts, label='Cluster points P')
-ax[i].set_title('View X-Z')
-ax[i].set_xlabel('x'); ax[i].set_ylabel('z'); 
-ax[i].set_aspect('equal', 'datalim'); ax[i].margins(.1, .1); ax[i].grid()
-i = 3
-ax[i].plot(curve[:,1], curve[:,2], 'y-', lw=3, label='Generating circle')
-ax[i].scatter(curve[:,1], curve[:,2], alpha=alpha_pts, label='Cluster points P')
-ax[i].set_title('View Y-Z')
-ax[i].set_xlabel('y'); ax[i].set_ylabel('z'); 
-ax[i].set_aspect('equal', 'datalim'); ax[i].margins(.1, .1); ax[i].grid()
+break_point=int(len(curve)/2)
+curve1=curve[:break_point]
+curve2=curve[break_point:]
+curve_fitarc1,curve_fitcircle1=circle_fit(curve1,p=curve[break_point])
+curve_fitarc2,curve_fitcircle2=circle_fit(curve2,p=curve[break_point])
 
-#-------------------------------------------------------------------------------
-# (1) Fitting plane by SVD for the mean-centered data
-# Eq. of plane is <p,n> + d = 0, where curve is a point on plane and n is normal vector
-#-------------------------------------------------------------------------------
-curve_mean = curve.mean(axis=0)
-curve_centered = curve - curve_mean
-U,s,V = np.linalg.svd(curve_centered)
 
-# Normal vector of fitting plane is given by 3rd column in V
-# Note linalg.svd returns V^T, so we need to select 3rd row from V^T
-normal = V[2,:]
-d = -np.dot(curve_mean, normal)  # d = -<p,n>
 
-#-------------------------------------------------------------------------------
-# (2) Project points to coords X-Y in 2D plane
-#-------------------------------------------------------------------------------
-curve_xy = rodrigues_rot(curve_centered, normal, [0,0,1])
 
-ax[0].scatter(curve_xy[:,0], curve_xy[:,1], alpha=alpha_pts, label='Projected points')
+plt.figure()
+ax = plt.axes(projection='3d')
+# ax.set_xlim3d(1500, 3000)
+# ax.set_ylim3d(-500, 1000)
+# ax.set_zlim3d(0, 1500)
 
-#-------------------------------------------------------------------------------
-# (3) Fit circle in new 2D coords
-#-------------------------------------------------------------------------------
-xc, yc, r = fit_circle_2d(curve_xy[:,0], curve_xy[:,1])
 
-#--- Generate circle points in 2D
-t = np.linspace(0, 2*np.pi, 100)
-xx = xc + r*np.cos(t)
-yy = yc + r*np.sin(t)
+ax.plot3D(curve[:,0], curve[:,1],curve[:,2], 'gray')
 
-ax[0].plot(xx, yy, 'k--', lw=2, label='Fitting circle')
-ax[0].plot(xc, yc, 'k+', ms=10)
-ax[0].legend()
+# ax.scatter3D(curve[:,0], curve[:,1], curve[:,2], c=curve[:,2], cmap='Reds')
 
-#-------------------------------------------------------------------------------
-# (4) Transform circle center back to 3D coords
-#-------------------------------------------------------------------------------
-C = rodrigues_rot(np.array([xc,yc,0]), [0,0,1], normal) + curve_mean
-C = C.flatten()
+# ax.scatter3D(curve_fitcircle1[:,0], curve_fitcircle1[:,1], curve_fitcircle1[:,2], c=curve_fitcircle1[:,2], cmap='Greens')
+# ax.scatter3D(curve_fitcircle2[:,0], curve_fitcircle2[:,1], curve_fitcircle2[:,2], c=curve_fitcircle2[:,2], cmap='Blues')
 
-#--- Generate points for fitting circle
-t = np.linspace(0, 2*np.pi, 100)
-u = curve[0] - C
-curve_fitcircle = generate_circle_by_vectors(t, C, r, normal, u)
+ax.scatter3D(curve_fitarc1[:,0], curve_fitarc1[:,1], curve_fitarc1[:,2], c=curve_fitarc1[:,2], cmap='Greens')
+ax.scatter3D(curve_fitarc2[:,0], curve_fitarc2[:,1], curve_fitarc2[:,2], c=curve_fitarc2[:,2], cmap='Blues')
 
-ax[1].plot(curve_fitcircle[:,0], curve_fitcircle[:,1], 'k--', lw=2, label='Fitting circle')
-ax[2].plot(curve_fitcircle[:,0], curve_fitcircle[:,2], 'k--', lw=2, label='Fitting circle')
-ax[3].plot(curve_fitcircle[:,1], curve_fitcircle[:,2], 'k--', lw=2, label='Fitting circle')
-ax[3].legend()
+ax.scatter3D(curve[break_point][0], curve[break_point][1], curve[break_point][2], c=curve[break_point][2], cmap='Oranges_r')
 
-#--- Generate points for fitting arc
-u = curve[0] - C
-v = curve[-1] - C
-theta = angle_between(u, v, normal)
 
-t = np.linspace(0, theta, 100)
-curve_fitarc = generate_circle_by_vectors(t, C, r, normal, u)
-
-ax[1].plot(curve_fitarc[:,0], curve_fitarc[:,1], 'k-', lw=3, label='Fitting arc')
-ax[2].plot(curve_fitarc[:,0], curve_fitarc[:,2], 'k-', lw=3, label='Fitting arc')
-ax[3].plot(curve_fitarc[:,1], curve_fitarc[:,2], 'k-', lw=3, label='Fitting arc')
-ax[1].plot(C[0], C[1], 'k+', ms=10)
-ax[2].plot(C[0], C[2], 'k+', ms=10)
-ax[3].plot(C[1], C[2], 'k+', ms=10)
-ax[3].legend()
 
 plt.show()
-print('Fitting plane: n = %s' % np.array_str(normal, precision=4))
-print('Fitting circle: center = %s, r = %.4g' % (np.array_str(C, precision=4), r))
-print('Fitting arc: u = %s, θ = %.4g' % (np.array_str(u, precision=4), theta*180/np.pi))
+
