@@ -30,7 +30,7 @@ def fit_circle_2d(x, y, p=[]):
         res = minimize(fun, (0,0), method='SLSQP')
 
         center=res.x/2.
-        r=np.sqrt((p[0]-center[0])**2+(p[1]-center[1])**2)
+        r=np.linalg.norm(p[:-1]-center)
         return center[0], center[1], r
         
 
@@ -99,19 +99,25 @@ def circle_fit(curve,p=[]):
         p_centered = p - curve_mean
 
         ###constraint fitting
-        fun = lambda t: np.linalg.norm(t[0]*curve_centered[:,0] + t[1]*curve_centered[:,1] + t[2]*curve_centered[:,2] - np.ones(len(curve)))
-        cons = ({'type': 'eq', 'fun': lambda t:  t[0]*p_centered[0] + t[1]*p_centered[1] + t[2]*p_centered[2] - 1 })
+        fun = lambda t: np.linalg.norm(np.dot(curve_centered,t) - np.ones(len(curve)))
+        cons = ({'type': 'eq', 'fun': lambda t:  np.dot(p_centered,t) - 1 })
 
         res = minimize(fun, (0,0,0), method='SLSQP', constraints=cons)
 
         normal=res.x
+        
 
         ###make sure constraint point is on plane
-        # print(normal[0]*p_centered[0]+normal[1]*p_centered[1]+normal[2]*p_centered[2])
+        # print(np.dot(normal,p_centered))
         ###normalize plane normal
         normal=normal/np.linalg.norm(normal)
-        
+
+        ###project points onto regression plane
+        #https://stackoverflow.com/questions/9605556/how-to-project-a-point-onto-a-plane-in-3d
+        # curve_xy = curve_centered - np.dot(curve_centered-p_centered,normal)*normal
+
         curve_xy = rodrigues_rot(np.vstack((p_centered,curve_centered)), normal, [0,0,1])
+
 
         xc, yc, r = fit_circle_2d(curve_xy[1:,0], curve_xy[1:,1],curve_xy[0])
 
@@ -150,7 +156,7 @@ curve_z=data['Z'].tolist()
 curve=np.vstack((curve_x, curve_y, curve_z)).T
 
 break_point=int(len(curve)/2)
-curve1=curve[:break_point]
+curve1=np.flip(curve[:break_point],axis=0)
 curve2=curve[break_point:]
 curve_fitarc1,curve_fitcircle1=circle_fit(curve1,p=curve[break_point])
 curve_fitarc2,curve_fitcircle2=circle_fit(curve2,p=curve[break_point])
