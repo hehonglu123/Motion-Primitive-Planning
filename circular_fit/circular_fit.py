@@ -116,10 +116,12 @@ def circle_fit(curve,p=[]):
         #https://stackoverflow.com/questions/9605556/how-to-project-a-point-onto-a-plane-in-3d
         # curve_xy = curve_centered - np.dot(curve_centered-p_centered,normal)*normal
 
-        curve_xy = rodrigues_rot(np.vstack((p_centered,curve_centered)), normal, [0,0,1])
+        curve_xy = rodrigues_rot(curve_centered, normal, [0,0,1])
+        p_temp = rodrigues_rot(p_centered, normal, [0,0,1])
+        p_temp = p_temp.flatten()
 
 
-        xc, yc, r = fit_circle_2d(curve_xy[1:,0], curve_xy[1:,1],curve_xy[0])
+        xc, yc, r = fit_circle_2d(curve_xy[:,0], curve_xy[:,1],p_temp)
 
     else:
         ###fit on a plane first
@@ -156,8 +158,11 @@ curve_z=data['Z'].tolist()
 curve=np.vstack((curve_x, curve_y, curve_z)).T
 
 break_point=int(len(curve)/2)
-curve1=np.flip(curve[:break_point],axis=0)
+curve1=curve[:break_point]
 curve2=curve[break_point:]
+# curve1=np.flip(curve[:break_point],axis=0)
+curve2=np.flip(curve[break_point:],axis=0)
+
 curve_fitarc1,curve_fitcircle1=circle_fit(curve1,p=curve[break_point])
 curve_fitarc2,curve_fitcircle2=circle_fit(curve2,p=curve[break_point])
 
