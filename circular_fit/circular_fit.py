@@ -139,8 +139,13 @@ def circle_fit(curve,p=[]):
     C = rodrigues_rot(np.array([xc,yc,0]), [0,0,1], normal) + curve_mean
     C = C.flatten()
     ###get 3D circular arc
-    u = curve[0] - C
-    v = curve[-1] - C
+    ###always start from constraint p
+    u=p-C
+    if np.linalg.norm(p-curve[0])<1:
+        v=curve[-1] - C
+    else:
+        v=curve[0] - C
+
     theta = angle_between(u, v, normal)
 
     l = np.linspace(0, theta, 1000)
@@ -161,7 +166,7 @@ break_point=int(len(curve)/2)
 curve1=curve[:break_point]
 curve2=curve[break_point:]
 # curve1=np.flip(curve[:break_point],axis=0)
-curve2=np.flip(curve[break_point:],axis=0)
+# curve2=np.flip(curve[break_point:],axis=0)
 
 curve_fitarc1,curve_fitcircle1=circle_fit(curve1,p=curve[break_point])
 curve_fitarc2,curve_fitcircle2=circle_fit(curve2,p=curve[break_point])
@@ -191,4 +196,3 @@ ax.scatter3D(curve[break_point][0], curve[break_point][1], curve[break_point][2]
 
 
 plt.show()
-

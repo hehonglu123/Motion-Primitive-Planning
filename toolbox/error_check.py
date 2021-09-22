@@ -52,3 +52,26 @@ def complete_points_check(fit,curve,R_fit,R_curve):
 
 	return max_cartesian_error,max_cartesian_error_index,avg_cartesian_error,np.max(np.array(rotation_error))
 
+def complete_points_check2(fit_backproj,curve_backproj,fit,curve):	###error metric on 9/17 by prof Julius
+	error_backproj=[]
+	
+	error=[]
+	for i in range(len(fit)):
+		error_temp=np.linalg.norm(curve-fit[i],axis=1)
+		idx=np.argmin(error_temp)
+		error.append(error_temp[idx])
+
+		error_temp=np.linalg.norm(curve_backproj-fit_backproj[i],axis=1)
+		idx=np.argmin(error_temp)
+		error_backproj.append(error_temp[idx])
+
+	error=np.array(error)
+	error_backproj=np.array(error_backproj)
+
+	max_cartesian_error=np.max(error)
+	avg_cartesian_error=np.average(error)
+	max_cartesian_error_backproj=np.max(error_backproj)
+	avg_cartesian_error_backproj=np.average(error_backproj)
+
+	return max_cartesian_error,avg_cartesian_error,max_cartesian_error_backproj,avg_cartesian_error_backproj
+
