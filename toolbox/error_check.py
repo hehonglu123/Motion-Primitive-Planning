@@ -67,11 +67,15 @@ def complete_points_check2(fit_backproj,curve_backproj,fit,curve):	###error metr
 
 	error=np.array(error)
 	error_backproj=np.array(error_backproj)
+	error_total=error+error_backproj
 
 	max_cartesian_error=np.max(error)
 	avg_cartesian_error=np.average(error)
 	max_cartesian_error_backproj=np.max(error_backproj)
 	avg_cartesian_error_backproj=np.average(error_backproj)
+	max_total_error=np.max(error_total)
+	avg_total_error=np.average(error_total)
+	max_error_index=np.argmax(error_total)
 
-	return max_cartesian_error,avg_cartesian_error,max_cartesian_error_backproj,avg_cartesian_error_backproj
+	return max_cartesian_error,avg_cartesian_error,max_cartesian_error_backproj,avg_cartesian_error_backproj,max_total_error,avg_total_error,max_error_index
 

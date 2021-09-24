@@ -25,13 +25,25 @@ def fit_circle_2d(x, y, p=[]):
         r = np.sqrt(c[2] + xc**2 + yc**2)
         return xc, yc, r
     else:
-        fun = lambda t: np.linalg.norm(t[0]*x + t[1]*y + p[0]**2 - t[0]*p[0] + p[1]**2 - t[1]*p[1] - np.square(x) - np.square(y))
-        
-        res = minimize(fun, (0,0), method='SLSQP')
+        # fun = lambda t: np.linalg.norm(t[0]*x + t[1]*y + p[0]**2 - t[0]*p[0] + p[1]**2 - t[1]*p[1] - np.square(x) - np.square(y))
+        # res = minimize(fun, (0,0), method='SLSQP')
+        # center=res.x/2.
+        # r=np.linalg.norm(p[:-1]-center)
+        # return center[0], center[1], r
 
-        center=res.x/2.
-        r=np.linalg.norm(p[:-1]-center)
-        return center[0], center[1], r
+
+        ###rewrite lstsq to fit point p on circle
+        A = np.array([x-p[0], y-p[1]]).T
+        b = x**2 + y**2 - p[0]**2 - p[1]**2
+        
+        # Solve by method of least squares
+        c = np.linalg.lstsq(A,b,rcond=None)[0]
+        
+        # Get circle parameters from solution c
+        xc = c[0]/2
+        yc = c[1]/2
+        r=np.linalg.norm(p[:-1]-np.array([xc,yc]))
+        return xc, yc, r
         
 
 #-------------------------------------------------------------------------------
@@ -101,10 +113,15 @@ def circle_fit(curve,p=[]):
         ###constraint fitting
         fun = lambda t: np.linalg.norm(np.dot(curve_centered,t) - np.ones(len(curve)))
         cons = ({'type': 'eq', 'fun': lambda t:  np.dot(p_centered,t) - 1 })
-
         res = minimize(fun, (0,0,0), method='SLSQP', constraints=cons)
-
         normal=res.x
+
+        ###rewrite lstsq to fit point p on plane
+        # A = np.array([curve_centered[:,0]-p_centered[0]/p_centered[2], curve_centered[:,1]-p_centered[1]/p_centered[2]]).T
+        # b = np.ones(len(curve))-curve_centered[:,2]/p_centered[2]
+        # c = np.linalg.lstsq(A,b,rcond=None)[0]
+        # normal=np.array([c[0],c[1],(1-c[0]*p_centered[0]-c[1]*p_centered[1])/p_centered[2]])
+
         
 
         ###make sure constraint point is on plane
@@ -165,15 +182,26 @@ curve=np.vstack((curve_x, curve_y, curve_z)).T
 break_point=int(len(curve)/2)
 curve1=curve[:break_point]
 curve2=curve[break_point:]
-# curve1=np.flip(curve[:break_point],axis=0)
-# curve2=np.flip(curve[break_point:],axis=0)
 
 curve_fitarc1,curve_fitcircle1=circle_fit(curve1,p=curve[break_point])
 curve_fitarc2,curve_fitcircle2=circle_fit(curve2,p=curve[break_point])
 
+###error calc
+fit=np.vstack((curve_fitarc1,curve_fitarc2))
+error=[]
+for i in range(len(fit)):
+    error_temp=np.linalg.norm(curve-fit[i],axis=1)
+    idx=np.argmin(error_temp)
+    error.append(error_temp[idx])
 
+error=np.array(error)
+max_cartesian_error=np.max(error)
+avg_cartesian_error=np.average(error)
 
+print('max error: ',max_cartesian_error)
+print('average error: ',avg_cartesian_error)
 
+###3D plot
 plt.figure()
 ax = plt.axes(projection='3d')
 # ax.set_xlim3d(1500, 3000)

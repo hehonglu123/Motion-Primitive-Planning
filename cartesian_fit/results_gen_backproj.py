@@ -21,11 +21,12 @@ def fit_under_error(curve,curve_backproj,curve_R,max_error_threshold,d=50):
 	max_error=999
 
 	results_max_cartesian_error=[]
-	results_max_cartesian_error_index=[]
 	results_avg_cartesian_error=[]
-	results_max_orientation_error=[]
-	results_max_dz_error=[]
-	results_avg_dz_error=[]
+	results_max_backproj_error=[]
+	results_avg_backproj_error=[]
+	results_max_total_error=[]
+	results_avg_total_error=[]
+	results_max_error_index=[]
 
 
 	while max_error>max_error_threshold:
@@ -71,8 +72,6 @@ def fit_under_error(curve,curve_backproj,curve_R,max_error_threshold,d=50):
 				d_z=np.linalg.norm(intersection-curve_cartesian_pred[j])
 				dz_error.append(d_z)
 
-
-
 			#########################find next breakpoint#########################
 			if i!=len(breakpoints)-2:
 				temp_lam=np.arange(breakpoints[i],breakpoints[i+1])
@@ -81,28 +80,32 @@ def fit_under_error(curve,curve_backproj,curve_R,max_error_threshold,d=50):
 			interp=interp1d(np.array([breakpoints[i],breakpoints[i+1]]),np.array([curve_backproj[breakpoints[i]],curve_backproj[breakpoints[i+1]]]),axis=0)
 			temp_fit.append(interp(temp_lam))
 
-		temp_fit=np.concatenate( temp_fit, axis=0 ).reshape(len(curve_backproj),len(curve_backproj[0]))
+		temp_fit=np.concatenate(temp_fit, axis=0 ).reshape(len(curve_backproj),len(curve_backproj[0]))
 		errors=np.linalg.norm(temp_fit-curve_backproj,axis=1)
 		next_breakpoint=np.argsort(errors)[-1]
 
 		##############################check error (against fitting forward projected curve)##############################
 		dz_error=np.clip(np.array(dz_error)-d,0,999)		###dz can't be smaller than 0
-		max_error,max_cartesian_error_index,avg_cartesian_error,max_orientation_error=complete_points_check(curve_final_projection,curve,curve_R_pred,curve_R)
+		max_error,avg_cartesian_error,max_cartesian_error_backproj,avg_cartesian_error_backproj,max_total_error,avg_total_error,max_error_index \
+		=complete_points_check2(curve_cartesian_pred,curve_backproj,curve_final_projection,curve)
+
 		results_max_cartesian_error.append(max_error)
-		results_max_cartesian_error_index.append(max_cartesian_error_index)
 		results_avg_cartesian_error.append(avg_cartesian_error)
-		results_max_orientation_error.append(max_orientation_error)
-		results_max_dz_error.append(dz_error.max())
-		results_avg_dz_error.append(dz_error.mean())
+		results_max_backproj_error.append(max_cartesian_error_backproj)
+		results_avg_backproj_error.append(avg_cartesian_error_backproj)
+		results_max_total_error.append(max_total_error)
+		results_avg_total_error.append(avg_total_error)
+		results_max_error_index.append(max_error_index)
 
 		print(max_error,len(breakpoints))
 
-	return np.array(results_max_cartesian_error),np.array(results_max_cartesian_error_index),np.array(results_avg_cartesian_error),np.array(results_max_orientation_error), np.array(results_max_dz_error),np.array(results_avg_dz_error)
+	return np.array(results_max_cartesian_error),np.array(results_avg_cartesian_error),np.array(results_max_backproj_error),np.array(results_avg_backproj_error), \
+	np.array(results_max_total_error),np.array(results_avg_total_error),np.array(results_max_error_index)
 
 def main():
 	###All in base frame
 	col_names=['X', 'Y', 'Z','direction_x', 'direction_y', 'direction_z'] 
-	data = read_csv("../data/from_interp/Curve_in_base_frame.csv", names=col_names)
+	data = read_csv("../data/from_cad/Curve_in_base_frame.csv", names=col_names)
 	curve_x=data['X'].tolist()
 	curve_y=data['Y'].tolist()
 	curve_z=data['Z'].tolist()
@@ -115,7 +118,7 @@ def main():
 	###back projection
 	d=50			###offset
 	col_names=['X', 'Y', 'Z','direction_x', 'direction_y', 'direction_z'] 
-	data = read_csv("../data/from_interp/Curve_backproj_in_base_frame.csv", names=col_names)
+	data = read_csv("../data/from_cad/Curve_backproj_in_base_frame.csv", names=col_names)
 	curve_x=data['X'].tolist()
 	curve_y=data['Y'].tolist()
 	curve_z=data['Z'].tolist()
@@ -136,12 +139,15 @@ def main():
 		curve_R.append(R_curve)
 
 	#########################fitting tests####################################
-	results_max_cartesian_error,results_max_cartesian_error_index,results_avg_cartesian_error,results_max_orientation_error, results_max_dz_error, results_avg_dz_error=\
-		fit_under_error(curve,curve_backproj,curve_R,1,d=d)
+	results_max_cartesian_error,results_avg_cartesian_error,results_max_backproj_error,results_avg_backproj_error,results_max_total_error,\
+	results_avg_total_error,results_max_error_index=fit_under_error(curve,curve_backproj,curve_R,1,d=d)
 
 	###output to csv
-	df=DataFrame({'max_cartesian_error (mm)':results_max_cartesian_error,'max_cartesian_error_index (mm)':results_max_cartesian_error_index,'avg_cartesian_error (mm)':results_avg_cartesian_error,'max_orientation_error  (rad)':results_max_orientation_error,'max_z_error (mm)':results_max_dz_error,'average_z_error (mm)':results_avg_dz_error})
-	df.to_csv('../results/from_interp/cartesian_fit_results_backproj.csv',header=True,index=False)
+	df=DataFrame({'max_cartesian_error':results_max_cartesian_error,'avg_cartesian_error':results_avg_cartesian_error,\
+		'max_projection_error':results_max_backproj_error,'avg_projection_error':results_avg_backproj_error,\
+		'max_total_error':results_max_total_error,'avg_total_error':results_avg_total_error,'max_error_idx':results_max_error_index})
+	
+	df.to_csv('../results/from_cad/cartesian_fit_results_backproj.csv',header=True,index=False)
 
 
 	plt.figure()
