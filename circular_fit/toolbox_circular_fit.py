@@ -1,5 +1,4 @@
 import numpy as np
-from scipy.optimize import minimize
 
 def generate_circle_by_vectors(t, C, r, n, u):
     n = n/np.linalg.norm(n)
@@ -21,12 +20,6 @@ def fit_circle_2d(x, y, p=[]):
         r = np.sqrt(c[2] + xc**2 + yc**2)
         return xc, yc, r
     else:
-        # fun = lambda t: np.linalg.norm(t[0]*x + t[1]*y + p[0]**2 - t[0]*p[0] + p[1]**2 - t[1]*p[1] - np.square(x) - np.square(y))
-        # res = minimize(fun, (0,0), method='SLSQP')
-        # center=res.x/2.
-        # r=np.linalg.norm(p[:-1]-center)
-        # return center[0], center[1], r
-
 
         ###rewrite lstsq to fit point p on circle
         A = np.array([x-p[0], y-p[1]]).T
@@ -107,16 +100,11 @@ def circle_fit(curve,p=[]):
         p_centered = p - curve_mean
 
         ###constraint fitting
-        fun = lambda t: np.linalg.norm(np.dot(curve_centered,t) - np.ones(len(curve)))
-        cons = ({'type': 'eq', 'fun': lambda t:  np.dot(p_centered,t) - 1 })
-        res = minimize(fun, (0,0,0), method='SLSQP', constraints=cons)
-        normal=res.x
-
         ###rewrite lstsq to fit point p on plane
-        # A = np.array([curve_centered[:,0]-p_centered[0]/p_centered[2], curve_centered[:,1]-p_centered[1]/p_centered[2]]).T
-        # b = np.ones(len(curve))-curve_centered[:,2]/p_centered[2]
-        # c = np.linalg.lstsq(A,b,rcond=None)[0]
-        # normal=np.array([c[0],c[1],(1-c[0]*p_centered[0]-c[1]*p_centered[1])/p_centered[2]])
+        A = np.array([curve_centered[:,0]-p_centered[0]*curve_centered[:,2]/p_centered[2], curve_centered[:,1]-p_centered[1]*curve_centered[:,2]/p_centered[2]]).T
+        b = np.ones(len(curve))-curve_centered[:,2]/p_centered[2]
+        c = np.linalg.lstsq(A,b,rcond=None)[0]
+        normal=np.array([c[0],c[1],(1-c[0]*p_centered[0]-c[1]*p_centered[1])/p_centered[2]])
 
         
 
