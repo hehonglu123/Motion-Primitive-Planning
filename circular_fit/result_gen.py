@@ -6,7 +6,7 @@ from pandas import *
 from toolbox_circular_fit import *
 
 
-
+#####################3d circular fitting under error threshold, with equally divided breakpoint segments###############################
 
 
 
@@ -27,36 +27,7 @@ def fit_under_error(curve,max_error_threshold,d=50):
 
 	while max_error>max_error_threshold:
 
-		fit=[]
-		
-		for i in range(len(breakpoints)-1):
-			if len(breakpoints)==2:
-				###first fit
-				curve_fitarc,curve_fitcircle=circle_fit(curve)
-				fit=curve_fitarc
-			else:
-				seg2fit=curve[breakpoints[i]:breakpoints[i+1]]
-				if i==0:
-
-					curve_fitarc,curve_fit_circle=circle_fit(seg2fit)
-					fit.append(curve_fitarc)
-
-
-					# plt.figure()
-					# ax = plt.axes(projection='3d')
-					# ax.plot3D(curve[:,0], curve[:,1],curve[:,2], 'gray')
-					# ax.scatter3D(curve_fitarc[:,0], curve_fitarc[:,1], curve_fitarc[:,2], c=curve_fitarc[:,2], cmap='Greens')
-					# plt.show()
-				else:
-					curve_fitarc,curve_fit_circle=circle_fit(seg2fit,p=fit[-1][-1])
-					fit.append(curve_fitarc)
-
-
-					# plt.figure()
-					# ax = plt.axes(projection='3d')
-					# ax.plot3D(curve[:,0], curve[:,1],curve[:,2], 'gray')
-					# ax.scatter3D(curve_fitarc[:,0], curve_fitarc[:,1], curve_fitarc[:,2], c=curve_fitarc[:,2], cmap='Greens')
-					# plt.show()
+		fit=stepwise_3dfitting(curve,breakpoints)
 
 		###new breakpoints if max error out of threshold
 		breakpoints=[0]
@@ -66,17 +37,15 @@ def fit_under_error(curve,max_error_threshold,d=50):
 
 
 		##############################check error (against fitting forward projected curve)##############################
-		fit_all=np.array(fit).reshape(-1,3)
 		error=[]
-		for i in range(len(fit_all)):
-		    error_temp=np.linalg.norm(curve-fit_all[i],axis=1)
+		for i in range(len(fit)):
+		    error_temp=np.linalg.norm(curve-fit[i],axis=1)
 		    idx=np.argmin(error_temp)
 		    error.append(error_temp[idx])
 
 		error=np.array(error)
 		max_error=np.max(error)
 		print('max error: ', max_error)
-
 
 
 		# max_error,max_cartesian_error_index,avg_cartesian_error,max_orientation_error=complete_points_check(curve_final_projection,curve,curve_R_pred,curve_R)
@@ -92,8 +61,8 @@ def fit_under_error(curve,max_error_threshold,d=50):
 	plt.figure()
 	ax = plt.axes(projection='3d')
 	ax.plot3D(curve[:,0], curve[:,1],curve[:,2], 'gray')
-	for i in range(len(fit)):
-		ax.scatter3D(fit[i][:,0], fit[i][:,1], fit[i][:,2], c=fit[i][:,2], cmap='Greens')
+	for i in range(len(breakpoints)-1):
+		ax.scatter3D(fit[breakpoints[i]:breakpoints[i+1],0], fit[breakpoints[i]:breakpoints[i+1],1], fit[breakpoints[i]:breakpoints[i+1],2], c=fit[breakpoints[i]:breakpoints[i+1],2], cmap='Greens')
 	plt.show()
 
 	return np.array(results_max_cartesian_error),np.array(results_max_cartesian_error_index),np.array(results_avg_cartesian_error),np.array(results_max_orientation_error), np.array(results_max_dz_error),np.array(results_avg_dz_error)

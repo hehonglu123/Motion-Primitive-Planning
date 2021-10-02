@@ -164,3 +164,45 @@ def circle_fit(curve,p=[]):
     curve_fitcircle = generate_circle_by_vectors(l, C, r, normal, u)
 
     return curve_fitarc, curve_fitcircle
+
+def seg_3dfit(seg2fit,p=[]):
+
+    curve_fitarc,curve_fit_circle=circle_fit(seg2fit,p)
+    error=[]
+    ###check error
+    for i in range(len(curve_fitarc)):
+        error_temp=np.linalg.norm(seg2fit-curve_fitarc[i],axis=1)
+        idx=np.argmin(error_temp)
+        error.append(error_temp[idx])
+    return curve_fitarc,np.max(error)
+
+
+def stepwise_3dfitting(curve,breakpoints):
+    if len(breakpoints)==1:
+        print("num of breakpoints must be greater than 2")
+        return
+    fit=[]
+    for i in range(len(breakpoints)-1):
+        seg2fit=curve[breakpoints[i]:breakpoints[i+1]]
+        if i==0:
+
+            curve_fitarc,curve_fit_circle=circle_fit(seg2fit)
+            fit.append(curve_fitarc)
+
+        else:
+            curve_fitarc,curve_fit_circle=circle_fit(seg2fit,p=fit[-1][-1])
+            fit.append(curve_fitarc)
+
+    return np.array(fit).reshape(-1,3)
+
+def DE_stepwise_3dfitting(breakpoints,curve):
+    fit=stepwise_3dfitting(curve,breakpoints)
+
+    error=[]
+    for i in range(len(fit)):
+        error_temp=np.linalg.norm(curve-fit[i],axis=1)
+        idx=np.argmin(error_temp)
+        error.append(error_temp[idx])
+
+    return np.max(np.array(error))
+

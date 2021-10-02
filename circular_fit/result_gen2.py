@@ -5,18 +5,9 @@ import matplotlib.pyplot as plt
 from pandas import *
 from toolbox_circular_fit import *
 
+#####################3d circular fitting under error threshold, with stepwise incremental breakpoints###############################
 
 
-def seg_fit(start_idx,seg2fit,p=[]):
-
-	curve_fitarc,curve_fit_circle=circle_fit(seg2fit,p)
-	error=[]
-	###check error
-	for i in range(len(curve_fitarc)):
-	    error_temp=np.linalg.norm(seg2fit-curve_fitarc[i],axis=1)
-	    idx=np.argmin(error_temp)
-	    error.append(error_temp[idx])
-	return curve_fitarc,np.max(error)
 
 
 def fit_under_error(curve,max_error_threshold,d=50):
@@ -40,7 +31,7 @@ def fit_under_error(curve,max_error_threshold,d=50):
 		increment=100
 		###start 1-seg fitting until reaching threshold
 		###first test fitting
-		prev_curve_fitarc,max_error=seg_fit(breakpoints[-1],curve[breakpoints[-1]:breakpoints[-1]+next_point],p=[] if breakpoints[-1]>=0 else fit[-1][-1])
+		prev_curve_fitarc,max_error=seg_3dfit(curve[breakpoints[-1]:breakpoints[-1]+next_point],p=[] if breakpoints[-1]>=0 else fit[-1][-1])
 
 
 		if breakpoints[-1]+next_point==len(curve)-1 and max_error<=max_error_threshold:
@@ -52,7 +43,7 @@ def fit_under_error(curve,max_error_threshold,d=50):
 		if max_error>max_error_threshold:
 			while True:
 				next_point= min(next_point - increment,len(curve)-1-breakpoints[-1])
-				curve_fitarc,max_error=seg_fit(breakpoints[-1],curve[breakpoints[-1]:breakpoints[-1]+next_point],p=[] if breakpoints[-1]>=0 else fit[-1][-1])
+				curve_fitarc,max_error=seg_3dfit(curve[breakpoints[-1]:breakpoints[-1]+next_point],p=[] if breakpoints[-1]>=0 else fit[-1][-1])
 				if max_error<=max_error_threshold:
 					breakpoints.append(breakpoints[-1]+next_point)
 					fit.append(curve_fitarc)
@@ -61,7 +52,7 @@ def fit_under_error(curve,max_error_threshold,d=50):
 		else:
 			while True:
 				next_point= min(next_point + increment,len(curve)-1-breakpoints[-1])
-				new_curve_fitarc, max_error=seg_fit(breakpoints[-1],curve[breakpoints[-1]:breakpoints[-1]+next_point],p=[] if breakpoints[-1]>=0 else fit[-1][-1])
+				new_curve_fitarc, max_error=seg_3dfit(curve[breakpoints[-1]:breakpoints[-1]+next_point],p=[] if breakpoints[-1]>=0 else fit[-1][-1])
 				if max_error>=max_error_threshold:
 					breakpoints.append(breakpoints[-1]+next_point-increment)
 					fit.append(prev_curve_fitarc)
