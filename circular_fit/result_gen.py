@@ -78,7 +78,9 @@ def main():
 	curve_y=data['Y'].tolist()
 	curve_z=data['Z'].tolist()
 	curve=np.vstack((curve_x, curve_y, curve_z)).T
-	fit_under_error(curve,1)
+	# fit_under_error(curve,1)
+
+	stepwise_3dfitting(curve,[    0,  8872,  9156, 12350, 13930, 14519, 17580])
 
 if __name__ == "__main__":
 	main()

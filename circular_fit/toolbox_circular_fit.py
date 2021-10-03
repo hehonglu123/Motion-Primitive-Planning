@@ -1,5 +1,5 @@
 import numpy as np
-
+import traceback
 def generate_circle_by_vectors(t, C, r, n, u):
     n = n/np.linalg.norm(n)
     u = u/np.linalg.norm(u)
@@ -184,25 +184,23 @@ def stepwise_3dfitting(curve,breakpoints):
     fit=[]
     for i in range(len(breakpoints)-1):
         seg2fit=curve[breakpoints[i]:breakpoints[i+1]]
-        if i==0:
 
-            curve_fitarc,curve_fit_circle=circle_fit(seg2fit)
-            fit.append(curve_fitarc)
+        try:
+            if i==0:
 
-        else:
-            curve_fitarc,curve_fit_circle=circle_fit(seg2fit,p=fit[-1][-1])
-            fit.append(curve_fitarc)
+                curve_fitarc,curve_fit_circle=circle_fit(seg2fit)
+                fit.append(curve_fitarc)
+
+            else:
+                curve_fitarc,curve_fit_circle=circle_fit(seg2fit,p=fit[-1][-1])
+                fit.append(curve_fitarc)
+        except:
+            traceback.print_exc()
+            print(breakpoints)
+
+            
 
     return np.array(fit).reshape(-1,3)
 
-def DE_stepwise_3dfitting(breakpoints,curve):
-    fit=stepwise_3dfitting(curve,breakpoints)
 
-    error=[]
-    for i in range(len(fit)):
-        error_temp=np.linalg.norm(curve-fit[i],axis=1)
-        idx=np.argmin(error_temp)
-        error.append(error_temp[idx])
-
-    return np.max(np.array(error))
 

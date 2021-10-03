@@ -100,7 +100,7 @@ def main():
 	curve_y=data['Y'].tolist()
 	curve_z=data['Z'].tolist()
 	curve=np.vstack((curve_x, curve_y, curve_z)).T
-	fit_under_error(curve,.6)
+	fit_under_error(curve,1.)
 
 if __name__ == "__main__":
 	main()
