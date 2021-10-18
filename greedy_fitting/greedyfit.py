@@ -81,47 +81,60 @@ def fit_under_error(curve,curve_js,max_error_threshold,d=50):
 	js_fit=[]
 
 	while breakpoints[-1]!=len(curve)-1:
-		next_point= min(3000,len(curve)-1-breakpoints[-1])
-		increment=100
+		next_point= min(1000,len(curve)-1-breakpoints[-1])
+		prev_point=0
+		prev_possible_point=0
 		###start 1-seg fitting until reaching threshold
 		###first test fitting
-		# prev_curve_fitarc,max_error=movec_fit(curve[breakpoints[-1]:breakpoints[-1]+next_point],p=[] if breakpoints[-1]>=0 else fit[-1][-1])
-		prev_curve_fitarc,prev_curve_js_fitarc,max_error=movej_fit(curve[breakpoints[-1]:breakpoints[-1]+next_point],curve_js[breakpoints[-1]:breakpoints[-1]+next_point],q=[] if breakpoints[-1]>=0 else js_fit[-1][-1])
+		# curve_fitarc,max_error=movel_fit(curve[breakpoints[-1]:breakpoints[-1]+next_point],p=[] if breakpoints[-1]>=0 else fit[-1][-1])
+		curve_fitarc,prev_curve_js_fitarc,max_error=movej_fit(curve[breakpoints[-1]:breakpoints[-1]+next_point],curve_js[breakpoints[-1]:breakpoints[-1]+next_point],q=[] if breakpoints[-1]>=0 else js_fit[-1][-1])
 
 
 		if breakpoints[-1]+next_point==len(curve)-1 and max_error<=max_error_threshold:
 			breakpoints.append(len(curve)-1)
-			fit.append(prev_curve_fitarc)
-			js_fit.append(prev_curve_js_fitarc)
+			fit.append(curve_fitarc)
+			# js_fit.append(prev_curve_js_fitarc)
 			break
 
-		###bp going backward to meet threshold
-		if max_error>max_error_threshold:
-			while True:
-				next_point= min(next_point - increment,len(curve)-1-breakpoints[-1])
-				# curve_fitarc,max_error=movec_fit(curve[breakpoints[-1]:breakpoints[-1]+next_point],p=[] if breakpoints[-1]>=0 else fit[-1][-1])
+		###bisection search breakpoints
+		while True:
+			###bp going backward to meet threshold
+			if max_error>max_error_threshold:
+				prev_point_temp=next_point
+				next_point-=int(np.abs(next_point-prev_point)/2)
+				prev_point=prev_point_temp
+				# curve_fitarc,max_error=movel_fit(curve[breakpoints[-1]:breakpoints[-1]+next_point],p=[] if breakpoints[-1]>=0 else fit[-1][-1])
 				curve_fitarc,curve_js_fitarc,max_error=movej_fit(curve[breakpoints[-1]:breakpoints[-1]+next_point],curve_js[breakpoints[-1]:breakpoints[-1]+next_point],q=[] if breakpoints[-1]>=0 else js_fit[-1][-1])
 
-				if max_error<=max_error_threshold:
-					breakpoints.append(breakpoints[-1]+next_point)
-					fit.append(curve_fitarc)
-					js_fit.append(curve_js_fitarc)
-					break
-		###bp going forward to get close to threshold
-		else:
-			while True:
-				next_point= min(next_point + increment,len(curve)-1-breakpoints[-1])
-				new_curve_fitarc, max_error=seg_3dfit(curve[breakpoints[-1]:breakpoints[-1]+next_point],p=[] if breakpoints[-1]>=0 else fit[-1][-1])
-				if max_error>=max_error_threshold:
-					breakpoints.append(breakpoints[-1]+next_point-increment)
-					fit.append(prev_curve_fitarc)
-					js_fit.append(prev_curve_js_fitarc)
-					break
-				prev_curve_fitarc=new_curve_fitarc
+				
+			###bp going forward to get close to threshold
+			else:
+				prev_possible_point=next_point
+				prev_point_temp=next_point
+				next_point= min(next_point + int(np.abs(next_point-prev_point)),len(curve)-1-breakpoints[-1])
+				prev_point=prev_point_temp
+				# curve_fitarc,max_error=movel_fit(curve[breakpoints[-1]:breakpoints[-1]+next_point],p=[] if breakpoints[-1]>=0 else fit[-1][-1])
+				curve_fitarc,curve_js_fitarc,max_error=movej_fit(curve[breakpoints[-1]:breakpoints[-1]+next_point],curve_js[breakpoints[-1]:breakpoints[-1]+next_point],q=[] if breakpoints[-1]>=0 else js_fit[-1][-1])
 
-				if next_point==len(curve)-1:
-					break
-		
+			if next_point==prev_point:
+				print('stuck')
+				###if ever getting stuck, restore
+				next_point=prev_possible_point
+				# curve_fitarc,max_error=movel_fit(curve[breakpoints[-1]:breakpoints[-1]+next_point],p=[] if breakpoints[-1]>=0 else fit[-1][-1])
+				curve_fitarc,curve_js_fitarc,max_error=movej_fit(curve[breakpoints[-1]:breakpoints[-1]+next_point],curve_js[breakpoints[-1]:breakpoints[-1]+next_point],q=[] if breakpoints[-1]>=0 else js_fit[-1][-1])
+				breakpoints.append(breakpoints[-1]+next_point)
+				fit.append(curve_fitarc)
+				# js_fit.append(curve_js_fitarc)
+				break
+
+			###find the closest but under max_threshold
+			if (max_error<=max_error_threshold and np.abs(next_point-prev_point)<10) or next_point==len(curve)-1:
+				breakpoints.append(breakpoints[-1]+next_point)
+				fit.append(curve_fitarc)
+				# js_fit.append(curve_js_fitarc)
+				break
+
+
 		print(breakpoints)
 
 
