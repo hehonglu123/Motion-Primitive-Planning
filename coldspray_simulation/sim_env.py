@@ -52,9 +52,8 @@ class environment(object):
 		# y_data=np.tile(np.arange(0,self.surface.length,self.surface.resolution),(round(self.surface.width/self.surface.resolution),1)).T.flatten()
 		# self.ax.bar3d(x_data,y_data,np.zeros(len(self.surface.deposition_image.flatten())),self.surface.resolution, self.surface.resolution, self.surface.deposition_image.flatten())
 		
-		normalizedImg = np.zeros((round(self.surface.width/self.surface.resolution),round(self.surface.length/self.surface.resolution)))
-		normalizedImg = cv2.normalize(self.surface.deposition_image,  normalizedImg, 0, 255, cv2.NORM_MINMAX)
-		cv2.imshow('Image', self.surface.deposition_image)
+
+		cv2.imshow('Image', cv2.convertScaleAbs(self.surface.deposition_image,alpha=255/self.surface.deposition_image.max()))
 		cv2.waitKey(1)
 
 	def generate_spray_path(self,path_on_surface):
@@ -69,11 +68,27 @@ class environment(object):
 		bins_coord=coord_on_surface+np.array([self.surface.length/2.,self.surface.width/2.,0])
 		bins_coord=np.round(bins_coord/self.surface.resolution).astype(int)
 
+		###generate uniform distribution deposition
+		# Y, X = np.ogrid[:len(self.surface.deposition_image), :len(self.surface.deposition_image[0])]
+		# dist_from_center = np.sqrt((X - bins_coord[0])**2 + (Y-bins_coord[1])**2)
+		# mask = dist_from_center <= self.nozzle.radius
+		# self.surface.deposition_image+=mask*self.nozzle.feed_rate
+
 		###generate gaussian distribution deposition
 		Y, X = np.ogrid[:len(self.surface.deposition_image), :len(self.surface.deposition_image[0])]
 		dist_from_center = np.sqrt((X - bins_coord[0])**2 + (Y-bins_coord[1])**2)
-		mask = dist_from_center <= self.nozzle.radius
-		self.surface.deposition_image+=mask*self.nozzle.feed_rate
+		mask1 = dist_from_center <= 3*self.nozzle.gauss_std
+		self.surface.deposition_image+=mask1*self.nozzle.feed_rate
+
+		mask2 = dist_from_center <= 2*self.nozzle.gauss_std
+		self.surface.deposition_image+=mask2*self.nozzle.feed_rate*5.74
+
+		mask3 = dist_from_center <= 1*self.nozzle.gauss_std
+		self.surface.deposition_image+=mask3*self.nozzle.feed_rate*14.47
+
+		
+
+
 
 	def spray(self,traj_p,traj_R):
 		###spray along a given nozzle path
@@ -84,7 +99,7 @@ class environment(object):
 			self.update_graphics()
 
 def main():
-	noz=nozzle(1,0.5,1)
+	noz=nozzle(radius=2,gauss_std=10,feed_rate=1)
 	width=100
 	length=100
 	resolution=0.1
@@ -96,7 +111,10 @@ def main():
 	traj_p=env.generate_spray_path(path_on_surface)
 	traj_R=[-np.eye(3)]*len(path_on_surface)
 
-	env.spray(traj_p,traj_R)
+	while True:
+		env.spray(traj_p,traj_R)
+		env.spray(np.flip(traj_p,axis=0),traj_R)
+	
 	print('physics finished')
 
 
