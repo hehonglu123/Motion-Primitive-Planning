@@ -11,9 +11,9 @@ from robot_def import *
 
 #####################3d curve-fitting with MoveL, MoveJ, MoveC; stepwise incremental bi-section searched breakpoints###############################
 
-def movel_fit(curve,curve_js,q=[]):
+def movel_fit(curve,p=[]):
 	###no constraint
-	if len(q)==0:
+	if len(p)==0:
 		A=np.vstack((np.ones(len(curve)),np.arange(0,len(curve)))).T
 		b=curve
 		res=np.linalg.lstsq(A,b,rcond=None)[0]
@@ -21,7 +21,6 @@ def movel_fit(curve,curve_js,q=[]):
 		slope=res[1].reshape(1,-1)
 	###with constraint point
 	else:
-		p=fwd(q).p
 		A=np.arange(0,len(curve)).reshape(-1,1)
 		b=curve-curve[0]
 		res=np.linalg.lstsq(A,b,rcond=None)[0]
@@ -32,14 +31,7 @@ def movel_fit(curve,curve_js,q=[]):
 
 	max_error=np.max(np.linalg.norm(curve-curve_fit,axis=1))
 
-	q_all=np.array(inv(curve_fit[-1],fwd(curve_js[-1]).R))
-
-	###choose inv_kin closest to previous joints
-	temp_q=q_all-curve_js[-1]
-	order=np.argsort(np.linalg.norm(temp_q,axis=1))
-	q_last=q_all[order[0]]
-
-	return curve_fit,q_last,max_error
+	return curve_fit,max_error
 
 
 def movej_fit(curve,curve_js,q=[]):
@@ -64,36 +56,19 @@ def movej_fit(curve,curve_js,q=[]):
 	curve_fit=np.array(curve_fit)
 	max_error=np.max(np.linalg.norm(curve-curve_fit,axis=1))
 
-	return curve_fit,curve_js_fit[-1],max_error
+	return curve_fit,curve_js_fit,max_error
 
 
 
-def movec_fit(curve,curve_js,q=[]):
-	if len(q)>0:
-		p=fwd(q).p
-	else:
-		p=[]
-	curve_fit,max_error=seg_3dfit(curve,p)
-
-	q_all=np.array(inv(curve_fit[-1],fwd(curve_js[-1]).R))
-
-	###choose inv_kin closest to previous joints
-	temp_q=q_all-curve_js[-1]
-	order=np.argsort(np.linalg.norm(temp_q,axis=1))
-	q_last=q_all[order[0]]
-
-	return curve_fit,q_last,max_error
-
+def movec_fit(curve,p=[]):
+	return seg_3dfit(curve,p)
 
 def fit_under_error(curve,curve_js,max_error_threshold,d=50):
 
 	###initialize
 	breakpoints=[0]
 	num_breakpoints=4
-	primitives_choices=[]
-	q_breakpoints=[]
-	primitives_data=[]
-
+	
 
 	results_max_cartesian_error=[]
 	results_max_cartesian_error_index=[]
@@ -106,94 +81,62 @@ def fit_under_error(curve,curve_js,max_error_threshold,d=50):
 	js_fit=[]
 
 	while breakpoints[-1]!=len(curve)-1:
-		###primitive candidates
-		primitives={'movel_fit':movel_fit,'movej_fit':movej_fit,'movec_fit':movec_fit}
-		
-		
-
-		next_point= min(2000,len(curve)-1-breakpoints[-1])
+		next_point= min(1000,len(curve)-1-breakpoints[-1])
 		prev_point=0
 		prev_possible_point=0
+		###start 1-seg fitting until reaching threshold
+		###first test fitting
+		curve_fitarc,max_error=movec_fit(curve[breakpoints[-1]:breakpoints[-1]+next_point],p=[] if breakpoints[-1]==0 else fit[-1][-1])
+		# curve_fitarc,prev_curve_js_fitarc,max_error=movej_fit(curve[breakpoints[-1]:breakpoints[-1]+next_point],curve_js[breakpoints[-1]:breakpoints[-1]+next_point],q=[] if breakpoints[-1]>=0 else js_fit[-1][-1])
 
-		max_errors={'movel_fit':999,'movej_fit':999,'movec_fit':999}
+
+		if breakpoints[-1]+next_point==len(curve)-1 and max_error<=max_error_threshold:
+			breakpoints.append(len(curve)-1)
+			fit.append(curve_fitarc)
+			# js_fit.append(prev_curve_js_fitarc)
+			break
 
 		###bisection search breakpoints
 		while True:
 			###bp going backward to meet threshold
-			if min(list(max_errors.values()))>max_error_threshold:
+			if max_error>max_error_threshold:
 				prev_point_temp=next_point
 				next_point-=int(np.abs(next_point-prev_point)/2)
 				prev_point=prev_point_temp
+				curve_fitarc,max_error=movec_fit(curve[breakpoints[-1]:breakpoints[-1]+next_point],p=[] if breakpoints[-1]==0 else fit[-1][-1])
+				# curve_fitarc,curve_js_fitarc,max_error=movej_fit(curve[breakpoints[-1]:breakpoints[-1]+next_point],curve_js[breakpoints[-1]:breakpoints[-1]+next_point],q=[] if breakpoints[-1]>=0 else js_fit[-1][-1])
+
 				
-				for key in primitives: 
-					curve_fit,q_last,max_error=primitives[key](curve[breakpoints[-1]:breakpoints[-1]+next_point],curve_js[breakpoints[-1]:breakpoints[-1]+next_point],q=[] if len(q_breakpoints)==0 else q_breakpoints[-1])
-					max_errors[key]=max_error
-
-
-
 			###bp going forward to get close to threshold
 			else:
 				prev_possible_point=next_point
 				prev_point_temp=next_point
 				next_point= min(next_point + int(np.abs(next_point-prev_point)),len(curve)-1-breakpoints[-1])
 				prev_point=prev_point_temp
-				
+				curve_fitarc,max_error=movec_fit(curve[breakpoints[-1]:breakpoints[-1]+next_point],p=[] if breakpoints[-1]==0 else fit[-1][-1])
+				# curve_fitarc,curve_js_fitarc,max_error=movej_fit(curve[breakpoints[-1]:breakpoints[-1]+next_point],curve_js[breakpoints[-1]:breakpoints[-1]+next_point],q=[] if breakpoints[-1]>=0 else js_fit[-1][-1])
 
-				for key in primitives: 
-					curve_fit,q_last,max_error=primitives[key](curve[breakpoints[-1]:breakpoints[-1]+next_point],curve_js[breakpoints[-1]:breakpoints[-1]+next_point],q=[] if len(q_breakpoints)==0 else q_breakpoints[-1])
-					max_errors[key]=max_error
-
-			# print(max_errors)
 			if next_point==prev_point:
 				print('stuck')
 				###if ever getting stuck, restore
 				next_point=prev_possible_point
-				
-				
-				for key in primitives: 
-					curve_fit,q_last,max_error=primitives[key](curve[breakpoints[-1]:breakpoints[-1]+next_point],curve_js[breakpoints[-1]:breakpoints[-1]+next_point],q=[] if len(q_breakpoints)==0 else q_breakpoints[-1])
-					if max_error<max_error_threshold:
-						q_breakpoints.append(q_last)
-						primitives_choices.append(key)
-						if key=='movec_fit':
-							primitives_data.append([curve_fit[int(len(curve_fit)/2)],curve_fit[-1]])
-						if key=='movel_fit':
-							primitives_data.append([curve_fit[-1]])
-						else:
-							primitives_data.append([q_last])
-						break
-
-				
-
+				curve_fitarc,max_error=movec_fit(curve[breakpoints[-1]:breakpoints[-1]+next_point],p=[] if breakpoints[-1]==0 else fit[-1][-1])
+				# curve_fitarc,curve_js_fitarc,max_error=movej_fit(curve[breakpoints[-1]:breakpoints[-1]+next_point],curve_js[breakpoints[-1]:breakpoints[-1]+next_point],q=[] if breakpoints[-1]>=0 else js_fit[-1][-1])
 				breakpoints.append(breakpoints[-1]+next_point)
-				fit.append(curve_fit)
+				fit.append(curve_fitarc)
+				# js_fit.append(curve_js_fitarc)
 				break
 
 			###find the closest but under max_threshold
-			if (min(list(max_errors.values()))<=max_error_threshold and np.abs(next_point-prev_point)<10) or next_point==len(curve)-1:
-				for key in primitives: 
-					curve_fit,q_last,max_error=primitives[key](curve[breakpoints[-1]:breakpoints[-1]+next_point],curve_js[breakpoints[-1]:breakpoints[-1]+next_point],q=[] if len(q_breakpoints)==0 else q_breakpoints[-1])
-					if max_error<max_error_threshold:
-						q_breakpoints.append(q_last)
-						primitives_choices.append(key)
-						if key=='movec_fit':
-							primitives_data.append([curve_fit[int(len(curve_fit)/2)],curve_fit[-1]])
-						if key=='movel_fit':
-							primitives_data.append([curve_fit[-1]])
-						else:
-							primitives_data.append([q_last])
-						break
-
+			if (max_error<=max_error_threshold and np.abs(next_point-prev_point)<10) or next_point==len(curve)-1:
 				breakpoints.append(breakpoints[-1]+next_point)
-				fit.append(curve_fit)
-
-
+				fit.append(curve_fitarc)
+				# js_fit.append(curve_js_fitarc)
 				break
 
 
 		print(breakpoints)
-		print(primitives_choices)
-		print(primitives_data)
+
 
 	##############################check error (against fitting forward projected curve)##############################
 	fit_all=np.vstack(fit)
