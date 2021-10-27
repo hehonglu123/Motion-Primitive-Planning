@@ -92,7 +92,7 @@ def fit_under_error(curve,curve_js,max_error_threshold,d=50):
 	num_breakpoints=4
 	primitives_choices=[]
 	q_breakpoints=[]
-	primitives_data=[]
+	points=[]
 
 
 	results_max_cartesian_error=[]
@@ -156,11 +156,11 @@ def fit_under_error(curve,curve_js,max_error_threshold,d=50):
 						q_breakpoints.append(q_last)
 						primitives_choices.append(key)
 						if key=='movec_fit':
-							primitives_data.append([curve_fit[int(len(curve_fit)/2)],curve_fit[-1]])
+							points.append([curve_fit[int(len(curve_fit)/2)],curve_fit[-1]])
 						elif key=='movel_fit':
-							primitives_data.append([curve_fit[-1]])
+							points.append([curve_fit[-1]])
 						else:
-							primitives_data.append([q_last])
+							points.append([q_last])
 						break
 
 				
@@ -177,11 +177,11 @@ def fit_under_error(curve,curve_js,max_error_threshold,d=50):
 						q_breakpoints.append(q_last)
 						primitives_choices.append(key)
 						if key=='movec_fit':
-							primitives_data.append([curve_fit[int(len(curve_fit)/2)],curve_fit[-1]])
+							points.append([curve_fit[int(len(curve_fit)/2)],curve_fit[-1]])
 						elif key=='movel_fit':
-							primitives_data.append([curve_fit[-1]])
+							points.append([curve_fit[-1]])
 						else:
-							primitives_data.append([q_last])
+							points.append([q_last])
 						break
 
 				breakpoints.append(breakpoints[-1]+next_point)
@@ -192,8 +192,8 @@ def fit_under_error(curve,curve_js,max_error_threshold,d=50):
 
 
 		print(breakpoints)
-		print(primitives_choices)
-		print(primitives_data)
+		# print(primitives_choices)
+		# print(points)
 
 	##############################check error (against fitting forward projected curve)##############################
 	fit_all=np.vstack(fit)
@@ -217,7 +217,7 @@ def fit_under_error(curve,curve_js,max_error_threshold,d=50):
 		ax.scatter3D(fit[i][:,0], fit[i][:,1], fit[i][:,2], c=fit[i][:,2], cmap='Greens')
 	plt.show()
 
-	return breakpoints,primitives_choices,primitives_data
+	return breakpoints,primitives_choices,points
 
 
 
@@ -242,10 +242,16 @@ def main():
 	curve_q6=data['q6'].tolist()
 	curve_js=np.vstack((curve_q1, curve_q2, curve_q3,curve_q4,curve_q5,curve_q6)).T
 
-	breakpoints,primitives_choices,primitives_data=fit_under_error(curve,curve_js,1.)
-	print(len(breakpoints[1:]),len(primitives_choices),len(primitives_data))
-	df=DataFrame({'breakpoints':breakpoints[1:],'primitives_choices':primitives_choices,'primitives_data':primitives_data})
-	df.to_csv('command.csv',header=False,index=False)
+	breakpoints,primitives_choices,points=fit_under_error(curve,curve_js,1.)
+
+	###insert initial configuration
+	primitives_choices.insert(0,'movej_fit')
+	points.insert(0,[curve_js[0]])
+	print(primitives_choices)
+	print(points)
+
+	df=DataFrame({'breakpoints':breakpoints,'primitives':primitives_choices,'points':points})
+	df.to_csv('command.csv',header=True,index=False)
 
 if __name__ == "__main__":
 	main()
