@@ -19,7 +19,7 @@ def project(curve_fit,R_init,R_last):
 	distance_traveled=0
 	curve_fit_proj=[]
 	###find axis angle first
-	R_diff=np.dot(R_init,R_last.T)
+	R_diff=np.dot(R_init.T,R_last)
 	k,theta=R2rot(R_diff)
 
 	for i in range(len(curve_fit)):
@@ -27,12 +27,12 @@ def project(curve_fit,R_init,R_last):
 		###linearly interpolate angle
 		angle=theta*distance_traveled/total_dis
 		R=rot(k,angle)
-		R_act=np.dot(R.T,R_init)
+		R_act=np.dot(R_init,R)
 		curve_fit_proj.append(curve_fit[i]+d*R_act[:,-1])
 
 	return curve_fit_proj
 
-def movel_fit(curve_backproj,curve,curve_backproj_js,q=[]):
+def movel_fit(curve,curve_backproj,curve_backproj_js,q=[]):
 	###no constraint
 	if len(q)==0:
 		A=np.vstack((np.ones(len(curve_backproj)),np.arange(0,len(curve_backproj)))).T
@@ -75,7 +75,7 @@ def movel_fit(curve_backproj,curve,curve_backproj_js,q=[]):
 	return curve_fit,q_last,max_error
 
 
-def movej_fit(curve_backproj,curve,curve_backproj_js,q=[]):
+def movej_fit(curve,curve_backproj,curve_backproj_js,q=[]):
 	if len(q)==0:
 		A=np.vstack((np.ones(len(curve_backproj_js)),np.arange(0,len(curve_backproj_js)))).T
 		b=curve_backproj_js
@@ -111,7 +111,7 @@ def movej_fit(curve_backproj,curve,curve_backproj_js,q=[]):
 	return curve_fit,curve_js_fit[-1],max_error
 
 
-def movec_fit(curve_backproj,curve,curve_backproj_js,q=[]):
+def movec_fit(curve,curve_backproj,curve_backproj_js,q=[]):
 	if len(q)==0:
 		p=[]
 		start_pose=fwd(curve_backproj_js[0])
@@ -290,10 +290,10 @@ def main():
 	###read in points backprojected
 	col_names=['X', 'Y', 'Z','direction_x', 'direction_y', 'direction_z'] 
 	data = read_csv("../data/from_cad/Curve_backproj_in_base_frame.csv", names=col_names)
-	curvecurve_backproj_x=data['X'].tolist()
-	curvecurve_backproj_y=data['Y'].tolist()
-	curvecurve_backproj_z=data['Z'].tolist()
-	curve_backproj=np.vstack((curvecurve_backproj_x, curvecurve_backproj_y, curvecurve_backproj_z)).T
+	curve_backproj_x=data['X'].tolist()
+	curve_backproj_y=data['Y'].tolist()
+	curve_backproj_z=data['Z'].tolist()
+	curve_backproj=np.vstack((curve_backproj_x, curve_backproj_y, curve_backproj_z)).T
 
 	###read interpolated curves in joint space
 	col_names=['q1', 'q2', 'q3','q4', 'q5', 'q6'] 
@@ -321,7 +321,7 @@ def main():
 
 	###insert initial configuration
 	primitives_choices.insert(0,'movej_fit')
-	points.insert(0,[curve_js[0]])
+	points.insert(0,[curve_backproj_js[0]])
 	print(primitives_choices)
 	print(points)
 

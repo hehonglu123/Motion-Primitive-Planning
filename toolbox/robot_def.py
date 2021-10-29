@@ -111,5 +111,3 @@ def jdot(q,qdot):
 	Jmat[-1]=Jmat[-1][:,:n]
 	Jdotmat[-1]=Jdotmat[-1][:,:n]
 	return Jdotmat[-1]
-
-

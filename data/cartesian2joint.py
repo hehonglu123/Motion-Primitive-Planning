@@ -56,7 +56,7 @@ def main():
 	# ax.plot3D(curve[:,0], curve[:,1],curve[:,2], 'gray')
 	# plt.show()
 
-	curve=curve-d*curve_direction
+	# curve=curve-d*curve_direction
 
 	curve_R=[]
 

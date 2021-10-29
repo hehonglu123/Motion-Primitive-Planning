@@ -13,13 +13,7 @@ def Ry(theta):
 def Rz(theta):
 	return np.array(([[np.cos(theta),-np.sin(theta),0],[np.sin(theta),np.cos(theta),0],[0,0,1]]))
 
-def R2q_local(R):
-	q_temp=R2q(R)
-	return q_temp
-	# return np.hstack((q_temp[-1],q_temp[:-1]))
-def convert_R(R):
 
-	return np.dot(R,Ry(np.pi/2))
 
 def multisplit(s, delims):
 	pos = 0
@@ -53,7 +47,7 @@ def format_point(point,quat,cf,eax):
 	return point_out
 
 def format_movel(q,point):
-	quat=R2q_local(convert_R(fwd(q).R))
+	quat=R2q(fwd(q).R)
 	cf=quadrant(q)
 
 
@@ -71,9 +65,9 @@ def format_movej(q):
 	return 'MoveAbsJ '+'[['+str(q_deg[0])+','+str(q_deg[1])+','+str(q_deg[2])+','+str(q_deg[3])+','+str(q_deg[4])+','+str(q_deg[5])+'],'+eax+'],'\
 			+speed+','+zone+',Paintgun;'
 def format_movec(q1,q2,point1,point2):
-	quat1=R2q_local(convert_R(fwd(q1).R))
+	quat1=R2q(fwd(q1).R)
 	cf1=quadrant(q1)
-	quat2=R2q_local(convert_R(fwd(q2).R))
+	quat2=R2q(fwd(q2).R)
 	cf2=quadrant(q2)
 
 	eax='[9E+09,9E+09,9E+09,9E+09,9E+09,9E+09]'
@@ -87,7 +81,7 @@ def format_movec(q1,q2,point1,point2):
 def main():
 
 	col_names=['q1', 'q2', 'q3','q4', 'q5', 'q6'] 
-	data = read_csv("../data/from_cad/Curve_js.csv", names=col_names)
+	data = read_csv("../data/from_cad/Curve_backproj_js.csv", names=col_names)
 	curve_q1=data['q1'].tolist()
 	curve_q2=data['q2'].tolist()
 	curve_q3=data['q3'].tolist()
@@ -96,7 +90,7 @@ def main():
 	curve_q6=data['q6'].tolist()
 	curve_js=np.vstack((curve_q1, curve_q2, curve_q3,curve_q4,curve_q5,curve_q6)).T
 
-	data = read_csv("command.csv")
+	data = read_csv("command_backproj.csv")
 	breakpoints=data['breakpoints'].tolist()
 	primitives=data['primitives'].tolist()
 	points=data['points'].tolist()
