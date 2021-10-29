@@ -19,7 +19,7 @@ def project(curve_fit,R_init,R_last):
 	distance_traveled=0
 	curve_fit_proj=[]
 	###find axis angle first
-	R_diff=np.dot(R_init.T,R_last)
+	R_diff=np.dot(R_init,R_last.T)
 	k,theta=R2rot(R_diff)
 
 	for i in range(len(curve_fit)):
@@ -27,8 +27,8 @@ def project(curve_fit,R_init,R_last):
 		###linearly interpolate angle
 		angle=theta*distance_traveled/total_dis
 		R=rot(k,angle)
-		R_act=np.dot(R_init,R)
-		curve_fit_proj.append(curve_fit[i]-d*R_act[:,-1])
+		R_act=np.dot(R.T,R_init)
+		curve_fit_proj.append(curve_fit[i]+d*R_act[:,-1])
 
 	return curve_fit_proj
 
@@ -326,7 +326,7 @@ def main():
 	print(points)
 
 	df=DataFrame({'breakpoints':breakpoints,'primitives':primitives_choices,'points':points})
-	df.to_csv('command.csv',header=True,index=False)
+	df.to_csv('command_backproj.csv',header=True,index=False)
 
 if __name__ == "__main__":
 	main()

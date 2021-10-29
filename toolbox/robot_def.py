@@ -26,7 +26,8 @@ p6=np.array([[0.0],[0],[0.0]])
 #TCP Paint gun
 R_tool=Ry(np.radians(120))
 p_tool=np.array([0.45,0,-0.05])*1000.
-
+# R_tool=None
+# p_tool=None
 
 P=np.concatenate((p0,p1,p2,p3,p4,p5,p6),axis=1)*1000.
 joint_type=np.zeros(6)

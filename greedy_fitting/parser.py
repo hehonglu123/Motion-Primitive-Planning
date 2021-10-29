@@ -13,6 +13,10 @@ def Ry(theta):
 def Rz(theta):
 	return np.array(([[np.cos(theta),-np.sin(theta),0],[np.sin(theta),np.cos(theta),0],[0,0,1]]))
 
+def R2q_local(R):
+	q_temp=R2q(R)
+	return q_temp
+	# return np.hstack((q_temp[-1],q_temp[:-1]))
 def convert_R(R):
 
 	return np.dot(R,Ry(np.pi/2))
@@ -37,7 +41,7 @@ def extract_points(primitive_type,points):
 		return list(map(float, endpoint))
 
 def quadrant(q):
-	temp=np.ceil(np.array([q[0],q[3],q[5]])/np.pi)
+	temp=np.ceil(np.array([q[0],q[3],q[5]])/(np.pi/2))
 
 	return np.hstack((temp,[0])).astype(int)
 def format_point(point,quat,cf,eax):
@@ -49,7 +53,7 @@ def format_point(point,quat,cf,eax):
 	return point_out
 
 def format_movel(q,point):
-	quat=R2q(convert_R(fwd(q).R))
+	quat=R2q_local(convert_R(fwd(q).R))
 	cf=quadrant(q)
 
 
@@ -57,7 +61,7 @@ def format_movel(q,point):
 	speed='v500'
 	zone='z1'
 	p=format_point(point,quat,cf,eax)
-	return 'MoveL '+p+','+speed+','+zone+',tool0;'
+	return 'MoveL '+p+','+speed+','+zone+',Paintgun;'
 def format_movej(q):
 
 	eax='[9E+09,9E+09,9E+09,9E+09,9E+09,9E+09]'
@@ -65,11 +69,11 @@ def format_movej(q):
 	zone='z1'
 	q_deg=np.degrees(q)
 	return 'MoveAbsJ '+'[['+str(q_deg[0])+','+str(q_deg[1])+','+str(q_deg[2])+','+str(q_deg[3])+','+str(q_deg[4])+','+str(q_deg[5])+'],'+eax+'],'\
-			+speed+','+zone+',tool0;'
+			+speed+','+zone+',Paintgun;'
 def format_movec(q1,q2,point1,point2):
-	quat1=R2q(convert_R(fwd(q1).R))
+	quat1=R2q_local(convert_R(fwd(q1).R))
 	cf1=quadrant(q1)
-	quat2=R2q(convert_R(fwd(q2).R))
+	quat2=R2q_local(convert_R(fwd(q2).R))
 	cf2=quadrant(q2)
 
 	eax='[9E+09,9E+09,9E+09,9E+09,9E+09,9E+09]'
@@ -78,7 +82,7 @@ def format_movec(q1,q2,point1,point2):
 
 	p1=format_point(point1,quat1,cf1,eax)
 	p2=format_point(point2,quat2,cf2,eax)
-	return 'MoveC '+p1+','+p2+','+speed+','+zone+',tool0;'
+	return 'MoveC '+p1+','+p2+','+speed+','+zone+',Paintgun;'
 
 def main():
 
