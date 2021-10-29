@@ -73,7 +73,8 @@ def movec_fit(curve,curve_js,q=[]):
 		p=fwd(q).p
 	else:
 		p=[]
-	curve_fit,max_error=seg_3dfit(curve,p)
+	curve_fit,curve_fit_circle=circle_fit(curve,p)
+	max_error=np.max(np.linalg.norm(curve-curve_fit,axis=1))
 
 	q_all=np.array(inv(curve_fit[-1],fwd(curve_js[-1]).R))
 
@@ -192,7 +193,7 @@ def fit_under_error(curve,curve_js,max_error_threshold,d=50):
 
 
 		print(breakpoints)
-		# print(primitives_choices)
+		print(primitives_choices)
 		# print(points)
 
 	##############################check error (against fitting forward projected curve)##############################

@@ -28,7 +28,7 @@ def project(curve_fit,R_init,R_last):
 		angle=theta*distance_traveled/total_dis
 		R=rot(k,angle)
 		R_act=np.dot(R_init,R)
-		curve_fit_proj.append(curve_fit[i]+d*R_act[:,0])
+		curve_fit_proj.append(curve_fit[i]-d*R_act[:,-1])
 
 	return curve_fit_proj
 
@@ -69,8 +69,9 @@ def movel_fit(curve_backproj,curve,curve_backproj_js,q=[]):
 	###calculating projection error
 	curve_proj=project(curve_fit,start_pose.R,end_R)
 	max_error2=np.max(np.linalg.norm(curve-curve_proj,axis=1))
-	max_error=max_error1+max_error2
+	max_error=(max_error1+max_error2)/2
 
+	# print(max_error1,max_error2)
 	return curve_fit,q_last,max_error
 
 
@@ -105,10 +106,9 @@ def movej_fit(curve_backproj,curve,curve_backproj_js,q=[]):
 	###calculating projection error
 	curve_proj=project(curve_fit,start_pose.R,fwd(curve_js_fit[-1]).R)
 	max_error2=np.max(np.linalg.norm(curve-curve_proj,axis=1))
-	max_error=max_error1+max_error2
+	max_error=(max_error1+max_error2)/2
 
 	return curve_fit,curve_js_fit[-1],max_error
-
 
 
 def movec_fit(curve_backproj,curve,curve_backproj_js,q=[]):
@@ -119,8 +119,9 @@ def movec_fit(curve_backproj,curve,curve_backproj_js,q=[]):
 	else:
 		start_pose=fwd(q)
 		p=fwd(q).p
-		
-	curve_fit,max_error1=seg_3dfit(curve,p)
+	
+	curve_fit,curve_fit_circle=circle_fit(curve_backproj,p)
+	max_error1=np.max(np.linalg.norm(curve_backproj-curve_fit,axis=1))
 
 	end_R=fwd(curve_backproj_js[-1]).R
 	q_all=np.array(inv(curve_fit[-1],end_R))
@@ -132,9 +133,10 @@ def movec_fit(curve_backproj,curve,curve_backproj_js,q=[]):
 
 
 	###calculating projection error
+
 	curve_proj=project(curve_fit,start_pose.R,end_R)
 	max_error2=np.max(np.linalg.norm(curve-curve_proj,axis=1))
-	max_error=max_error1+max_error2
+	max_error=(max_error1+max_error2)/2
 
 	return curve_fit,q_last,max_error
 
@@ -194,7 +196,7 @@ def fit_under_error(curve,curve_backproj,curve_backproj_js,max_error_threshold,d
 				
 
 				for key in primitives: 
-					curve_fit,q_last,max_error=primitives[key](curve[breakpoints[-1]:breakpoints[-1]+next_point],curve_js[breakpoints[-1]:breakpoints[-1]+next_point],q=[] if len(q_breakpoints)==0 else q_breakpoints[-1])
+					curve_fit,q_last,max_error=primitives[key](curve[breakpoints[-1]:breakpoints[-1]+next_point],curve_backproj[breakpoints[-1]:breakpoints[-1]+next_point],curve_backproj_js[breakpoints[-1]:breakpoints[-1]+next_point],q=[] if len(q_breakpoints)==0 else q_breakpoints[-1])
 					max_errors[key]=max_error
 
 			# print(max_errors)
@@ -205,7 +207,7 @@ def fit_under_error(curve,curve_backproj,curve_backproj_js,max_error_threshold,d
 				
 				
 				for key in primitives: 
-					curve_fit,q_last,max_error=primitives[key](curve[breakpoints[-1]:breakpoints[-1]+next_point],curve_js[breakpoints[-1]:breakpoints[-1]+next_point],q=[] if len(q_breakpoints)==0 else q_breakpoints[-1])
+					curve_fit,q_last,max_error=primitives[key](curve[breakpoints[-1]:breakpoints[-1]+next_point],curve_backproj[breakpoints[-1]:breakpoints[-1]+next_point],curve_backproj_js[breakpoints[-1]:breakpoints[-1]+next_point],q=[] if len(q_breakpoints)==0 else q_breakpoints[-1])
 					if max_error<max_error_threshold:
 						q_breakpoints.append(q_last)
 						primitives_choices.append(key)
@@ -226,7 +228,7 @@ def fit_under_error(curve,curve_backproj,curve_backproj_js,max_error_threshold,d
 			###find the closest but under max_threshold
 			if (min(list(max_errors.values()))<=max_error_threshold and np.abs(next_point-prev_point)<10) or next_point==len(curve)-1:
 				for key in primitives: 
-					curve_fit,q_last,max_error=primitives[key](curve[breakpoints[-1]:breakpoints[-1]+next_point],curve_js[breakpoints[-1]:breakpoints[-1]+next_point],q=[] if len(q_breakpoints)==0 else q_breakpoints[-1])
+					curve_fit,q_last,max_error=primitives[key](curve[breakpoints[-1]:breakpoints[-1]+next_point],curve_backproj[breakpoints[-1]:breakpoints[-1]+next_point],curve_backproj_js[breakpoints[-1]:breakpoints[-1]+next_point],q=[] if len(q_breakpoints)==0 else q_breakpoints[-1])
 					if max_error<max_error_threshold:
 						q_breakpoints.append(q_last)
 						primitives_choices.append(key)
@@ -246,7 +248,7 @@ def fit_under_error(curve,curve_backproj,curve_backproj_js,max_error_threshold,d
 
 
 		print(breakpoints)
-		# print(primitives_choices)
+		print(primitives_choices)
 		# print(points)
 
 	##############################check error (against fitting forward projected curve)##############################

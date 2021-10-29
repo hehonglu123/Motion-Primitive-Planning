@@ -158,7 +158,7 @@ def circle_fit(curve,p=[]):
 
     theta = angle_between(u, v, normal)
 
-    l = np.linspace(0, theta, 1000)
+    l = np.linspace(0, theta, len(curve))
     curve_fitarc = generate_circle_by_vectors(l, C, r, normal, u)
     l = np.linspace(0, 2*np.pi, 1000)
     curve_fitcircle = generate_circle_by_vectors(l, C, r, normal, u)
