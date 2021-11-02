@@ -90,7 +90,7 @@ def main():
 	curve_q6=data['q6'].tolist()
 	curve_js=np.vstack((curve_q1, curve_q2, curve_q3,curve_q4,curve_q5,curve_q6)).T
 
-	data = read_csv("command_backproj.csv")
+	data = read_csv("comparison/moveL+moveC/command_backproj.csv")
 	breakpoints=data['breakpoints'].tolist()
 	primitives=data['primitives'].tolist()
 	points=data['points'].tolist()

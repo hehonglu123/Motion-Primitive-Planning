@@ -90,7 +90,6 @@ def fit_under_error(curve,curve_js,max_error_threshold,d=50):
 
 	###initialize
 	breakpoints=[0]
-	num_breakpoints=4
 	primitives_choices=[]
 	q_breakpoints=[]
 	points=[]

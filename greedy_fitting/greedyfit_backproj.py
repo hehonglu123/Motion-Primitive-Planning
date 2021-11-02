@@ -145,7 +145,6 @@ def fit_under_error(curve,curve_backproj,curve_backproj_js,max_error_threshold,d
 
 	###initialize
 	breakpoints=[0]
-	num_breakpoints=4
 	primitives_choices=[]
 	q_breakpoints=[]
 	points=[]
@@ -255,7 +254,7 @@ def fit_under_error(curve,curve_backproj,curve_backproj_js,max_error_threshold,d
 	fit_all=np.vstack(fit)
 	error=[]
 	for i in range(len(fit_all)):
-	    error_temp=np.linalg.norm(curve-fit_all[i],axis=1)
+	    error_temp=np.linalg.norm(curve_backproj-fit_all[i],axis=1)
 	    idx=np.argmin(error_temp)
 	    error.append(error_temp[idx])
 
@@ -273,7 +272,7 @@ def fit_under_error(curve,curve_backproj,curve_backproj_js,max_error_threshold,d
 		ax.scatter3D(fit[i][:,0], fit[i][:,1], fit[i][:,2], c=fit[i][:,2], cmap='Greens')
 	plt.show()
 
-	return breakpoints,primitives_choices,points
+	return breakpoints,primitives_choices,points,fit_all
 
 
 
@@ -317,7 +316,7 @@ def main():
 	curve_backproj_q6=data['q6'].tolist()
 	curve_backproj_js=np.vstack((curve_backproj_q1, curve_backproj_q2, curve_backproj_q3,curve_backproj_q4,curve_backproj_q5,curve_backproj_q6)).T
 
-	breakpoints,primitives_choices,points=fit_under_error(curve,curve_backproj,curve_backproj_js,1.)
+	breakpoints,primitives_choices,points,curve_fit=fit_under_error(curve,curve_backproj,curve_backproj_js,1.)
 
 	###insert initial configuration
 	primitives_choices.insert(0,'movej_fit')
@@ -326,7 +325,9 @@ def main():
 	print(points)
 
 	df=DataFrame({'breakpoints':breakpoints,'primitives':primitives_choices,'points':points})
-	df.to_csv('command_backproj.csv',header=True,index=False)
+	df.to_csv('comparison/moveL+moveC/command_backproj.csv',header=True,index=False)
+	df=DataFrame({'x':curve_fit[:,0],'y':curve_fit[:,1],'z':curve_fit[:,2]})
+	df.to_csv('comparison/moveL+moveC/curve_fit_backproj.csv',header=True,index=False)
 
 if __name__ == "__main__":
 	main()
