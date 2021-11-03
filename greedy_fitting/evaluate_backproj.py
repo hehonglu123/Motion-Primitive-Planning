@@ -18,13 +18,14 @@ def eval(q_all,curve,curve_backproj):
 		curve_proj.append(pose.p+d*pose.R[:,-1])
 	max_error1=calc_max_error(curve_fit,curve_backproj)
 	max_error2=calc_max_error(curve_proj,curve)
-
-	print('max error1: ',max_error1,'max error2: ',max_error2)
+	avg_error1=calc_avg_error(curve_fit,curve_backproj)
+	avg_error2=calc_avg_error(curve_proj,curve)
+	return max_error1, max_error2, avg_error1,avg_error2
 
 
 def main():
 
-	data = read_excel("backproj_recordings.xlsx")
+	data = read_excel("comparison/moveL/v5000_z10.xlsx")
 	q1=data['J1'].tolist()
 	q2=data['J2'].tolist()
 	q3=data['J3'].tolist()
@@ -63,7 +64,8 @@ def main():
         0.91741297]),(len(q_all),1)),axis=1)
 	start_idx=np.argsort(dist)[0]
 
-	eval(q_all[start_idx:],curve,curve_backproj)
+	max_error1, max_error2, avg_error1,avg_error2=eval(q_all[start_idx:],curve,curve_backproj)
+	print(max_error1,max_error2, avg_error1, avg_error2)
 
 if __name__ == "__main__":
 	main()
