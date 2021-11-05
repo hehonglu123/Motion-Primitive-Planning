@@ -17,6 +17,7 @@ MODULE Get_Joint_Data
     VAR iodev datalog;
 
     PERS Bool loggerEnabled;
+    PERS Bool endrecording:=TRUE;
     VAR Bool fileIsOpen:=FALSE;
 
     VAR string file_date;
@@ -35,13 +36,16 @@ MODULE Get_Joint_Data
 
                 time:=ClkRead(samplingClock);
 
-                ! time interval 0.001 s
-                IF time<0.001 THEN
-                    WaitTime 0.001-time;
+                ! time interval 0.004 s
+                IF time<0.004 THEN
+                    WaitTime 0.004-time;
                 ENDIF
             ELSE
                 ! loggerEnabled = FALSE
                 IF fileIsOpen=TRUE closeFile;
+                IF endrecording=TRUE THEN
+                    RETURN;
+                ENDIF
             ENDIF
         ENDWHILE
     ENDPROC
