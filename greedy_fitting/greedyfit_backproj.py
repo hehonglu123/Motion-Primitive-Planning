@@ -320,7 +320,16 @@ def main():
 
 	###insert initial configuration
 	primitives_choices.insert(0,'movej_fit')
-	points.insert(0,[curve_backproj_js[0]])
+
+	q_all=np.array(inv(curve_fit[0],fwd(curve_backproj_js[0]).R))
+
+	###choose inv_kin closest to previous joints
+	temp_q=q_all-curve_backproj_js[0]
+	order=np.argsort(np.linalg.norm(temp_q,axis=1))
+	q_init=q_all[order[0]]
+
+
+	points.insert(0,[q_init])
 	print(primitives_choices)
 	print(points)
 

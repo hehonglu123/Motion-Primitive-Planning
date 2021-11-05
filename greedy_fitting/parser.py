@@ -52,8 +52,8 @@ def format_movel(q,point):
 
 
 	eax='[9E+09,9E+09,9E+09,9E+09,9E+09,9E+09]'
-	speed='v500'
-	zone='z1'
+	speed='v5000'
+	zone='fine'
 	p=format_point(point,quat,cf,eax)
 	return 'MoveL '+p+','+speed+','+zone+',Paintgun;'
 def format_movej(q):
@@ -90,7 +90,7 @@ def main():
 	curve_q6=data['q6'].tolist()
 	curve_js=np.vstack((curve_q1, curve_q2, curve_q3,curve_q4,curve_q5,curve_q6)).T
 
-	data = read_csv("comparison/moveL+moveC/command_backproj.csv")
+	data = read_csv("comparison/moveC/command_backproj.csv")
 	breakpoints=data['breakpoints'].tolist()
 	primitives=data['primitives'].tolist()
 	points=data['points'].tolist()

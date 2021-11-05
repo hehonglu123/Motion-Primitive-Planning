@@ -24,14 +24,16 @@ def eval(q_all,curve,curve_backproj):
 
 
 def main():
-
-	data = read_excel("comparison/moveL/v5000_z10.xlsx")
-	q1=data['J1'].tolist()
-	q2=data['J2'].tolist()
-	q3=data['J3'].tolist()
-	q4=data['J4'].tolist()
-	q5=data['J5'].tolist()
-	q6=data['J6'].tolist()
+	col_names=['timestamp', 'J1', 'J2','J3', 'J4', 'J5', 'J6'] 
+	data = read_csv("comparison/moveL+moveC/v5000_z10.csv",names=col_names)
+	data = data.apply(to_numeric, errors='coerce')
+	q1=data['J1'].tolist()[1:]
+	q2=data['J2'].tolist()[1:]
+	q3=data['J3'].tolist()[1:]
+	q4=data['J4'].tolist()[1:]
+	q5=data['J5'].tolist()[1:]
+	q6=data['J6'].tolist()[1:]
+	timestamp=data['timestamp'].tolist()[1:]
 	q_all=np.vstack((q1,q2,q3,q4,q5,q6)).T
 
 	col_names=['X', 'Y', 'Z','direction_x', 'direction_y', 'direction_z'] 
@@ -66,6 +68,7 @@ def main():
 
 	max_error1, max_error2, avg_error1,avg_error2=eval(q_all[start_idx:],curve,curve_backproj)
 	print(max_error1,max_error2, avg_error1, avg_error2)
+	print('time: ',timestamp[-1]-timestamp[start_idx])
 
 if __name__ == "__main__":
 	main()

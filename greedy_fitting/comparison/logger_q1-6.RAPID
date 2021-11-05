@@ -1,0 +1,87 @@
+MODULE Get_Joint_Data
+    VAR num J1;
+    
+    VAR num J2;
+    
+    VAR num J3;
+
+    VAR num J4;
+
+    VAR num J5;
+
+    VAR num J6;
+
+    VAR clock timestampClock;
+    VAR clock samplingClock;
+    VAR num time;
+    VAR iodev datalog;
+
+    PERS Bool loggerEnabled;
+    VAR Bool fileIsOpen:=FALSE;
+
+    VAR string file_date;
+    VAR string file_time;
+    VAR string filename;
+
+    PROC main()
+        WHILE 1=1 DO
+            IF loggerEnabled=TRUE THEN
+                IF fileIsOpen=FALSE openFile;
+
+                ClkReset samplingClock;
+                ClkStart samplingClock;
+                logData;
+                ClkStop samplingClock;
+
+                time:=ClkRead(samplingClock);
+
+                ! time interval 0.001 s
+                IF time<0.001 THEN
+                    WaitTime 0.001-time;
+                ENDIF
+            ELSE
+                ! loggerEnabled = FALSE
+                IF fileIsOpen=TRUE closeFile;
+            ENDIF
+        ENDWHILE
+    ENDPROC
+
+    PROC openFile()
+        file_date:=CDate();
+        file_time:=CTime();
+        filename:="joint_data_"+file_date+"_"+StrPart(file_time,1,2)+"-"+StrPart(file_time,4,2)+"-"+StrPart(file_time,7,2)+".csv";
+        Open "HOME:"\File:=filename,datalog\Write;
+        Write datalog,"timestamp,  "\NoNewLine;
+        Write datalog,"J1, "\NoNewLine;
+        Write datalog,"J2, "\NoNewLine;
+        Write datalog,"J3, "\NoNewLine;
+        Write datalog,"J4, "\NoNewLine;
+        Write datalog,"J5, "\NoNewLine;
+        Write datalog,"J6";
+        ClkReset timestampClock;
+        ClkStart timestampClock;
+        fileIsOpen:=TRUE;
+    ENDPROC
+
+    PROC logData()
+        GetJointData 1\Position:=J1;
+        GetJointData 2\Position:=J2;
+        GetJointData 3\Position:=J3;
+        GetJointData 4\Position:=J4;
+        GetJointData 5\Position:=J5;
+        GetJointData 6\Position:=J6;
+        Write datalog, "" \Num:=ClkRead(timestampClock)\NoNewLine;
+
+        Write datalog,", "\Num:=J1\NoNewLine;
+        Write datalog,", "\Num:=J2\NoNewLine;
+        Write datalog,", "\Num:=J3\NoNewLine;
+        Write datalog,", "\Num:=J4\NoNewLine;
+        Write datalog,", "\Num:=J5\NoNewLine;
+        Write datalog,", "\Num:=J6;
+    ENDPROC
+
+    PROC closeFile()
+        Close datalog;
+        fileIsOpen:=FALSE;
+    ENDPROC
+ENDMODULE
