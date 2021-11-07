@@ -45,11 +45,10 @@ def movel_fit(curve,curve_backproj,curve_backproj_js,q=[]):
 	###with constraint point
 	else:
 		start_pose=fwd(q)
-		p=start_pose.p
+		start_point=start_pose.p
 		A=np.arange(0,len(curve_backproj)).reshape(-1,1)
-		b=curve_backproj-curve_backproj[0]
+		b=curve_backproj-start_point
 		res=np.linalg.lstsq(A,b,rcond=None)[0]
-		start_point=curve_backproj[0]
 		slope=res.reshape(1,-1)
 
 	curve_fit=np.dot(np.arange(0,len(curve_backproj)).reshape(-1,1),slope)+start_point
@@ -90,7 +89,7 @@ def movej_fit(curve,curve_backproj,curve_backproj_js,q=[]):
 		A=np.arange(0,len(curve_backproj_js)).reshape(-1,1)
 		b=curve_backproj_js-curve_backproj_js[0]
 		res=np.linalg.lstsq(A,b,rcond=None)[0]
-		start_point=curve_backproj_js[0]
+		start_point=q
 		slope=res.reshape(1,-1)
 
 	curve_js_fit=np.dot(np.arange(0,len(curve_backproj_js)).reshape(-1,1),slope)+start_point
@@ -144,7 +143,7 @@ def movec_fit(curve,curve_backproj,curve_backproj_js,q=[]):
 def fit_under_error(curve,curve_backproj,curve_backproj_js,max_error_threshold,d=50):
 
 	###initialize
-	breakpoints=[0]
+	breakpoints=[1]
 	primitives_choices=[]
 	q_breakpoints=[]
 	points=[]
@@ -181,7 +180,7 @@ def fit_under_error(curve,curve_backproj,curve_backproj_js,max_error_threshold,d
 				prev_point=prev_point_temp
 				
 				for key in primitives: 
-					curve_fit,q_last,max_error=primitives[key](curve[breakpoints[-1]:breakpoints[-1]+next_point],curve_backproj[breakpoints[-1]:breakpoints[-1]+next_point],curve_backproj_js[breakpoints[-1]:breakpoints[-1]+next_point],q=[] if len(q_breakpoints)==0 else q_breakpoints[-1])
+					curve_fit,q_last,max_error=primitives[key](curve[breakpoints[-1]-1:breakpoints[-1]+next_point],curve_backproj[breakpoints[-1]-1:breakpoints[-1]+next_point],curve_backproj_js[breakpoints[-1]-1:breakpoints[-1]+next_point],q=[] if len(q_breakpoints)==0 else q_breakpoints[-1])
 					max_errors[key]=max_error
 
 
@@ -195,7 +194,7 @@ def fit_under_error(curve,curve_backproj,curve_backproj_js,max_error_threshold,d
 				
 
 				for key in primitives: 
-					curve_fit,q_last,max_error=primitives[key](curve[breakpoints[-1]:breakpoints[-1]+next_point],curve_backproj[breakpoints[-1]:breakpoints[-1]+next_point],curve_backproj_js[breakpoints[-1]:breakpoints[-1]+next_point],q=[] if len(q_breakpoints)==0 else q_breakpoints[-1])
+					curve_fit,q_last,max_error=primitives[key](curve[breakpoints[-1]-1:breakpoints[-1]+next_point],curve_backproj[breakpoints[-1]-1:breakpoints[-1]+next_point],curve_backproj_js[breakpoints[-1]-1:breakpoints[-1]+next_point],q=[] if len(q_breakpoints)==0 else q_breakpoints[-1])
 					max_errors[key]=max_error
 
 			# print(max_errors)
@@ -206,7 +205,7 @@ def fit_under_error(curve,curve_backproj,curve_backproj_js,max_error_threshold,d
 				
 				
 				for key in primitives: 
-					curve_fit,q_last,max_error=primitives[key](curve[breakpoints[-1]:breakpoints[-1]+next_point],curve_backproj[breakpoints[-1]:breakpoints[-1]+next_point],curve_backproj_js[breakpoints[-1]:breakpoints[-1]+next_point],q=[] if len(q_breakpoints)==0 else q_breakpoints[-1])
+					curve_fit,q_last,max_error=primitives[key](curve[breakpoints[-1]-1:breakpoints[-1]+next_point],curve_backproj[breakpoints[-1]-1:breakpoints[-1]+next_point],curve_backproj_js[breakpoints[-1]-1:breakpoints[-1]+next_point],q=[] if len(q_breakpoints)==0 else q_breakpoints[-1])
 					if max_error<max_error_threshold:
 						q_breakpoints.append(q_last)
 						primitives_choices.append(key)
@@ -227,7 +226,7 @@ def fit_under_error(curve,curve_backproj,curve_backproj_js,max_error_threshold,d
 			###find the closest but under max_threshold
 			if (min(list(max_errors.values()))<=max_error_threshold and np.abs(next_point-prev_point)<10) or next_point==len(curve)-1:
 				for key in primitives: 
-					curve_fit,q_last,max_error=primitives[key](curve[breakpoints[-1]:breakpoints[-1]+next_point],curve_backproj[breakpoints[-1]:breakpoints[-1]+next_point],curve_backproj_js[breakpoints[-1]:breakpoints[-1]+next_point],q=[] if len(q_breakpoints)==0 else q_breakpoints[-1])
+					curve_fit,q_last,max_error=primitives[key](curve[breakpoints[-1]-1:breakpoints[-1]+next_point],curve_backproj[breakpoints[-1]-1:breakpoints[-1]+next_point],curve_backproj_js[breakpoints[-1]-1:breakpoints[-1]+next_point],q=[] if len(q_breakpoints)==0 else q_breakpoints[-1])
 					if max_error<max_error_threshold:
 						q_breakpoints.append(q_last)
 						primitives_choices.append(key)

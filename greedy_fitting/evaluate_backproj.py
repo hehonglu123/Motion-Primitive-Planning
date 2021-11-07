@@ -11,14 +11,14 @@ def eval(q_all,curve,curve_backproj):
 	q_all=np.radians(q_all)
 	d=50
 	curve_proj=[]
-	curve_fit=[]
+	curve_exe=[]
 	for q in q_all:
 		pose=fwd(q)
-		curve_fit.append(pose.p)
+		curve_exe.append(pose.p)
 		curve_proj.append(pose.p+d*pose.R[:,-1])
-	max_error1=calc_max_error(curve_fit,curve_backproj)
+	max_error1=calc_max_error(curve_exe,curve_backproj)
 	max_error2=calc_max_error(curve_proj,curve)
-	avg_error1=calc_avg_error(curve_fit,curve_backproj)
+	avg_error1=calc_avg_error(curve_exe,curve_backproj)
 	avg_error2=calc_avg_error(curve_proj,curve)
 	return max_error1, max_error2, avg_error1,avg_error2
 

@@ -21,7 +21,7 @@ def movel_fit(curve,curve_js,q=[]):
 		slope=res[1].reshape(1,-1)
 	###with constraint point
 	else:
-		p=fwd(q).p
+		start_point=fwd(q).p
 		A=np.arange(0,len(curve)).reshape(-1,1)
 		b=curve-curve[0]
 		res=np.linalg.lstsq(A,b,rcond=None)[0]
@@ -53,7 +53,7 @@ def movej_fit(curve,curve_js,q=[]):
 		A=np.arange(0,len(curve_js)).reshape(-1,1)
 		b=curve_js-curve_js[0]
 		res=np.linalg.lstsq(A,b,rcond=None)[0]
-		start_point=curve_js[0]
+		start_point=q
 		slope=res.reshape(1,-1)
 
 	curve_js_fit=np.dot(np.arange(0,len(curve_js)).reshape(-1,1),slope)+start_point
