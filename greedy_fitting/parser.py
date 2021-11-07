@@ -59,8 +59,8 @@ def format_movel(q,point):
 def format_movej(q):
 
 	eax='[9E+09,9E+09,9E+09,9E+09,9E+09,9E+09]'
-	speed='v500'
-	zone='z1'
+	speed='v5000'
+	zone='fine'
 	q_deg=np.degrees(q)
 	return 'MoveAbsJ '+'[['+str(q_deg[0])+','+str(q_deg[1])+','+str(q_deg[2])+','+str(q_deg[3])+','+str(q_deg[4])+','+str(q_deg[5])+'],'+eax+'],'\
 			+speed+','+zone+',Paintgun;'
@@ -71,8 +71,8 @@ def format_movec(q1,q2,point1,point2):
 	cf2=quadrant(q2)
 
 	eax='[9E+09,9E+09,9E+09,9E+09,9E+09,9E+09]'
-	speed='v500'
-	zone='z1'
+	speed='v5000'
+	zone='fine'
 
 	p1=format_point(point1,quat1,cf1,eax)
 	p2=format_point(point2,quat2,cf2,eax)
@@ -90,7 +90,7 @@ def main():
 	curve_q6=data['q6'].tolist()
 	curve_js=np.vstack((curve_q1, curve_q2, curve_q3,curve_q4,curve_q5,curve_q6)).T
 
-	data = read_csv("comparison/moveC/command_backproj.csv")
+	data = read_csv("comparison/moveL/command_backproj.csv")
 	breakpoints=data['breakpoints'].tolist()
 	primitives=data['primitives'].tolist()
 	points=data['points'].tolist()

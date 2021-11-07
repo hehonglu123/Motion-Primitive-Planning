@@ -6,6 +6,8 @@ import numpy as np
 sys.path.append('../toolbox')
 from robot_def import *
 from error_check import *
+sys.path.append('../circular_fit')
+from toolbox_circular_fit import *
 
 def main():
 	col_names=['X', 'Y', 'Z','direction_x', 'direction_y', 'direction_z'] 
@@ -24,7 +26,7 @@ def main():
 
 	###read in points backprojected
 	col_names=['timestamp', 'J1', 'J2','J3', 'J4', 'J5', 'J6'] 
-	data = read_csv("comparison/moveC/v500_fine.csv",names=col_names)
+	data = read_csv("comparison/moveL/v500_fine.csv",names=col_names)
 	data = data.apply(to_numeric, errors='coerce')
 	q1=data['J1'].tolist()[1:]
 	q2=data['J2'].tolist()[1:]
@@ -37,7 +39,7 @@ def main():
 
 	###find start configuration (RS recording start when button pressed)
 	dist=np.linalg.norm(q_all-np.tile(np.degrees([ 0.62750007,  0.17975177,  0.51961085,  1.60530199, -0.89342989,
-        0.91741297]),(len(q_all),1)),axis=1)
+		0.91741297]),(len(q_all),1)),axis=1)
 	start_idx=np.argsort(dist)[0]
 	q_all=np.radians(q_all)
 	curve_exe=[]
@@ -46,11 +48,33 @@ def main():
 		curve_exe.append(pose.p)
 	curve_exe=np.array(curve_exe)
 
-	fig = plt.figure()
-	ax = plt.axes(projection='3d')
-	ax.plot3D(curve[:,0], curve[:,1], curve[:,2], 'gray')
-	ax.plot3D(curve_fit[:,0], curve_fit[:,1], curve_fit[:,2], 'red')
+
+	###plane projection visualization
+	curve_mean = curve.mean(axis=0)
+	curve_centered = curve - curve_mean
+	U,s,V = np.linalg.svd(curve_centered)
+	# Normal vector of fitting plane is given by 3rd column in V
+	# Note linalg.svd returns V^T, so we need to select 3rd row from V^T
+	normal = V[2,:]
+
+	curve_2d_vis = rodrigues_rot(curve_centered, normal, [0,0,1])[:,:2]
+	curve_fit_2d_vis = rodrigues_rot(curve_fit-curve_mean, normal, [0,0,1])[:,:2]
+	curve_exe_2d_vis = rodrigues_rot(curve_exe-curve_mean, normal, [0,0,1])[:,:2]
+	plt.plot(curve_2d_vis[:,0],curve_2d_vis[:,1])
+	plt.plot(curve_fit_2d_vis[:,0],curve_fit_2d_vis[:,1])
+	plt.plot(curve_exe_2d_vis[:,0],curve_exe_2d_vis[:,1])
+	plt.legend(['original curve','curve fit','curve execution'])
+
+
+
+	# fig = plt.figure()
+	# ax = plt.axes(projection='3d')
+	# ax.plot3D(curve[:,0], curve[:,1], curve[:,2], 'gray')
+	# ax.plot3D(curve_fit[:,0], curve_fit[:,1], curve_fit[:,2], 'red')
 	# ax.plot3D(curve_exe[:,0], curve_exe[:,1], curve_exe[:,2], 'blue')
+	
+
+
 	plt.show()
 
 
