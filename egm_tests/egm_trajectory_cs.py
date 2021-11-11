@@ -61,29 +61,33 @@ def main():
             if res:
                 
                 fb = state.robot_message.feedBack.cartesian
-
+                p_cur=np.array([fb.pos.x,fb.pos.y,fb.pos.z])
+                R_cur=q2R([fb.orient.u0, fb.orient.u1, fb.orient.u2, fb.orient.u3])
                 if not arrived_init:
                     ###read in degrees
                     print('going to initial point',curve_backproj[0])
-                    egm.send_to_robot_cart(curve_backproj[0],R2q(R_init))
-                    if np.linalg.norm(np.array([fb.pos.x,fb.pos.y,fb.pos.z])-curve_backproj[0])<0.001:
+                   
+                    R_diff=np.dot(R_cur.T,R_init)
+                    k,theta=R2rot(R_diff)
+                    R_next=np.dot(R_cur,rot(k,min(theta,0.1)))
+                    egm.send_to_robot_cart(p_cur+(curve_backproj[0]-p_cur)/np.linalg.norm(curve_backproj[0]-p_cur),R2q(R_next))
+                    print(np.linalg.norm(p_cur-curve_backproj[0]))
+                    if np.linalg.norm(p_cur-curve_backproj[0])<0.1:
                         arrived_init=True
                 else:
-                    pass
-                    # joint_out.append(np.deg2rad(state.joint_angles))
-                    # if np.linalg.norm(np.deg2rad(state.joint_angles)-curve_backproj_js[idx])>0.02:
-                    #     ###send radians
-                    #     egm.send_to_robot(curve_backproj_js[idx])
-                    # else:
-                    #     print('arrived',idx)
-                    #     idx+=1
+
+                    ###send mms
+                    egm.send_to_robot_cart(curve_backproj[idx],R2q(direction2R(curve_direction[idx],-curve_backproj[idx]+curve_backproj[idx-1])))
+
+                    idx+=1
+                    pos_out.append(p_cur)
     except:
         traceback.print_exc()
         
-        # joint_out=np.array(joint_out)
-        # ###output to csv
-        # df=DataFrame({'q0':joint_out[:,0],'q1':joint_out[:,1],'q2':joint_out[:,2],'q3':joint_out[:,3],'q4':joint_out[:,4],'q5':joint_out[:,5]})
-        # df.to_csv('execution_egm.csv',header=False,index=False)
+        pos_out=np.array(pos_out)
+        ###output to csv
+        df=DataFrame({'x':pos_out[:,0],'y':pos_out[:,1],'z':pos_out[:,2]})
+        df.to_csv('execution_egm_cart.csv',header=False,index=False)
 
 if __name__ == '__main__':
     main()
