@@ -33,18 +33,22 @@ def main():
 
                 if not arrived_init:
                     ###read in degrees
-                    print "ID: " + str(state.robot_message.header.seqno) + " Joints: " + str(state.joint_angles)
-                    egm.send_to_robot(curve_backproj_js[0])
+                    print ("ID: " + str(state.robot_message.header.seqno) + " Joints: " + str(state.joint_angles))
+                    q_cur=np.radians(state.joint_angles)
+                    egm.send_to_robot(q_cur+(curve_backproj_js[0]-q_cur)/(10*np.linalg.norm(curve_backproj_js[0]-q_cur)))
                     if np.linalg.norm(np.deg2rad(state.joint_angles)-curve_backproj_js[0])<0.001:
                         arrived_init=True
                 else:
                     joint_out.append(np.deg2rad(state.joint_angles))
-                    if np.linalg.norm(np.deg2rad(state.joint_angles)-curve_backproj_js[idx])>0.02:
-                        ###send radians
-                        egm.send_to_robot(curve_backproj_js[idx])
-                    else:
-                        print('arrived',idx)
-                        idx+=1
+                    # if np.linalg.norm(np.deg2rad(state.joint_angles)-curve_backproj_js[idx])>0.02:
+                    #     ###send radians
+                    #     egm.send_to_robot(curve_backproj_js[idx])
+                    # else:
+                    #     print('arrived',idx)
+                    #     idx+=1
+                    ###send radians
+                    egm.send_to_robot(curve_backproj_js[idx])
+                    idx+=1    
     except:
         joint_out=np.array(joint_out)
         ###output to csv

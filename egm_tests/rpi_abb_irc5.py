@@ -26,15 +26,17 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
-####packages: ws4py, BeautifulSoup, requests, protobuf
-
 from __future__ import absolute_import
 
 import socket
 import select
-import egm_pb2
+try:
+    from . import egm_pb2
+except:
+    import egm_pb2
 import requests
-from BeautifulSoup import BeautifulSoup
+#from BeautifulSoup import BeautifulSoup
+from bs4 import BeautifulSoup
 import traceback
 from collections import namedtuple
 import numpy as np
@@ -95,12 +97,50 @@ class EGM(object):
 
         return True, EGMRobotState(joint_angles, rapid_running, motors_on, robot_message)
 
+    def send_to_robot_cart(self, xyz, quat):
+        if not self.egm_addr:
+            return False
+
+        self.send_sequence_number+=1
+
+        sensorMessage=egm_pb2.EgmSensor()
+
+        header=sensorMessage.header
+        header.mtype=egm_pb2.EgmHeader.MessageType.Value('MSGTYPE_CORRECTION')
+        header.seqno=self.send_sequence_number
+        self.send_sequence_number+=1
+
+        planned=sensorMessage.planned
+
+        # if joint_angles is not None:
+        #     joint_angles2 = list(np.rad2deg(joint_angles))
+        #     planned.joints.joints.extend(joint_angles2)
+
+        if xyz is not None and quat is not None:
+            planned.cartesian.pos.x = xyz[0]
+            planned.cartesian.pos.y = xyz[1]
+            planned.cartesian.pos.z = xyz[2]
+            planned.cartesian.orient.u0 = quat[0]
+            planned.cartesian.orient.u1 = quat[1]
+            planned.cartesian.orient.u2 = quat[2]
+            planned.cartesian.orient.u3 = quat[3]
+
+        buf=sensorMessage.SerializeToString()
+
+        try:
+            self.socket.sendto(buf, self.egm_addr)
+        except:
+            return False
+
+        return True
+
+
     def send_to_robot(self, joint_angles):
 
         if not self.egm_addr:
             return False
 
-        self.send_sequence_number+=1
+        #self.send_sequence_number+=1
 
         sensorMessage=egm_pb2.EgmSensor()
 
@@ -124,7 +164,7 @@ class EGM(object):
 
         return True
 
-EGMRobotState=namedtuple('EGMRobotState', ['joint_angles', 'rapid_running', 'motors_on', 'robot_message'], verbose=False)
+EGMRobotState=namedtuple('EGMRobotState', ['joint_angles', 'rapid_running', 'motors_on', 'robot_message'])
 JointTarget=namedtuple('JointTarget', ['robax', 'extax'])
 RobTarget=namedtuple('RobTarget', ['trans','rot','robconf','extax'])
 
@@ -505,7 +545,7 @@ class RAPID(object):
         ws.connect()        
         return ws
 
-RAPIDExecutionState=namedtuple('RAPIDExecutionState', ['ctrlexecstate', 'cycle'], verbose=False)
+RAPIDExecutionState=namedtuple('RAPIDExecutionState', ['ctrlexecstate', 'cycle'])
 RAPIDEventLogEntry=namedtuple('RAPIDEventLogEntry', ['msgtype', 'code', 'tstamp', 'args', 'title', 'desc', 'conseqs', 'causes', 'actions'])
 RAPIDIpcMessage=namedtuple('RAPIDIpcMessage',['data','userdef','msgtype','cmd'])
 RAPIDSignal=namedtuple('RAPIDSignal',['name','lvalue'])
@@ -537,7 +577,7 @@ class RAPIDSubscriptionClient(WebSocketClient):
             data=self.extract_data(soup)
             self._callback(data)
         else:
-            print "Received Illegal Event " + str(event_xml)
+            print("Received Illegal Event " + str(event_xml))
             
     def extract_data(self, soup):
         return None
