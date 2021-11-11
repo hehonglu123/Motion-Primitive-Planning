@@ -48,7 +48,9 @@ def main():
     q_init=np.array([0.627463700138299,0.17976842821744082,0.5196590573281621,1.6053098733278601,-0.8935105128511388,0.9174696574156079])
     R_init=fwd(q_init).R
 
+    timestamp=[]
     pos_out=[]
+    quat_out=[]
     try:
         egm=rpi_abb_irc5.EGM()
         t1=time.time()
@@ -62,7 +64,8 @@ def main():
                 
                 fb = state.robot_message.feedBack.cartesian
                 p_cur=np.array([fb.pos.x,fb.pos.y,fb.pos.z])
-                R_cur=q2R([fb.orient.u0, fb.orient.u1, fb.orient.u2, fb.orient.u3])
+                quat_cur=[fb.orient.u0, fb.orient.u1, fb.orient.u2, fb.orient.u3]
+                R_cur=q2R(quat_cur)
                 if not arrived_init:
                     ###read in degrees
                     print('going to initial point',curve_backproj[0])
@@ -70,24 +73,35 @@ def main():
                     R_diff=np.dot(R_cur.T,R_init)
                     k,theta=R2rot(R_diff)
                     R_next=np.dot(R_cur,rot(k,min(theta,0.1)))
-                    egm.send_to_robot_cart(p_cur+(curve_backproj[0]-p_cur)/np.linalg.norm(curve_backproj[0]-p_cur),R2q(R_next))
+                    egm.send_to_robot_cart(p_cur+10*(curve_backproj[0]-p_cur)/np.linalg.norm(curve_backproj[0]-p_cur),R2q(R_next))
                     print(np.linalg.norm(p_cur-curve_backproj[0]))
                     if np.linalg.norm(p_cur-curve_backproj[0])<0.1:
                         arrived_init=True
                 else:
 
-                    ###send mms
-                    egm.send_to_robot_cart(curve_backproj[idx],R2q(direction2R(curve_direction[idx],-curve_backproj[idx]+curve_backproj[idx-1])))
+                    if np.linalg.norm(p_cur-curve_backproj[idx])>0.5:
+                        ###send radians
+                        egm.send_to_robot_cart(curve_backproj[idx],R2q(direction2R(curve_direction[idx],-curve_backproj[idx]+curve_backproj[idx-1])))
+                    else:
+                        print('arrived',idx)
+                        idx+=1
 
-                    idx+=1
+                    ###send mms
+                    # egm.send_to_robot_cart(curve_backproj[idx],R2q(direction2R(curve_direction[idx],-curve_backproj[idx]+curve_backproj[idx-1])))
+                    # idx+=1
+
+                    timestamp.append(time.time())
                     pos_out.append(p_cur)
+                    quat_out.append(quat_cur)
     except:
         traceback.print_exc()
         
+        timestamp=np.array(timestamp)
         pos_out=np.array(pos_out)
+        quat_out=np.array(quat_out)
         ###output to csv
-        df=DataFrame({'x':pos_out[:,0],'y':pos_out[:,1],'z':pos_out[:,2]})
-        df.to_csv('execution_egm_cart.csv',header=False,index=False)
+        df=DataFrame({'timestamp':timestamp,'x':pos_out[:,0],'y':pos_out[:,1],'z':pos_out[:,2],'q1':quat_out[:,0],'q2':quat_out[:,1],'q3':quat_out[:,2],'q4':quat_out[:,3]})
+        df.to_csv('execution_egm_cs.csv',header=False,index=False)
 
 if __name__ == '__main__':
     main()
