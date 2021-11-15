@@ -16,8 +16,8 @@ def eval(q_all,curve,curve_backproj):
 		pose=fwd(q)
 		curve_exe.append(pose.p)
 		curve_proj.append(pose.p+d*pose.R[:,-1])
-	max_error1=calc_max_error(curve_exe,curve_backproj)
-	max_error2=calc_max_error(curve_proj,curve)
+	max_error1,max_error_idx1=calc_max_error(curve_exe,curve_backproj)
+	max_error2,max_error_idx2=calc_max_error(curve_proj,curve)
 	avg_error1=calc_avg_error(curve_exe,curve_backproj)
 	avg_error2=calc_avg_error(curve_proj,curve)
 	return max_error1, max_error2, avg_error1,avg_error2
@@ -25,7 +25,7 @@ def eval(q_all,curve,curve_backproj):
 
 def main():
 	col_names=['timestamp', 'J1', 'J2','J3', 'J4', 'J5', 'J6'] 
-	data = read_csv("comparison/moveL+moveC/v5000_z10.csv",names=col_names)
+	data = read_csv("comparison/moveL+moveC/threshold05/v500_fine.csv",names=col_names)
 	data = data.apply(to_numeric, errors='coerce')
 	q1=data['J1'].tolist()[1:]
 	q2=data['J2'].tolist()[1:]
@@ -62,8 +62,7 @@ def main():
 	curve_backproj_js=np.vstack((curve_backproj_q1, curve_backproj_q2, curve_backproj_q3,curve_backproj_q4,curve_backproj_q5,curve_backproj_q6)).T
 
 	###find start configuration (RS recording start when button pressed)
-	dist=np.linalg.norm(q_all-np.tile(np.degrees([ 0.62750007,  0.17975177,  0.51961085,  1.60530199, -0.89342989,
-        0.91741297]),(len(q_all),1)),axis=1)
+	dist=np.linalg.norm(q_all-np.tile(np.array([ 35.952876472045666,10.291001528494611,29.77535782467298,91.98023628868943,-51.18973047515866,52.558538106882104]),(len(q_all),1)),axis=1)
 	start_idx=np.argsort(dist)[0]
 
 	max_error1, max_error2, avg_error1,avg_error2=eval(q_all[start_idx:],curve,curve_backproj)

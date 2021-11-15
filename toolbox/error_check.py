@@ -20,11 +20,16 @@ def calc_error(p,curve):
 ###calculate maximum error between fit curve and original curve in cartesian space, distance only
 def calc_max_error(fit,curve):
 	max_error=0
+	idx=0
+	max_error_idx=0
 	for p in fit:
 		error=calc_error(p,curve)
 		if error>max_error:
+			max_error_idx=idx
 			max_error=copy.deepcopy(error)
-	return max_error
+		idx+=1
+
+	return max_error, max_error_idx
 
 def calc_avg_error(fit,curve):
 	error=0
