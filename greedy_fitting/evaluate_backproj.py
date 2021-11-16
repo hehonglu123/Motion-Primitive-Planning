@@ -18,6 +18,7 @@ def eval(q_all,curve,curve_backproj):
 		curve_proj.append(pose.p+d*pose.R[:,-1])
 	max_error1,max_error_idx1=calc_max_error(curve_exe,curve_backproj)
 	max_error2,max_error_idx2=calc_max_error(curve_proj,curve)
+	print(max_error_idx1,max_error_idx2)
 	avg_error1=calc_avg_error(curve_exe,curve_backproj)
 	avg_error2=calc_avg_error(curve_proj,curve)
 	return max_error1, max_error2, avg_error1,avg_error2
@@ -25,15 +26,15 @@ def eval(q_all,curve,curve_backproj):
 
 def main():
 	col_names=['timestamp', 'J1', 'J2','J3', 'J4', 'J5', 'J6'] 
-	data = read_csv("comparison/moveL+moveC/threshold05/v500_fine.csv",names=col_names)
+	data = read_csv("comparison/moveL+moveC/threshold1/v5000_fine.csv",names=col_names)
 	data = data.apply(to_numeric, errors='coerce')
-	q1=data['J1'].tolist()[1:]
-	q2=data['J2'].tolist()[1:]
-	q3=data['J3'].tolist()[1:]
-	q4=data['J4'].tolist()[1:]
-	q5=data['J5'].tolist()[1:]
-	q6=data['J6'].tolist()[1:]
-	timestamp=data['timestamp'].tolist()[1:]
+	q1=data['J1'].tolist()[1:-1]
+	q2=data['J2'].tolist()[1:-1]
+	q3=data['J3'].tolist()[1:-1]
+	q4=data['J4'].tolist()[1:-1]
+	q5=data['J5'].tolist()[1:-1]
+	q6=data['J6'].tolist()[1:-1]
+	timestamp=data['timestamp'].tolist()[1:-1]
 	q_all=np.vstack((q1,q2,q3,q4,q5,q6)).T
 
 	col_names=['X', 'Y', 'Z','direction_x', 'direction_y', 'direction_z'] 
@@ -62,8 +63,9 @@ def main():
 	curve_backproj_js=np.vstack((curve_backproj_q1, curve_backproj_q2, curve_backproj_q3,curve_backproj_q4,curve_backproj_q5,curve_backproj_q6)).T
 
 	###find start configuration (RS recording start when button pressed)
-	dist=np.linalg.norm(q_all-np.tile(np.array([ 35.952876472045666,10.291001528494611,29.77535782467298,91.98023628868943,-51.18973047515866,52.558538106882104]),(len(q_all),1)),axis=1)
-	start_idx=np.argsort(dist)[0]
+	# dist1=np.linalg.norm(q_all-np.tile(start_joints,(len(q_all),1)),axis=1)
+	# start_idx=np.argmin(dist1)
+	start_idx=0
 
 	max_error1, max_error2, avg_error1,avg_error2=eval(q_all[start_idx:],curve,curve_backproj)
 	print(max_error1,max_error2, avg_error1, avg_error2)

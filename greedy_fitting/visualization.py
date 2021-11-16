@@ -18,7 +18,7 @@ def main():
 	curve=np.vstack((curve_x, curve_y, curve_z)).T
 
 	col_names=['X', 'Y', 'Z','direction_x', 'direction_y', 'direction_z'] 
-	data = read_csv("comparison/moveL/curve_fit_backproj.csv")
+	data = read_csv("comparison/moveL+moveC/threshold05/curve_fit_backproj.csv")
 	curve_x=data['x'].tolist()
 	curve_y=data['y'].tolist()
 	curve_z=data['z'].tolist()
@@ -26,7 +26,7 @@ def main():
 
 	###read in points backprojected
 	col_names=['timestamp', 'J1', 'J2','J3', 'J4', 'J5', 'J6'] 
-	data = read_csv("comparison/moveL/v500_z1.csv",names=col_names)
+	data = read_csv("comparison/moveL+moveC/threshold1/v500_fine.csv",names=col_names)
 	data = data.apply(to_numeric, errors='coerce')
 	q1=data['J1'].tolist()[1:]
 	q2=data['J2'].tolist()[1:]
@@ -38,9 +38,10 @@ def main():
 	q_all=np.vstack((q1,q2,q3,q4,q5,q6)).T
 
 	###find start configuration (RS recording start when button pressed)
-	dist=np.linalg.norm(q_all-np.tile(np.degrees([ 0.62750007,  0.17975177,  0.51961085,  1.60530199, -0.89342989,
-		0.91741297]),(len(q_all),1)),axis=1)
-	start_idx=np.argsort(dist)[0]
+	# dist=np.linalg.norm(q_all-np.tile(np.degrees([ 0.62750007,  0.17975177,  0.51961085,  1.60530199, -0.89342989,
+	# 	0.91741297]),(len(q_all),1)),axis=1)
+	# start_idx=np.argsort(dist)[0]
+	start_idx=0
 	q_all=np.radians(q_all)
 	curve_exe=[]
 	for q in q_all[start_idx:]:
