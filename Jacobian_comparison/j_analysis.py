@@ -7,7 +7,7 @@ from robot_def import *
 
 
 col_names=['q1', 'q2', 'q3','q4', 'q5', 'q6'] 
-data = read_csv("from_cad/Curve_backproj_js.csv", names=col_names)
+data = read_csv('curve_poses/curve_pose3/Curve_backproj_js0.csv', names=col_names)
 curve_q1=data['q1'].tolist()
 curve_q2=data['q2'].tolist()
 curve_q3=data['q3'].tolist()
