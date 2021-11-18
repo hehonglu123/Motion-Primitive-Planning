@@ -26,7 +26,7 @@ def main():
 
 	###read in points backprojected
 	col_names=['timestamp', 'J1', 'J2','J3', 'J4', 'J5', 'J6'] 
-	data = read_csv("comparison/moveL+moveC/threshold1/v500_fine.csv",names=col_names)
+	data = read_csv("comparison/moveL+moveC/threshold1/v5000_fine.csv",names=col_names)
 	data = data.apply(to_numeric, errors='coerce')
 	q1=data['J1'].tolist()[1:]
 	q2=data['J2'].tolist()[1:]
