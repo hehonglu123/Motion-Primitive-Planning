@@ -23,10 +23,10 @@ def main():
 	curve=np.vstack((curve_x, curve_y, curve_z)).T
 	curve_direction=np.vstack((curve_direction_x, curve_direction_y, curve_direction_z)).T
 
-	curve_new,curve_direction_new=rotate_curve(curve,curve_direction,Rx(np.pi/2),np.array([0,0,0]))
+	curve_new,curve_direction_new=rotate_curve(curve,curve_direction,Ry(np.pi/2),np.array([1000,0,1000]))
 
 	df=DataFrame({'x':curve_new[:,0],'y':curve_new[:,1], 'z':curve_new[:,2],'x_direction':curve_direction_new[:,0],'y_direction':curve_direction_new[:,1],'z_direction':curve_direction_new[:,2]})
-	df.to_csv("curve_poses/curve_pose3/Curve_backproj_in_base_frame.csv",header=False,index=False)
+	df.to_csv("curve_poses/curve_pose5/Curve_backproj_in_base_frame.csv",header=False,index=False)
 
 
 if __name__ == "__main__":
