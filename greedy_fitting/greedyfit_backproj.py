@@ -279,7 +279,7 @@ def fit_under_error(curve,curve_backproj,curve_backproj_js,max_error_threshold,d
 def main():
 	###read in points
 	col_names=['X', 'Y', 'Z','direction_x', 'direction_y', 'direction_z'] 
-	data = read_csv("../data/from_cad/Curve_in_base_frame.csv", names=col_names)
+	data = read_csv("../data/from_ge/Curve_in_base_frame.csv", names=col_names)
 	curve_x=data['X'].tolist()
 	curve_y=data['Y'].tolist()
 	curve_z=data['Z'].tolist()
@@ -287,7 +287,7 @@ def main():
 
 	###read in points backprojected
 	col_names=['X', 'Y', 'Z','direction_x', 'direction_y', 'direction_z'] 
-	data = read_csv("../data/from_cad/Curve_backproj_in_base_frame.csv", names=col_names)
+	data = read_csv("../data/from_ge/Curve_backproj_in_base_frame.csv", names=col_names)
 	curve_backproj_x=data['X'].tolist()
 	curve_backproj_y=data['Y'].tolist()
 	curve_backproj_z=data['Z'].tolist()
@@ -295,18 +295,7 @@ def main():
 
 	###read interpolated curves in joint space
 	col_names=['q1', 'q2', 'q3','q4', 'q5', 'q6'] 
-	data = read_csv("../data/from_cad/Curve_js.csv", names=col_names)
-	curve_q1=data['q1'].tolist()
-	curve_q2=data['q2'].tolist()
-	curve_q3=data['q3'].tolist()
-	curve_q4=data['q4'].tolist()
-	curve_q5=data['q5'].tolist()
-	curve_q6=data['q6'].tolist()
-	curve_js=np.vstack((curve_q1, curve_q2, curve_q3,curve_q4,curve_q5,curve_q6)).T
-
-	###read interpolated curves in joint space
-	col_names=['q1', 'q2', 'q3','q4', 'q5', 'q6'] 
-	data = read_csv("../data/from_cad/Curve_backproj_js.csv", names=col_names)
+	data = read_csv("../data/from_ge/Curve_backproj_js.csv", names=col_names)
 	curve_backproj_q1=data['q1'].tolist()
 	curve_backproj_q2=data['q2'].tolist()
 	curve_backproj_q3=data['q3'].tolist()
@@ -315,7 +304,7 @@ def main():
 	curve_backproj_q6=data['q6'].tolist()
 	curve_backproj_js=np.vstack((curve_backproj_q1, curve_backproj_q2, curve_backproj_q3,curve_backproj_q4,curve_backproj_q5,curve_backproj_q6)).T
 
-	breakpoints,primitives_choices,points,curve_fit=fit_under_error(curve,curve_backproj,curve_backproj_js,0.5)
+	breakpoints,primitives_choices,points,curve_fit=fit_under_error(curve,curve_backproj,curve_backproj_js,max_error_threshold=1.)
 
 	###insert initial configuration
 	primitives_choices.insert(0,'movej_fit')
@@ -333,9 +322,9 @@ def main():
 	print(points)
 
 	df=DataFrame({'breakpoints':breakpoints,'primitives':primitives_choices,'points':points})
-	df.to_csv('comparison/moveL+moveC/command_backproj_05.csv',header=True,index=False)
+	df.to_csv('comparison/moveL+moveC/command_backproj.csv',header=True,index=False)
 	df=DataFrame({'x':curve_fit[:,0],'y':curve_fit[:,1],'z':curve_fit[:,2]})
-	df.to_csv('comparison/moveL+moveC/curve_fit_backproj_05.csv',header=True,index=False)
+	df.to_csv('comparison/moveL+moveC/curve_fit_backproj.csv',header=True,index=False)
 
 if __name__ == "__main__":
 	main()
