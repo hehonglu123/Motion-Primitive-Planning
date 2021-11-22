@@ -12,12 +12,12 @@ from robot_def import *
 def main():
 
 	col_names=['X', 'Y', 'Z','direction_x','direction_y','direction_z'] 
-	data = read_csv("Curve_new_mm.csv", names=col_names)
+	data = read_csv("Curve_dense_new_mm.csv", names=col_names)
 	curve_x=data['X'].tolist()
 	curve_y=data['Y'].tolist()
 	curve_z=data['Z'].tolist()
 
-	curve_new=np.flip(np.dot(np.dot(Rz(np.pi/2),Rx(np.pi/2)),np.vstack((curve_x, curve_y, curve_z))).T+np.array([2700,-800,500]),axis=0)
+	curve_new=np.dot(np.dot(Rz(np.pi/2),Rx(np.pi/2)),np.vstack((curve_x, curve_y, curve_z))).T+np.array([2700,-800,500])
 	curve_direction_new=[]
 
 	col_names=['X', 'Y', 'Z','direction_x','direction_y','direction_z'] 
