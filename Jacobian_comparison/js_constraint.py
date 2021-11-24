@@ -11,7 +11,7 @@ from robot_def import *
 def main():
 	###read actual curve
 	col_names=['q1', 'q2', 'q3','q4', 'q5', 'q6'] 
-	data = read_csv("curve_poses/curve_pose0/Curve_backproj_js0.csv", names=col_names)
+	data = read_csv("curve_poses/curve_pose6/Curve_backproj_js1.csv", names=col_names)
 	curve_q1=data['q1'].tolist()
 	curve_q2=data['q2'].tolist()
 	curve_q3=data['q3'].tolist()
@@ -24,9 +24,6 @@ def main():
 
 
 	dlam_max=[]
-	ddlam_max=[]
-	dlam_act=[0]
-	qd_prev=np.zeros(6)
 
 	###find path length
 	lam=[0]
@@ -38,26 +35,23 @@ def main():
 	###normalize lam
 	lam=np.array(lam)/lam[-1]
 
-
-	for i in range(0,100):#len(curve_js)-1,1):
-		dq=np.abs(curve_js[i+1]-curve_js[i])
-		dqdlam=dq/(lam[i+1]-lam[i])
-		t=np.max(dq/joint_vel_limit)
+	step=1000
+	for i in range(0,len(lam)-step,step):
+		dq=np.abs(curve_js[i+step]-curve_js[i])
+		dqdlam=dq/(lam[i+step]-lam[i])
+		t=np.max(np.divide(dq,joint_vel_limit))
 
 		qdot_max=dq/t 		###approximated max qdot
 		dlam_max.append(qdot_max[0]/dqdlam[0])
 
-		print(t,np.linalg.norm(dq))
 
 
-
-	dlam_act.pop(0)
-	# plt.plot(lam[1:-1:10],dlam_max,label="lambda_dot_max")
-	# plt.xlabel("lambda")
-	# plt.ylabel("lambda_dot")
-	# plt.title("max lambda_dot vs lambda (path index)")
-	# plt.savefig("velocity-constraint_js.png")
-	# plt.show()
+	plt.plot(lam[:-step:step],dlam_max,label="lambda_dot_max")
+	plt.xlabel("lambda")
+	plt.ylabel("lambda_dot")
+	plt.title("max lambda_dot vs lambda (path index)")
+	plt.savefig("velocity-constraint_js.png")
+	plt.show()
 
 
 if __name__ == "__main__":
