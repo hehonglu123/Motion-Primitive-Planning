@@ -45,13 +45,13 @@ def jacobian(q):
 def fwd(q):
 	return fwdkin(ABB_def,q)
 
-def fwd_all(q_all):
+def fwd_all(q_all,base_R=np.eye(3),base_p=np.array([0,0,0])):
 	pose_p_all=[]
 	pose_R_all=[]
 	for q in q_all:
 		pose_temp=fwd(q)
-		pose_p_all.append(pose_temp.p)
-		pose_R_all.append(pose_temp.R)
+		pose_p_all.append(np.dot(base_R,pose_temp.p)+base_p)
+		pose_R_all.append(np.dot(base_R,pose_temp.R))
 
 	return Transform_all(pose_p_all,pose_R_all)
 

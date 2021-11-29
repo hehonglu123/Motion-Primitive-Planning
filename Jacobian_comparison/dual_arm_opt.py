@@ -10,8 +10,9 @@ from robot_def import *
 from lambda_calc import *
 
 def opt_fun(curve_js_steps):
+	###curve_js_steps: steps*12x1 vector
 	global lam, joint_vel_limit
-	dlam=calc_lamdot(curve_js_steps.reshape((-1,6)),lam,joint_vel_limit,1)
+	dlam=calc_lamdot(curve_js_steps.reshape((-1,12)),lam,joint_vel_limit,1)
 
 	return min(dlam)
 def main():
@@ -27,7 +28,7 @@ def main():
 	curve_q6=data['q6'].tolist()
 	curve_js=np.vstack((curve_q1, curve_q2, curve_q3,curve_q4,curve_q5,curve_q6)).T
 
-	joint_vel_limit=np.radians([110,90,90,150,120,235])
+	joint_vel_limit=np.radians([110,90,90,150,120,235]*2)
 
 	###decrease curve density to simplify computation
 	step=1000	
@@ -53,11 +54,15 @@ def main():
 	curve_cs_p=np.array(curve_cs_p)
 	curve_cs_R=np.array(curve_cs_R)
 
+	###second arm base pose
+	base_R=np.array([[-1,0,0],[0,-1,0],[0,0,1]])
+	base_p=np.array([4,0,0])
+
 	###path constraints, position constraint and curve normal constraint
-	cons = ({'type': 'eq', 'fun': lambda x:  fwd_all(x.reshape((-1,6))).p_all.flatten()-curve_cs_p.flatten()},
-			{'type': 'eq', 'fun': lambda x:  fwd_all(x.reshape((-1,6))).R_all[:,:,-1].flatten()-curve_cs_R[:,:,-1].flatten()})
-	lowerer_limit=np.radians([-220.,-40.,-180.,-300.,-120.,-360.])+0.001*np.ones(6)
-	upper_limit=np.radians([220.,160.,70.,300.,120.,360.])-0.001*np.ones(6)
+	cons = ({'type': 'eq', 'fun': lambda x:  fwd_all(x.reshape((-1,6*2))[:,:6]).p_all.flatten()-fwd_all(x.reshape((-1,6*2))[:,6:],base_R,base_p).p_all.flatten()-curve_cs_p.flatten()},
+			{'type': 'eq', 'fun': lambda x:  fwd_all(x.reshape((-1,6*2))[:,:6]).R_all[:,:,-1].flatten()-curve_cs_R[:,:,-1].flatten()})
+	lowerer_limit=np.radians([-220.,-40.,-180.,-300.,-120.,-360.]*2)+0.001*np.ones(6*2)
+	upper_limit=np.radians([220.,160.,70.,300.,120.,360.]*2)-0.001*np.ones(6*2)
 	bnds=tuple(zip(lowerer_limit,upper_limit))*len(curve_js)
 
 	res = minimize(opt_fun, curve_js, method='SLSQP',tol=1e-10,bounds=bnds,constraints=cons)
