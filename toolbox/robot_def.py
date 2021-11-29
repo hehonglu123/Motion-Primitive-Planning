@@ -36,11 +36,24 @@ lowerer_limit=np.radians([-220.,-40.,-180.,-300.,-120.,-360.])
 joint_vel_limit=np.radians([110,90,90,150,120,235])
 ABB_def=Robot(H,P,joint_type,joint_lower_limit = lowerer_limit, joint_upper_limit = upper_limit, joint_vel_limit=joint_vel_limit, R_tool=R_tool,p_tool=p_tool)
 
-
+class Transform_all(object):
+	def __init__(self, p_all, R_all):
+		self.R_all=np.array(R_all)
+		self.p_all=np.array(p_all)
 def jacobian(q):
 	return robotjacobian(ABB_def,q)
 def fwd(q):
 	return fwdkin(ABB_def,q)
+
+def fwd_all(q_all):
+	pose_p_all=[]
+	pose_R_all=[]
+	for q in q_all:
+		pose_temp=fwd(q)
+		pose_p_all.append(pose_temp.p)
+		pose_R_all.append(pose_temp.R)
+
+	return Transform_all(pose_p_all,pose_R_all)
 
 def inv(p,R=np.eye(3)):
 	pose=Transform(R,p)

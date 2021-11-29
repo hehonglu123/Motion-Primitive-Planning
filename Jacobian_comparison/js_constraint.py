@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 
 sys.path.append('../toolbox')
 from robot_def import *
-
+from lambda_calc import *
 
 def main():
 	###read actual curve
@@ -36,15 +36,8 @@ def main():
 	lam=np.array(lam)/lam[-1]
 
 	step=1000
-	for i in range(0,len(lam)-step,step):
-		dq=np.abs(curve_js[i+step]-curve_js[i])
-		dqdlam=dq/(lam[i+step]-lam[i])
-		t=np.max(np.divide(dq,joint_vel_limit))
 
-		qdot_max=dq/t 		###approximated max qdot
-		dlam_max.append(qdot_max[0]/dqdlam[0])
-
-
+	dlam_max=calc_lamdot(curve_js,lam,joint_vel_limit,step=1000)
 
 	plt.plot(lam[:-step:step],dlam_max,label="lambda_dot_max")
 	plt.xlabel("lambda")
