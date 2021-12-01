@@ -13,7 +13,7 @@ def opt_fun(curve_js_steps):
 	global lam, joint_vel_limit
 	dlam=calc_lamdot(curve_js_steps.reshape((-1,6)),lam,joint_vel_limit,1)
 
-	return min(dlam)
+	return -min(dlam)
 def main():
 	global joint_vel_limit, lam
 	###read actual curve

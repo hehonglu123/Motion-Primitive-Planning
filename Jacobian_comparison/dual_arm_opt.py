@@ -56,11 +56,11 @@ def main():
 
 	###second arm base pose
 	base_R=np.array([[-1,0,0],[0,-1,0],[0,0,1]])
-	base_p=np.array([4,0,0])
+	base_p=np.array([5000,0,0])
 
 	###path constraints, position constraint and curve normal constraint
 	cons = ({'type': 'eq', 'fun': lambda x:  fwd_all(x.reshape((-1,6*2))[:,:6]).p_all.flatten()-fwd_all(x.reshape((-1,6*2))[:,6:],base_R,base_p).p_all.flatten()-curve_cs_p.flatten()},
-			{'type': 'eq', 'fun': lambda x:  fwd_all(x.reshape((-1,6*2))[:,:6]).R_all[:,:,-1].flatten()-curve_cs_R[:,:,-1].flatten()})
+			{'type': 'eq', 'fun': lambda x:  np.dot(fwd_all(x.reshape((-1,6*2))[:,:6]).R_all, fwd_all(x.reshape((-1,6*2))[:,6:],base_R,base_p).R_all.T)[:,:,-1].flatten()-curve_cs_R[:,:,-1].flatten()})
 	lowerer_limit=np.radians([-220.,-40.,-180.,-300.,-120.,-360.]*2)+0.001*np.ones(6*2)
 	upper_limit=np.radians([220.,160.,70.,300.,120.,360.]*2)-0.001*np.ones(6*2)
 	bnds=tuple(zip(lowerer_limit,upper_limit))*len(curve_js)
@@ -70,8 +70,8 @@ def main():
 	print(res)
 	print('originial: ',opt_fun(curve_js),'optimized: ',opt_fun(res.x.reshape((-1,6))))
 
-	# print(res.x.reshape((-1,6)))
-	dlam_out=calc_lamdot(res.x.reshape((-1,6)),lam,joint_vel_limit,1)
+	# print(res.x.reshape((-1,6*2)))
+	dlam_out=calc_lamdot(res.x.reshape((-1,6*2)),lam,joint_vel_limit,1)
 
 
 	plt.plot(lam[:-1],dlam_out,label="lambda_dot_max")
