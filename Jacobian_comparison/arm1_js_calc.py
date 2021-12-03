@@ -6,6 +6,16 @@ import matplotlib.pyplot as plt
 sys.path.append('../toolbox')
 from robot_def import *
 
+def format_movej(q):
+
+	eax='[9E+09,9E+09,9E+09,9E+09,9E+09,9E+09]'
+	speed='v5000'
+	zone='fine'
+	q_deg=np.degrees(q)
+	return 'MoveAbsJ '+'[['+str(q_deg[0])+','+str(q_deg[1])+','+str(q_deg[2])+','+str(q_deg[3])+','+str(q_deg[4])+','+str(q_deg[5])+'],'+eax+'],'\
+			+speed+','+zone+',Paintgun;'
+
+
 def cross(v):
 	return np.array([[0,-v[-1],v[1]],
 					[v[-1],0,-v[0]],
@@ -37,7 +47,7 @@ def main():
 
 	###second arm settings
 	arm2_base_R=np.array([[-1,0,0],[0,-1,0],[0,0,1]])
-	arm2_base_p=np.array([5000,0,0])
+	arm2_base_p=np.array([6000,0,0])
 
 	col_names=['X', 'Y', 'Z','direction_x','direction_y','direction_z'] 
 	data = read_csv("curve_poses/dual_arm/arm2_cs.csv", names=col_names)
@@ -69,12 +79,12 @@ def main():
 		try:
 			position=np.dot(arm2_base_R,curve_arm2[i])+arm2_base_p+curve_relative[i]
 			if i==0:
-				R=direction2R(curve_direction[i],-curve_relative[i+1]+curve_relative[i])
+				position_next=np.dot(arm2_base_R,curve_arm2[1])+arm2_base_p+curve_relative[1]
+				R=direction2R(curve_direction[i],-position_next+position)
 			else:
 				R=direction2R(curve_direction[i],-position+position_prev)
 			q_all=np.array(inv(position,R))
 			position_prev=position
-
 		except:
 			traceback.print_exc()
 			pass
@@ -99,6 +109,8 @@ def main():
 	df=DataFrame({'q0':curve_js[:,0],'q1':curve_js[:,1],'q2':curve_js[:,2],'q3':curve_js[:,3],'q4':curve_js[:,4],'q5':curve_js[:,5]})
 	df.to_csv('curve_poses/dual_arm/arm1_js.csv',header=False,index=False)
 
+	for i in range(0,len(curve_js),4999):
+		print(format_movej(curve_js[i]))
 
 
 

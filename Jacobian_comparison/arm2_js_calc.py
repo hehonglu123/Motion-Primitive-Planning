@@ -45,8 +45,7 @@ def main():
 				curve_js[i]=q_all[order[0]]
 
 			except:
-				q_all=np.array(inv(curve[i],R[i]))
-				traceback.print_exc()
+				print(curve[i])
 				pass
 
 	###output to csv
