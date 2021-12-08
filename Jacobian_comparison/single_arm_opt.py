@@ -12,7 +12,7 @@ from robot_def import *
 from lambda_calc import *
 
 def normalize_dq(q):
-	q[:-1]=q[:-1]/(np.linalg.norm(q[:-1])) 
+	q=q/(np.linalg.norm(q)) 
 	return q   
 
 def opt_fun(curve_js_steps,lam,joint_vel_limit):
@@ -69,50 +69,56 @@ def main():
 	###stepwise qp solver
 	for i in range(len(curve_cs_p)-1):
 
-		error_fb=999
-		if i==0:
-			continue
-		while error_fb>0.1:
+		try:
+			error_fb=999
+			if i==0:
+				continue
 
-			pose_now=fwd(q_all[-1])
-			error_fb=np.linalg.norm(pose_now.p-curve_cs_p[i])+np.linalg.norm(pose_now.R[:,-1]-curve_cs_R[i][:,-1])
+			while error_fb>0.1:
 
-			
-			w=0.2
-			Kq=.01*np.eye(6)    #small value to make sure positive definite
-			KR=np.eye(3)        #gains for position and orientation error
+				pose_now=fwd(q_all[-1])
+				error_fb=np.linalg.norm(pose_now.p-curve_cs_p[i])+np.linalg.norm(pose_now.R[:,-1]-curve_cs_R[i][:,-1])
+				
+				w=0.2
+				Kq=.01*np.eye(6)    #small value to make sure positive definite
+				KR=np.eye(3)        #gains for position and orientation error
 
-			J=jacobian(q_all[-1])        #calculate current Jacobian
-			Jp=J[3:,:]
-			JR=J[:3,:] 
-			H=np.dot(np.transpose(Jp),Jp)+Kq+w*np.dot(np.transpose(JR),JR)
-			H=(H+np.transpose(H))/2
+				J=jacobian(q_all[-1])        #calculate current Jacobian
+				Jp=J[3:,:]
+				JR=J[:3,:] 
+				H=np.dot(np.transpose(Jp),Jp)+Kq+w*np.dot(np.transpose(JR),JR)
+				H=(H+np.transpose(H))/2
 
-			vd=curve_cs_p[i]-pose_now.p
-			k=np.cross(pose_now.R[:,-1],curve_cs_R[i][:,-1])
+				vd=curve_cs_p[i]-pose_now.p
+				k=np.cross(pose_now.R[:,-1],curve_cs_R[i][:,-1])
 
-			k=k/np.linalg.norm(k)
-			theta=np.arctan2(np.linalg.norm(np.cross(pose_now.R[:,-1],curve_cs_R[i][:,-1])), np.dot(pose_now.R[:,-1],curve_cs_R[i][:,-1]))
+				k=k/np.linalg.norm(k)
+				theta=-np.arctan2(np.linalg.norm(np.cross(pose_now.R[:,-1],curve_cs_R[i][:,-1])), np.dot(pose_now.R[:,-1],curve_cs_R[i][:,-1]))
 
-			k=np.array(k)
-			s=np.sin(theta/2)*k         #eR2
-			wd=-np.dot(KR,s)  
-			f=-np.dot(np.transpose(Jp),vd)-w*np.dot(np.transpose(JR),wd)
-			qdot=0.01*normalize_dq(solve_qp(H, f))
+				k=np.array(k)
+				s=np.sin(theta/2)*k         #eR2
+				wd=-np.dot(KR,s)
+				f=-np.dot(np.transpose(Jp),vd)-w*np.dot(np.transpose(JR),wd)
+				# qdot=solve_qp(H,f)
+				qdot=0.001*normalize_dq(solve_qp(H, f))
 
 
-			q_all.append(q_all[-1]+qdot)
-			print(qdot,q_all[-1])
+				q_all.append(q_all[-1]+qdot)
+				# print(q_all[-1])
+		except:
+			q_out.append(q_all[-1])
+			traceback.print_exc()
+			break
 
 		q_out.append(q_all[-1])
 
 
 	q_out=np.array(q_out)
 	print(q_out)
-	dlam_out=calc_lamdot(q_out,lam,joint_vel_limit,1)
+	dlam_out=calc_lamdot(q_out,lam[:len(q_out)],joint_vel_limit,1)
 
 
-	plt.plot(lam[:-1],dlam_out,label="lambda_dot_max")
+	plt.plot(lam[:len(q_out)-1],dlam_out,label="lambda_dot_max")
 	plt.xlabel("lambda")
 	plt.ylabel("lambda_dot")
 	plt.title("max lambda_dot vs lambda (path index)")
