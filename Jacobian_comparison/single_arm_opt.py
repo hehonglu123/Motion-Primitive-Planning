@@ -5,6 +5,7 @@ from general_robotics_toolbox import *
 import matplotlib.pyplot as plt
 from scipy.optimize import minimize
 from scipy.optimize import differential_evolution, shgo, NonlinearConstraint
+from qpsolvers import solve_qp
 
 sys.path.append('../toolbox')
 from robot_def import *
@@ -63,27 +64,33 @@ def main():
 	bnds=tuple(zip(lowerer_limit,upper_limit))*len(curve_js)
 
 	##starting q
-	q_all=curve_js[0]
-	q_out=[]
+	q_all=[curve_js[0]]
+	q_out=[curve_js[0]]
 	###stepwise qp solver
 	for i in range(len(curve_cs_p)-1):
-		pose_now=fwd(q_all[-1])
-		error_fb=np.linalg.norm(pose_now.p-curve_cs_p[i])+np.linalg.norm(pose_now.R[:,-1]-curve_cs_R[i][:,-1])
-		if error_fb<0.1:
-			q_out.append(q_all[-1])
-		else:
+
+		error_fb=999
+		if i==0:
+			continue
+		while error_fb>0.1:
+
+			pose_now=fwd(q_all[-1])
+			error_fb=np.linalg.norm(pose_now.p-curve_cs_p[i])+np.linalg.norm(pose_now.R[:,-1]-curve_cs_R[i][:,-1])
+
+			
 			w=0.2
-			Kq=.01*np.eye(n)    #small value to make sure positive definite
+			Kq=.01*np.eye(6)    #small value to make sure positive definite
 			KR=np.eye(3)        #gains for position and orientation error
 
-			q_cur=vel_ctrl.joint_position()
-			J=robotjacobian(robot_def,q_cur)        #calculate current Jacobian
+			J=jacobian(q_all[-1])        #calculate current Jacobian
 			Jp=J[3:,:]
 			JR=J[:3,:] 
 			H=np.dot(np.transpose(Jp),Jp)+Kq+w*np.dot(np.transpose(JR),JR)
 			H=(H+np.transpose(H))/2
 
+			vd=curve_cs_p[i]-pose_now.p
 			k=np.cross(pose_now.R[:,-1],curve_cs_R[i][:,-1])
+
 			k=k/np.linalg.norm(k)
 			theta=np.arctan2(np.linalg.norm(np.cross(pose_now.R[:,-1],curve_cs_R[i][:,-1])), np.dot(pose_now.R[:,-1],curve_cs_R[i][:,-1]))
 
@@ -91,13 +98,18 @@ def main():
 			s=np.sin(theta/2)*k         #eR2
 			wd=-np.dot(KR,s)  
 			f=-np.dot(np.transpose(Jp),vd)-w*np.dot(np.transpose(JR),wd)
-			qdot=0.5*normalize_dq(solve_qp(H, f))
+			qdot=0.01*normalize_dq(solve_qp(H, f))
+
 
 			q_all.append(q_all[-1]+qdot)
+			print(qdot,q_all[-1])
+
+		q_out.append(q_all[-1])
 
 
-
-	dlam_out=calc_lamdot(res.x.reshape((-1,6)),lam,joint_vel_limit,1)
+	q_out=np.array(q_out)
+	print(q_out)
+	dlam_out=calc_lamdot(q_out,lam,joint_vel_limit,1)
 
 
 	plt.plot(lam[:-1],dlam_out,label="lambda_dot_max")
