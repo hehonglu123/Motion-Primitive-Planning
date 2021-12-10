@@ -15,9 +15,42 @@ def normalize_dq(q):
 	q=q/(np.linalg.norm(q)) 
 	return q   
 
-def opt_fun(curve_js_steps,lam,joint_vel_limit):
+def direction2R(v_norm,v_tang):
+	v_norm=v_norm/np.linalg.norm(v_norm)
+	theta1 = np.arccos(np.dot(np.array([0,0,1]),v_norm))
+	###rotation to align z axis with curve normal
+	axis_temp=np.cross(np.array([0,0,1]),v_norm)
+	R1=rot(axis_temp/np.linalg.norm(axis_temp),theta1)
 
-	dlam=calc_lamdot(curve_js_steps.reshape((-1,6)),lam,joint_vel_limit,1)
+	###find correct x direction
+	v_temp=v_tang-v_norm * np.dot(v_tang, v_norm) / np.linalg.norm(v_norm)
+
+	###get as ngle to rotate
+	theta2 = np.arccos(np.dot(R1[:,0],v_temp/np.linalg.norm(v_temp)))
+
+
+	axis_temp=np.cross(R1[:,0],v_temp)
+	axis_temp=axis_temp/np.linalg.norm(axis_temp)
+
+	###rotation about z axis to minimize x direction error
+	R2=rot(np.array([0,0,np.sign(np.dot(axis_temp,v_norm))]),theta2)
+
+
+	return np.dot(R1,R2)
+
+def opt_fun(theta0,lam,joint_vel_limit,curve,curve_normal):
+
+	R_temp=direction2R(curve_normal[0],-curve[1]+curve[0])
+	R=np.dot(R_temp,Rz(theta0[0]))
+	try:
+		q_init=inv(curve[0],R)[0]
+		q_out=stepwise_optimize(q_init,curve,curve_normal)
+	except:
+		# traceback.print_exc()
+		return 999
+
+	
+	dlam=calc_lamdot(q_out,lam,joint_vel_limit,1)
 	print(min(dlam))
 	return -min(dlam)
 
@@ -62,6 +95,7 @@ def stepwise_optimize(q_init,curve,curve_normal):
 		except:
 			q_out.append(q_all[-1])
 			traceback.print_exc()
+			raise AssertionError
 			break
 
 		q_out.append(q_all[-1])
@@ -108,18 +142,29 @@ def main():
 	curve_cs_R=np.array(curve_cs_R)
 
 	###path constraints, position constraint and curve normal constraint
-	lowerer_limit=np.radians([-220.,-40.,-180.,-300.,-120.,-360.])+0.001*np.ones(6)
-	upper_limit=np.radians([220.,160.,70.,300.,120.,360.])-0.001*np.ones(6)
-	bnds=tuple(zip(lowerer_limit,upper_limit))*len(curve_js)
+	lowerer_limit=[-np.pi]
+	upper_limit=[np.pi]
+	bnds=tuple(zip(lowerer_limit,upper_limit))
 
-	##starting q
-	q_out=stepwise_optimize(curve_js[0],curve_cs_p,curve_cs_R[:,:,-1])
-	###stepwise qp solver
+
+	res = differential_evolution(opt_fun, bnds, args=(lam,joint_vel_limit,curve_cs_p,curve_cs_R[:,:,-1],),workers=-1,
+									x0 = [0],
+									strategy='best1bin', maxiter=2000,
+									popsize=15, tol=1e-10,
+									mutation=(0.5, 1), recombination=0.7,
+									seed=None, callback=None, disp=False,
+									polish=True, init='latinhypercube',
+									atol=0.)
 	
 
 
-	q_out=np.array(q_out)
-	print(q_out)
+	print(res)
+
+	R_temp=direction2R(curve_cs_R[0,:,-1],-curve_cs_p[1]+curve_cs_p[0])
+	R=np.dot(R_temp,Rz(res.x[0]))
+	q_init=inv(curve_cs_p[0],R)[0]
+	q_out=stepwise_optimize(q_init,curve_cs_p,curve_cs_R[:,:,-1])
+
 	dlam_out=calc_lamdot(q_out,lam[:len(q_out)],joint_vel_limit,1)
 
 
