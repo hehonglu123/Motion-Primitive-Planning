@@ -9,12 +9,57 @@ sys.path.append('../toolbox')
 from robot_def import *
 from lambda_calc import *
 
-def opt_fun(curve_js_steps):
-	###curve_js_steps: steps*12x1 vector
-	global lam, joint_vel_limit
-	dlam=calc_lamdot(curve_js_steps.reshape((-1,12)),lam,joint_vel_limit,1)
+def stepwise_optimize(q_init1,q_init2,curve,curve_normal):
+	q_all1=[q_init1]
+	q_out1=[q_init1]
+	q_all2=[q_init2]
+	q_out2=[q_init2]
+	for i in range(len(curve)):
+		try:
+			error_fb=999
+			if i==0:
+				continue
 
-	return min(dlam)
+			while error_fb>0.1:
+
+				pose_now=fwd(q_all[-1])
+				error_fb=np.linalg.norm(pose_now.p-curve[i])+np.linalg.norm(pose_now.R[:,-1]-curve_normal[i])
+				
+				w=0.2
+				Kq=.01*np.eye(6)    #small value to make sure positive definite
+				KR=np.eye(3)        #gains for position and orientation error
+
+				J=jacobian(q_all[-1])        #calculate current Jacobian
+				Jp=J[3:,:]
+				JR=J[:3,:] 
+				H=np.dot(np.transpose(Jp),Jp)+Kq+w*np.dot(np.transpose(JR),JR)
+				H=(H+np.transpose(H))/2
+
+				vd=curve[i]-pose_now.p
+				k=np.cross(pose_now.R[:,-1],curve_normal[i])
+
+				k=k/np.linalg.norm(k)
+				theta=-np.arctan2(np.linalg.norm(np.cross(pose_now.R[:,-1],curve_normal[i])), np.dot(pose_now.R[:,-1],curve_normal[i]))
+
+				k=np.array(k)
+				s=np.sin(theta/2)*k         #eR2
+				wd=-np.dot(KR,s)
+				f=-np.dot(np.transpose(Jp),vd)-w*np.dot(np.transpose(JR),wd)
+				qdot=solve_qp(H,f)
+
+				q_all.append(q_all[-1]+qdot)
+				# print(q_all[-1])
+		except:
+			q_out.append(q_all[-1])
+			traceback.print_exc()
+			break
+
+		q_out.append(q_all[-1])
+
+	q_out=np.array(q_out)
+	return q_out
+
+
 def main():
 	global joint_vel_limit, lam
 	###read actual curve
