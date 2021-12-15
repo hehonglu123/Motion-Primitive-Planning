@@ -42,16 +42,19 @@ class Transform_all(object):
 		self.p_all=np.array(p_all)
 def jacobian(q):
 	return robotjacobian(ABB_def,q)
-def fwd(q):
-	return fwdkin(ABB_def,q)
+def fwd(q,base_R=np.eye(3),base_p=np.array([0,0,0])):
+	pose_temp=fwdkin(ABB_def,q)
+	pose_temp.p=np.dot(base_R,pose_temp.p)+base_p
+	pose_temp.R=np.dot(base_R,pose_temp.R)
+	return pose_temp
 
 def fwd_all(q_all,base_R=np.eye(3),base_p=np.array([0,0,0])):
 	pose_p_all=[]
 	pose_R_all=[]
 	for q in q_all:
-		pose_temp=fwd(q)
-		pose_p_all.append(np.dot(base_R,pose_temp.p)+base_p)
-		pose_R_all.append(np.dot(base_R,pose_temp.R))
+		pose_temp=fwd(q,base_R,base_p)
+		pose_p_all.append(pose_temp.p)
+		pose_R_all.append(pose_temp.R)
 
 	return Transform_all(pose_p_all,pose_R_all)
 
