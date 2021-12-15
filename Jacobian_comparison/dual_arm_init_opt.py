@@ -13,6 +13,45 @@ from lambda_calc import *
 def normalize_dq(q):
 	q=q/(np.linalg.norm(q)) 
 	return q   
+def direction2R(v_norm,v_tang):
+	v_norm=v_norm/np.linalg.norm(v_norm)
+	theta1 = np.arccos(np.dot(np.array([0,0,1]),v_norm))
+	###rotation to align z axis with curve normal
+	axis_temp=np.cross(np.array([0,0,1]),v_norm)
+	R1=rot(axis_temp/np.linalg.norm(axis_temp),theta1)
+
+	###find correct x direction
+	v_temp=v_tang-v_norm * np.dot(v_tang, v_norm) / np.linalg.norm(v_norm)
+
+	###get as ngle to rotate
+	theta2 = np.arccos(np.dot(R1[:,0],v_temp/np.linalg.norm(v_temp)))
+
+
+	axis_temp=np.cross(R1[:,0],v_temp)
+	axis_temp=axis_temp/np.linalg.norm(axis_temp)
+
+	###rotation about z axis to minimize x direction error
+	R2=rot(np.array([0,0,np.sign(np.dot(axis_temp,v_norm))]),theta2)
+
+
+	return np.dot(R1,R2)
+
+def opt_fun(x,lam,joint_vel_limit,curve,curve_normal):
+
+	R_temp=direction2R(curve_normal[0],-curve[1]+curve[0])
+	R=np.dot(R_temp,Rz(x[-1]))
+	try:
+		q_init=inv(curve[0],R)[0]
+		q_out1,q_out2=stepwise_optimize(q_init1,x[:-1],relative_path,relative_path_direction_new,base2_R,base2_p,upper_limit,lowerer_limit)
+	except:
+		# traceback.print_exc()
+		return 999
+
+	
+	dlam_out=calc_lamdot(np.hstack((q_out1,q_out2)),lam[:len(q_out2)],joint_vel_limit,1)
+	print(min(dlam))
+	return -min(dlam)
+
 
 def stepwise_optimize(q_init1,q_init2,curve,curve_normal,base2_R,base2_p,upper_limit,lowerer_limit):
 	#curve_normal: expressed in second robot tool frame
@@ -157,21 +196,34 @@ def main():
 	relative_path_direction_new=np.dot(R2_convert.T,relative_path_direction.T).T
 
 
-	curve_cs_p=[]
-	curve_cs_R=[]
-	###find path length
-	lam=[0]
-	for i in range(len(relative_path)-1):
-		lam.append(lam[-1]+np.linalg.norm(relative_path[i+1]-relative_path[i]))
-	###normalize lam
-	lam=np.array(lam)/lam[-1]
+	###path constraints, position constraint and curve normal constraint
+	lowerer_limit=np.append(joint_lowerer_limit,[-np.pi])
+	upper_limit=np.append(joint_upper_limit,[np.pi])
+	bnds=tuple(zip(lowerer_limit,upper_limit))
 
-	###stepwise qp solver
-	q_out1, q_out2=stepwise_optimize(q_init1,q_init2,relative_path,relative_path_direction_new,base2_R,base2_p,upper_limit,lowerer_limit)
+	###opt variable: x=[rob2joint,theta(eef angle of first robot)]
+
+	res = differential_evolution(opt_fun, bnds, args=(lam,joint_vel_limit,curve_cs_p,curve_cs_R[:,:,-1],),workers=-1,
+									x0 = np.append(q_init2,[0]),
+									strategy='best1bin', maxiter=2000,
+									popsize=15, tol=1e-10,
+									mutation=(0.5, 1), recombination=0.7,
+									seed=None, callback=None, disp=False,
+									polish=True, init='latinhypercube',
+									atol=0.)
+	
 
 
-	###dual lambda_dot calc
-	dlam_out=calc_lamdot(np.hstack((q_out1,q_out2)),lam[:len(q_out2)],joint_vel_limit,1)
+	print(res)
+
+	R_temp=direction2R(curve_cs_R[0,:,-1],-curve_cs_p[1]+curve_cs_p[0])
+	R=np.dot(R_temp,Rz(res.x[0]))
+	q_init=inv(curve_cs_p[0],R)[0]
+	q_out=stepwise_optimize(q_init,curve_cs_p,curve_cs_R[:,:,-1])
+
+	dlam_out=calc_lamdot(q_out,lam[:len(q_out)],joint_vel_limit,1)
+
+
 
 
 	plt.plot(lam[:len(q_out2)-1],dlam_out,label="lambda_dot_max")
