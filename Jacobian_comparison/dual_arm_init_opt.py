@@ -36,13 +36,16 @@ def direction2R(v_norm,v_tang):
 
 	return np.dot(R1,R2)
 
-def opt_fun(x,lam,joint_vel_limit,curve,curve_normal):
+def opt_fun(x,lam,joint_vel_limit,relative_path,relative_path_direction_new,base2_R,base2_p,upper_limit,lowerer_limit):
+	q_init2=x[:-1]
+
+	pose2_world_now=fwd(q_all2[-1],base2_R,base2_p)
 
 	R_temp=direction2R(curve_normal[0],-curve[1]+curve[0])
 	R=np.dot(R_temp,Rz(x[-1]))
 	try:
 		q_init=inv(curve[0],R)[0]
-		q_out1,q_out2=stepwise_optimize(q_init1,x[:-1],relative_path,relative_path_direction_new,base2_R,base2_p,upper_limit,lowerer_limit)
+		q_out1,q_out2=stepwise_optimize(q_init1,q_init2,relative_path,relative_path_direction_new,base2_R,base2_p,upper_limit,lowerer_limit)
 	except:
 		# traceback.print_exc()
 		return 999
@@ -71,10 +74,10 @@ def stepwise_optimize(q_init1,q_init2,curve,curve_normal,base2_R,base2_p,upper_l
 				pose1_now=fwd(q_all1[-1])
 				pose2_now=fwd(q_all2[-1])
 
-				pose2_base_now=fwd(q_all2[-1],base2_R,base2_p)
+				pose2_world_now=fwd(q_all2[-1],base2_R,base2_p)
 
-				# print(pose1_now.p-pose2_base_now.p-curve[i], np.linalg.norm(np.dot(pose2_base_now.R.T,pose1_now.R[:,-1])-curve_normal[i]))
-				error_fb=np.linalg.norm(pose1_now.p-pose2_base_now.p-curve[i])+np.linalg.norm(np.dot(pose2_base_now.R.T,pose1_now.R[:,-1])-curve_normal[i])
+				# print(pose1_now.p-pose2_world_now.p-curve[i], np.linalg.norm(np.dot(pose2_world_now.R.T,pose1_now.R[:,-1])-curve_normal[i]))
+				error_fb=np.linalg.norm(pose1_now.p-pose2_world_now.p-curve[i])+np.linalg.norm(np.dot(pose2_world_now.R.T,pose1_now.R[:,-1])-curve_normal[i])
 				
 				########################################################first robot###########################################
 				w=0.2
@@ -88,11 +91,11 @@ def stepwise_optimize(q_init1,q_init2,curve,curve_normal,base2_R,base2_p,upper_l
 				H=np.dot(np.transpose(J1p),J1p)+Kq+w*np.dot(np.transpose(J1R),J1R)
 				H=(H+np.transpose(H))/2
 
-				vd=Kp*(curve[i]-(pose1_now.p-pose2_base_now.p))
-				k=np.cross(pose1_now.R[:,-1],np.dot(pose2_base_now.R,curve_normal[i]))
+				vd=Kp*(curve[i]-(pose1_now.p-pose2_world_now.p))
+				k=np.cross(pose1_now.R[:,-1],np.dot(pose2_world_now.R,curve_normal[i]))
 
 				k=k/np.linalg.norm(k)
-				theta=-np.arctan2(np.linalg.norm(np.cross(pose1_now.R[:,-1],np.dot(pose2_base_now.R,curve_normal[i]))), np.dot(pose1_now.R[:,-1],np.dot(pose2_base_now.R,curve_normal[i])))
+				theta=-np.arctan2(np.linalg.norm(np.cross(pose1_now.R[:,-1],np.dot(pose2_world_now.R,curve_normal[i]))), np.dot(pose1_now.R[:,-1],np.dot(pose2_world_now.R,curve_normal[i])))
 
 				k=np.array(k)
 				s=np.sin(theta/2)*k         #eR2
@@ -112,10 +115,10 @@ def stepwise_optimize(q_init1,q_init2,curve,curve_normal,base2_R,base2_p,upper_l
 				H=(H+np.transpose(H))/2
 
 				vd=-vd
-				# k=np.cross(pose2_base_now.R[:,-1],np.dot(pose2_base_now.R,-curve_normal[i]))
+				# k=np.cross(pose2_world_now.R[:,-1],np.dot(pose2_world_now.R,-curve_normal[i]))
 
 				# k=k/np.linalg.norm(k)
-				# theta=-np.arctan2(np.linalg.norm(np.cross(pose2_base_now.R[:,-1],np.dot(pose2_base_now.R,-curve_normal[i]))), np.dot(pose2_base_now.R[:,-1],np.dot(pose2_base_now.R,-curve_normal[i])))
+				# theta=-np.arctan2(np.linalg.norm(np.cross(pose2_world_now.R[:,-1],np.dot(pose2_world_now.R,-curve_normal[i]))), np.dot(pose2_world_now.R[:,-1],np.dot(pose2_world_now.R,-curve_normal[i])))
 				theta=-theta
 
 				k=np.array(k)
