@@ -3,7 +3,7 @@ from pandas import *
 import sys, traceback, time
 from general_robotics_toolbox import *
 import matplotlib.pyplot as plt
-from scipy.optimize import minimize
+from scipy.optimize import differential_evolution, shgo, NonlinearConstraint, minimize
 from qpsolvers import solve_qp
 
 sys.path.append('../toolbox')
@@ -36,22 +36,22 @@ def direction2R(v_norm,v_tang):
 
 	return np.dot(R1,R2)
 
-def opt_fun(x,lam,joint_vel_limit,relative_path,relative_path_direction_new,base2_R,base2_p,upper_limit,lowerer_limit):
+def opt_fun(x,lam,joint_vel_limit,curve,curve_normal,base2_R,base2_p,upper_limit,lowerer_limit):
 	q_init2=x[:-1]
 
-	pose2_world_now=fwd(q_all2[-1],base2_R,base2_p)
+	pose2_world_now=fwd(q_init2,base2_R,base2_p)
 
-	R_temp=direction2R(curve_normal[0],-curve[1]+curve[0])
+	R_temp=direction2R(np.dot(pose2_world_now.R,curve_normal[0]),-curve[1]+curve[0])
 	R=np.dot(R_temp,Rz(x[-1]))
 	try:
-		q_init=inv(curve[0],R)[0]
-		q_out1,q_out2=stepwise_optimize(q_init1,q_init2,relative_path,relative_path_direction_new,base2_R,base2_p,upper_limit,lowerer_limit)
+		q_init1=inv(pose2_world_now.p,R)[0]
+		q_out1,q_out2=stepwise_optimize(q_init1,q_init2,curve,curve_normal,base2_R,base2_p,upper_limit,lowerer_limit)
 	except:
 		# traceback.print_exc()
 		return 999
 
 	
-	dlam_out=calc_lamdot(np.hstack((q_out1,q_out2)),lam[:len(q_out2)],joint_vel_limit,1)
+	dlam=calc_lamdot(np.hstack((q_out1,q_out2)),lam[:len(q_out2)],joint_vel_limit,1)
 	print(min(dlam))
 	return -min(dlam)
 
@@ -132,8 +132,9 @@ def stepwise_optimize(q_init1,q_init2,curve,curve_normal,base2_R,base2_p,upper_l
 		except:
 			q_out1.append(q_all1[-1])
 			q_out2.append(q_all2[-1])
-			traceback.print_exc()
-			break
+			# traceback.print_exc()
+			raise AssertionError
+			return
 
 		q_out1.append(q_all1[-1])
 		q_out2.append(q_all2[-1])
@@ -191,6 +192,13 @@ def main():
 	relative_path=relative_path[0:-1:step]
 	relative_path_direction=relative_path_direction[0:-1:step]
 
+	###find path length
+	lam=[0]
+	for i in range(len(relative_path)-1):
+		lam.append(lam[-1]+np.linalg.norm(relative_path[i+1]-relative_path[i]))
+	###normalize lam
+	lam=np.array(lam)/lam[-1]
+
 	###convert relative curve normal to robot2 tool frame
 	R2_tool=np.array([	[0,0,1],
 						[0,1,0],
@@ -204,11 +212,12 @@ def main():
 	upper_limit=np.append(joint_upper_limit,[np.pi])
 	bnds=tuple(zip(lowerer_limit,upper_limit))
 
-	###opt variable: x=[rob2joint,theta(eef angle of first robot)]
+	# ###opt variable: x=[rob2joint,theta(eef angle of first robot)]
+	# res = minimize(opt_fun, np.append(q_init2,[0]), args=(lam,joint_vel_limit,relative_path,relative_path_direction_new,base2_R,base2_p,upper_limit,lowerer_limit,), method='SLSQP',tol=1e-10,bounds=bnds)
 
-	res = differential_evolution(opt_fun, bnds, args=(lam,joint_vel_limit,curve_cs_p,curve_cs_R[:,:,-1],),workers=-1,
+	res = differential_evolution(opt_fun, bnds, args=(lam,joint_vel_limit,relative_path,relative_path_direction_new,base2_R,base2_p,upper_limit,lowerer_limit,),workers=-1,
 									x0 = np.append(q_init2,[0]),
-									strategy='best1bin', maxiter=2000,
+									strategy='best1bin', maxiter=200,
 									popsize=15, tol=1e-10,
 									mutation=(0.5, 1), recombination=0.7,
 									seed=None, callback=None, disp=False,
@@ -219,17 +228,21 @@ def main():
 
 	print(res)
 
-	R_temp=direction2R(curve_cs_R[0,:,-1],-curve_cs_p[1]+curve_cs_p[0])
-	R=np.dot(R_temp,Rz(res.x[0]))
-	q_init=inv(curve_cs_p[0],R)[0]
-	q_out=stepwise_optimize(q_init,curve_cs_p,curve_cs_R[:,:,-1])
+	q_init2=res.x[:-1]
+	pose2_world_now=fwd(q_init2,base2_R,base2_p)
 
-	dlam_out=calc_lamdot(q_out,lam[:len(q_out)],joint_vel_limit,1)
+	R_temp=direction2R(np.dot(pose2_world_now.R,relative_path_direction_new[0]),-relative_path[1]+relative_path[0])
+	R=np.dot(R_temp,Rz(res.x[-1]))
 
+	q_init1=inv(pose2_world_now.p,R)[0]
+	q_out1,q_out2=stepwise_optimize(q_init1,q_init2,relative_path,relative_path_direction_new,base2_R,base2_p,upper_limit,lowerer_limit)
 
+	###stepwise qp solver
+	q_out1, q_out2=stepwise_optimize(q_init1,q_init2,relative_path,relative_path_direction_new,base2_R,base2_p,upper_limit,lowerer_limit)
+	
+	dlam=calc_lamdot(np.hstack((q_out1,q_out2)),lam[:len(q_out2)],joint_vel_limit,1)
 
-
-	plt.plot(lam[:len(q_out2)-1],dlam_out,label="lambda_dot_max")
+	plt.plot(lam[:len(q_out2)-1],dlam,label="lambda_dot_max")
 	plt.xlabel("lambda")
 	plt.ylabel("lambda_dot")
 	plt.title("DUALARM max lambda_dot vs lambda (path index)")

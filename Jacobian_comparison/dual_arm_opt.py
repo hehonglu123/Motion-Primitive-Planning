@@ -172,7 +172,7 @@ def main():
 
 	###dual lambda_dot calc
 	dlam_out=calc_lamdot(np.hstack((q_out1,q_out2)),lam[:len(q_out2)],joint_vel_limit,1)
-
+	print('lamdadot min: ', min(dlam_out))
 
 	plt.plot(lam[:len(q_out2)-1],dlam_out,label="lambda_dot_max")
 	plt.xlabel("lambda")
