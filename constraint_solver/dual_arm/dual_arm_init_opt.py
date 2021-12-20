@@ -57,7 +57,6 @@ def opt_fun(x,lam,joint_vel_limit,curve,curve_normal,base2_R,base2_p,upper_limit
 
 
 def stepwise_optimize(q_init1,q_init2,curve,curve_normal,base2_R,base2_p,upper_limit,lowerer_limit):
-	#curve_normal: expressed in second robot tool frame
 
 	q_all1=[q_init1]
 	q_out1=[q_init1]
