@@ -11,12 +11,12 @@ from robot_def import *
 from lambda_calc import *
 
 class lambda_opt(object):
-	def __init__(self,relative_path,relative_path_normal,base2_R=np.eye(3),base2_p=np.zeros(3),steps=50):
+	def __init__(self,relative_path,relative_path_direction,base2_R=np.eye(3),base2_p=np.zeros(3),steps=50):
 		self.relative_path=relative_path
-		self.relative_path_normal=relative_path_normal
+		self.relative_path_direction=relative_path_direction
 		self.base2_R=base2_R
 		self.base2_p=base2_p
-		self.joint_vel_limit=np.radians([110,90,90,150,120,235]*2)
+		self.joint_vel_limit=np.radians([110,90,90,150,120,235])
 		self.joint_upper_limit=np.radians([220.,160.,70.,300.,120.,360.])
 		self.joint_lowerer_limit=np.radians([-220.,-40.,-180.,-300.,-120.,-360.])
 
@@ -24,7 +24,7 @@ class lambda_opt(object):
 		self.p_tool=np.array([0.45,0,-0.05])*1000.
 
 
-		self.R2_convert=np.dot(self.base2_R,self.R_tool=R)
+		self.R2_convert=np.dot(self.base2_R,self.R_tool)
 
 		###decrease curve density to simplify computation
 		num_per_step=int(len(self.relative_path)/steps)	
@@ -35,9 +35,9 @@ class lambda_opt(object):
 		self.lam=[0]
 		for i in range(len(relative_path)-1):
 			self.lam.append(self.lam[-1]+np.linalg.norm(relative_path[i+1]-relative_path[i]))
-		###normalize lam
+		###normalize lam, 
 		self.lam=np.array(self.lam)/self.lam[-1]
-
+		self.lam=self.lam[0:-1:num_per_step]
 
 
 	def direction2R(self,v_norm,v_tang):
@@ -123,7 +123,9 @@ class lambda_opt(object):
 		q_out1=[q_init1]
 		q_all2=[q_init2]
 		q_out2=[q_init2]
+
 		for i in range(len(curve)):
+
 			try:
 				error_fb=999
 				if i==0:
@@ -223,15 +225,18 @@ class lambda_opt(object):
 		return -min(dlam)
 
 	def dual_arm_opt(self,x,curve,curve_normal):
+
+		curve_normal_init=np.dot(self.R2_convert.T,curve_normal[0])
+
 		q_init2=x[:-1]
 
-		pose2_world_now=fwd(q_init2,base2_R,base2_p)
+		pose2_world_now=fwd(q_init2,self.base2_R,self.base2_p)
 
-		R_temp=self.direction2R(np.dot(pose2_world_now.R,curve_normal[0]),-curve[1]+curve[0])
+		R_temp=self.direction2R(np.dot(pose2_world_now.R,curve_normal_init),-curve[1]+curve[0])
 		R=np.dot(R_temp,Rz(x[-1]))
 		try:
 			q_init1=inv(pose2_world_now.p,R)[0]
-			q_out1,q_out2=self.dual_arm_stepwise_optimize(q_init1,q_init2,curve,curve_normal,base2_R,base2_p,upper_limit,lowerer_limit)
+			q_out1,q_out2=self.dual_arm_stepwise_optimize(q_init1,q_init2,curve,curve_normal)
 		except:
 			# traceback.print_exc()
 			return 999
@@ -302,7 +307,7 @@ class lambda_opt(object):
 def main():
 	###read actual curve
 	col_names=['q1', 'q2', 'q3','q4', 'q5', 'q6'] 
-	data = read_csv("curve_poses/dual_arm/arm1_js.csv", names=col_names)
+	data = read_csv("dual_arm/curve_poses/arm1_js.csv", names=col_names)
 	curve_q1=data['q1'].tolist()
 	curve_q2=data['q2'].tolist()
 	curve_q3=data['q3'].tolist()
@@ -313,7 +318,7 @@ def main():
 	q_init1=curve_js1[0]
 
 	col_names=['q1', 'q2', 'q3','q4', 'q5', 'q6'] 
-	data = read_csv("curve_poses/dual_arm/arm2_js.csv", names=col_names)
+	data = read_csv("dual_arm/curve_poses/arm2_js.csv", names=col_names)
 	curve_q1=data['q1'].tolist()
 	curve_q2=data['q2'].tolist()
 	curve_q3=data['q3'].tolist()
@@ -324,7 +329,7 @@ def main():
 	q_init2=curve_js2[0]
 
 	col_names=['X', 'Y', 'Z','direction_x','direction_y','direction_z'] 
-	data = read_csv("curve_poses/dual_arm/relative_path.csv", names=col_names)
+	data = read_csv("dual_arm/curve_poses/relative_path.csv", names=col_names)
 	curve_x=data['X'].tolist()
 	curve_y=data['Y'].tolist()
 	curve_z=data['Z'].tolist()
@@ -336,22 +341,21 @@ def main():
 
 	opt=lambda_opt(relative_path,relative_path_direction,base2_R=np.array([[-1,0,0],[0,-1,0],[0,0,1]]),	base2_p=np.array([6000,0,0]))
 
-	###path constraints, position constraint and curve normal constraint
-	lowerer_limit=np.append(joint_lowerer_limit,[-np.pi])
-	upper_limit=np.append(joint_upper_limit,[np.pi])
-	bnds=tuple(zip(lowerer_limit,upper_limit))
+	###stepwise qp solver
+	q_out1, q_out2=opt.dual_arm_stepwise_optimize(q_init1,q_init2,opt.relative_path,opt.relative_path_direction)
 
-	# ###opt variable: x=[rob2joint,theta(eef angle of first robot)]
-	# res = minimize(opt_fun, np.append(q_init2,[0]), args=(lam,joint_vel_limit,relative_path,relative_path_direction_new,base2_R,base2_p,upper_limit,lowerer_limit,), method='SLSQP',tol=1e-10,bounds=bnds)
 
-	res = differential_evolution(opt_fun, bnds, args=(lam,joint_vel_limit,relative_path,relative_path_direction_new,base2_R,base2_p,upper_limit,lowerer_limit,),workers=-1,
-									x0 = np.append(q_init2,[0]),
-									strategy='best1bin', maxiter=200,
-									popsize=15, tol=1e-10,
-									mutation=(0.5, 1), recombination=0.7,
-									seed=None, callback=None, disp=False,
-									polish=True, init='latinhypercube',
-									atol=0.)
+	###dual lambda_dot calc
+	dlam_out=calc_lamdot(np.hstack((q_out1,q_out2)),opt.lam[:len(q_out2)],np.tile(opt.joint_vel_limit,2),1)
+	print('lamdadot min: ', min(dlam_out))
+
+	plt.plot(opt.lam[:len(q_out2)-1],dlam_out,label="lambda_dot_max")
+	plt.xlabel("lambda")
+	plt.ylabel("lambda_dot")
+	plt.title("DUALARM max lambda_dot vs lambda (path index)")
+	plt.ylim([0.5,3.5])
+	plt.savefig("velocity-constraint_js.png")
+	plt.show()
 
 if __name__ == "__main__":
 	main()
