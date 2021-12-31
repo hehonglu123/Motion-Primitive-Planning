@@ -1,0 +1,1 @@
+set GAZEBO_MODEL_PATH=%GAZEBO_MODEL_PATH%;C:\Users\hehon\Desktop\robodk\Motion-Primitive-Planning\simulation\gazebo_sim\model

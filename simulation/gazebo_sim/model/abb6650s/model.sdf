@@ -18,12 +18,12 @@
       <enable_wind>0</enable_wind>
       <kinematic>0</kinematic>
       <pose>0 0 0 0 -0 0</pose>
-      <visual name='abb_pedestal_fixed_joint_lump__abb_base_link_fixed_joint_lump__visual_visual_visual_1'>
+      <visual name='abb_pedestal_visual1'>
         <pose>0 0 0 0 -0 0</pose>
         <geometry>
           <mesh>
             <scale>1 1 1</scale>
-            <uri>/home/iamnotedible/Motion-Primitive-Planning/simulation/gazebo_sim/model/6650s/meshes/visual/base_link.stl</uri>
+            <uri>model://abb6650s/meshes/visual/base_link.stl</uri>
           </mesh>
         </geometry>
         <material>
@@ -32,7 +32,7 @@
         <transparency>0</transparency>
         <cast_shadows>1</cast_shadows>
       </visual>
-      <visual name='abb_pedestal_fixed_joint_lump__abb_visual_visual'>
+      <visual name='abb_pedestal_visual2'>
         <pose>0 0 -0.5 0 -0 0</pose>
         <geometry>
           <cylinder>
@@ -46,7 +46,7 @@
         <transparency>0</transparency>
         <cast_shadows>1</cast_shadows>
       </visual>
-      <collision name='abb_pedestal_fixed_joint_lump__abb_collision_collision'>
+      <collision name='abb_pedestal_collision'>
         <laser_retro>0</laser_retro>
         <max_contacts>10</max_contacts>
         <pose>0 0 -0.4 0 -0 0</pose>
@@ -102,13 +102,13 @@
           </contact>
         </surface>
       </collision>
-      <collision name='abb_pedestal_fixed_joint_lump__abb_base_link_fixed_joint_lump__collision_collision_collision_1'>
+      <collision name='abb_pedestal_collision1'>
         <laser_retro>0</laser_retro>
         <max_contacts>10</max_contacts>
         <pose>0 0 0 0 -0 0</pose>
         <geometry>
           <mesh>
-            <uri>/home/iamnotedible/Motion-Primitive-Planning/simulation/gazebo_sim/model/6650s/meshes/collision/base_link.stl</uri>
+            <uri>model://abb6650s/meshes/collision/base_link.stl</uri>
             <scale>1 1 1</scale>
           </mesh>
         </geometry>
@@ -159,7 +159,7 @@
         </surface>
       </collision>
     </link>
-    <link name='abb_link_1'>
+    <link name='link_1'>
       <pose>0 0 0.63 0 -0 0</pose>
       <inertial>
         <pose>0 0 0 0 -0 0</pose>
@@ -176,12 +176,12 @@
       <self_collide>0</self_collide>
       <enable_wind>0</enable_wind>
       <kinematic>0</kinematic>
-      <visual name='abb_link_1_fixed_joint_lump__visual_visual_visual'>
+      <visual name='abb_link1_visual'>
         <pose>0 0 0 0 -0 0</pose>
         <geometry>
           <mesh>
             <scale>1 1 1</scale>
-            <uri>/home/iamnotedible/Motion-Primitive-Planning/simulation/gazebo_sim/model/6650s/meshes/visual/link_1.stl</uri>
+            <uri>model://abb6650s/meshes/visual/link_1.stl</uri>
           </mesh>
         </geometry>
         <material>
@@ -190,13 +190,13 @@
         <transparency>0</transparency>
         <cast_shadows>1</cast_shadows>
       </visual>
-      <collision name='abb_link_1_fixed_joint_lump__collision_collision_collision'>
+      <collision name='abb_link1_collision'>
         <laser_retro>0</laser_retro>
         <max_contacts>10</max_contacts>
         <pose>0 0 0 0 -0 0</pose>
         <geometry>
           <mesh>
-            <uri>/home/iamnotedible/Motion-Primitive-Planning/simulation/gazebo_sim/model/6650s/meshes/collision/link_1.stl</uri>
+            <uri>model://abb6650s/meshes/collision/link_1.stl</uri>
             <scale>1 1 1</scale>
           </mesh>
         </geometry>
@@ -247,7 +247,7 @@
         </surface>
       </collision>
     </link>
-    <link name='abb_link_2'>
+    <link name='link_2'>
       <pose>0.6 0 0.63 0 -0 0</pose>
       <inertial>
         <pose>0 0 0 0 -0 0</pose>
@@ -264,12 +264,12 @@
       <self_collide>0</self_collide>
       <enable_wind>0</enable_wind>
       <kinematic>0</kinematic>
-      <visual name='abb_link_2_fixed_joint_lump__visual_visual_visual'>
+      <visual name='abb_link2_visual'>
         <pose>0 0 0 0 -0 0</pose>
         <geometry>
           <mesh>
             <scale>1 1 1</scale>
-            <uri>/home/iamnotedible/Motion-Primitive-Planning/simulation/gazebo_sim/model/6650s/meshes/visual/link_2.stl</uri>
+            <uri>model://abb6650s/meshes/visual/link_2.stl</uri>
           </mesh>
         </geometry>
         <material>
@@ -278,13 +278,13 @@
         <transparency>0</transparency>
         <cast_shadows>1</cast_shadows>
       </visual>
-      <collision name='abb_link_2_fixed_joint_lump__collision_collision_collision'>
+      <collision name='abb_link2_collision'>
         <laser_retro>0</laser_retro>
         <max_contacts>10</max_contacts>
         <pose>0 0 0 0 -0 0</pose>
         <geometry>
           <mesh>
-            <uri>/home/iamnotedible/Motion-Primitive-Planning/simulation/gazebo_sim/model/6650s/meshes/collision/link_2.stl</uri>
+            <uri>model://abb6650s/meshes/collision/link_2.stl</uri>
             <scale>1 1 1</scale>
           </mesh>
         </geometry>
@@ -335,7 +335,7 @@
         </surface>
       </collision>
     </link>
-    <link name='abb_link_3'>
+    <link name='link_3'>
       <pose>0.6 0 1.91 0 -0 0</pose>
       <inertial>
         <pose>0 0 0 0 -0 0</pose>
@@ -352,12 +352,12 @@
       <self_collide>0</self_collide>
       <enable_wind>0</enable_wind>
       <kinematic>0</kinematic>
-      <visual name='abb_link_3_fixed_joint_lump__visual_visual_visual'>
+      <visual name='abb_link3_visual'>
         <pose>0 0 0 0 -0 0</pose>
         <geometry>
           <mesh>
             <scale>1 1 1</scale>
-            <uri>/home/iamnotedible/Motion-Primitive-Planning/simulation/gazebo_sim/model/6650s/meshes/visual/link_3.stl</uri>
+            <uri>model://abb6650s/meshes/visual/link_3.stl</uri>
           </mesh>
         </geometry>
         <material>
@@ -366,13 +366,13 @@
         <transparency>0</transparency>
         <cast_shadows>1</cast_shadows>
       </visual>
-      <collision name='abb_link_3_fixed_joint_lump__collision_collision_collision'>
+      <collision name='abb_link3_collision'>
         <laser_retro>0</laser_retro>
         <max_contacts>10</max_contacts>
         <pose>0 0 0 0 -0 0</pose>
         <geometry>
           <mesh>
-            <uri>/home/iamnotedible/Motion-Primitive-Planning/simulation/gazebo_sim/model/6650s/meshes/collision/link_3.stl</uri>
+            <uri>model://abb6650s/meshes/collision/link_3.stl</uri>
             <scale>1 1 1</scale>
           </mesh>
         </geometry>
@@ -423,7 +423,7 @@
         </surface>
       </collision>
     </link>
-    <link name='abb_link_4'>
+    <link name='link_4'>
       <pose>0 0 2.11 0 -0 0</pose>
       <inertial>
         <pose>0 0 0 0 -0 0</pose>
@@ -440,12 +440,12 @@
       <self_collide>0</self_collide>
       <enable_wind>0</enable_wind>
       <kinematic>0</kinematic>
-      <visual name='abb_link_4_fixed_joint_lump__visual_visual_visual'>
+      <visual name='abb_link4_visual'>
         <pose>0 0 0 0 -0 0</pose>
         <geometry>
           <mesh>
             <scale>1 1 1</scale>
-            <uri>/home/iamnotedible/Motion-Primitive-Planning/simulation/gazebo_sim/model/6650s/meshes/visual/link_4.stl</uri>
+            <uri>model://abb6650s/meshes/visual/link_4.stl</uri>
           </mesh>
         </geometry>
         <material>
@@ -454,13 +454,13 @@
         <transparency>0</transparency>
         <cast_shadows>1</cast_shadows>
       </visual>
-      <collision name='abb_link_4_fixed_joint_lump__collision_collision_collision'>
+      <collision name='abb_link4_collision'>
         <laser_retro>0</laser_retro>
         <max_contacts>10</max_contacts>
         <pose>0 0 0 0 -0 0</pose>
         <geometry>
           <mesh>
-            <uri>/home/iamnotedible/Motion-Primitive-Planning/simulation/gazebo_sim/model/6650s/meshes/collision/link_4.stl</uri>
+            <uri>model://abb6650s/meshes/collision/link_4.stl</uri>
             <scale>1 1 1</scale>
           </mesh>
         </geometry>
@@ -511,7 +511,7 @@
         </surface>
       </collision>
     </link>
-    <link name='abb_link_5'>
+    <link name='link_5'>
       <pose>2.192 0 2.11 0 -0 0</pose>
       <inertial>
         <pose>0 0 0 0 -0 0</pose>
@@ -528,12 +528,12 @@
       <self_collide>0</self_collide>
       <enable_wind>0</enable_wind>
       <kinematic>0</kinematic>
-      <visual name='abb_link_5_fixed_joint_lump__visual_visual_visual'>
+      <visual name='abb_link5_visual'>
         <pose>0 0 0 0 -0 0</pose>
         <geometry>
           <mesh>
             <scale>1 1 1</scale>
-            <uri>/home/iamnotedible/Motion-Primitive-Planning/simulation/gazebo_sim/model/6650s/meshes/visual/link_5.stl</uri>
+            <uri>model://abb6650s/meshes/visual/link_5.stl</uri>
           </mesh>
         </geometry>
         <material>
@@ -542,13 +542,13 @@
         <transparency>0</transparency>
         <cast_shadows>1</cast_shadows>
       </visual>
-      <collision name='abb_link_5_fixed_joint_lump__collision_collision_collision'>
+      <collision name='abb_link5_collision'>
         <laser_retro>0</laser_retro>
         <max_contacts>10</max_contacts>
         <pose>0 0 0 0 -0 0</pose>
         <geometry>
           <mesh>
-            <uri>/home/iamnotedible/Motion-Primitive-Planning/simulation/gazebo_sim/model/6650s/meshes/collision/link_5.stl</uri>
+            <uri>model://abb6650s/meshes/collision/link_5.stl</uri>
             <scale>1 1 1</scale>
           </mesh>
         </geometry>
@@ -599,7 +599,7 @@
         </surface>
       </collision>
     </link>
-    <link name='abb_link_6'>
+    <link name='link_6'>
       <pose>2.392 0 2.11 0 -0 0</pose>
       <inertial>
         <pose>0 0 0 0 -0 0</pose>
@@ -616,12 +616,12 @@
       <self_collide>0</self_collide>
       <enable_wind>0</enable_wind>
       <kinematic>0</kinematic>
-      <visual name='abb_link_6_fixed_joint_lump__visual_visual_visual'>
+      <visual name='abb_link6_visual'>
         <pose>0 0 0 0 -0 0</pose>
         <geometry>
           <mesh>
             <scale>1 1 1</scale>
-            <uri>/home/iamnotedible/Motion-Primitive-Planning/simulation/gazebo_sim/model/6650s/meshes/visual/link_6.stl</uri>
+            <uri>model://abb6650s/meshes/visual/link_6.stl</uri>
           </mesh>
         </geometry>
         <material>
@@ -630,13 +630,13 @@
         <transparency>0</transparency>
         <cast_shadows>1</cast_shadows>
       </visual>
-      <collision name='abb_link_6_fixed_joint_lump__collision_collision_collision'>
+      <collision name='abb_link6_collision'>
         <laser_retro>0</laser_retro>
         <max_contacts>10</max_contacts>
         <pose>0 0 0 0 -0 0</pose>
         <geometry>
           <mesh>
-            <uri>/home/iamnotedible/Motion-Primitive-Planning/simulation/gazebo_sim/model/6650s/meshes/collision/link_6.stl</uri>
+            <uri>model://abb6650s/meshes/collision/link_6.stl</uri>
             <scale>1 1 1</scale>
           </mesh>
         </geometry>
@@ -687,9 +687,9 @@
         </surface>
       </collision>
     </link>
-    <joint name='abb_joint_1' type='revolute'>
+    <joint name='joint_1' type='revolute'>
       <parent>abb_pedestal</parent>
-      <child>abb_link_1</child>
+      <child>link_1</child>
       <pose>0 0 0 0 -0 0</pose>
       <axis>
         <xyz>0 0 1</xyz>
@@ -719,9 +719,9 @@
         </ode>
       </physics>
     </joint>
-    <joint name='abb_joint_2' type='revolute'>
-      <parent>abb_link_1</parent>
-      <child>abb_link_2</child>
+    <joint name='joint_2' type='revolute'>
+      <parent>link_1</parent>
+      <child>link_2</child>
       <pose>0 0 0 0 -0 0</pose>
       <axis>
         <xyz>0 1 0</xyz>
@@ -751,9 +751,9 @@
         </ode>
       </physics>
     </joint>
-    <joint name='abb_joint_3' type='revolute'>
-      <parent>abb_link_2</parent>
-      <child>abb_link_3</child>
+    <joint name='joint_3' type='revolute'>
+      <parent>link_2</parent>
+      <child>link_3</child>
       <pose>0 0 -0 0 -0 0</pose>
       <axis>
         <xyz>0 1 0</xyz>
@@ -783,9 +783,9 @@
         </ode>
       </physics>
     </joint>
-    <joint name='abb_joint_4' type='revolute'>
-      <parent>abb_link_3</parent>
-      <child>abb_link_4</child>
+    <joint name='joint_4' type='revolute'>
+      <parent>link_3</parent>
+      <child>link_4</child>
       <pose>0 0 0 0 -0 0</pose>
       <axis>
         <xyz>1 0 0</xyz>
@@ -815,9 +815,9 @@
         </ode>
       </physics>
     </joint>
-    <joint name='abb_joint_5' type='revolute'>
-      <parent>abb_link_4</parent>
-      <child>abb_link_5</child>
+    <joint name='joint_5' type='revolute'>
+      <parent>link_4</parent>
+      <child>link_5</child>
       <pose>0 0 0 0 -0 0</pose>
       <axis>
         <xyz>0 1 0</xyz>
@@ -847,9 +847,9 @@
         </ode>
       </physics>
     </joint>
-    <joint name='abb_joint_6' type='revolute'>
-      <parent>abb_link_5</parent>
-      <child>abb_link_6</child>
+    <joint name='joint_6' type='revolute'>
+      <parent>link_5</parent>
+      <child>link_6</child>
       <pose>-0 0 0 0 -0 0</pose>
       <axis>
         <xyz>1 0 0</xyz>

@@ -1,18 +1,18 @@
 device_info:
   device:
-    name: 6650s2_robot
+    name: abb_6650s2
   manufacturer:
     name: ABB_Robots
-    uuid: d80db3c2-3de8-41e3-97f9-62765a7063b8
+    uuid: d80db3c2-3de8-41e3-97f9-62765a7063b9
   model:
-    name: 6650s1
-    uuid: 1d3f5111-01fa-4ecf-a11e-76810d5e1dde
-  user_description: ABB Robots 6650s1 Robot
+    name: 6650s2
+    uuid: 1d3f5111-01fa-4ecf-a11e-76810d5e1ddf
+  user_description: ABB Robots 6650s2 Robot
   serial_number: 123456789
   device_classes:
     - class_identifier:
         name: robot
-        uuid: 39b513e7-21b9-4b49-8654-7537473030eb
+        uuid: 39b513e7-21b9-4b49-8654-7537473a30eb
       subclasses: 
         - serial
         - serial_six_axis
@@ -70,7 +70,7 @@ chains:
     z: 0.0
 
   flange_identifier: tool0
-   flange_pose:
+  flange_pose:
     orientation:
       w: 0.5
       x: 0.0
@@ -98,7 +98,7 @@ chains:
 joint_info:
 - default_effort_units: newton_meter
   default_units: radian
-  joint_identifier: J1
+  joint_identifier: joint_1
   joint_limits:
     effort: 150.0
     lower: -3.83972435
@@ -109,7 +109,7 @@ joint_info:
   passive: false
 - default_effort_units: newton_meter
   default_units: radian
-  joint_identifier: J2
+  joint_identifier: joint_2
   joint_limits:
     effort: 150.0
     lower: -0.6981317
@@ -120,7 +120,7 @@ joint_info:
   passive: false
 - default_effort_units: newton_meter
   default_units: radian
-  joint_identifier: J3
+  joint_identifier: joint_3
   joint_limits:
     effort: 150.0
     lower: -3.14159265
@@ -131,7 +131,7 @@ joint_info:
   passive: false
 - default_effort_units: newton_meter
   default_units: radian
-  joint_identifier: J4
+  joint_identifier: joint_4
   joint_limits:
     effort: 28.0
     lower: -5.23598776
@@ -142,7 +142,7 @@ joint_info:
   passive: false
 - default_effort_units: newton_meter
   default_units: radian
-  joint_identifier: J5
+  joint_identifier: joint_5
   joint_limits:
     effort: 28.0
     lower: -2.0943951
@@ -153,7 +153,7 @@ joint_info:
   passive: false
 - default_effort_units: newton_meter
   default_units: radian
-  joint_identifier: J6
+  joint_identifier: joint_6
   joint_limits:
     effort: 28.0
     lower: -6.28318530718
