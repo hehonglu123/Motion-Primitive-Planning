@@ -89,18 +89,18 @@ chains:
   - 5
   link_identifiers:
   - base_link
-  - L1
-  - L2
-  - L3
-  - L4
-  - L5
-  - L6
+  - link_1
+  - link_2
+  - link_3
+  - link_4
+  - link_5
+  - link_6
 joint_info:
 - default_effort_units: newton_meter
   default_units: radian
   joint_identifier: joint_1
   joint_limits:
-    effort: 150.0
+    effort: 28.0
     lower: -3.83972435
     upper: 3.83972435
     velocity: 1.91986218
@@ -111,7 +111,7 @@ joint_info:
   default_units: radian
   joint_identifier: joint_2
   joint_limits:
-    effort: 150.0
+    effort: 28.0
     lower: -0.6981317
     upper: 2.7925268
     velocity: 1.57079633
@@ -122,7 +122,7 @@ joint_info:
   default_units: radian
   joint_identifier: joint_3
   joint_limits:
-    effort: 150.0
+    effort: 28.0
     lower: -3.14159265
     upper: 1.22173048
     velocity: 1.57079633

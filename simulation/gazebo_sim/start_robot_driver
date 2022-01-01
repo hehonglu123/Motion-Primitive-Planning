@@ -1,0 +1,4 @@
+#!/bin/bash
+cd ~/GazeboModelRobotRaconteurDriver-2021-04-18
+gnome-terminal --tab -e  ./run_6650s1_driver.sh
+gnome-terminal --tab -e  ./run_6650s2_driver.sh
