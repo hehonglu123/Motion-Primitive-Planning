@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 from scipy.optimize import differential_evolution, shgo, NonlinearConstraint, minimize
 from qpsolvers import solve_qp
 
-sys.path.append('../toolbox')
+sys.path.append('../../toolbox')
 from robot_def import *
 from lambda_calc import *
 
@@ -146,7 +146,7 @@ def stepwise_optimize(q_init1,q_init2,curve,curve_normal,base2_R,base2_p,upper_l
 def main():
 	###read actual curve
 	col_names=['q1', 'q2', 'q3','q4', 'q5', 'q6'] 
-	data = read_csv("curve_poses/dual_arm/arm1_js.csv", names=col_names)
+	data = read_csv("curve_poses/arm1_js.csv", names=col_names)
 	curve_q1=data['q1'].tolist()
 	curve_q2=data['q2'].tolist()
 	curve_q3=data['q3'].tolist()
@@ -157,7 +157,7 @@ def main():
 	q_init1=curve_js1[0]
 
 	col_names=['q1', 'q2', 'q3','q4', 'q5', 'q6'] 
-	data = read_csv("curve_poses/dual_arm/arm2_js.csv", names=col_names)
+	data = read_csv("curve_poses/arm2_js.csv", names=col_names)
 	curve_q1=data['q1'].tolist()
 	curve_q2=data['q2'].tolist()
 	curve_q3=data['q3'].tolist()
@@ -168,7 +168,7 @@ def main():
 	q_init2=curve_js2[0]
 
 	col_names=['X', 'Y', 'Z','direction_x','direction_y','direction_z'] 
-	data = read_csv("curve_poses/dual_arm/relative_path.csv", names=col_names)
+	data = read_csv("curve_poses/relative_path.csv", names=col_names)
 	curve_x=data['X'].tolist()
 	curve_y=data['Y'].tolist()
 	curve_z=data['Z'].tolist()

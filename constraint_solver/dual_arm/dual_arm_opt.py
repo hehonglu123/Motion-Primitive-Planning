@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 from scipy.optimize import minimize
 from qpsolvers import solve_qp
 
-sys.path.append('../toolbox')
+sys.path.append('../../toolbox')
 from robot_def import *
 from lambda_calc import *
 
@@ -16,11 +16,11 @@ def normalize_dq(q):
 
 def stepwise_optimize(q_init1,q_init2,curve,curve_normal,base2_R,base2_p,upper_limit,lowerer_limit):
 	#curve_normal: expressed in second robot tool frame
-
 	q_all1=[q_init1]
 	q_out1=[q_init1]
 	q_all2=[q_init2]
 	q_out2=[q_init2]
+	print(curve_normal)
 	for i in range(len(curve)):
 		try:
 			error_fb=999
@@ -73,10 +73,6 @@ def stepwise_optimize(q_init1,q_init2,curve,curve_normal,base2_R,base2_p,upper_l
 				H=(H+np.transpose(H))/2
 
 				vd=-vd
-				# k=np.cross(pose2_base_now.R[:,-1],np.dot(pose2_base_now.R,-curve_normal[i]))
-
-				# k=k/np.linalg.norm(k)
-				# theta=-np.arctan2(np.linalg.norm(np.cross(pose2_base_now.R[:,-1],np.dot(pose2_base_now.R,-curve_normal[i]))), np.dot(pose2_base_now.R[:,-1],np.dot(pose2_base_now.R,-curve_normal[i])))
 				theta=-theta
 
 				k=np.array(k)
@@ -104,7 +100,7 @@ def stepwise_optimize(q_init1,q_init2,curve,curve_normal,base2_R,base2_p,upper_l
 def main():
 	###read actual curve
 	col_names=['q1', 'q2', 'q3','q4', 'q5', 'q6'] 
-	data = read_csv("curve_poses/dual_arm/arm1_js.csv", names=col_names)
+	data = read_csv("curve_poses/arm1_js.csv", names=col_names)
 	curve_q1=data['q1'].tolist()
 	curve_q2=data['q2'].tolist()
 	curve_q3=data['q3'].tolist()
@@ -115,7 +111,7 @@ def main():
 	q_init1=curve_js1[0]
 
 	col_names=['q1', 'q2', 'q3','q4', 'q5', 'q6'] 
-	data = read_csv("curve_poses/dual_arm/arm2_js.csv", names=col_names)
+	data = read_csv("curve_poses/arm2_js.csv", names=col_names)
 	curve_q1=data['q1'].tolist()
 	curve_q2=data['q2'].tolist()
 	curve_q3=data['q3'].tolist()
@@ -126,7 +122,7 @@ def main():
 	q_init2=curve_js2[0]
 
 	col_names=['X', 'Y', 'Z','direction_x','direction_y','direction_z'] 
-	data = read_csv("curve_poses/dual_arm/relative_path.csv", names=col_names)
+	data = read_csv("curve_poses/relative_path.csv", names=col_names)
 	curve_x=data['X'].tolist()
 	curve_y=data['Y'].tolist()
 	curve_z=data['Z'].tolist()
@@ -153,6 +149,7 @@ def main():
 	R2_tool=np.array([	[0,0,1],
 						[0,1,0],
 						[-1,0,0]])
+	R2_tool=np.dot(Ry(np.radians(120)),R2_tool)
 	R2_convert=np.dot(base2_R,R2_tool)
 	relative_path_direction_new=np.dot(R2_convert.T,relative_path_direction.T).T
 
@@ -168,6 +165,13 @@ def main():
 
 	###stepwise qp solver
 	q_out1, q_out2=stepwise_optimize(q_init1,q_init2,relative_path,relative_path_direction_new,base2_R,base2_p,upper_limit,lowerer_limit)
+
+
+	####output to trajectory csv
+	df=DataFrame({'q0':q_out1[:,0],'q1':q_out1[:,1],'q2':q_out1[:,2],'q3':q_out1[:,3],'q4':q_out1[:,4],'q5':q_out1[:,5]})
+	df.to_csv('trajectory/'+'arm1.csv',header=False,index=False)
+	df=DataFrame({'q0':q_out2[:,0],'q1':q_out2[:,1],'q2':q_out2[:,2],'q3':q_out2[:,3],'q4':q_out2[:,4],'q5':q_out2[:,5]})
+	df.to_csv('trajectory/'+'arm2.csv',header=False,index=False)
 
 
 	###dual lambda_dot calc
