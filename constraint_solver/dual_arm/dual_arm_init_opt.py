@@ -67,9 +67,9 @@ def main():
 
 	####output to trajectory csv
 	df=DataFrame({'q0':q_out1[:,0],'q1':q_out1[:,1],'q2':q_out1[:,2],'q3':q_out1[:,3],'q4':q_out1[:,4],'q5':q_out1[:,5]})
-	df.to_csv('trajectory/dual_arm/'+'arm1.csv',header=False,index=False)
+	df.to_csv('trajectory/arm1.csv',header=False,index=False)
 	df=DataFrame({'q0':q_out2[:,0],'q1':q_out2[:,1],'q2':q_out2[:,2],'q3':q_out2[:,3],'q4':q_out2[:,4],'q5':q_out2[:,5]})
-	df.to_csv('trajectory/dual_arm/'+'arm2.csv',header=False,index=False)
+	df.to_csv('trajectory/arm2.csv',header=False,index=False)
 
 	###dual lambda_dot calc
 	dlam_out=calc_lamdot(np.hstack((q_out1,q_out2)),opt.lam[:len(q_out2)],np.tile(opt.joint_vel_limit,2),1)

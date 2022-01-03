@@ -8,7 +8,7 @@ from pandas import *
 def main():
     ###read actual curve
     col_names=['q1', 'q2', 'q3','q4', 'q5', 'q6'] 
-    data = read_csv("trajectory/arm1.csv", names=col_names)
+    data = read_csv("trajectory/dual_arm/arm1.csv", names=col_names)
     curve_q1=data['q1'].tolist()
     curve_q2=data['q2'].tolist()
     curve_q3=data['q3'].tolist()
@@ -18,7 +18,7 @@ def main():
     curve_js1=np.vstack((curve_q1, curve_q2, curve_q3,curve_q4,curve_q5,curve_q6)).T
 
     col_names=['q1', 'q2', 'q3','q4', 'q5', 'q6'] 
-    data = read_csv("trajectory/arm2.csv", names=col_names)
+    data = read_csv("trajectory/dual_arm/arm2.csv", names=col_names)
     curve_q1=data['q1'].tolist()
     curve_q2=data['q2'].tolist()
     curve_q3=data['q3'].tolist()
@@ -29,7 +29,7 @@ def main():
 
 
 
-    robot1 = RRN.ConnectService('rr+tcp://localhost:12222?service=robot')
+    robot1 = RRN.ConnectService('rr+tcp://172.24.230.254:12222?service=robot')
 
     robot_const = RRN.GetConstants("com.robotraconteur.robotics.robot", robot1)
 
@@ -78,7 +78,7 @@ def main():
     traj1_gen = robot1.execute_trajectory(traj1)
 
     ########################################################################
-    robot2 = RRN.ConnectService('rr+tcp://localhost:23333?service=robot')
+    robot2 = RRN.ConnectService('rr+tcp://172.24.230.254:23333?service=robot')
 
     robot_const = RRN.GetConstants("com.robotraconteur.robotics.robot", robot2)
 
