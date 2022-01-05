@@ -3,11 +3,19 @@ sys.path.append('../')
 from constraint_solver import *
 
 
-
-
+col_names=['q1', 'q2', 'q3','q4', 'q5', 'q6'] 
+data = read_csv("curve_poses/arm2_js.csv", names=col_names)
+curve_q1=data['q1'].tolist()
+curve_q2=data['q2'].tolist()
+curve_q3=data['q3'].tolist()
+curve_q4=data['q4'].tolist()
+curve_q5=data['q5'].tolist()
+curve_q6=data['q6'].tolist()
+curve_js2=np.vstack((curve_q1, curve_q2, curve_q3,curve_q4,curve_q5,curve_q6)).T
+q_init2=curve_js2[0]
 
 col_names=['X', 'Y', 'Z','direction_x','direction_y','direction_z'] 
-data = read_csv("curve_poses/relative_path.csv", names=col_names)
+data = read_csv("curve_poses/relative_path_tool_frame.csv", names=col_names)
 curve_x=data['X'].tolist()
 curve_y=data['Y'].tolist()
 curve_z=data['Z'].tolist()
@@ -21,11 +29,11 @@ opt=lambda_opt(relative_path,relative_path_direction,base2_R=np.array([[-1,0,0],
 
 x=np.array([0.12404139,  0.37379556, -0.24278124, -2.68848665, -1.18318923,
         2.47401284,  0.65366543])
-q_init2=x[:-1]
+# q_init2=x[:-1]
 pose2_world_now=fwd(q_init2,opt.base2_R,opt.base2_p)
 
-R_temp=opt.direction2R(np.dot(pose2_world_now.R,opt.curve_normal_toolframe[0]),-opt.curve[1]+opt.curve[0])
-R=np.dot(R_temp,Rz(x[-1]))
+R_temp=opt.direction2R(np.dot(pose2_world_now.R,opt.curve_normal[0]),np.dot(pose2_world_now.R,-opt.curve[1]+opt.curve[0]))
+R=np.dot(R_temp,Rz(0))
 
 q_init1=inv(pose2_world_now.p,R)[0]
 

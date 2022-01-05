@@ -11,7 +11,7 @@ from robot_def import *
 from lambda_calc import *
 
 class lambda_opt(object):
-	def __init__(self,curve,curve_normal,base2_R=np.eye(3),base2_p=np.zeros(3),steps=50):
+	def __init__(self,curve,curve_normal,base2_R=np.eye(3),base2_p=np.zeros(3),steps=32):
 		self.curve=curve
 		self.curve_normal=curve_normal
 		self.base2_R=base2_R
@@ -20,19 +20,11 @@ class lambda_opt(object):
 		self.joint_upper_limit=np.radians([220.,160.,70.,300.,120.,360.])
 		self.joint_lowerer_limit=np.radians([-220.,-40.,-180.,-300.,-120.,-360.])
 
-		self.R_tool=Ry(np.radians(120))
-		self.p_tool=np.array([0.45,0,-0.05])*1000.
-
-		###convert relative curve normal to robot2 tool frame
-
-		self.R2_convert=np.dot(self.base2_R,self.R_tool)
-
 		###decrease curve density to simplify computation
 		num_per_step=int(len(self.curve)/steps)	
 		self.curve=self.curve[0:-1:num_per_step]
 		self.curve_normal=self.curve_normal[0:-1:num_per_step]
 
-		self.curve_normal_toolframe=np.dot(self.R2_convert.T,self.curve_normal.T).T
 
 		###find path length
 		self.lam=[0]
@@ -127,21 +119,29 @@ class lambda_opt(object):
 		q_out1=[q_init1]
 		q_all2=[q_init2]
 		q_out2=[q_init2]
+
 		for i in range(len(self.curve)):
 			try:
 				error_fb=999
 				if i==0:
-					continue
-
-				while error_fb>0.1:
-
 					pose1_now=fwd(q_all1[-1])
 					pose2_now=fwd(q_all2[-1])
 
-					pose2_base_now=fwd(q_all2[-1],self.base2_R,self.base2_p)
+					pose2_world_now=fwd(q_all2[-1],self.base2_R,self.base2_p)					
+					continue
 
-					error_fb=np.linalg.norm(pose1_now.p-pose2_base_now.p-self.curve[i])+np.linalg.norm(np.dot(pose2_base_now.R.T,pose1_now.R[:,-1])-self.curve_normal_toolframe[i])
-					
+
+				while error_fb>0.1:
+					pose1_now=fwd(q_all1[-1])
+					pose2_now=fwd(q_all2[-1])
+
+					pose2_world_now=fwd(q_all2[-1],self.base2_R,self.base2_p)
+
+					error_fb=np.linalg.norm(np.dot(pose2_world_now.R.T,pose1_now.p-pose2_world_now.p)-self.curve[i])+np.linalg.norm(np.dot(pose2_world_now.R.T,pose1_now.R[:,-1])-self.curve_normal[i])	
+
+					# print(i)
+					# print(np.dot(pose2_world_now.R.T,pose1_now.p-pose2_world_now.p)-self.curve[i])
+					# print(np.dot(pose2_world_now.R.T,pose1_now.R[:,-1])-self.curve_normal[i])
 					########################################################first robot###########################################
 					w=0.2
 					Kq=.01*np.eye(6)    #small value to make sure positive definite
@@ -153,12 +153,14 @@ class lambda_opt(object):
 					J1R=J1[:3,:] 
 					H=np.dot(np.transpose(J1p),J1p)+Kq+w*np.dot(np.transpose(J1R),J1R)
 					H=(H+np.transpose(H))/2
-
-					vd=Kp*(self.curve[i]-(pose1_now.p-pose2_base_now.p))
-					k=np.cross(pose1_now.R[:,-1],np.dot(pose2_base_now.R,self.curve_normal_toolframe[i]))
+					
+					vd=Kp*np.dot(pose2_world_now.R,self.curve[i]-np.dot(pose2_world_now.R.T,pose1_now.p-pose2_world_now.p))  ###R^2_0*(curve-R^0_2*(p1-p2))
+					k=np.dot(pose2_world_now.R,np.cross(np.dot(pose2_world_now.R.T,pose1_now.R[:,-1]),self.curve_normal[i]))	###R^2_0*(R^0_2*R1[z] x curve_normal)
 
 					k=k/np.linalg.norm(k)
-					theta=-np.arctan2(np.linalg.norm(np.cross(pose1_now.R[:,-1],np.dot(pose2_base_now.R,self.curve_normal_toolframe[i]))), np.dot(pose1_now.R[:,-1],np.dot(pose2_base_now.R,self.curve_normal_toolframe[i])))
+
+					vec1=np.dot(pose2_world_now.R.T,pose1_now.R[:,-1])
+					theta=-np.arctan2(np.linalg.norm(np.cross(vec1,self.curve_normal[i])),np.dot(vec1,self.curve_normal[i]))
 
 					k=np.array(k)
 					s=np.sin(theta/2)*k         #eR2
@@ -185,9 +187,11 @@ class lambda_opt(object):
 					wd=-np.dot(KR,s)
 					f=-np.dot(np.transpose(J2p),vd)-w*np.dot(np.transpose(J2R),wd)
 					qdot=solve_qp(H,f)
+
 					###TODO:
 					#cap to joint limits
 					q_all2.append(q_all2[-1]+qdot)
+
 			except:
 				q_out1.append(q_all1[-1])
 				q_out2.append(q_all2[-1])
@@ -231,7 +235,7 @@ class lambda_opt(object):
 
 		pose2_world_now=fwd(q_init2,self.base2_R,self.base2_p)
 
-		R_temp=self.direction2R(np.dot(pose2_world_now.R,self.curve_normal_toolframe[0]),-self.curve[1]+self.curve[0])
+		R_temp=self.direction2R(np.dot(pose2_world_now.R,self.curve_normal[0]),-self.curve[1]+self.curve[0])
 		R=np.dot(R_temp,Rz(x[-1]))
 		try:
 			q_init1=inv(pose2_world_now.p,R)[0]
