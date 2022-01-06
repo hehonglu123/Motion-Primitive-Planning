@@ -207,10 +207,10 @@ class lambda_opt(object):
 		return q_out1, q_out2
 
 	def curve_pose_opt(self,x):
-		k=x[:3]/np.linalg.norm(x[:3])
-		theta0=x[3]
+		k=x[:3]/np.linalg.norm(x[:3])	###pose rotation axis
+		theta0=x[3]		###pose rotation angle
 		shift=x[4:-1]
-		theta1=x[-1]
+		theta1=x[-1]	###spray angle
 
 		R_curve=rot(k,theta0)
 		curve_new=np.dot(R_curve,self.curve.T).T+np.tile(shift,(len(self.curve),1))

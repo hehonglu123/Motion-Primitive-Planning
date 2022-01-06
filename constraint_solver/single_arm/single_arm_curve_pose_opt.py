@@ -1,4 +1,4 @@
-import sys
+import sys, yaml
 sys.path.append('../')
 from constraint_solver import *
 
@@ -24,7 +24,7 @@ def main():
 	bnds=tuple(zip(lowerer_limit,upper_limit))
 
 
-	res = minimize(opt.curve_pose_opt, [1,0,0,0,2327.1365,1084.361,757.6133,0], method='SLSQP',tol=1e-10,bounds=bnds)
+	res = minimize(opt.curve_pose_opt, [0.57735027, 0.57735027, 0.57735027,2.0943951023931957,2700,-800,500,0], method='SLSQP',tol=1e-10,bounds=bnds)
 
 	# res = differential_evolution(opt.curve_pose_opt, bnds, args=None,workers=-1,
 	# 								x0 = [1,0,0,0,2327.1365,1084.361,757.6133,0],
@@ -48,6 +48,9 @@ def main():
 	curve_new=np.dot(R_curve,opt.curve.T).T+np.tile(shift,(len(opt.curve),1))
 	curve_normal_new=np.dot(R_curve,opt.curve_normal.T).T
 
+	curve_pose=np.vstack((np.hstack((R_curve,np.array([shift/1000.]).T)),np.array([0,0,0,1])))
+
+
 	R_temp=opt.direction2R(curve_normal_new[0],-curve_new[1]+curve_new[0])
 	R=np.dot(R_temp,Rz(theta1))
 	q_init=inv(curve_new[0],R)[0]
@@ -58,6 +61,8 @@ def main():
 	####output to trajectory csv
 	df=DataFrame({'q0':q_out[:,0],'q1':q_out[:,1],'q2':q_out[:,2],'q3':q_out[:,3],'q4':q_out[:,4],'q5':q_out[:,5]})
 	df.to_csv('trajectory/curve_pose_opt/arm1.csv',header=False,index=False)
+	with open(r'trajectory/curve_pose_opt/curve_pose.yaml', 'w') as file:
+		documents = yaml.dump({'H':curve_pose.tolist()}, file)
 
 	dlam_out=calc_lamdot(q_out,opt.lam[:len(q_out)],opt.joint_vel_limit,1)
 

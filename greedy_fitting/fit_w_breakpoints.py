@@ -66,7 +66,7 @@ def main():
 	curve=np.vstack((curve_x, curve_y, curve_z)).T
 
 
-	curve_fit,max_error_all=fit_w_breakpoints(curve,[movec_fit,movel_fit,movec_fit],[0,int(len(curve)/3),int(2*len(curve)/3),len(curve)])
+	curve_fit,max_error_all=fit_w_breakpoints(curve,[movel_fit,movec_fit,movec_fit],[0,int(len(curve)/3),int(2*len(curve)/3),len(curve)])
 
 	print(max_error_all)
 

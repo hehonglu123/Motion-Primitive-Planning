@@ -29,7 +29,7 @@ def main():
 
 
 
-    robot1 = RRN.ConnectService('rr+tcp://172.24.230.254:12222?service=robot')
+    robot1 = RRN.ConnectService('rr+tcp://localhost:12222?service=robot')
 
     robot_const = RRN.GetConstants("com.robotraconteur.robotics.robot", robot1)
 
@@ -78,7 +78,7 @@ def main():
     traj1_gen = robot1.execute_trajectory(traj1)
 
     ########################################################################
-    robot2 = RRN.ConnectService('rr+tcp://172.24.230.254:23333?service=robot')
+    robot2 = RRN.ConnectService('rr+tcp://localhost:23333?service=robot')
 
     robot_const = RRN.GetConstants("com.robotraconteur.robotics.robot", robot2)
 

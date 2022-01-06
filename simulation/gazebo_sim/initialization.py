@@ -47,6 +47,14 @@ with open('calibration/abb6650s2.yaml') as file:
 	H = np.array(yaml.load(file)['H'],dtype=np.float64)
 initialize(robot_sdf,model_name,H)
 
+#read sdf file
+model_name="blade"
+f = open('model/blade/model.sdf','r')
+bade_sdf = f.read()
+with open('trajectory/single_arm/curve_pose_opt/curve_pose.yaml') as file:
+	H = np.array(yaml.load(file)['H'],dtype=np.float64)
+initialize(bade_sdf,model_name,H)
+
 
 print("Done!")
 
