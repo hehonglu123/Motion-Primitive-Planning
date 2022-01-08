@@ -1,7 +1,11 @@
-import sys
+import numpy as np
+from pandas import *
+import sys, traceback, time
+from general_robotics_toolbox import *
+import matplotlib.pyplot as plt
+
 sys.path.append('../')
 from constraint_solver import *
-
 
 def main():
 	col_names=['X', 'Y', 'Z','direction_x','direction_y','direction_z'] 
@@ -30,10 +34,39 @@ def main():
 
 	opt=lambda_opt(curve,curve_normal)
 
+	###path constraints, position constraint and curve normal constraint
+	lowerer_limit=[-np.pi]
+	upper_limit=[np.pi]
+	bnds=tuple(zip(lowerer_limit,upper_limit))*len(opt.curve)
 
-	##starting q
-	q_out=opt.single_arm_stepwise_optimize(q_init)
-	###stepwise qp solver
+
+	###diff evolution
+	res = differential_evolution(opt.single_arm_global_opt, bnds,workers=-1,
+									x0 = np.zeros(len(opt.curve)),
+									strategy='best1bin', maxiter=2000,
+									popsize=15, tol=1e-2,
+									mutation=(0.5, 1), recombination=0.7,
+									seed=None, callback=None, disp=False,
+									polish=True, init='latinhypercube',
+									atol=0.)
+
+	print(res)
+
+	for i in range(len(opt.curve)):
+		if i==0:
+			R_temp=opt.direction2R(opt.curve_normal[i],-opt.curve[i+1]+opt.curve[i])
+			R=np.dot(R_temp,Rz(res.x[i]))
+			q_out=[inv(opt.curve[i],R)[0]]
+
+		else:
+			R_temp=opt.direction2R(opt.curve_normal[i],-opt.curve[i]+opt.curve[i-1])
+			R=np.dot(R_temp,Rz(res.x[i]))
+			###get closet config to previous one
+			q_inv_all=inv(opt.curve[i],R)
+			temp_q=q_inv_all-q_out[-1]
+			order=np.argsort(np.linalg.norm(temp_q,axis=1))
+			q_out.append(q_inv_all[order[0]])
+
 	
 
 

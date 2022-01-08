@@ -266,6 +266,7 @@ class lambda_opt(object):
 
 	def single_arm_global_opt(self,theta):
 
+
 		for i in range(len(self.curve)):
 			if i==0:
 				R_temp=self.direction2R(self.curve_normal[i],-self.curve[i+1]+self.curve[i])

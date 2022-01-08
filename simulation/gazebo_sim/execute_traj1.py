@@ -1,8 +1,10 @@
 from RobotRaconteur.Client import *
-import time, argparse
+import time, argparse, sys
 import numpy as np
 from pandas import *
 
+sys.path.append('../../toolbox')
+from robot_def import *
 
 
 def main():
@@ -17,20 +19,16 @@ def main():
     curve_q6=data['q6'].tolist()
     curve_js1=np.vstack((curve_q1, curve_q2, curve_q3,curve_q4,curve_q5,curve_q6)).T
 
-    ###read actual curve
-    col_names=['X', 'Y', 'Z','direction_x','direction_y','direction_z'] 
-    data = read_csv("trajectory/single_arm/curve_pose_opt/relative_path.csv", names=col_names)
-    curve_x=data['X'].tolist()
-    curve_y=data['Y'].tolist()
-    curve_z=data['Z'].tolist()
-    curve=np.vstack((curve_x, curve_y, curve_z)).T
-
+    p_prev=fwd(curve_js1[0]).p
     ###find path length
     lam=[0]
-    for i in range(len(curve)-1):
-        lam.append(lam[-1]+np.linalg.norm(curve[i+1]-curve[i]))
+    for i in range(len(curve_js1)-1):
+        p_new=fwd(curve_js1[i+1]).p
+        lam.append(lam[-1]+np.linalg.norm(p_new-p_prev))
+        p_prev=p_new
     ###normalize lam, 
     lam=np.array(lam)/lam[-1]
+
 
     robot1 = RRN.ConnectService('rr+tcp://localhost:12222?service=robot')
 

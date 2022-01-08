@@ -64,6 +64,7 @@ def main():
 	with open(r'trajectory/curve_pose_opt/curve_pose.yaml', 'w') as file:
 		documents = yaml.dump({'H':curve_pose.tolist()}, file)
 
+	print(opt.lam[:len(q_out)])
 	dlam_out=calc_lamdot(q_out,opt.lam[:len(q_out)],opt.joint_vel_limit,1)
 
 
@@ -72,7 +73,7 @@ def main():
 	plt.ylabel("lambda_dot")
 	plt.ylim([0.5,3.5])
 	plt.title("max lambda_dot vs lambda (path index)")
-	plt.savefig("velocity-constraint_js.png")
+	plt.savefig("trajectory/curve_pose_opt/results.png")
 	plt.show()
 if __name__ == "__main__":
 	main()

@@ -37,7 +37,7 @@ def main():
 	bnds=tuple(zip(lowerer_limit,upper_limit))
 	res = differential_evolution(opt.dual_arm_opt, bnds, args=None,workers=-1,
 									x0 = np.append(q_init2,[0]),
-									strategy='best1bin', maxiter=200,
+									strategy='best1bin', maxiter=500,
 									popsize=15, tol=1e-10,
 									mutation=(0.5, 1), recombination=0.7,
 									seed=None, callback=None, disp=False,
@@ -70,7 +70,7 @@ def main():
 	plt.ylabel("lambda_dot")
 	plt.title("DUALARM max lambda_dot vs lambda (path index)")
 	plt.ylim([0.5,3.5])
-	plt.savefig("velocity-constraint_js.png")
+	plt.savefig("trajectory/results.png")
 	plt.show()
 
 

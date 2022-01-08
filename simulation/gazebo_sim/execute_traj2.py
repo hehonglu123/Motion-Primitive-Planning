@@ -1,11 +1,15 @@
 from RobotRaconteur.Client import *
-import time, argparse
+import time, argparse, sys
 import numpy as np
 from pandas import *
 
-
+sys.path.append('../../toolbox')
+from robot_def import *
 
 def main():
+    joint_vel_limit=np.radians([110,90,90,150,120,235])
+    base2_R=np.array([[-1,0,0],[0,-1,0],[0,0,1]])
+    base2_p=np.array([6000,0,0])
     ###read actual curve
     col_names=['q1', 'q2', 'q3','q4', 'q5', 'q6'] 
     data = read_csv("trajectory/dual_arm/arm1.csv", names=col_names)
@@ -27,7 +31,15 @@ def main():
     curve_q6=data['q6'].tolist()
     curve_js2=np.vstack((curve_q1, curve_q2, curve_q3,curve_q4,curve_q5,curve_q6)).T
 
-
+    p_prev=np.zeros(3)
+    ###find path length
+    lam=[0]
+    for i in range(len(curve_js1)-1):
+        p_new=fwd(curve_js1[i+1]).p-fwd(curve_js2[i+1],base2_R,base2_p).p
+        lam.append(lam[-1]+np.linalg.norm(p_new-p_prev))
+        p_prev=p_new
+    ###normalize lam, 
+    lam=np.array(lam)/lam[-1]
 
     robot1 = RRN.ConnectService('rr+tcp://localhost:12222?service=robot')
 
@@ -65,7 +77,7 @@ def main():
     for i in range(len(curve_js1)):
         wp = JointTrajectoryWaypoint()
         wp.joint_position = curve_js1[i]
-        wp.time_from_start = 50*i/len(curve_js1)
+        wp.time_from_start = 2*lam[i]
         waypoints.append(wp)
 
 
@@ -114,7 +126,7 @@ def main():
     for i in range(len(curve_js2)):
         wp = JointTrajectoryWaypoint()
         wp.joint_position = curve_js2[i]
-        wp.time_from_start = 50*i/len(curve_js2)
+        wp.time_from_start = 2*lam[i]
         waypoints.append(wp)
 
 
