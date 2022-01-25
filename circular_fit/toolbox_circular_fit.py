@@ -87,7 +87,7 @@ def set_axes_equal_3d(ax):
     ax.set_ylim3d([centers[1]-radius, centers[1]+radius])
     ax.set_zlim3d([centers[2]-radius, centers[2]+radius])
 
-def circle_fit(curve,p=[]):
+def circle_fit(curve,p=[],slope=[]):
     ###curve: 3D point data
     ###p:   constraint point of the arc
     ########################################
@@ -105,8 +105,6 @@ def circle_fit(curve,p=[]):
         b = np.ones(len(curve))-curve_centered[:,2]/p_centered[2]
         c = np.linalg.lstsq(A,b,rcond=None)[0]
         normal=np.array([c[0],c[1],(1-c[0]*p_centered[0]-c[1]*p_centered[1])/p_centered[2]])
-
-        
 
         ###make sure constraint point is on plane
         # print(np.dot(normal,p_centered))

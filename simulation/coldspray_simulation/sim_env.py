@@ -1,6 +1,6 @@
 import numpy as np
 import sys, time, cv2
-sys.path.append('../toolbox')
+sys.path.append('../../toolbox')
 from projection import LinePlaneCollision
 import matplotlib.pyplot as plt
 import mpl_toolkits.mplot3d.axes3d as p3

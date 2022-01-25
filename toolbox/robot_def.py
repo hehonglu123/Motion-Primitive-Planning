@@ -34,6 +34,7 @@ joint_type=np.zeros(6)
 upper_limit=np.radians([220.,160.,70.,300.,120.,360.])
 lowerer_limit=np.radians([-220.,-40.,-180.,-300.,-120.,-360.])
 joint_vel_limit=np.radians([110,90,90,150,120,235])
+joint_acc_limit=10*joint_vel_limit
 ABB_def=Robot(H,P,joint_type,joint_lower_limit = lowerer_limit, joint_upper_limit = upper_limit, joint_vel_limit=joint_vel_limit, R_tool=R_tool,p_tool=p_tool)
 
 class Transform_all(object):

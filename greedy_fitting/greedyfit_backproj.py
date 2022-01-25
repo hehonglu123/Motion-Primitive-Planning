@@ -144,6 +144,7 @@ def fit_under_error(curve,curve_backproj,curve_backproj_js,max_error_threshold,d
 
 	###initialize
 	breakpoints=[1]
+	breakpoints_out=[0]
 	primitives_choices=[]
 	q_breakpoints=[]
 	points=[]
@@ -221,6 +222,7 @@ def fit_under_error(curve,curve_backproj,curve_backproj_js,max_error_threshold,d
 
 				breakpoints.append(breakpoints[-1]+next_point)
 				fit.append(curve_fit)
+				breakpoints_out.append(breakpoints_out[-1]+len(curve_fit))
 				break
 
 			###find the closest but under max_threshold
@@ -240,6 +242,7 @@ def fit_under_error(curve,curve_backproj,curve_backproj_js,max_error_threshold,d
 
 				breakpoints.append(breakpoints[-1]+next_point)
 				fit.append(curve_fit)
+				breakpoints_out.append(breakpoints_out[-1]+len(curve_fit))
 
 
 				break
@@ -271,7 +274,7 @@ def fit_under_error(curve,curve_backproj,curve_backproj_js,max_error_threshold,d
 		ax.scatter3D(fit[i][:,0], fit[i][:,1], fit[i][:,2], c=fit[i][:,2], cmap='Greens')
 	plt.show()
 
-	return breakpoints,primitives_choices,points,fit_all
+	return breakpoints,breakpoints_out,primitives_choices,points,fit_all
 
 
 
@@ -304,7 +307,7 @@ def main():
 	curve_backproj_q6=data['q6'].tolist()
 	curve_backproj_js=np.vstack((curve_backproj_q1, curve_backproj_q2, curve_backproj_q3,curve_backproj_q4,curve_backproj_q5,curve_backproj_q6)).T
 
-	breakpoints,primitives_choices,points,curve_fit=fit_under_error(curve,curve_backproj,curve_backproj_js,max_error_threshold=1.)
+	breakpoints,breakpoints_out,primitives_choices,points,curve_fit=fit_under_error(curve,curve_backproj,curve_backproj_js,max_error_threshold=1.)
 
 	###insert initial configuration
 	primitives_choices.insert(0,'movej_fit')
@@ -321,7 +324,7 @@ def main():
 	print(primitives_choices)
 	print(points)
 
-	df=DataFrame({'breakpoints':breakpoints,'primitives':primitives_choices,'points':points})
+	df=DataFrame({'breakpoints':breakpoints,'breakpoints_out':breakpoints_out,'primitives':primitives_choices,'points':points})
 	df.to_csv('comparison/moveL+moveC/command_backproj.csv',header=True,index=False)
 	df=DataFrame({'x':curve_fit[:,0],'y':curve_fit[:,1],'z':curve_fit[:,2]})
 	df.to_csv('comparison/moveL+moveC/curve_fit_backproj.csv',header=True,index=False)

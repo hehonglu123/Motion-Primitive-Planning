@@ -11,19 +11,20 @@ from toolbox_circular_fit import *
 
 def main():
 	col_names=['X', 'Y', 'Z','direction_x', 'direction_y', 'direction_z'] 
-	data = read_csv("../data/from_cad/Curve_backproj_in_base_frame.csv", names=col_names)
+	data = read_csv("../data/from_ge/Curve_backproj_in_base_frame.csv", names=col_names)
 	curve_x=data['X'].tolist()
 	curve_y=data['Y'].tolist()
 	curve_z=data['Z'].tolist()
 	curve=np.vstack((curve_x, curve_y, curve_z)).T
 
 	col_names=['X', 'Y', 'Z','direction_x', 'direction_y', 'direction_z'] 
-	data = read_csv("comparison/moveL+moveC/threshold05/curve_fit_backproj.csv")
+	data = read_csv("comparison/moveL+moveC/threshold1/curve_fit_backproj.csv")
 	curve_x=data['x'].tolist()
 	curve_y=data['y'].tolist()
 	curve_z=data['z'].tolist()
 	curve_fit=np.vstack((curve_x, curve_y, curve_z)).T
-
+	curve=curve[::100]
+	curve_fit=curve_fit[::100]
 	###read in points backprojected
 	col_names=['timestamp', 'J1', 'J2','J3', 'J4', 'J5', 'J6'] 
 	data = read_csv("comparison/moveL+moveC/threshold1/v5000_fine.csv",names=col_names)
@@ -61,18 +62,20 @@ def main():
 	curve_2d_vis = rodrigues_rot(curve_centered, normal, [0,0,1])[:,:2]
 	curve_fit_2d_vis = rodrigues_rot(curve_fit-curve_mean, normal, [0,0,1])[:,:2]
 	curve_exe_2d_vis = rodrigues_rot(curve_exe-curve_mean, normal, [0,0,1])[:,:2]
-	plt.plot(curve_2d_vis[:,0],curve_2d_vis[:,1])
-	plt.plot(curve_fit_2d_vis[:,0],curve_fit_2d_vis[:,1])
-	plt.plot(curve_exe_2d_vis[:,0],curve_exe_2d_vis[:,1])
-	plt.legend(['original curve','curve fit','curve execution'])
+	# plt.plot(curve_2d_vis[:,0],curve_2d_vis[:,1])
+	# plt.plot(curve_fit_2d_vis[:,0],curve_fit_2d_vis[:,1])
+	# plt.plot(curve_exe_2d_vis[:,0],curve_exe_2d_vis[:,1])
+	# plt.legend(['original curve','curve fit','curve execution'])
 
 
 
-	# fig = plt.figure()
-	# ax = plt.axes(projection='3d')
-	# ax.plot3D(curve[:,0], curve[:,1], curve[:,2], 'gray')
-	# ax.plot3D(curve_fit[:,0], curve_fit[:,1], curve_fit[:,2], 'red')
+	fig = plt.figure()
+	ax = plt.axes(projection='3d')
+	ax.plot3D(curve[:,0], curve[:,1], curve[:,2],label='original',c='gray')
+	ax.plot3D(curve_fit[:,0], curve_fit[:,1], curve_fit[:,2],label='curve_fit',c='red')
 	# ax.plot3D(curve_exe[:,0], curve_exe[:,1], curve_exe[:,2], 'blue')
+	ax.legend()
+
 	
 
 
