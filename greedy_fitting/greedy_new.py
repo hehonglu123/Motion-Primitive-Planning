@@ -8,17 +8,19 @@ sys.path.append('../circular_fit')
 from toolbox_circular_fit import *
 sys.path.append('../toolbox')
 from robot_def import *
+from direction2R import *
+from general_robotics_toolbox import *
+from error_check import *
 
 #####################3d curve-fitting with MoveL, MoveJ, MoveC; stepwise incremental bi-section searched breakpoints###############################
 
 class greedy_fit(object):
-	def __init__(self,curve,curve_normal):
-		self.d=50 			###standoff distance
+	def __init__(self,curve,curve_normal,d=50):
+		self.d=d 			###standoff distance
 		self.curve=curve
 		self.curve_backproj=curve-self.d*curve_normal
 		self.curve_normal=curve_normal
-		self.base2_R=base2_R
-		self.base2_p=base2_p
+
 		self.joint_vel_limit=np.radians([110,90,90,150,120,235])
 		self.joint_acc_limit=10*self.joint_vel_limit
 		self.joint_upper_limit=np.radians([220.,160.,70.,300.,120.,360.])
@@ -31,6 +33,8 @@ class greedy_fit(object):
 		self.curve_fit_R=[]
 		self.curve_fit_js=[]
 		self.cartesian_slope_prev=None
+		
+		self.slope_constraint=False
 	
 		###find path length
 		self.lam=[0]
@@ -45,11 +49,15 @@ class greedy_fit(object):
 
 	def orientation_interp(self,R_init,R_end,steps):
 		curve_fit_R=[]
+		###find axis angle first
+		R_diff=np.dot(R_init.T,R_end)
+		k,theta=R2rot(R_diff)
 		for i in range(steps):
 			###linearly interpolate angle
 			angle=theta*i/steps
 			R=rot(k,angle)
 			curve_fit_R.append(np.dot(R_init,R))
+		curve_fit_R=np.array(curve_fit_R)
 		return curve_fit_R
 
 	def car2js(self,curve_fit,curve_fit_R):
@@ -75,7 +83,18 @@ class greedy_fit(object):
 		###with constraint point
 		else:
 			start_point=self.curve_fit[-1]
-			slope=self.cartesian_slope_prev*np.linalg.norm(curve_backproj[-1]-curve_backproj[0])/len(curve_backproj)
+
+			if self.slope_constraint:
+				
+				slope=self.cartesian_slope_prev*np.linalg.norm(curve_backproj[-1]-curve_backproj[0])/len(curve_backproj)
+				slope=slope.reshape(1,-1)
+			else:
+
+				A=np.arange(0,len(curve_backproj)).reshape(-1,1)
+				b=curve_backproj-start_point
+				res=np.linalg.lstsq(A,b,rcond=None)[0]
+				slope=res.reshape(1,-1)
+
 
 		curve_fit=np.dot(np.arange(0,len(curve_backproj)).reshape(-1,1),slope)+start_point
 		###calculate fitting error
@@ -87,14 +106,15 @@ class greedy_fit(object):
 			R_init=direction2R(curve_normal[0],-curve_fit[1]+curve_fit[0])
 		else:
 			R_init=self.curve_fit_R[-1]
-		curve_fit_R=orientation_interp(R_init,R_end,len(curve_fit))
+		curve_fit_R=self.orientation_interp(R_init,R_end,len(curve_fit))
 
 
 		###calculate corresponding joint configs
-		curve_fit_js=self.car2js(curve_fit,curve_fit_R)
+		# curve_fit_js=self.car2js(curve_fit,curve_fit_R)
+		curve_fit_js=[]
 
 		###calculating projection error
-		curve_proj=project(curve_fit,curve_fit_R)
+		curve_proj=self.project(curve_fit,curve_fit_R)
 		max_error2=np.max(np.linalg.norm(curve-curve_proj,axis=1))
 		max_error=(max_error1+max_error2)/2
 
@@ -144,39 +164,42 @@ class greedy_fit(object):
 			curve_fit,curve_fit_circle=circle_fit(curve_backproj)	
 		###with constraint point
 		else:
-			curve_fit,curve_fit_circle=circle_fit(curve_backproj,self.curve_fit[-1],self.cartesian_slope_prev)
+			if self.slope_constraint:
+				curve_fit,curve_fit_circle=circle_fit(curve_backproj,self.curve_fit[-1],self.cartesian_slope_prev)
+			else:
+				curve_fit,curve_fit_circle=circle_fit(curve_backproj,self.curve_fit[-1])
 		
 		max_error1=np.max(np.linalg.norm(curve_backproj-curve_fit,axis=1))
-
 		###interpolate orientation linearly
 		R_end=direction2R(curve_normal[-1],-curve_fit[-1]+curve_fit[-2])
 		if len(self.curve_fit)==0:
 			R_init=direction2R(curve_normal[0],-curve_fit[1]+curve_fit[0])
 		else:
 			R_init=self.curve_fit_R[-1]
-		curve_fit_R=orientation_interp(R_init,R_end,len(curve_fit))
-
+		curve_fit_R=self.orientation_interp(R_init,R_end,len(curve_fit))
 
 		###calculate corresponding joint configs
-		curve_fit_js=self.car2js(curve_fit,curve_fit_R)
+		# curve_fit_js=self.car2js(curve_fit,curve_fit_R)
+		curve_fit_js=[]
 
 		###calculating projection error
-		curve_proj=project(curve_fit,curve_fit_R)
+		curve_proj=self.project(curve_fit,curve_fit_R)
 		max_error2=np.max(np.linalg.norm(curve-curve_proj,axis=1))
 		max_error=(max_error1+max_error2)/2
+		###calculating ending slope
+		slope=curve_fit[-1]-curve_fit[-2]
 
 		# print(max_error1,max_error2)
 		return curve_fit,curve_fit_R,curve_fit_js,max_error,slope
 
 
 
-	def fit_under_error(curve,curve_backproj,curve_backproj_js,max_error_threshold,d=50):
+	def fit_under_error(self,max_error_threshold):
 
 		###initialize
 		breakpoints=[1]
 		breakpoints_out=[0]
 		primitives_choices=[]
-		q_breakpoints=[]
 		points=[]
 
 
@@ -187,23 +210,30 @@ class greedy_fit(object):
 		results_max_dz_error=[]
 		results_avg_dz_error=[]
 
-		fit=[]
-		js_fit=[]
+		self.curve_fit=[]
+		self.curve_fit_R=[]
+		self.curve_fit_js=[]
+		self.cartesian_slope_prev=None
 
-		while breakpoints[-1]!=len(curve)-1:
+		while breakpoints[-1]!=len(self.curve)-1:
 			###primitive candidates
-			primitives={'movel_fit':movel_fit,'movej_fit':movej_fit,'movec_fit':movec_fit}
+			primitives={'movel_fit':self.movel_fit,'movec_fit':self.movec_fit}#,'movej_fit':movej_fit,'movec_fit':movec_fit}
 			
 			
 
-			next_point= min(2000,len(curve)-1-breakpoints[-1])
+			next_point= min(2000,len(self.curve)-1-breakpoints[-1])
 			prev_point=0
 			prev_possible_point=0
 
 			max_errors={'movel_fit':999,'movej_fit':999,'movec_fit':999}
+			###initial error map update:
+			for key in primitives: 
+				curve_fit,curve_fit_R,curve_fit_js,max_error,slope=primitives[key](self.curve[breakpoints[-1]-1:breakpoints[-1]+next_point],self.curve_backproj[breakpoints[-1]-1:breakpoints[-1]+next_point],self.curve_normal[breakpoints[-1]-1:breakpoints[-1]+next_point])
+				max_errors[key]=max_error
 
 			###bisection search breakpoints
 			while True:
+				print(breakpoints[-1]+next_point,max_error)
 				###bp going backward to meet threshold
 				if min(list(max_errors.values()))>max_error_threshold:
 					prev_point_temp=next_point
@@ -211,7 +241,7 @@ class greedy_fit(object):
 					prev_point=prev_point_temp
 					
 					for key in primitives: 
-						curve_fit,q_last,max_error=primitives[key](curve[breakpoints[-1]-1:breakpoints[-1]+next_point],curve_backproj[breakpoints[-1]-1:breakpoints[-1]+next_point],curve_backproj_js[breakpoints[-1]-1:breakpoints[-1]+next_point],q=[] if len(q_breakpoints)==0 else q_breakpoints[-1])
+						curve_fit,curve_fit_R,curve_fit_js,max_error,slope=primitives[key](self.curve[breakpoints[-1]-1:breakpoints[-1]+next_point],self.curve_backproj[breakpoints[-1]-1:breakpoints[-1]+next_point],self.curve_normal[breakpoints[-1]-1:breakpoints[-1]+next_point])
 						max_errors[key]=max_error
 
 
@@ -220,12 +250,12 @@ class greedy_fit(object):
 				else:
 					prev_possible_point=next_point
 					prev_point_temp=next_point
-					next_point= min(next_point + int(np.abs(next_point-prev_point)),len(curve)-1-breakpoints[-1])
+					next_point= min(next_point + int(np.abs(next_point-prev_point)),len(self.curve)-1-breakpoints[-1])
 					prev_point=prev_point_temp
 					
 
 					for key in primitives: 
-						curve_fit,q_last,max_error=primitives[key](curve[breakpoints[-1]-1:breakpoints[-1]+next_point],curve_backproj[breakpoints[-1]-1:breakpoints[-1]+next_point],curve_backproj_js[breakpoints[-1]-1:breakpoints[-1]+next_point],q=[] if len(q_breakpoints)==0 else q_breakpoints[-1])
+						curve_fit,curve_fit_R,curve_fit_js,max_error,slope=primitives[key](self.curve[breakpoints[-1]-1:breakpoints[-1]+next_point],self.curve_backproj[breakpoints[-1]-1:breakpoints[-1]+next_point],self.curve_normal[breakpoints[-1]-1:breakpoints[-1]+next_point])
 						max_errors[key]=max_error
 
 				# print(max_errors)
@@ -236,42 +266,47 @@ class greedy_fit(object):
 					
 					
 					for key in primitives: 
-						curve_fit,q_last,max_error=primitives[key](curve[breakpoints[-1]-1:breakpoints[-1]+next_point],curve_backproj[breakpoints[-1]-1:breakpoints[-1]+next_point],curve_backproj_js[breakpoints[-1]-1:breakpoints[-1]+next_point],q=[] if len(q_breakpoints)==0 else q_breakpoints[-1])
+						curve_fit,curve_fit_R,curve_fit_js,max_error,slope=primitives[key](self.curve[breakpoints[-1]-1:breakpoints[-1]+next_point],self.curve_backproj[breakpoints[-1]-1:breakpoints[-1]+next_point],self.curve_normal[breakpoints[-1]-1:breakpoints[-1]+next_point])
 						if max_error<max_error_threshold:
-							q_breakpoints.append(q_last)
 							primitives_choices.append(key)
 							if key=='movec_fit':
 								points.append([curve_fit[int(len(curve_fit)/2)],curve_fit[-1]])
 							elif key=='movel_fit':
 								points.append([curve_fit[-1]])
 							else:
-								points.append([q_last])
+								points.append([curve_fit_js[-1]])
 							break
 
 					
 
 					breakpoints.append(breakpoints[-1]+next_point)
-					fit.append(curve_fit)
+					self.curve_fit.extend(curve_fit)
+					self.curve_fit_R.extend(curve_fit_R)
+					self.curve_fit_js.extend(curve_fit_js)
+					self.cartesian_slope_prev=slope
 					breakpoints_out.append(breakpoints_out[-1]+len(curve_fit))
 					break
 
 				###find the closest but under max_threshold
-				if (min(list(max_errors.values()))<=max_error_threshold and np.abs(next_point-prev_point)<10) or next_point==len(curve)-1:
+				if (min(list(max_errors.values()))<=max_error_threshold and np.abs(next_point-prev_point)<10) or next_point==len(self.curve)-1:
 					for key in primitives: 
-						curve_fit,q_last,max_error=primitives[key](curve[breakpoints[-1]-1:breakpoints[-1]+next_point],curve_backproj[breakpoints[-1]-1:breakpoints[-1]+next_point],curve_backproj_js[breakpoints[-1]-1:breakpoints[-1]+next_point],q=[] if len(q_breakpoints)==0 else q_breakpoints[-1])
+						curve_fit,curve_fit_R,curve_fit_js,max_error,slope=primitives[key](self.curve[breakpoints[-1]-1:breakpoints[-1]+next_point],self.curve_backproj[breakpoints[-1]-1:breakpoints[-1]+next_point],self.curve_normal[breakpoints[-1]-1:breakpoints[-1]+next_point])
 						if max_error<max_error_threshold:
-							q_breakpoints.append(q_last)
 							primitives_choices.append(key)
 							if key=='movec_fit':
 								points.append([curve_fit[int(len(curve_fit)/2)],curve_fit[-1]])
 							elif key=='movel_fit':
 								points.append([curve_fit[-1]])
 							else:
-								points.append([q_last])
+								points.append([curve_fit_js[-1]])
+							
 							break
 
 					breakpoints.append(breakpoints[-1]+next_point)
-					fit.append(curve_fit)
+					self.curve_fit.extend(curve_fit)
+					self.curve_fit_R.extend(curve_fit_R)
+					self.curve_fit_js.extend(curve_fit_js)
+					self.cartesian_slope_prev=slope
 					breakpoints_out.append(breakpoints_out[-1]+len(curve_fit))
 
 
@@ -282,29 +317,15 @@ class greedy_fit(object):
 			print(primitives_choices)
 			# print(points)
 
-		##############################check error (against fitting forward projected curve)##############################
-		fit_all=np.vstack(fit)
-		error=[]
-		for i in range(len(fit_all)):
-		    error_temp=np.linalg.norm(curve_backproj-fit_all[i],axis=1)
-		    idx=np.argmin(error_temp)
-		    error.append(error_temp[idx])
+		##############################check error (against fitting back projected curve)##############################
 
-		error=np.array(error)
-		max_error=np.max(error)
-		print('max error: ', max_error)
+		# max_error,max_error_idx=calc_max_error(self.curve_fit,self.curve_backproj)
+		# print('max error: ', max_error)
 
+		self.curve_fit=np.array(self.curve_fit)
+		self.curve_fit_js=np.array(self.curve_fit_js)
 
-		###plt
-		###3D plot
-		plt.figure()
-		ax = plt.axes(projection='3d')
-		ax.plot3D(curve[:,0], curve[:,1],curve[:,2], 'gray')
-		for i in range(len(fit)):
-			ax.scatter3D(fit[i][:,0], fit[i][:,1], fit[i][:,2], c=fit[i][:,2], cmap='Greens')
-		plt.show()
-
-		return breakpoints,breakpoints_out,primitives_choices,points,fit_all
+		return breakpoints,breakpoints_out,primitives_choices,points
 
 
 
@@ -316,48 +337,49 @@ def main():
 	curve_x=data['X'].tolist()
 	curve_y=data['Y'].tolist()
 	curve_z=data['Z'].tolist()
+	curve_direction_x=data['direction_x'].tolist()
+	curve_direction_y=data['direction_y'].tolist()
+	curve_direction_z=data['direction_z'].tolist()
 	curve=np.vstack((curve_x, curve_y, curve_z)).T
-
-	###read in points backprojected
-	col_names=['X', 'Y', 'Z','direction_x', 'direction_y', 'direction_z'] 
-	data = read_csv("../data/from_ge/Curve_backproj_in_base_frame.csv", names=col_names)
-	curve_backproj_x=data['X'].tolist()
-	curve_backproj_y=data['Y'].tolist()
-	curve_backproj_z=data['Z'].tolist()
-	curve_backproj=np.vstack((curve_backproj_x, curve_backproj_y, curve_backproj_z)).T
-
-	###read interpolated curves in joint space
-	col_names=['q1', 'q2', 'q3','q4', 'q5', 'q6'] 
-	data = read_csv("../data/from_ge/Curve_backproj_js.csv", names=col_names)
-	curve_backproj_q1=data['q1'].tolist()
-	curve_backproj_q2=data['q2'].tolist()
-	curve_backproj_q3=data['q3'].tolist()
-	curve_backproj_q4=data['q4'].tolist()
-	curve_backproj_q5=data['q5'].tolist()
-	curve_backproj_q6=data['q6'].tolist()
-	curve_backproj_js=np.vstack((curve_backproj_q1, curve_backproj_q2, curve_backproj_q3,curve_backproj_q4,curve_backproj_q5,curve_backproj_q6)).T
-
-	breakpoints,breakpoints_out,primitives_choices,points,curve_fit=fit_under_error(curve,curve_backproj,curve_backproj_js,max_error_threshold=1.)
-
-	###insert initial configuration
-	primitives_choices.insert(0,'movej_fit')
-
-	q_all=np.array(inv(curve_fit[0],fwd(curve_backproj_js[0]).R))
-
-	###choose inv_kin closest to previous joints
-	temp_q=q_all-curve_backproj_js[0]
-	order=np.argsort(np.linalg.norm(temp_q,axis=1))
-	q_init=q_all[order[0]]
+	curve_normal=np.vstack((curve_direction_x, curve_direction_y, curve_direction_z)).T
 
 
-	points.insert(0,[q_init])
+	greedy_fit_obj=greedy_fit(curve,curve_normal,d=50)
+	greedy_fit_obj.slope_constraint=False
+
+	breakpoints,breakpoints_out,primitives_choices,points=greedy_fit_obj.fit_under_error(max_error_threshold=1.)
+
+
+	###plt
+	###3D plot
+	plt.figure()
+	ax = plt.axes(projection='3d')
+	ax.plot3D(greedy_fit_obj.curve[:,0], greedy_fit_obj.curve[:,1],greedy_fit_obj.curve[:,2], 'gray')
+	
+	ax.scatter3D(greedy_fit_obj.curve_fit[:,0], greedy_fit_obj.curve_fit[:,1], greedy_fit_obj.curve_fit[:,2], c=greedy_fit_obj.curve_fit[:,2], cmap='Greens')
+	plt.show()
+
+	# ###insert initial configuration
+	# primitives_choices.insert(0,'movej_fit')
+
+	# q_all=np.array(inv(curve_fit[0],fwd(curve_backproj_js[0]).R))
+
+	# ###choose inv_kin closest to previous joints
+	# temp_q=q_all-curve_backproj_js[0]
+	# order=np.argsort(np.linalg.norm(temp_q,axis=1))
+	# q_init=q_all[order[0]]
+
+
+	# points.insert(0,[q_init])
+
+
 	print(primitives_choices)
 	print(points)
 
-	df=DataFrame({'breakpoints':breakpoints,'breakpoints_out':breakpoints_out,'primitives':primitives_choices,'points':points})
-	df.to_csv('comparison/moveL+moveC/command_backproj.csv',header=True,index=False)
-	df=DataFrame({'x':curve_fit[:,0],'y':curve_fit[:,1],'z':curve_fit[:,2]})
-	df.to_csv('comparison/moveL+moveC/curve_fit_backproj.csv',header=True,index=False)
+	# df=DataFrame({'breakpoints':breakpoints,'breakpoints_out':breakpoints_out,'primitives':primitives_choices,'points':points})
+	# df.to_csv('comparison/moveL+moveC/command_backproj.csv',header=True,index=False)
+	# df=DataFrame({'x':curve_fit[:,0],'y':curve_fit[:,1],'z':curve_fit[:,2]})
+	# df.to_csv('comparison/moveL+moveC/curve_fit_backproj.csv',header=True,index=False)
 
 if __name__ == "__main__":
 	main()
