@@ -255,7 +255,7 @@ class greedy_fit(object):
 
 			###bisection search breakpoints
 			while True:
-				print(breakpoints[-1]+next_point,max_error)
+				print(breakpoints[-1]+next_point,max_errors[min(max_errors, key=max_errors.get)])
 				###bp going backward to meet threshold
 				if min(list(max_errors.values()))>max_error_threshold:
 					prev_point_temp=next_point
@@ -370,7 +370,7 @@ def main():
 
 	###disable slope alignment
 	greedy_fit_obj.slope_constraint=True
-	greedy_fit_obj.break_early=True
+	greedy_fit_obj.break_early=False
 	###set primitive choices
 	greedy_fit_obj.primitives={'movel_fit':greedy_fit_obj.movel_fit,'movec_fit':greedy_fit_obj.movec_fit}
 

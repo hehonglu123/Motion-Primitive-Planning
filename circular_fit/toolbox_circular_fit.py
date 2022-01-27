@@ -175,7 +175,7 @@ def circle_fit(curve,p=[],slope=[]):
             circle_plane_normal=circle_plane_normal/np.linalg.norm(circle_plane_normal)
 
             res = minimize(fit_circle_2d_w_slope2, [5000], method='SLSQP',tol=1e-10, args=(curve,p,r_dir,))
-            print('radius: ',res.x)
+            # print('radius: ',res.x)
             r=abs(res.x)
             C=p-res.x*r_dir
             end_vec=vec_proj_plane(curve[-1]-C,circle_plane_normal)
