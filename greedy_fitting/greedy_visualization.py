@@ -18,7 +18,7 @@ def main():
 	curve=np.vstack((curve_x, curve_y, curve_z)).T
 
 	col_names=['X', 'Y', 'Z','direction_x', 'direction_y', 'direction_z'] 
-	data = read_csv("comparison/moveL+moveC/threshold1/curve_fit_backproj.csv")
+	data = read_csv("curve_fit_backproj.csv")
 	curve_x=data['x'].tolist()
 	curve_y=data['y'].tolist()
 	curve_z=data['z'].tolist()

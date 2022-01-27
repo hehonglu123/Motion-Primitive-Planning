@@ -27,14 +27,19 @@ class greedy_fit(object):
 		self.joint_lowerer_limit=np.radians([-220.,-40.,-180.,-300.,-120.,-360.])
 
 		###seed initial js for inv
-		self.q_prev=np.array([0.627463700138299,0.17976842821744082,0.5196590573281621,1.6053098733278601,-0.8935105128511388,0.9174696574156079])
+		self.q_init=np.array([0.627463700138299,0.17976842821744082,0.5196590573281621,1.6053098733278601,-0.8935105128511388,0.9174696574156079])
 
 		self.curve_fit=[]
 		self.curve_fit_R=[]
 		self.curve_fit_js=[]
 		self.cartesian_slope_prev=None
 		
+		###slope alignement settings
 		self.slope_constraint=False
+		self.break_early=False
+
+		###initial primitive candidates
+		self.primitives={'movel_fit':self.movel_fit,'movej_fit':self.movej_fit,'movec_fit':self.movec_fit}
 	
 		###find path length
 		self.lam=[0]
@@ -119,43 +124,43 @@ class greedy_fit(object):
 		max_error=(max_error1+max_error2)/2
 
 		# print(max_error1,max_error2)
-		return curve_fit,curve_fit_R,curve_fit_js,max_error,slope
+		return curve_fit,curve_fit_R,curve_fit_js,max_error
 
 
-	# def movej_fit(self,curve,curve_backproj,curve_normal):
-	# 	if len(q)==0:
-	# 		A=np.vstack((np.ones(len(curve_backproj_js)),np.arange(0,len(curve_backproj_js)))).T
-	# 		b=curve_backproj_js
-	# 		res=np.linalg.lstsq(A,b,rcond=None)[0]
-	# 		start_point=res[0]
-	# 		slope=res[1].reshape(1,-1)
+	def movej_fit(self,curve,curve_backproj,curve_normal):
+		if len(q)==0:
+			A=np.vstack((np.ones(len(curve_backproj_js)),np.arange(0,len(curve_backproj_js)))).T
+			b=curve_backproj_js
+			res=np.linalg.lstsq(A,b,rcond=None)[0]
+			start_point=res[0]
+			slope=res[1].reshape(1,-1)
 
-	# 		start_pose=fwd(curve_backproj_js[0])
-	# 	###with constraint point
-	# 	else:
-	# 		start_pose=fwd(q)
-	# 		A=np.arange(0,len(curve_backproj_js)).reshape(-1,1)
-	# 		b=curve_backproj_js-curve_backproj_js[0]
-	# 		res=np.linalg.lstsq(A,b,rcond=None)[0]
-	# 		start_point=q
-	# 		slope=res.reshape(1,-1)
+			start_pose=fwd(curve_backproj_js[0])
+		###with constraint point
+		else:
+			start_pose=fwd(q)
+			A=np.arange(0,len(curve_backproj_js)).reshape(-1,1)
+			b=curve_backproj_js-curve_backproj_js[0]
+			res=np.linalg.lstsq(A,b,rcond=None)[0]
+			start_point=q
+			slope=res.reshape(1,-1)
 
-	# 	curve_js_fit=np.dot(np.arange(0,len(curve_backproj_js)).reshape(-1,1),slope)+start_point
+		curve_js_fit=np.dot(np.arange(0,len(curve_backproj_js)).reshape(-1,1),slope)+start_point
 
-	# 	curve_fit=[]
-	# 	for i in range(len(curve_js_fit)):
-	# 		curve_fit.append(fwd(curve_js_fit[i]).p)
-	# 	curve_fit=np.array(curve_fit)
+		curve_fit=[]
+		for i in range(len(curve_js_fit)):
+			curve_fit.append(fwd(curve_js_fit[i]).p)
+		curve_fit=np.array(curve_fit)
 
-	# 	###calculate fitting error
-	# 	max_error1=np.max(np.linalg.norm(curve_backproj-curve_fit,axis=1))
+		###calculate fitting error
+		max_error1=np.max(np.linalg.norm(curve_backproj-curve_fit,axis=1))
 
-	# 	###calculating projection error
-	# 	curve_proj=project(curve_fit,start_pose.R,fwd(curve_js_fit[-1]).R)
-	# 	max_error2=np.max(np.linalg.norm(curve-curve_proj,axis=1))
-	# 	max_error=(max_error1+max_error2)/2
+		###calculating projection error
+		curve_proj=project(curve_fit,start_pose.R,fwd(curve_js_fit[-1]).R)
+		max_error2=np.max(np.linalg.norm(curve-curve_proj,axis=1))
+		max_error=(max_error1+max_error2)/2
 
-	# 	return curve_fit,curve_js_fit[-1],max_error
+		return curve_fit,curve_js_fit[-1],max_error
 
 
 	def movec_fit(self,curve,curve_backproj,curve_normal):
@@ -186,13 +191,31 @@ class greedy_fit(object):
 		curve_proj=self.project(curve_fit,curve_fit_R)
 		max_error2=np.max(np.linalg.norm(curve-curve_proj,axis=1))
 		max_error=(max_error1+max_error2)/2
-		###calculating ending slope
-		slope=curve_fit[-1]-curve_fit[-2]
 
 		# print(max_error1,max_error2)
-		return curve_fit,curve_fit_R,curve_fit_js,max_error,slope
+		return curve_fit,curve_fit_R,curve_fit_js,max_error
 
+	def breakearly(self,curve,curve_fit):
+		best_alignment=0
+		idx=0
+		for i in reversed(range(len(curve)-1)):
+			slope_original=curve[i+1]-curve[i]
+			slope_original=slope_original/np.linalg.norm(slope_original)
 
+			slope_fit=curve_fit[i+1]-curve_fit[i]
+			slope_fit=slope_fit/np.linalg.norm(slope_fit)
+
+			###return the point with smaller slope difference
+			if np.dot(slope_fit,slope_original)>best_alignment:
+				best_alignment=np.dot(slope_fit,slope_original)
+				idx=i
+
+		print('alignment:',best_alignment)
+
+		if idx==0:
+			idx=int(len(curve)/2)
+		
+		return idx
 
 	def fit_under_error(self,max_error_threshold):
 
@@ -215,9 +238,8 @@ class greedy_fit(object):
 		self.curve_fit_js=[]
 		self.cartesian_slope_prev=None
 
-		while breakpoints[-1]!=len(self.curve)-1:
-			###primitive candidates
-			primitives={'movel_fit':self.movel_fit,'movec_fit':self.movec_fit}#,'movej_fit':movej_fit,'movec_fit':movec_fit}
+		while breakpoints[-1]<len(self.curve)-1:
+			
 			
 			
 
@@ -227,8 +249,8 @@ class greedy_fit(object):
 
 			max_errors={'movel_fit':999,'movej_fit':999,'movec_fit':999}
 			###initial error map update:
-			for key in primitives: 
-				curve_fit,curve_fit_R,curve_fit_js,max_error,slope=primitives[key](self.curve[breakpoints[-1]-1:breakpoints[-1]+next_point],self.curve_backproj[breakpoints[-1]-1:breakpoints[-1]+next_point],self.curve_normal[breakpoints[-1]-1:breakpoints[-1]+next_point])
+			for key in self.primitives: 
+				curve_fit,curve_fit_R,curve_fit_js,max_error=self.primitives[key](self.curve[breakpoints[-1]-1:breakpoints[-1]+next_point],self.curve_backproj[breakpoints[-1]-1:breakpoints[-1]+next_point],self.curve_normal[breakpoints[-1]-1:breakpoints[-1]+next_point])
 				max_errors[key]=max_error
 
 			###bisection search breakpoints
@@ -240,8 +262,8 @@ class greedy_fit(object):
 					next_point-=int(np.abs(next_point-prev_point)/2)
 					prev_point=prev_point_temp
 					
-					for key in primitives: 
-						curve_fit,curve_fit_R,curve_fit_js,max_error,slope=primitives[key](self.curve[breakpoints[-1]-1:breakpoints[-1]+next_point],self.curve_backproj[breakpoints[-1]-1:breakpoints[-1]+next_point],self.curve_normal[breakpoints[-1]-1:breakpoints[-1]+next_point])
+					for key in self.primitives: 
+						curve_fit,curve_fit_R,curve_fit_js,max_error=self.primitives[key](self.curve[breakpoints[-1]-1:breakpoints[-1]+next_point],self.curve_backproj[breakpoints[-1]-1:breakpoints[-1]+next_point],self.curve_normal[breakpoints[-1]-1:breakpoints[-1]+next_point])
 						max_errors[key]=max_error
 
 
@@ -254,19 +276,22 @@ class greedy_fit(object):
 					prev_point=prev_point_temp
 					
 
-					for key in primitives: 
-						curve_fit,curve_fit_R,curve_fit_js,max_error,slope=primitives[key](self.curve[breakpoints[-1]-1:breakpoints[-1]+next_point],self.curve_backproj[breakpoints[-1]-1:breakpoints[-1]+next_point],self.curve_normal[breakpoints[-1]-1:breakpoints[-1]+next_point])
+					for key in self.primitives: 
+						curve_fit,curve_fit_R,curve_fit_js,max_error=self.primitives[key](self.curve[breakpoints[-1]-1:breakpoints[-1]+next_point],self.curve_backproj[breakpoints[-1]-1:breakpoints[-1]+next_point],self.curve_normal[breakpoints[-1]-1:breakpoints[-1]+next_point])
 						max_errors[key]=max_error
 
 				# print(max_errors)
 				if next_point==prev_point:
-					print('stuck')
-					###if ever getting stuck, restore
-					next_point=prev_possible_point
+					print('stuck')		###if ever getting stuck, restore
+					###TODO: debug why <2
+					next_point=max(prev_possible_point,2)
+					# if breakpoints[-1]+next_point+1==len(self.curve)-1:
+					# 	next_point=3
+
 					
 					
-					for key in primitives: 
-						curve_fit,curve_fit_R,curve_fit_js,max_error,slope=primitives[key](self.curve[breakpoints[-1]-1:breakpoints[-1]+next_point],self.curve_backproj[breakpoints[-1]-1:breakpoints[-1]+next_point],self.curve_normal[breakpoints[-1]-1:breakpoints[-1]+next_point])
+					for key in self.primitives: 
+						curve_fit,curve_fit_R,curve_fit_js,max_error=self.primitives[key](self.curve[breakpoints[-1]-1:breakpoints[-1]+next_point],self.curve_backproj[breakpoints[-1]-1:breakpoints[-1]+next_point],self.curve_normal[breakpoints[-1]-1:breakpoints[-1]+next_point])
 						if max_error<max_error_threshold:
 							primitives_choices.append(key)
 							if key=='movec_fit':
@@ -276,21 +301,13 @@ class greedy_fit(object):
 							else:
 								points.append([curve_fit_js[-1]])
 							break
-
-					
-
-					breakpoints.append(breakpoints[-1]+next_point)
-					self.curve_fit.extend(curve_fit)
-					self.curve_fit_R.extend(curve_fit_R)
-					self.curve_fit_js.extend(curve_fit_js)
-					self.cartesian_slope_prev=slope
-					breakpoints_out.append(breakpoints_out[-1]+len(curve_fit))
+	
 					break
 
 				###find the closest but under max_threshold
 				if (min(list(max_errors.values()))<=max_error_threshold and np.abs(next_point-prev_point)<10) or next_point==len(self.curve)-1:
-					for key in primitives: 
-						curve_fit,curve_fit_R,curve_fit_js,max_error,slope=primitives[key](self.curve[breakpoints[-1]-1:breakpoints[-1]+next_point],self.curve_backproj[breakpoints[-1]-1:breakpoints[-1]+next_point],self.curve_normal[breakpoints[-1]-1:breakpoints[-1]+next_point])
+					for key in self.primitives: 
+						curve_fit,curve_fit_R,curve_fit_js,max_error=self.primitives[key](self.curve[breakpoints[-1]-1:breakpoints[-1]+next_point],self.curve_backproj[breakpoints[-1]-1:breakpoints[-1]+next_point],self.curve_normal[breakpoints[-1]-1:breakpoints[-1]+next_point])
 						if max_error<max_error_threshold:
 							primitives_choices.append(key)
 							if key=='movec_fit':
@@ -301,16 +318,21 @@ class greedy_fit(object):
 								points.append([curve_fit_js[-1]])
 							
 							break
-
-					breakpoints.append(breakpoints[-1]+next_point)
-					self.curve_fit.extend(curve_fit)
-					self.curve_fit_R.extend(curve_fit_R)
-					self.curve_fit_js.extend(curve_fit_js)
-					self.cartesian_slope_prev=slope
-					breakpoints_out.append(breakpoints_out[-1]+len(curve_fit))
-
-
 					break
+	
+
+			if self.break_early:
+				idx=max(self.breakearly(self.curve_backproj[breakpoints[-1]-1:breakpoints[-1]+next_point],curve_fit),2)
+			else:
+				idx=next_point
+
+			breakpoints.append(breakpoints[-1]+idx)
+			self.curve_fit.extend(curve_fit[:len(curve_fit)-(next_point-idx)])
+			self.curve_fit_R.extend(curve_fit_R[:len(curve_fit)-(next_point-idx)])
+			# self.curve_fit_js.extend(curve_fit_js[:len(curve_fit)-(next_point-idx)])
+			###calculating ending slope
+			self.cartesian_slope_prev=(self.curve_fit[-1]-self.curve_fit[-2])/np.linalg.norm(self.curve_fit[-1]-self.curve_fit[-2])
+			breakpoints_out.append(breakpoints_out[-1]+len(curve_fit[:len(curve_fit)-(next_point-idx)]))
 
 
 			print(breakpoints)
@@ -345,7 +367,12 @@ def main():
 
 
 	greedy_fit_obj=greedy_fit(curve,curve_normal,d=50)
-	greedy_fit_obj.slope_constraint=False
+
+	###disable slope alignment
+	greedy_fit_obj.slope_constraint=True
+	greedy_fit_obj.break_early=True
+	###set primitive choices
+	greedy_fit_obj.primitives={'movel_fit':greedy_fit_obj.movel_fit,'movec_fit':greedy_fit_obj.movec_fit}
 
 	breakpoints,breakpoints_out,primitives_choices,points=greedy_fit_obj.fit_under_error(max_error_threshold=1.)
 
@@ -359,27 +386,25 @@ def main():
 	ax.scatter3D(greedy_fit_obj.curve_fit[:,0], greedy_fit_obj.curve_fit[:,1], greedy_fit_obj.curve_fit[:,2], c=greedy_fit_obj.curve_fit[:,2], cmap='Greens')
 	plt.show()
 
-	# ###insert initial configuration
-	# primitives_choices.insert(0,'movej_fit')
-
-	# q_all=np.array(inv(curve_fit[0],fwd(curve_backproj_js[0]).R))
-
-	# ###choose inv_kin closest to previous joints
-	# temp_q=q_all-curve_backproj_js[0]
-	# order=np.argsort(np.linalg.norm(temp_q,axis=1))
-	# q_init=q_all[order[0]]
-
-
-	# points.insert(0,[q_init])
+	############insert initial configuration#################
+	primitives_choices.insert(0,'movej_fit')
+	q_all=np.array(inv(greedy_fit_obj.curve_fit[0],greedy_fit_obj.curve_fit_R[0]))
+	###choose inv_kin closest to previous joints
+	temp_q=q_all-greedy_fit_obj.q_init
+	order=np.argsort(np.linalg.norm(temp_q,axis=1))
+	q_init=q_all[order[0]]
+	points.insert(0,[q_init])
 
 
-	print(primitives_choices)
-	print(points)
+	print(len(primitives_choices))
+	print(len(points))
+	print(len(breakpoints_out))
+	print(len(breakpoints))
 
-	# df=DataFrame({'breakpoints':breakpoints,'breakpoints_out':breakpoints_out,'primitives':primitives_choices,'points':points})
-	# df.to_csv('comparison/moveL+moveC/command_backproj.csv',header=True,index=False)
-	# df=DataFrame({'x':curve_fit[:,0],'y':curve_fit[:,1],'z':curve_fit[:,2]})
-	# df.to_csv('comparison/moveL+moveC/curve_fit_backproj.csv',header=True,index=False)
+	df=DataFrame({'breakpoints':breakpoints,'breakpoints_out':breakpoints_out,'primitives':primitives_choices,'points':points})
+	df.to_csv('command_backproj.csv',header=True,index=False)
+	df=DataFrame({'x':greedy_fit_obj.curve_fit[:,0],'y':greedy_fit_obj.curve_fit[:,1],'z':greedy_fit_obj.curve_fit[:,2]})
+	df.to_csv('curve_fit_backproj.csv',header=True,index=False)
 
 if __name__ == "__main__":
 	main()

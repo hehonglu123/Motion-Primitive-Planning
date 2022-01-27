@@ -44,7 +44,7 @@ def fit_circle_2d_w_slope(x,curve,p):
 def fit_circle_2d_w_slope2(x,curve,p,r_dir):
     #given direction already
     center=p-x*r_dir
-    return np.linalg.norm(x**2-np.linalg.norm(curve-center,axis=1))         ###min{ || (x-x_c)^2+(y-y_c)^2+(z-z_c)^2 - r^2 ||  }   
+    return np.linalg.norm(x**2-np.linalg.norm(curve-center,axis=1)**2)         ###min{ || (x-x_c)^2+(y-y_c)^2+(z-z_c)^2 - r^2 ||  }   
 def vec_proj_plane(u,n):
     ###u: vector in 3D
     ###n: plane normal
@@ -174,15 +174,18 @@ def circle_fit(curve,p=[],slope=[]):
             circle_plane_normal=np.cross(r_dir,slope)
             circle_plane_normal=circle_plane_normal/np.linalg.norm(circle_plane_normal)
 
-            res = minimize(fit_circle_2d_w_slope2, [1000], method='SLSQP',tol=1e-10, args=(curve,p,r_dir,))
-            print(res.x)
+            res = minimize(fit_circle_2d_w_slope2, [5000], method='SLSQP',tol=1e-10, args=(curve,p,r_dir,))
+            print('radius: ',res.x)
             r=abs(res.x)
             C=p-res.x*r_dir
             end_vec=vec_proj_plane(curve[-1]-C,circle_plane_normal)
 
             ###get 3D circular arc
-            u = curve[0] - C
-            v = curve[-1] - C
+            u = p - C
+            if np.linalg.norm(p-curve[0])<np.linalg.norm(p-curve[-1]):
+                v=curve[-1] - C
+            else:
+                v=curve[0] - C
             theta = angle_between(u, v, circle_plane_normal)
 
             l = np.linspace(0, theta, len(curve))
