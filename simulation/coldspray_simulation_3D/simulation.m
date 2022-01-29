@@ -5,7 +5,9 @@ gm = importGeometry('test_stl.stl');
 
 
 data = stlread('test_stl.stl');
-% trimesh(data,'FaceColor','none','EdgeColor','k');
+figure(100); trimesh(data,'FaceColor','none','EdgeColor','k'); hold; 
+plotTransforms([0 0 0],[1 0 0 0],'Framesize',10); axis equal;
+title("The mold (mesh)")
 
 %data2 = stlread('generic_fan_blade.stl');
 %trimesh(data2,'FaceColor','none','EdgeColor','k')
@@ -128,11 +130,13 @@ disp(mean(T));
 disp(std(T));
 
 data_final = triangulation(data.ConnectivityList, p_progress');
-figure(2); trimesh(data_final,'FaceColor','none','EdgeColor','k'); hold
-plot(q_surface(1,:),q_surface(2,:),'.'); axis equal;
+% figure(2); trimesh(data_final,'FaceColor','none','EdgeColor','k'); hold
+figure(2); trimesh(data_final,'FaceColor','none','EdgeColor','red'); hold on; 
+trimesh(data,'FaceColor','none','EdgeColor','k'); axis equal; view(0,90);
+% plot(q_surface(1,:),q_surface(2,:),'.'); axis equal;
 % figure(2); trimesh(data,'FaceColor','none','EdgeColor','k');
 title('Final mesh and original surface. (cross section)');
-legend('Final mesh','Original surface')
+legend('Final mesh','Original surface','Location','bestoutside')
 view(0,90);
 figure(3); plot(T); title('Deposition simulation time after every motion')
 
