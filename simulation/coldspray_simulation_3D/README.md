@@ -10,7 +10,7 @@ Run *simulation.m* in matlab
 
 The method assume that the deposition follows a Gaussian distribution.
 
-<img src="imgs/deposition_distribution.png">
+<img src="imgs/deposition_distribution.png" height="300">
 
 It then used the assumption to "grow" the points of meshes of the model.
 
