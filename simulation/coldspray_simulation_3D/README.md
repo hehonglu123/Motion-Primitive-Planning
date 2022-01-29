@@ -10,13 +10,14 @@ Run *simulation.m* in matlab
 
 The method assume that the deposition follows a Gaussian distribution.
 
-![deposition model](imgs/deposition_distribution.png)
+<img src="imgs/deposition_distribution.png">
 
 It then used the assumption to "grow" the points of meshes of the model.
 
-![eq1](imgs/eq_1.png)
+<img src="imgs/eq_1.png">
 
-![eq2](imgs/eq_2.png)
+<img src="imgs/eq_1.png">
+
 
 ### Assumption (for now)
 1. The robot motions are moveL with constant speed.
@@ -28,22 +29,22 @@ It then used the assumption to "grow" the points of meshes of the model.
 
 The test mold looks like below
 
-![mold](imgs/mold.png)
+<img src="imgs/mold.png" height="300">
 
 ### Simulation Result with Robot path
 
 Robot path and mesh (cross section)
 
-![robot_path](imgs/mold_and_robot_path_cross_section.png)
+<img src="imgs/mold_and_robot_path_cross_section.png" height="300">
 
 Simulation result
 
-![result](imgs/coldspray_simulation_result.png)
+<img src="imgs/coldspray_simulation_result.png" height="300">
 
 Calculation time
 
 Mean: 7.23e-04
 Std: 0.0022
 
-![duration](imgs/duration.png)
+<img src="imgs/duration.png" height="300">
 
