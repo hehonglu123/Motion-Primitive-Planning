@@ -33,17 +33,17 @@ def initialize(robot_sdf,model_name,H):
 
 #model name: ur, sawyer, abb,staubli
 #read sdf file
-model_name="abb6650s1"
-f = open('model/abb6650s1/model.sdf','r')
+model_name="abb6640"
+f = open('model/abb6640/model.sdf','r')
 robot_sdf = f.read()
-with open('calibration/abb6650s1.yaml') as file:
+with open('calibration/abb6640.yaml') as file:
 	H = np.array(yaml.load(file)['H'],dtype=np.float64)
 initialize(robot_sdf,model_name,H)
 #read sdf file
-model_name="abb6650s2"
-f = open('model/abb6650s2/model.sdf','r')
+model_name="abb1200"
+f = open('model/abb1200/model.sdf','r')
 robot_sdf = f.read()
-with open('calibration/abb6650s2.yaml') as file:
+with open('calibration/abb1200.yaml') as file:
 	H = np.array(yaml.load(file)['H'],dtype=np.float64)
 initialize(robot_sdf,model_name,H)
 

@@ -5,7 +5,7 @@ from general_robotics_toolbox import *
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 sys.path.append('../toolbox')
-from robot_def import *
+from robots_def import *
 
 def cross(v):
 	return np.array([[0,-v[-1],v[1]],
@@ -49,6 +49,9 @@ def main():
 	curve=np.vstack((curve_x, curve_y, curve_z)).T
 	curve_direction=np.vstack((curve_direction_x, curve_direction_y, curve_direction_z)).T
 
+
+	abb6640_obj=abb6640()
+
 	###back projection
 	d=0			###offset
 	# plt.figure()
@@ -83,7 +86,7 @@ def main():
 	q_init=np.array([0.627463700138299,0.17976842821744082,0.5196590573281621,1.6053098733278601,-0.8935105128511388,0.9174696574156079])
 	for i in range(len(curve)):
 		try:
-			q_all=np.array(inv(curve[i],curve_R[i]))
+			q_all=np.array(abb6640_obj.inv(curve[i],curve_R[i]))
 		except:
 			traceback.print_exc()
 			pass
@@ -100,7 +103,7 @@ def main():
 				curve_js[i]=q_all[order[0]]
 
 			except:
-				q_all=np.array(inv(curve[i],curve_R[i]))
+				q_all=np.array(abb6640_obj.inv(curve[i],curve_R[i]))
 				traceback.print_exc()
 				pass
 
