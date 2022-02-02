@@ -11,6 +11,7 @@ from robots_def import *
 from direction2R import *
 from general_robotics_toolbox import *
 from error_check import *
+# from robotstudio_send import MotionSend
 
 #####################3d curve-fitting with MoveL, MoveJ, MoveC; stepwise incremental bi-section searched breakpoints###############################
 
@@ -83,7 +84,7 @@ class greedy_fit(object):
 			order=np.argsort(np.linalg.norm(temp_q,axis=1))
 			curve_fit_js.append(q_all[order[0]])
 		return curve_fit_js
-	def movel_fit(self,curve,curve_backproj,curve_backproj_js,curve_normal):	###unit vector slope
+	def movel_fit(self,curve,curve_backproj,curve_backproj_js,curve_quat,curve_normal):	###unit vector slope
 		###no constraint
 		if len(self.curve_fit)==0:
 			A=np.vstack((np.ones(len(curve_backproj)),np.arange(0,len(curve_backproj)))).T
@@ -91,9 +92,15 @@ class greedy_fit(object):
 			res=np.linalg.lstsq(A,b,rcond=None)[0]
 			start_point=res[0]
 			slope=res[1].reshape(1,-1)
+			###fit orientation with regression
+			curve_fit_R=self.orientation_linear_fit(curve_quat)
 
 		###with constraint point
 		else:
+			###fit orientation with regression
+			curve_fit_R=self.orientation_linear_fit(curve_quat,R2q(self.curve_fit_R[-1]))
+
+
 			start_point=self.curve_fit[-1]
 
 			if self.slope_constraint:
@@ -112,14 +119,14 @@ class greedy_fit(object):
 		###calculate fitting error
 		max_error1=np.max(np.linalg.norm(curve_backproj-curve_fit,axis=1))
 
-		###interpolate orientation linearly
-		R_end=direction2R(curve_normal[-1],-curve_fit[-1]+curve_fit[-2])
-		if len(self.curve_fit)==0:
-			R_init=direction2R(curve_normal[0],-curve_fit[1]+curve_fit[0])
-		else:
-			R_init=self.curve_fit_R[-1]
-		curve_fit_R=self.orientation_interp(R_init,R_end,len(curve_fit))
-
+		# ###interpolate orientation linearly
+		# R_end=direction2R(curve_normal[-1],-curve_fit[-1]+curve_fit[-2])
+		# if len(self.curve_fit)==0:
+		# 	R_init=direction2R(curve_normal[0],-curve_fit[1]+curve_fit[0])
+		# else:
+		# 	R_init=self.curve_fit_R[-1]
+		# curve_fit_R=self.orientation_interp(R_init,R_end,len(curve_fit))
+		
 
 		###calculate corresponding joint configs, leave black to skip inv during searching
 		curve_fit_js=[]
@@ -133,7 +140,7 @@ class greedy_fit(object):
 		return curve_fit,curve_fit_R,curve_fit_js,max_error
 
 
-	def movej_fit(self,curve,curve_backproj,curve_backproj_js,curve_normal):
+	def movej_fit(self,curve,curve_backproj,curve_backproj_js,curve_quat,curve_normal):
 		###no constraint
 		if len(self.curve_fit)==0:
 			A=np.vstack((np.ones(len(curve_backproj_js)),np.arange(0,len(curve_backproj_js)))).T
@@ -181,25 +188,35 @@ class greedy_fit(object):
 		return curve_fit,curve_fit_R,curve_fit_js,max_error
 
 
-	def movec_fit(self,curve,curve_backproj,curve_backproj_js,curve_normal):
+	def movec_fit(self,curve,curve_backproj,curve_backproj_js,curve_quat,curve_normal):
 		###no previous constraint
 		if len(self.curve_fit)==0:
 			curve_fit,curve_fit_circle=circle_fit(curve_backproj)	
+			###fit orientation with regression
+			curve_fit_R=self.orientation_linear_fit(curve_quat)
 		###with constraint point
 		else:
+			###fit orientation with regression
+			curve_fit_R=self.orientation_linear_fit(curve_quat,R2q(self.curve_fit_R[-1]))
+
 			if self.slope_constraint:
 				curve_fit,curve_fit_circle=circle_fit(curve_backproj,self.curve_fit[-1],self.cartesian_slope_prev)
 			else:
 				curve_fit,curve_fit_circle=circle_fit(curve_backproj,self.curve_fit[-1])
-		
+			
+
+
+
 		max_error1=np.max(np.linalg.norm(curve_backproj-curve_fit,axis=1))
-		###interpolate orientation linearly
-		R_end=direction2R(curve_normal[-1],-curve_fit[-1]+curve_fit[-2])
-		if len(self.curve_fit)==0:
-			R_init=direction2R(curve_normal[0],-curve_fit[1]+curve_fit[0])
-		else:
-			R_init=self.curve_fit_R[-1]
-		curve_fit_R=self.orientation_interp(R_init,R_end,len(curve_fit))
+		# ###interpolate orientation linearly
+		# R_end=direction2R(curve_normal[-1],-curve_fit[-1]+curve_fit[-2])
+		# if len(self.curve_fit)==0:
+		# 	R_init=direction2R(curve_normal[0],-curve_fit[1]+curve_fit[0])
+		# else:
+		# 	R_init=self.curve_fit_R[-1]
+		# curve_fit_R=self.orientation_interp(R_init,R_end,len(curve_fit))
+
+		
 
 		###calculate corresponding joint configs, leave black to skip inv during searching
 		curve_fit_js=[]
@@ -231,8 +248,9 @@ class greedy_fit(object):
 				theta-=2*np.pi
 
 		else:
-			###TODO: implement orientation continuous constraint
-			Q=np.array(curve_quat).T
+			###TODO: find better way for orientation continuous constraint 
+			curve_quat_cons=np.vstack((curve_quat,np.tile(initial_quat,(999999,1))))
+			Q=np.array(curve_quat_cons).T
 			Z=np.dot(Q,Q.T)
 			u, s, vh = np.linalg.svd(Z)
 
@@ -254,7 +272,7 @@ class greedy_fit(object):
 			###linearly interpolate angle
 			angle=theta*i/len(curve_quat)
 			R=rot(k,angle)
-			curve_fit_R.append(np.dot(R_init,R))
+			curve_fit_R.append(np.dot(R,R_init))
 		curve_fit_R=np.array(curve_fit_R)
 		return curve_fit_R
 
@@ -319,12 +337,12 @@ class greedy_fit(object):
 			max_errors={'movel_fit':999,'movej_fit':999,'movec_fit':999}
 			###initial error map update:
 			for key in self.primitives: 
-				curve_fit,curve_fit_R,curve_fit_js,max_error=self.primitives[key](self.curve[breakpoints[-1]-1:breakpoints[-1]+next_point],self.curve_backproj[breakpoints[-1]-1:breakpoints[-1]+next_point],self.curve_backproj_js[breakpoints[-1]-1:breakpoints[-1]+next_point],self.curve_normal[breakpoints[-1]-1:breakpoints[-1]+next_point])
+				curve_fit,curve_fit_R,curve_fit_js,max_error=self.primitives[key](self.curve[breakpoints[-1]-1:breakpoints[-1]+next_point],self.curve_backproj[breakpoints[-1]-1:breakpoints[-1]+next_point],self.curve_backproj_js[breakpoints[-1]-1:breakpoints[-1]+next_point],self.curve_quat[breakpoints[-1]-1:breakpoints[-1]+next_point],self.curve_normal[breakpoints[-1]-1:breakpoints[-1]+next_point])
 				max_errors[key]=max_error
 
 			###bisection search breakpoints
 			while True:
-				print(breakpoints[-1]+next_point,max_errors[min(max_errors, key=max_errors.get)])
+				print('index: ',breakpoints[-1]+next_point,'max_error: ',max_errors[min(max_errors, key=max_errors.get)])
 				###bp going backward to meet threshold
 				if min(list(max_errors.values()))>max_error_threshold:
 					prev_point_temp=next_point
@@ -332,7 +350,7 @@ class greedy_fit(object):
 					prev_point=prev_point_temp
 					
 					for key in self.primitives: 
-						curve_fit,curve_fit_R,curve_fit_js,max_error=self.primitives[key](self.curve[breakpoints[-1]-1:breakpoints[-1]+next_point],self.curve_backproj[breakpoints[-1]-1:breakpoints[-1]+next_point],self.curve_backproj_js[breakpoints[-1]-1:breakpoints[-1]+next_point],self.curve_normal[breakpoints[-1]-1:breakpoints[-1]+next_point])
+						curve_fit,curve_fit_R,curve_fit_js,max_error=self.primitives[key](self.curve[breakpoints[-1]-1:breakpoints[-1]+next_point],self.curve_backproj[breakpoints[-1]-1:breakpoints[-1]+next_point],self.curve_backproj_js[breakpoints[-1]-1:breakpoints[-1]+next_point],self.curve_quat[breakpoints[-1]-1:breakpoints[-1]+next_point],self.curve_normal[breakpoints[-1]-1:breakpoints[-1]+next_point])
 						max_errors[key]=max_error
 
 
@@ -346,7 +364,7 @@ class greedy_fit(object):
 					
 
 					for key in self.primitives: 
-						curve_fit,curve_fit_R,curve_fit_js,max_error=self.primitives[key](self.curve[breakpoints[-1]-1:breakpoints[-1]+next_point],self.curve_backproj[breakpoints[-1]-1:breakpoints[-1]+next_point],self.curve_backproj_js[breakpoints[-1]-1:breakpoints[-1]+next_point],self.curve_normal[breakpoints[-1]-1:breakpoints[-1]+next_point])
+						curve_fit,curve_fit_R,curve_fit_js,max_error=self.primitives[key](self.curve[breakpoints[-1]-1:breakpoints[-1]+next_point],self.curve_backproj[breakpoints[-1]-1:breakpoints[-1]+next_point],self.curve_backproj_js[breakpoints[-1]-1:breakpoints[-1]+next_point],self.curve_quat[breakpoints[-1]-1:breakpoints[-1]+next_point],self.curve_normal[breakpoints[-1]-1:breakpoints[-1]+next_point])
 						max_errors[key]=max_error
 
 				# print(max_errors)
@@ -359,7 +377,7 @@ class greedy_fit(object):
 
 		
 					for key in self.primitives: 
-						curve_fit,curve_fit_R,curve_fit_js,max_error=self.primitives[key](self.curve[breakpoints[-1]-1:breakpoints[-1]+next_point],self.curve_backproj[breakpoints[-1]-1:breakpoints[-1]+next_point],self.curve_backproj_js[breakpoints[-1]-1:breakpoints[-1]+next_point],self.curve_normal[breakpoints[-1]-1:breakpoints[-1]+next_point])
+						curve_fit,curve_fit_R,curve_fit_js,max_error=self.primitives[key](self.curve[breakpoints[-1]-1:breakpoints[-1]+next_point],self.curve_backproj[breakpoints[-1]-1:breakpoints[-1]+next_point],self.curve_backproj_js[breakpoints[-1]-1:breakpoints[-1]+next_point],self.curve_quat[breakpoints[-1]-1:breakpoints[-1]+next_point],self.curve_normal[breakpoints[-1]-1:breakpoints[-1]+next_point])
 						if max_error<max_error_threshold:
 							primitives_choices.append(key)
 							if key=='movec_fit':
@@ -375,7 +393,7 @@ class greedy_fit(object):
 				###find the closest but under max_threshold
 				if (min(list(max_errors.values()))<=max_error_threshold and np.abs(next_point-prev_point)<10) or next_point==len(self.curve)-1:
 					for key in self.primitives: 
-						curve_fit,curve_fit_R,curve_fit_js,max_error=self.primitives[key](self.curve[breakpoints[-1]-1:breakpoints[-1]+next_point],self.curve_backproj[breakpoints[-1]-1:breakpoints[-1]+next_point],self.curve_backproj_js[breakpoints[-1]-1:breakpoints[-1]+next_point],self.curve_normal[breakpoints[-1]-1:breakpoints[-1]+next_point])
+						curve_fit,curve_fit_R,curve_fit_js,max_error=self.primitives[key](self.curve[breakpoints[-1]-1:breakpoints[-1]+next_point],self.curve_backproj[breakpoints[-1]-1:breakpoints[-1]+next_point],self.curve_backproj_js[breakpoints[-1]-1:breakpoints[-1]+next_point],self.curve_quat[breakpoints[-1]-1:breakpoints[-1]+next_point],self.curve_normal[breakpoints[-1]-1:breakpoints[-1]+next_point])
 						if max_error<max_error_threshold:
 							primitives_choices.append(key)
 							if key=='movec_fit':
@@ -480,12 +498,15 @@ def main():
 	q_init=q_all[order[0]]
 	points.insert(0,[q_init])
 
-
+	# ms = MotionSend()
+	# ms.exec_motions(primitives_choices,breakpoints,points)
 
 	df=DataFrame({'breakpoints':breakpoints,'breakpoints_out':breakpoints_out,'primitives':primitives_choices,'points':points})
 	df.to_csv('command_backproj.csv',header=True,index=False)
 	df=DataFrame({'x':greedy_fit_obj.curve_fit[:,0],'y':greedy_fit_obj.curve_fit[:,1],'z':greedy_fit_obj.curve_fit[:,2]})
 	df.to_csv('curve_fit_backproj.csv',header=True,index=False)
+	df=DataFrame({'x':greedy_fit_obj.curve_fit_js[:,0],'y':greedy_fit_obj.curve_fit_js[:,1],'z':greedy_fit_obj.curve_fit_js[:,2]})
+	df.to_csv('curve_fit_js.csv',header=True,index=False)
 
 if __name__ == "__main__":
 	main()
