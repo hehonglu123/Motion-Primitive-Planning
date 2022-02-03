@@ -24,8 +24,16 @@ def main():
 	curve_z=data['z'].tolist()
 	curve_fit=np.vstack((curve_x, curve_y, curve_z)).T
 
+	data = read_csv("command_backproj.csv")
+	breakpoints=np.array(data['breakpoints'].tolist())
+	primitives=data['primitives'].tolist()
+	points=data['points'].tolist()
+
+
+	####only every 100 points
 	curve=curve[::100]
 	curve_fit=curve_fit[::100]
+	breakpoints=breakpoints/100
 
 
 	###plane projection visualization
@@ -40,6 +48,7 @@ def main():
 	curve_fit_2d_vis = rodrigues_rot(curve_fit, normal, [0,0,1])[:,:2]
 	plt.plot(curve_2d_vis[:,0],curve_2d_vis[:,1])
 	plt.plot(curve_fit_2d_vis[:,0],curve_fit_2d_vis[:,1])
+	plt.scatter(curve_fit_2d_vis[breakpoints.astype(int),0],curve_fit_2d_vis[breakpoints.astype(int),1])
 	plt.legend(['original curve','curve fit','curve execution'])
 
 	plt.xlim([-1300, -500])
