@@ -8,6 +8,7 @@ import numpy as np
 from general_robotics_toolbox import *
 from pandas import read_csv
 import sys
+import csv
 sys.path.append('../abb_motion_program_exec')
 from abb_motion_program_exec_client import *
 sys.path.append('../toolbox')
@@ -94,8 +95,26 @@ class MotionSend(object):
         
         print(mp.get_program_rapid())
         log_results = self.client.execute_motion_program(mp)
+        # with open("log.csv","wb") as f:
+        #     f.write(log_results)
         log_results_str = log_results.decode('ascii')
+        # print(log_results)
         print(log_results_str)
+        log_results_dict = {}
+        
+        rows = log_results_str.split("\r\n")
+        for row in rows[:-1]:
+            if len(log_results_dict) == 0:
+                log_results_dict['timestamp']=[]
+                log_results_dict['cmd_num']=[]
+                log_results_dict['joint_angle']=[]
+                continue
+            col = row.split(", ")
+            log_results_dict['timestamp'].append(float(col[0]))
+            log_results_dict['cmd_num'].append(float(col[1]))
+            log_results_dict['joint_angle'].append(np.array([float(col[2]),float(col[3]),float(col[4]),float(col[5]),float(col[6]),float(col[7])]))
+
+        return log_results_dict
 
 def main():
     ms = MotionSend()
