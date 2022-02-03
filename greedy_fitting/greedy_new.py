@@ -506,7 +506,7 @@ def main():
 	df=DataFrame({'x':greedy_fit_obj.curve_fit[:,0],'y':greedy_fit_obj.curve_fit[:,1],'z':greedy_fit_obj.curve_fit[:,2]})
 	df.to_csv('curve_fit_backproj.csv',header=True,index=False)
 	df=DataFrame({'j1':greedy_fit_obj.curve_fit_js[:,0],'j2':greedy_fit_obj.curve_fit_js[:,1],'j3':greedy_fit_obj.curve_fit_js[:,2],'j4':greedy_fit_obj.curve_fit_js[:,3],'j5':greedy_fit_obj.curve_fit_js[:,4],'j6':greedy_fit_obj.curve_fit_js[:,5]})
-	df.to_csv('curve_fit_js.csv',header=True,index=False)
+	df.to_csv('curve_fit_js.csv',header=False,index=False)
 
 if __name__ == "__main__":
 	main()

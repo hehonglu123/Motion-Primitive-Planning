@@ -11,7 +11,7 @@ import sys
 sys.path.append('../abb_motion_program_exec')
 from abb_motion_program_exec_client import *
 sys.path.append('../toolbox')
-from robot_def import *
+from robots_def import *
 
 def quadrant(q):
     temp=np.ceil(np.array([q[0],q[3],q[5]])/(np.pi/2))-1
@@ -27,6 +27,7 @@ class MotionSend(object):
     def __init__(self) -> None:
         
         self.client = MotionProgramExecClient()
+        self.robot=abb6640()
 
         # paint gun with dummy load data
         # to get the real load data, we need to know the mass 
@@ -41,17 +42,18 @@ class MotionSend(object):
         self.tool = tooldata(True,pose([50,0,450],[quatR[0],quatR[1],quatR[2],quatR[3]]),loaddata(0.001,[0,0,0.001],[1,0,0,0],0,0,0))
 
     def moveL_target(self,q,point):
-        quat=R2q(fwd(q).R)
+        quat=R2q(self.robot.fwd(q).R)
         cf=quadrant(q)
+
 
         robt = robtarget([point[0], point[1], point[2]], [ quat[0], quat[1], quat[2], quat[3]], confdata(cf[0],cf[1],cf[2],cf[3]),[9E+09]*6)
         return robt
     
     def moveC_target(self,q1,q2,point1,point2):
 
-        quat1=R2q(fwd(q1).R)
+        quat1=R2q(self.robot.fwd(q1).R)
         cf1=quadrant(q1)
-        quat2=R2q(fwd(q2).R)
+        quat2=R2q(self.robot.fwd(q2).R)
         cf2=quadrant(q2)
 
         robt1 = robtarget([point1[0], point1[1], point1[2]], [ quat1[0], quat1[1], quat1[2], quat1[3]], confdata(cf1[0],cf1[1],cf1[2],cf1[3]),[0]*6)
@@ -64,10 +66,10 @@ class MotionSend(object):
         jointt = jointtarget([q[0],q[1],q[2],q[3],q[4],q[5]],[0]*6)
         return jointt
 
-    def exec_motions(self,primitives,breakpoints,points,curve_backproj_js_filename='Curve_backproj_js'):
+    def exec_motions(self,primitives,breakpoints,points,curve_backproj_js_filename='curve_fit_js'):
 
         col_names=['q1', 'q2', 'q3','q4', 'q5', 'q6'] 
-        data = read_csv("../data/from_ge/"+curve_backproj_js_filename+".csv", names=col_names)
+        data = read_csv(curve_backproj_js_filename+".csv", names=col_names)
         curve_q1=data['q1'].tolist()
         curve_q2=data['q2'].tolist()
         curve_q3=data['q3'].tolist()
@@ -76,12 +78,14 @@ class MotionSend(object):
         curve_q6=data['q6'].tolist()
         curve_js=np.vstack((curve_q1, curve_q2, curve_q3,curve_q4,curve_q5,curve_q6)).T
 
+
         mp = MotionProgram(tool=self.tool)
         
         for i in range(len(primitives)):
             motion = primitives[i]
             if motion == 'movel_fit':
-                robt = self.moveL_target(curve_js[breakpoints[i]],points[i][0])
+
+                robt = self.moveL_target(curve_js[breakpoints[i]],points[i])
                 mp.MoveL(robt,v5000,fine)
 
             elif motion == 'movec_fit':
@@ -89,27 +93,46 @@ class MotionSend(object):
                 mp.MoveC(robt1,robt2,v5000,fine)
 
             else: # movej_fit
-                jointt = self.moveJ_target(points[i][0])
+                jointt = self.moveJ_target(points[i])
                 mp.MoveAbsJ(jointt,v5000,fine)
         
         print(mp.get_program_rapid())
         log_results = self.client.execute_motion_program(mp)
         log_results_str = log_results.decode('ascii')
         print(log_results_str)
+def extract_points(primitive_type,points):
+    if primitive_type=='movec_fit':
+        endpoints=points[8:-3].split('array')
+        endpoint1=endpoints[0][:-4].split(',')
+        endpoint2=endpoints[1][2:].split(',')
 
+        return list(map(float, endpoint1)),list(map(float, endpoint2))
+    else:
+        endpoint=points[8:-3].split(',')
+        return list(map(float, endpoint))
 def main():
     ms = MotionSend()
 
-    # data = read_csv("comparison/moveL+moveC/command_backproj.csv")
-    # breakpoints=data['breakpoints'].tolist()
-    # primitives=data['primitives'].tolist()
-    # points_str=data['points'].tolist()
+    data = read_csv("command_backproj.csv")
+    breakpoints=data['breakpoints'].tolist()
+    primitives=data['primitives'].tolist()
+    points=data['points'].tolist()
     
-    # # points = []
-    # # for p in points_str
+
+    points_list=[]
+    for i in range(len(breakpoints)):
+        if primitives[i]=='movel_fit':
+            point=extract_points(primitives[i],points[i])
+            points_list.append(point)
+        elif primitives[i]=='movec_fit':
+            point1,point2=extract_points(primitives[i],points[i])
+            points_list.append([point1,point2])
+        else:
+            point=extract_points(primitives[i],points[i])
+            points_list.append(point)
 
     ms = MotionSend()
-    # ms.exec_motions(primitives,breakpoints,points)
+    ms.exec_motions(primitives,breakpoints,points_list)
 
 if __name__ == "__main__":
     main()
