@@ -370,7 +370,7 @@ def main():
 	# curve_direction_x=data['direction_x'].tolist()
 	# curve_direction_y=data['direction_y'].tolist()
 	# curve_direction_z=data['direction_z'].tolist()
-	test_length = 1000
+	test_length = 10000
 	curve_x=data['X'].tolist()[:test_length]
 	curve_y=data['Y'].tolist()[:test_length]
 	curve_z=data['Z'].tolist()[:test_length]
@@ -384,7 +384,8 @@ def main():
 	greedy_fit_obj=greedy_fit(curve,curve_normal,d=50)
 
 	###disable slope alignment
-	greedy_fit_obj.slope_constraint=True
+	# greedy_fit_obj.slope_constraint=True
+	greedy_fit_obj.slope_constraint=False
 	greedy_fit_obj.break_early=False
 	###set primitive choices
 	greedy_fit_obj.primitives={'movel_fit':greedy_fit_obj.movel_fit,'movec_fit':greedy_fit_obj.movec_fit}
@@ -410,12 +411,12 @@ def main():
 	q_init=q_all[order[0]]
 	points.insert(0,[q_init])
 
-	print(fwd(q_init))
-	print(rox.R2q(fwd(q_init).R))
-	print(fwd(np.deg2rad([31.592, 6.91965, 40.4833, 50.5172, -45.0545, 79.0079])))
+	# print(fwd(q_init))
+	# print(rox.R2q(fwd(q_init).R))
+	# print(fwd(np.deg2rad([31.592, 6.91965, 40.4833, 50.5172, -45.0545, 79.0079])))
 
 	ms = MotionSend()
-	ms.exec_motions(primitives_choices,breakpoints,points)
+	exec_result = ms.exec_motions(primitives_choices,breakpoints,points)
 
 	
 	print(len(primitives_choices))
