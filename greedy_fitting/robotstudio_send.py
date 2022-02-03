@@ -65,7 +65,23 @@ class MotionSend(object):
         jointt = jointtarget([q[0],q[1],q[2],q[3],q[4],q[5]],[0]*6)
         return jointt
 
-    def exec_motions(self,primitives,breakpoints,points,curve_backproj_js_filename='Curve_backproj_js'):
+    def exec_motions(self,primitives,breakpoints,points,curve_backproj_js_filename='Curve_backproj_js',vel_data=5000,zone_data=0):
+
+        vel = v5000
+        if vel_data == 50:
+            vel=v50
+        elif vel_data == 500:
+            vel=v500
+        else:
+            vel=v5000
+        
+        zone=fine
+        if zone_data == 0:
+            zone=fine
+        elif zone_data == 1:
+            zone=z1
+        else:
+            zone=z10
 
         col_names=['q1', 'q2', 'q3','q4', 'q5', 'q6'] 
         data = read_csv("../data/from_ge/"+curve_backproj_js_filename+".csv", names=col_names)
@@ -83,23 +99,23 @@ class MotionSend(object):
             motion = primitives[i]
             if motion == 'movel_fit':
                 robt = self.moveL_target(curve_js[breakpoints[i]],points[i][0])
-                mp.MoveL(robt,v5000,fine)
+                mp.MoveL(robt,vel,zone)
 
             elif motion == 'movec_fit':
                 robt1, robt2 = self.moveC_target(curve_js[breakpoints[i-1]],curve_js[breakpoints[i]],points[i][0],points[i][1])
-                mp.MoveC(robt1,robt2,v5000,fine)
+                mp.MoveC(robt1,robt2,vel,zone)
 
             else: # movej_fit
                 jointt = self.moveJ_target(points[i][0])
-                mp.MoveAbsJ(jointt,v5000,fine)
+                mp.MoveAbsJ(jointt,vel,zone)
         
-        print(mp.get_program_rapid())
+        # print(mp.get_program_rapid())
         log_results = self.client.execute_motion_program(mp)
-        # with open("log.csv","wb") as f:
-        #     f.write(log_results)
+        with open("log.csv","wb") as f:
+            f.write(log_results)
         log_results_str = log_results.decode('ascii')
         # print(log_results)
-        print(log_results_str)
+        # print(log_results_str)
         log_results_dict = {}
         
         rows = log_results_str.split("\r\n")
@@ -116,19 +132,40 @@ class MotionSend(object):
 
         return log_results_dict
 
+def extract_points(primitive_type,points):
+    if primitive_type=='movec_fit':
+        endpoints=points[8:-3].split('array')
+        endpoint1=endpoints[0][:-4].split(',')
+        endpoint2=endpoints[1][2:].split(',')
+
+        return list(map(float, endpoint1)),list(map(float, endpoint2))
+    else:
+        endpoint=points[8:-3].split(',')
+        return [list(map(float, endpoint))]
+
 def main():
-    ms = MotionSend()
 
-    # data = read_csv("comparison/moveL+moveC/command_backproj.csv")
-    # breakpoints=data['breakpoints'].tolist()
-    # primitives=data['primitives'].tolist()
-    # points_str=data['points'].tolist()
+    data = read_csv("command_backproj.csv")
+    breakpoints=data['breakpoints'].tolist()
+    primitives=data['primitives'].tolist()
+    points=data['points'].tolist()
     
-    # # points = []
-    # # for p in points_str
+
+    points_list=[]
+    for i in range(len(breakpoints)):
+        if primitives[i]=='movel_fit':
+            point=extract_points(primitives[i],points[i])
+            points_list.append(point)
+        elif primitives[i]=='movec_fit':
+            point1,point2=extract_points(primitives[i],points[i])
+            points_list.append([point1,point2])
+        else:
+            point=extract_points(primitives[i],points[i])
+            points_list.append(point)
 
     ms = MotionSend()
-    # ms.exec_motions(primitives,breakpoints,points)
+    ms.exec_motions(primitives,breakpoints,points_list)
+    # ms.exec_motions(primitives,breakpoints,points_list,vel_data=50,zone_data=10)
 
 if __name__ == "__main__":
     main()

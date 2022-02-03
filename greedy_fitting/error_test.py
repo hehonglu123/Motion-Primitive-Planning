@@ -7,8 +7,10 @@ import matplotlib.pyplot as plt
 
 # from toolbox.robot_def import fwd
 sys.path.append('../toolbox')
-from robot_def import *
+from robots_def import *
 import general_robotics_toolbox as rox
+
+robot=abb6640()
 
 # read Robotstudio logged data
 with open("log.csv","r") as f:
@@ -52,7 +54,7 @@ with open("command_backproj.csv","r") as f:
 # read curve
 col_names=['X', 'Y', 'Z','direction_x', 'direction_y', 'direction_z'] 
 data = read_csv("../data/from_ge/Curve_in_base_frame.csv", names=col_names)
-test_length = 10000
+test_length = breakpoints[-1]+1
 curve_x=data['X'].tolist()[:test_length]
 curve_y=data['Y'].tolist()[:test_length]
 curve_z=data['Z'].tolist()[:test_length]
@@ -92,7 +94,7 @@ for i in range(1,len(breakpoints)):
     exec_path_proj = []
     exec_path_proj_l = [0]
     for mo_i in range(motion_start,motion_end+1):
-        exec_tool_T = fwd(joint_angles[mo_i])
+        exec_tool_T = robot.fwd(joint_angles[mo_i])
         exec_path.append(exec_tool_T.p)
         exec_curve_T = exec_tool_T*rox.Transform(np.eye(3),[0,0,stand_off])
         exec_path_proj.append(exec_curve_T.p)
@@ -149,12 +151,14 @@ plt.figure()
 ax = plt.axes(projection='3d')
 ax.plot3D(curve[:,0], curve[:,1],curve[:,2], 'gray')
 ax.scatter3D(all_exec_path_proj[1:,0], all_exec_path_proj[1:,1], all_exec_path_proj[1:,2], cmap='Greens')
+# ax.axis('equal')
 plt.show()
 
 plt.figure()
 ax = plt.axes(projection='3d')
 ax.plot3D(curve_backproj[:,0], curve_backproj[:,1],curve_backproj[:,2], 'gray')
 ax.scatter3D(all_exec_path[1:,0], all_exec_path[1:,1], all_exec_path[1:,2], cmap='Greens')
+# ax.axis('equal')
 plt.show()
 
 print("Ave All Proj Error:",np.mean(all_error_proj))
