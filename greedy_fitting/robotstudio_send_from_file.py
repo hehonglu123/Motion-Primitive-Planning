@@ -38,7 +38,7 @@ class MotionSend(object):
         # quatR = R2q(T_offset_tool.R)
         # self.tool = tooldata(True,pose(T_offset_tool.p,[quatR[0],quatR[1],quatR[2],quatR[3]]),loaddata(0.001,[0,0,0.001],[1,0,0,0],0,0,0))
 
-        quatR = R2q(rot([0,1,0],math.radians(0)))
+        quatR = R2q(rot([0,1,0],math.radians(30)))
         self.tool = tooldata(True,pose([50,0,450],[quatR[0],quatR[1],quatR[2],quatR[3]]),loaddata(0.001,[0,0,0.001],[1,0,0,0],0,0,0))
 
     def moveL_target(self,q,point):
