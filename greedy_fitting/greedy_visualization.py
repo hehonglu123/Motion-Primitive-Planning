@@ -49,7 +49,7 @@ def main():
 	plt.plot(curve_2d_vis[:,0],curve_2d_vis[:,1])
 	plt.plot(curve_fit_2d_vis[:,0],curve_fit_2d_vis[:,1])
 	plt.scatter(curve_fit_2d_vis[breakpoints.astype(int),0],curve_fit_2d_vis[breakpoints.astype(int),1])
-	plt.legend(['original curve','curve fit','curve execution'])
+	plt.legend(['original curve','curve fit','breakpoints'])
 
 	plt.xlim([-1300, -500])
 	plt.ylim([200,1800])
