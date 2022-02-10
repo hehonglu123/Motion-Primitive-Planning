@@ -31,6 +31,27 @@ def calc_max_error(fit,curve):
 
 	return max_error, max_error_idx
 
+def calc_max_error_js(robot,fit_js,curve_js):
+	fit=[]
+	for i in range(len(fit_js)):
+		fit.append(robot.fwd(fit_js[i]).p)
+	curve=[]
+	for i in range(len(curve_js)):
+		curve.append(robot.fwd(curve_js[i]).p)
+		
+
+	max_error=0
+	idx=0
+	max_error_idx=0
+	for p in fit:
+		error=calc_error(p,curve)
+		if error>max_error:
+			max_error_idx=idx
+			max_error=copy.deepcopy(error)
+		idx+=1
+
+	return max_error, max_error_idx
+
 def calc_avg_error(fit,curve):
 	error=0
 	for p in fit:

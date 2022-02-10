@@ -44,15 +44,23 @@ def main():
 	# Note linalg.svd returns V^T, so we need to select 3rd row from V^T
 	normal = V[2,:]
 
-	curve_2d_vis = rodrigues_rot(curve_centered+curve_mean, normal, [0,0,1])[:,:2]
-	curve_fit_2d_vis = rodrigues_rot(curve_fit, normal, [0,0,1])[:,:2]
-	plt.plot(curve_2d_vis[:,0],curve_2d_vis[:,1])
-	plt.plot(curve_fit_2d_vis[:,0],curve_fit_2d_vis[:,1])
-	plt.scatter(curve_fit_2d_vis[breakpoints.astype(int),0],curve_fit_2d_vis[breakpoints.astype(int),1])
-	plt.legend(['original curve','curve fit','breakpoints'])
+	# curve_2d_vis = rodrigues_rot(curve_centered+curve_mean, normal, [0,0,1])[:,:2]
+	# curve_fit_2d_vis = rodrigues_rot(curve_fit, normal, [0,0,1])[:,:2]
+	# plt.plot(curve_2d_vis[:,0],curve_2d_vis[:,1])
+	# plt.plot(curve_fit_2d_vis[:,0],curve_fit_2d_vis[:,1])
+	# plt.scatter(curve_fit_2d_vis[breakpoints.astype(int),0],curve_fit_2d_vis[breakpoints.astype(int),1])
+	# plt.legend(['original curve','curve fit','breakpoints'])
+	# plt.xlim([-1300, -500])
+	# plt.ylim([200,1800])
 
-	plt.xlim([-1300, -500])
-	plt.ylim([200,1800])
+	fig = plt.figure()
+	ax = plt.axes(projection='3d')
+	ax.plot3D(curve[:,0], curve[:,1], curve[:,2],label='original',c='gray')
+	ax.plot3D(curve_fit[:,0], curve_fit[:,1], curve_fit[:,2],label='curve_fit',c='red')
+	ax.scatter(curve_fit[breakpoints.astype(int),0],curve_fit[breakpoints.astype(int),1],curve_fit[breakpoints.astype(int),2])
+	ax.legend()
+
+	
 
 	plt.show()
 

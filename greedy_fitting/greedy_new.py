@@ -39,6 +39,7 @@ class greedy_fit(object):
 		self.curve_fit=[]
 		self.curve_fit_R=[]
 		self.curve_fit_js=[]
+
 		self.cartesian_slope_prev=None
 		self.js_slope_prev=None
 		
@@ -93,12 +94,12 @@ class greedy_fit(object):
 			start_point=res[0]
 			slope=res[1].reshape(1,-1)
 			###fit orientation with regression
-			curve_fit_R=self.orientation_linear_fit(curve_quat)
+			# curve_fit_R=self.orientation_linear_fit(curve_quat)
 
 		###with constraint point
 		else:
 			###fit orientation with regression
-			curve_fit_R=self.orientation_linear_fit(curve_quat,R2q(self.curve_fit_R[-1]))
+			# curve_fit_R=self.orientation_linear_fit(curve_quat,R2q(self.curve_fit_R[-1]))
 
 
 			start_point=self.curve_fit[-1]
@@ -119,13 +120,13 @@ class greedy_fit(object):
 		###calculate fitting error
 		max_error1=np.max(np.linalg.norm(curve_backproj-curve_fit,axis=1))
 
-		# ###interpolate orientation linearly
-		# R_end=direction2R(curve_normal[-1],-curve_fit[-1]+curve_fit[-2])
-		# if len(self.curve_fit)==0:
-		# 	R_init=direction2R(curve_normal[0],-curve_fit[1]+curve_fit[0])
-		# else:
-		# 	R_init=self.curve_fit_R[-1]
-		# curve_fit_R=self.orientation_interp(R_init,R_end,len(curve_fit))
+		###interpolate orientation linearly
+		R_end=direction2R(curve_normal[-1],-curve_fit[-1]+curve_fit[-2])
+		if len(self.curve_fit)==0:
+			R_init=direction2R(curve_normal[0],-curve_fit[1]+curve_fit[0])
+		else:
+			R_init=self.curve_fit_R[-1]
+		curve_fit_R=self.orientation_interp(R_init,R_end,len(curve_fit))
 		
 
 		###calculate corresponding joint configs, leave black to skip inv during searching
@@ -193,11 +194,11 @@ class greedy_fit(object):
 		if len(self.curve_fit)==0:
 			curve_fit,curve_fit_circle=circle_fit(curve_backproj)	
 			###fit orientation with regression
-			curve_fit_R=self.orientation_linear_fit(curve_quat)
+			# curve_fit_R=self.orientation_linear_fit(curve_quat)
 		###with constraint point
 		else:
 			###fit orientation with regression
-			curve_fit_R=self.orientation_linear_fit(curve_quat,R2q(self.curve_fit_R[-1]))
+			# curve_fit_R=self.orientation_linear_fit(curve_quat,R2q(self.curve_fit_R[-1]))
 
 			if self.slope_constraint:
 				curve_fit,curve_fit_circle=circle_fit(curve_backproj,self.curve_fit[-1],self.cartesian_slope_prev)
@@ -208,13 +209,13 @@ class greedy_fit(object):
 
 
 		max_error1=np.max(np.linalg.norm(curve_backproj-curve_fit,axis=1))
-		# ###interpolate orientation linearly
-		# R_end=direction2R(curve_normal[-1],-curve_fit[-1]+curve_fit[-2])
-		# if len(self.curve_fit)==0:
-		# 	R_init=direction2R(curve_normal[0],-curve_fit[1]+curve_fit[0])
-		# else:
-		# 	R_init=self.curve_fit_R[-1]
-		# curve_fit_R=self.orientation_interp(R_init,R_end,len(curve_fit))
+		###interpolate orientation linearly
+		R_end=direction2R(curve_normal[-1],-curve_fit[-1]+curve_fit[-2])
+		if len(self.curve_fit)==0:
+			R_init=direction2R(curve_normal[0],-curve_fit[1]+curve_fit[0])
+		else:
+			R_init=self.curve_fit_R[-1]
+		curve_fit_R=self.orientation_interp(R_init,R_end,len(curve_fit))
 
 		
 
@@ -276,6 +277,12 @@ class greedy_fit(object):
 		curve_fit_R=np.array(curve_fit_R)
 		return curve_fit_R
 
+	def get_angle(self,v1,v2):
+		v1=v1/np.linalg.norm(v1)
+		v2=v2/np.linalg.norm(v2)
+		angle=np.arccos(np.dot(v1,v2))
+		return angle
+
 	def breakearly(self,curve,curve_fit):
 		best_alignment=0
 		idx=0
@@ -322,7 +329,10 @@ class greedy_fit(object):
 		self.curve_fit=[]
 		self.curve_fit_R=[]
 		self.curve_fit_js=[]
-		self.cartesian_slope_prev=None
+		self.cartesian_slope_prev=[]
+		self.rotation_axis_prev=[]
+		slope_diff=[]
+		slope_diff_ori=[]
 		self.js_slope_prev=None
 
 		while breakpoints[-1]<len(self.curve)-1:
@@ -421,6 +431,14 @@ class greedy_fit(object):
 				###inv here to save time
 				self.curve_fit_js.extend(self.car2js(curve_fit[:len(curve_fit)-(next_point-idx)],curve_fit_R[:len(curve_fit)-(next_point-idx)]))
 			###calculating ending slope
+			R_diff=np.dot(curve_fit_R[0].T,curve_fit_R[-(next_point-idx)-1])
+			k,theta=R2rot(R_diff)
+			if len(self.cartesian_slope_prev)>0:
+				slope_diff.append(self.get_angle(self.cartesian_slope_prev,curve_fit[1]-curve_fit[0]))
+				slope_diff_ori.append(self.get_angle(self.rotation_axis_prev,k))
+
+			
+			self.rotation_axis_prev=k
 			self.cartesian_slope_prev=(self.curve_fit[-1]-self.curve_fit[-2])/np.linalg.norm(self.curve_fit[-1]-self.curve_fit[-2])
 			self.js_slope_prev=(self.curve_fit_js[-1]-self.curve_fit_js[-2])/np.linalg.norm(self.curve_fit_js[-1]-self.curve_fit_js[-2])
 			self.q_prev=self.curve_fit_js[-1]
@@ -435,7 +453,8 @@ class greedy_fit(object):
 
 		# max_error,max_error_idx=calc_max_error(self.curve_fit,self.curve_backproj)
 		# print('max error: ', max_error)
-
+		print('slope diff: ',np.degrees(slope_diff))
+		print('slope diff ori: ',np.degrees(slope_diff_ori))
 		self.curve_fit=np.array(self.curve_fit)
 		self.curve_fit_js=np.array(self.curve_fit_js)
 
@@ -498,6 +517,13 @@ def main():
 	q_init=q_all[order[0]]
 	points.insert(0,[q_init])
 
+	# slope_diff=[]
+	# for i in range(1,len(breakpoints_out)-1):
+	# 	slope_prev=greedy_fit_obj.curve_fit[breakpoints_out[i]]-greedy_fit_obj.curve_fit[breakpoints_out[i]-1]
+	# 	slope_next=greedy_fit_obj.curve_fit[breakpoints_out[i]+1]-greedy_fit_obj.curve_fit[breakpoints_out[i]]
+	# 	print(slope_prev,slope_next)
+	# 	slope_diff.append(greedy_fit_obj.get_angle(slope_prev,slope_next))
+	# print(np.degrees(slope_diff))
 	# ms = MotionSend()
 	# ms.exec_motions(primitives_choices,breakpoints,points)
 
