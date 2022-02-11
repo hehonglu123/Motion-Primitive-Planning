@@ -1,5 +1,5 @@
 import csv
-from matplotlib.pyplot import contour
+from matplotlib.pyplot import colormaps, contour
 from pandas import *
 import numpy as np
 import sys
@@ -13,7 +13,7 @@ import general_robotics_toolbox as rox
 robot=abb6640()
 
 # read Robotstudio logged data
-with open("log.csv","r") as f:
+with open("logged_joints/log_z1.csv","r") as f:
     rows = csv.reader(f, delimiter=',')
 
     log_results_dict = {}
@@ -31,7 +31,7 @@ with open("log.csv","r") as f:
     joint_angles = log_results_dict['joint_angle']
 
 # read breakpoint data
-with open("command_backproj.csv","r") as f:
+with open("command_backproj_30000.csv","r") as f:
     rows = csv.reader(f, delimiter=',')
 
     command_dict = {}
@@ -66,6 +66,10 @@ curve_normal=np.vstack((curve_direction_x, curve_direction_y, curve_direction_z)
 
 # print(curve)
 
+plt.figure()
+ax = plt.axes(projection='3d')
+colormap=['red','orange','yellow','green','cyan','blue','purple']
+
 stand_off = 50
 curve_backproj = curve-stand_off*curve_normal
 
@@ -74,22 +78,23 @@ all_exec_path_proj = np.array([[0,0,0]])
 all_error = []
 all_error_proj=[]
 # skip first break point since it's moveJ to the initial point
-for i in range(1,len(breakpoints)):
+for i in range(0,len(breakpoints)):
 
-    motion_seg = np.argwhere(np.array(cmd_num)==i+1).flatten() # the cum_num start with 1
-    print(motion_seg)
+    # motion_seg = np.argwhere(np.array(cmd_num)==i).flatten() # the cum_num start with 1
+    motion_seg = np.argwhere(np.array(cmd_num)==i+1).flatten()
+    # print(motion_seg)
     motion_start = motion_seg[0]
     motion_end = motion_seg[-1]
 
     # Curve
-    this_curve = curve[breakpoints[i-1]:breakpoints[i]]
-    this_curve_backproj=this_curve-stand_off*curve_normal[breakpoints[i-1]:breakpoints[i]]
-    this_curve_l = [0]
-    for curve_i in range(1,len(this_curve)):
-        this_curve_l.append(this_curve_l[-1]+np.linalg.norm(this_curve[curve_i]-this_curve[curve_i-1]))
-    this_curve_l = np.array(this_curve_l)/this_curve_l[-1]
+    # this_curve = curve[breakpoints[i-1]:breakpoints[i]]
+    # this_curve_backproj=this_curve-stand_off*curve_normal[breakpoints[i-1]:breakpoints[i]]
+    # this_curve_l = [0]
+    # for curve_i in range(1,len(this_curve)):
+    #     this_curve_l.append(this_curve_l[-1]+np.linalg.norm(this_curve[curve_i]-this_curve[curve_i-1]))
+    # this_curve_l = np.array(this_curve_l)/this_curve_l[-1]
     
-    # Real robot (or in RobotStudio) execution path
+    # # Real robot (or in RobotStudio) execution path
     exec_path = []
     exec_path_proj = []
     exec_path_proj_l = [0]
@@ -109,31 +114,34 @@ for i in range(1,len(breakpoints)):
     all_exec_path = np.vstack((all_exec_path,exec_path))
     all_exec_path_proj = np.vstack((all_exec_path_proj,exec_path_proj))
 
-    # error calculation
-    # associate the curve and execution path with the percentage of the path length
-    curve_error = [np.linalg.norm(exec_path_proj[0]-this_curve[0])]
-    backproj_error = [np.linalg.norm(exec_path[0]-this_curve_backproj[0])]
-    for exec_i in range(1,len(exec_path_proj_l)):
-        curve_where = np.argmax(this_curve_l>=exec_path_proj_l[exec_i])
-        prev_portion = (this_curve_l[curve_where]-exec_path_proj_l[exec_i])/(this_curve_l[curve_where]-this_curve_l[curve_where-1])
-        post_portion = (exec_path_proj_l[exec_i]-this_curve_l[curve_where-1])/(this_curve_l[curve_where]-this_curve_l[curve_where-1])
+    # # error calculation
+    # # associate the curve and execution path with the percentage of the path length
+    # curve_error = [np.linalg.norm(exec_path_proj[0]-this_curve[0])]
+    # backproj_error = [np.linalg.norm(exec_path[0]-this_curve_backproj[0])]
+    # for exec_i in range(1,len(exec_path_proj_l)):
+    #     curve_where = np.argmax(this_curve_l>=exec_path_proj_l[exec_i])
+    #     prev_portion = (this_curve_l[curve_where]-exec_path_proj_l[exec_i])/(this_curve_l[curve_where]-this_curve_l[curve_where-1])
+    #     post_portion = (exec_path_proj_l[exec_i]-this_curve_l[curve_where-1])/(this_curve_l[curve_where]-this_curve_l[curve_where-1])
         
-        # do interpolation between two curve points
-        associated_curve_point = prev_portion*this_curve[curve_where-1]+post_portion*this_curve[curve_where]
-        associated_curve_backproj_point = prev_portion*this_curve_backproj[curve_where-1]+post_portion*this_curve_backproj[curve_where]
+    #     # do interpolation between two curve points
+    #     associated_curve_point = prev_portion*this_curve[curve_where-1]+post_portion*this_curve[curve_where]
+    #     associated_curve_backproj_point = prev_portion*this_curve_backproj[curve_where-1]+post_portion*this_curve_backproj[curve_where]
 
-        # error calculation
-        curve_error.append(np.linalg.norm(exec_path_proj[exec_i]-associated_curve_point))
-        backproj_error.append(np.linalg.norm(exec_path[exec_i]-associated_curve_backproj_point))
+    #     # error calculation
+    #     curve_error.append(np.linalg.norm(exec_path_proj[exec_i]-associated_curve_point))
+    #     backproj_error.append(np.linalg.norm(exec_path[exec_i]-associated_curve_backproj_point))
 
-    print("Ave Proj Error:",np.mean(curve_error))
-    print("Max Proj Error:",np.max(curve_error))
-    all_error_proj = np.append(all_error_proj,curve_error)
+    # print("Ave Proj Error:",np.mean(curve_error))
+    # print("Max Proj Error:",np.max(curve_error))
+    # all_error_proj = np.append(all_error_proj,curve_error)
 
-    print("Ave Error:",np.mean(backproj_error))
-    print("Max Error:",np.max(backproj_error))
-    print("=============================")
-    all_error = np.append(all_error,backproj_error)
+    # print("Ave Error:",np.mean(backproj_error))
+    # print("Max Error:",np.max(backproj_error))
+    # print("=============================")
+    # all_error = np.append(all_error,backproj_error)
+
+    print(colormap[i])
+    ax.scatter3D(exec_path[1:,0], exec_path[1:,1], exec_path[1:,2], color=colormap[i])
 
     # plt.figure()
     # ax = plt.axes(projection='3d')
@@ -147,17 +155,17 @@ for i in range(1,len(breakpoints)):
     # ax.scatter3D(exec_path[:,0], exec_path[:,1], exec_path[:,2], c=exec_path[:,2], cmap='Greens')
     # plt.show()
 
-plt.figure()
-ax = plt.axes(projection='3d')
-ax.plot3D(curve[:,0], curve[:,1],curve[:,2], 'gray')
-ax.scatter3D(all_exec_path_proj[1:,0], all_exec_path_proj[1:,1], all_exec_path_proj[1:,2], cmap='Greens')
-# ax.axis('equal')
-plt.show()
+# plt.figure()
+# ax = plt.axes(projection='3d')
+# ax.plot3D(curve[:,0], curve[:,1],curve[:,2], 'gray')
+# ax.scatter3D(all_exec_path_proj[1:,0], all_exec_path_proj[1:,1], all_exec_path_proj[1:,2], cmap='Greens')
+# # ax.axis('equal')
+# plt.show()
 
-plt.figure()
-ax = plt.axes(projection='3d')
+# plt.figure()
+# ax = plt.axes(projection='3d')
 ax.plot3D(curve_backproj[:,0], curve_backproj[:,1],curve_backproj[:,2], 'gray')
-ax.scatter3D(all_exec_path[1:,0], all_exec_path[1:,1], all_exec_path[1:,2], cmap='Greens')
+# ax.scatter3D(all_exec_path[1:,0], all_exec_path[1:,1], all_exec_path[1:,2], cmap='Greens')
 # ax.axis('equal')
 plt.show()
 

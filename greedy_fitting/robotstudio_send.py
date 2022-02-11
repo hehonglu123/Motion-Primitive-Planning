@@ -12,7 +12,10 @@ import csv
 sys.path.append('../abb_motion_program_exec')
 from abb_motion_program_exec_client import *
 sys.path.append('../toolbox')
-from robot_def import *
+from robots_def import *
+# from robot_def import *
+
+robot = abb6640()
 
 def quadrant(q):
     temp=np.ceil(np.array([q[0],q[3],q[5]])/(np.pi/2))-1
@@ -32,17 +35,12 @@ class MotionSend(object):
         # paint gun with dummy load data
         # to get the real load data, we need to know the mass 
         # # and the inertia of the paint gun
-        # T_6_offset = rox.Transform(rot([0,1,0],math.pi/2),[200,0,0])
-        # T_6_tool = rox.Transform(rot([0,1,0],np.radians(120)),[450,0,-50])
-        # T_offset_tool = T_6_offset.inv()*T_6_tool
-        # quatR = R2q(T_offset_tool.R)
-        # self.tool = tooldata(True,pose(T_offset_tool.p,[quatR[0],quatR[1],quatR[2],quatR[3]]),loaddata(0.001,[0,0,0.001],[1,0,0,0],0,0,0))
 
         quatR = R2q(rot([0,1,0],math.radians(30)))
         self.tool = tooldata(True,pose([50,0,450],[quatR[0],quatR[1],quatR[2],quatR[3]]),loaddata(0.001,[0,0,0.001],[1,0,0,0],0,0,0))
 
     def moveL_target(self,q,point):
-        quat=R2q(fwd(q).R)
+        quat=R2q(robot.fwd(q).R)
         cf=quadrant(q)
 
         robt = robtarget([point[0], point[1], point[2]], [ quat[0], quat[1], quat[2], quat[3]], confdata(cf[0],cf[1],cf[2],cf[3]),[9E+09]*6)
@@ -50,9 +48,9 @@ class MotionSend(object):
     
     def moveC_target(self,q1,q2,point1,point2):
 
-        quat1=R2q(fwd(q1).R)
+        quat1=R2q(robot.fwd(q1).R)
         cf1=quadrant(q1)
-        quat2=R2q(fwd(q2).R)
+        quat2=R2q(robot.fwd(q2).R)
         cf2=quadrant(q2)
 
         robt1 = robtarget([point1[0], point1[1], point1[2]], [ quat1[0], quat1[1], quat1[2], quat1[3]], confdata(cf1[0],cf1[1],cf1[2],cf1[3]),[0]*6)
@@ -65,7 +63,8 @@ class MotionSend(object):
         jointt = jointtarget([q[0],q[1],q[2],q[3],q[4],q[5]],[0]*6)
         return jointt
 
-    def exec_motions(self,primitives,breakpoints,points,curve_backproj_js_filename='Curve_backproj_js',vel_data=5000,zone_data=0):
+    def exec_motions(self,primitives,breakpoints,points,curve_backproj_js_filename='Curve_backproj_js',vel_data=5000,zone_data=0,\
+                    save_file=False,save_file_name='log.csv',show_rapid=False,show_result=False):
 
         vel = v5000
         if vel_data == 50:
@@ -97,27 +96,38 @@ class MotionSend(object):
         
         for i in range(len(primitives)):
             motion = primitives[i]
+
+            # Motion program should start and end with fine zone
+            if i == len(primitives)-1 or i==0:
+                this_zone = fine
+            else:
+                this_zone = zone
+
             if motion == 'movel_fit':
                 robt = self.moveL_target(curve_js[breakpoints[i]],points[i][0])
-                mp.MoveL(robt,vel,zone)
+                mp.MoveL(robt,vel,this_zone)
 
             elif motion == 'movec_fit':
                 robt1, robt2 = self.moveC_target(curve_js[breakpoints[i-1]],curve_js[breakpoints[i]],points[i][0],points[i][1])
-                mp.MoveC(robt1,robt2,vel,zone)
+                mp.MoveC(robt1,robt2,vel,this_zone)
 
             else: # movej_fit
                 jointt = self.moveJ_target(points[i][0])
-                mp.MoveAbsJ(jointt,vel,zone)
+                mp.MoveAbsJ(jointt,vel,this_zone)
         
-        # print(mp.get_program_rapid())
+        if show_rapid:
+            print(mp.get_program_rapid())
+
         log_results = self.client.execute_motion_program(mp)
-        with open("log.csv","wb") as f:
-            f.write(log_results)
+        if save_file:
+            with open(save_file_name,"wb") as f:
+                f.write(log_results)
+
         log_results_str = log_results.decode('ascii')
-        # print(log_results)
-        # print(log_results_str)
+        if show_result:
+            print(log_results_str)
+
         log_results_dict = {}
-        
         rows = log_results_str.split("\r\n")
         for row in rows[:-1]:
             if len(log_results_dict) == 0:
@@ -131,41 +141,52 @@ class MotionSend(object):
             log_results_dict['joint_angle'].append(np.array([float(col[2]),float(col[3]),float(col[4]),float(col[5]),float(col[6]),float(col[7])]))
 
         return log_results_dict
+    
+    def exec_motions_from_file(self,data_file_name='command_backproj.csv',vel_data=5000,zone_data=0,\
+                    save_file=False,save_file_name='log.csv',show_rapid=False,show_result=False):
+        
+        data = read_csv(data_file_name)
+        breakpoints=data['breakpoints'].tolist()
+        primitives=data['primitives'].tolist()
+        points=data['points'].tolist()
 
-def extract_points(primitive_type,points):
-    if primitive_type=='movec_fit':
-        endpoints=points[8:-3].split('array')
-        endpoint1=endpoints[0][:-4].split(',')
-        endpoint2=endpoints[1][2:].split(',')
+        points_list=[]
+        for i in range(len(breakpoints)):
+            if primitives[i]=='movel_fit':
+                point=self.extract_points(primitives[i],points[i])
+                points_list.append(point)
+            elif primitives[i]=='movec_fit':
+                point1,point2=self.extract_points(primitives[i],points[i])
+                points_list.append([point1,point2])
+            else:
+                point=self.extract_points(primitives[i],points[i])
+                points_list.append(point)
+        
+        self.exec_motions(primitives,breakpoints,points_list,vel_data=vel_data,zone_data=zone_data,\
+            save_file=save_file,save_file_name=save_file_name,show_rapid=show_rapid,show_result=show_result)
 
-        return list(map(float, endpoint1)),list(map(float, endpoint2))
-    else:
-        endpoint=points[8:-3].split(',')
-        return [list(map(float, endpoint))]
+    def extract_points(self,primitive_type,points):
+        if primitive_type=='movec_fit':
+            endpoints=points[8:-3].split('array')
+            endpoint1=endpoints[0][:-4].split(',')
+            endpoint2=endpoints[1][2:].split(',')
+
+            return list(map(float, endpoint1)),list(map(float, endpoint2))
+        else:
+            endpoint=points[8:-3].split(',')
+            return [list(map(float, endpoint))]
 
 def main():
 
-    data = read_csv("command_backproj.csv")
-    breakpoints=data['breakpoints'].tolist()
-    primitives=data['primitives'].tolist()
-    points=data['points'].tolist()
-    
-
-    points_list=[]
-    for i in range(len(breakpoints)):
-        if primitives[i]=='movel_fit':
-            point=extract_points(primitives[i],points[i])
-            points_list.append(point)
-        elif primitives[i]=='movec_fit':
-            point1,point2=extract_points(primitives[i],points[i])
-            points_list.append([point1,point2])
-        else:
-            point=extract_points(primitives[i],points[i])
-            points_list.append(point)
-
     ms = MotionSend()
-    ms.exec_motions(primitives,breakpoints,points_list)
-    # ms.exec_motions(primitives,breakpoints,points_list,vel_data=50,zone_data=10)
+    # ms.exec_motions(primitives,breakpoints,points_list)
+    ms.exec_motions_from_file(data_file_name='command_backproj.csv',save_file=True,save_file_name='logged_joints/log.csv',show_result=True)
+    # ms.exec_motions(primitives,breakpoints,points_list,vel_data=50,save_file=True,save_file_name='logged_joints/log_v50.csv')
+    # ms.exec_motions_from_file(data_file_name='command_backproj.csv',zone_data=1,save_file=True,save_file_name='logged_joints/log_z1.csv')
+    # ms.exec_motions(primitives,breakpoints,points_list,zone_data=1)
+    # ms.exec_motions(primitives,breakpoints,points_list,zone_data=10,save_file=True,save_file_name='logged_joints/log_z10.csv')
+
+
 
 if __name__ == "__main__":
     main()
