@@ -593,7 +593,7 @@ def main():
 	greedy_fit_obj=greedy_fit(robot,curve,curve_normal,curve_js,d=50)
 
 	###disable slope alignment
-	greedy_fit_obj.slope_constraint=True
+	greedy_fit_obj.slope_constraint=False
 	greedy_fit_obj.break_early=False
 	###set primitive choices, defaults are all 3
 	greedy_fit_obj.primitives={'movel_fit':greedy_fit_obj.movel_fit,'movec_fit':greedy_fit_obj.movec_fit}

@@ -29,17 +29,38 @@ class fitting_toolbox(object):
 		self.cartesian_slope_prev=None
 		self.js_slope_prev=None
 		
-		###slope alignement settings
-		self.slope_constraint=False
-		self.break_early=False
-
-		###initial primitive candidates
-		self.primitives={'movel_fit':self.movel_fit,'movej_fit':self.movej_fit,'movec_fit':self.movec_fit}
 	
 		###find path length
 		self.lam=[0]
 		for i in range(len(curve)-1):
 			self.lam.append(self.lam[-1]+np.linalg.norm(curve[i+1]-curve[i]))
+
+	def R2w(self, curve_R):
+		curve_w=[np.zeros(3)]
+		for i in range(1,len(curve_R)):
+			R_diff=np.dot(curve_R[i],curve_R[0].T)
+			k,theta=R2rot(R_diff)
+			k=np.array(k)
+			curve_w.append(k*theta)
+		return np.array(curve_w)
+	def w2R(self,curve_w,R_init):
+		curve_R=[]
+		for i in range(len(curve_w)):
+			theta=np.linalg.norm(curve_w[i])
+			if theta==0:
+				curve_R.append(R_init)
+			else:
+				curve_R.append(np.dot(rot(curve_w[i]/theta,theta),R_init))
+
+		return np.array(curve_R)
+
+	def get_angle(self,v1,v2,less90=False):
+		v1=v1/np.linalg.norm(v1)
+		v2=v2/np.linalg.norm(v2)
+		angle=np.arccos(np.dot(v1,v2))
+		if less90 and angle>np.pi/2:
+			angle=np.pi-angle
+		return angle
 
 	def project(self,curve_fit,curve_fit_R):
 		###project fitting curve by standoff distance
@@ -118,44 +139,63 @@ class fitting_toolbox(object):
 			curve_fit_R.append(np.dot(R,R_init))
 		curve_fit_R=np.array(curve_fit_R)
 		return curve_fit_R
-			
-	def movel_fit(self,curve,curve_backproj,curve_backproj_js,curve_R,curve_normal):	###unit vector slope
+	
+	def threshold_slope(self,slope_prev,slope,slope_thresh):
+		slope_norm=np.linalg.norm(slope)
+		slope_prev=slope_prev/np.linalg.norm(slope_prev)
+		slope=slope.flatten()/slope_norm
+
+		angle=np.arccos(np.dot(slope_prev,slope))
+		print('angle original: ',np.degrees(angle))
+		if abs(angle)>slope_thresh:
+			slope_ratio=np.sin(slope_thresh)/np.sin(abs(angle)-slope_thresh)
+			slope_new=slope_prev+slope_ratio*slope
+			slope_new=slope_norm*slope_new/np.linalg.norm(slope_new)
+
+			print(np.degrees(self.get_angle(slope_prev,slope_new)))
+
+			return slope_new
+
+		else:
+			return slope
+
+
+	def movel_fit(self,curve,curve_backproj,curve_backproj_js,curve_R,slope_constraint=[]):	###unit vector slope
 		###convert orientation to w first
 		curve_w=self.R2w(curve_R)
-		weight=50
 		
 		###no constraint
 		if len(self.curve_fit)==0:
 			A=np.vstack((np.ones(len(curve_backproj)),np.arange(0,len(curve_backproj)))).T
-			###assemble b matrix with weight
-			b=np.hstack((curve_backproj,curve_w*weight**2))
+			###assemble b matrix
+			b=np.hstack((curve_backproj,curve_w))
 			
 			res=np.linalg.lstsq(A,b,rcond=None)[0]
 			p_start_point=res[0,:3]
-			w_start_point=res[0,3:]/(weight**2)
+			w_start_point=res[0,3:]
 			slope=res[1].reshape(1,-1)
 			p_slope=slope[:,:3]
-			w_slope=slope[:,3:]/(weight**2)		
+			w_slope=slope[:,3:]
 
 		###with constraint point
 		else:
 			p_start_point=self.curve_fit[-1]
 			w_start_point=np.zeros(3)
 
-			if self.slope_constraint:
+			if len(slope_constraint)!=0:
 				
-				slope=self.cartesian_slope_prev*np.linalg.norm(curve_backproj[-1]-curve_backproj[0])/len(curve_backproj)
-				slope=slope.reshape(1,-1)
+				p_slope=slope_constraint.reshape(1,-1)[:3]*np.linalg.norm(curve_backproj[-1]-curve_backproj[0])/len(curve_backproj)
+				w_slope=slope_constraint.reshape(1,-1)[-3:]*np.linalg.norm(curve_w[-1]-curve_w[0])/len(curve_w)
 			else:
 
 				A=np.arange(0,len(curve_backproj)).reshape(-1,1)
-				###assemble b matrix with weight
-				b=np.hstack((curve_backproj-p_start_point,(curve_w-w_start_point)*weight**2))
+				###assemble b matrix
+				b=np.hstack((curve_backproj-p_start_point,(curve_w-w_start_point)))
 
 				res=np.linalg.lstsq(A,b,rcond=None)[0]
 				slope=res.reshape(1,-1)
 				p_slope=slope[:,:3]
-				w_slope=slope[:,3:]/(weight**2)
+				w_slope=slope[:,3:]
 
 
 		curve_fit=np.dot(np.arange(0,len(curve_backproj)).reshape(-1,1),p_slope)+p_start_point
@@ -165,7 +205,6 @@ class fitting_toolbox(object):
 		###calculate fitting error
 		max_error1=np.max(np.linalg.norm(curve_backproj-curve_fit,axis=1))
 
-		
 
 		###calculate corresponding joint configs, leave black to skip inv during searching
 		curve_fit_js=[]
@@ -179,7 +218,7 @@ class fitting_toolbox(object):
 		return curve_fit,curve_fit_R,curve_fit_js,max_error
 
 
-	def movej_fit(self,curve,curve_backproj,curve_backproj_js,curve_R,curve_normal):
+	def movej_fit(self,curve,curve_backproj,curve_backproj_js,curve_R):
 		###no constraint
 		if len(self.curve_fit)==0:
 			A=np.vstack((np.ones(len(curve_backproj_js)),np.arange(0,len(curve_backproj_js)))).T
@@ -194,7 +233,7 @@ class fitting_toolbox(object):
 			start_point=self.curve_fit_js[-1]
 			start_pose=self.robot.fwd(start_point)
 
-			if self.slope_constraint:
+			if len(slope_constraint)!=0:
 				slope=self.curve_fit_js*np.linalg.norm(curve_backproj_js[-1]-curve_backproj_js[0])/len(curve_backproj_js)
 				slope=slope.reshape(1,-1)
 			else:
@@ -227,39 +266,40 @@ class fitting_toolbox(object):
 		return curve_fit,curve_fit_R,curve_fit_js,max_error
 
 
-	def movec_fit(self,curve,curve_backproj,curve_backproj_js,curve_R,curve_normal):
-		curve_w=self.R2w(curve_R)
-		weight=1
-		
+	def movec_fit(self,curve,curve_backproj,curve_backproj_js,curve_R,slope_constraint=[]):
+		curve_w=self.R2w(curve_R)		
 
 		###no previous constraint
 		if len(self.curve_fit)==0:
 			curve_fit,curve_fit_circle=circle_fit(curve_backproj)	
 			###fit orientation with regression
 			A=np.vstack((np.ones(len(curve_backproj)),np.arange(0,len(curve_backproj)))).T
-			###assemble b matrix with weight
-			b=curve_w*weight**2
+			###assemble b matrix
+			b=curve_w
 			
 			res=np.linalg.lstsq(A,b,rcond=None)[0]
-			w_start_point=res[0]/(weight**2)
+			w_start_point=res[0]
 			slope=res[1].reshape(1,-1)
-			w_slope=slope/(weight**2)	
+			w_slope=slope
 		###with constraint point
 		else:
-			###fit orientation with regression
 			w_start_point=np.zeros(3)
-			A=np.arange(0,len(curve_backproj)).reshape(-1,1)
-			###assemble b matrix with weight
-			b=(curve_w-w_start_point)*weight**2
 
-			res=np.linalg.lstsq(A,b,rcond=None)[0]
-			slope=res.reshape(1,-1)
-			w_slope=slope/(weight**2)
+			if len(slope_constraint)!=0:
+				curve_fit,curve_fit_circle=circle_fit(curve_backproj,self.curve_fit[-1],slope_constraint[:3])
 
-			if self.slope_constraint:
-				curve_fit,curve_fit_circle=circle_fit(curve_backproj,self.curve_fit[-1],self.cartesian_slope_prev)
+				w_slope=slope_constraint[-3:].reshape(1,-1)*np.linalg.norm(curve_w[-1]-curve_w[0])/len(curve_w)
+				w_slope.reshape(1,-1)
 			else:
 				curve_fit,curve_fit_circle=circle_fit(curve_backproj,self.curve_fit[-1])
+				###fit orientation with regression
+				A=np.arange(0,len(curve_backproj)).reshape(-1,1)
+				###assemble b matrix
+				b=curve_w-w_start_point
+
+				res=np.linalg.lstsq(A,b,rcond=None)[0]
+				slope=res.reshape(1,-1)
+				w_slope=slope
 			
 
 		curve_fit_w=np.dot(np.arange(0,len(curve_backproj)).reshape(-1,1),w_slope)+w_start_point

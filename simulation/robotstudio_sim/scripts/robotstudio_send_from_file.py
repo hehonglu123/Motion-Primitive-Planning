@@ -40,7 +40,7 @@ class MotionSend(object):
         # self.tool = tooldata(True,pose(T_offset_tool.p,[quatR[0],quatR[1],quatR[2],quatR[3]]),loaddata(0.001,[0,0,0.001],[1,0,0,0],0,0,0))
 
         quatR = R2q(rot([0,1,0],math.radians(30)))
-        self.tool = tooldata(True,pose([50,0,450],[quatR[0],quatR[1],quatR[2],quatR[3]]),loaddata(0.001,[0,0,0.001],[1,0,0,0],0,0,0))
+        self.tool = tooldata(True,pose([50,0,450],[quatR[0],quatR[1],quatR[2],quatR[3]]),loaddata(1,[0,0,0.001],[1,0,0,0],0,0,0))
 
     def moveL_target(self,q,point):
         quat=R2q(self.robot.fwd(q).R)
@@ -87,15 +87,15 @@ class MotionSend(object):
             if motion == 'movel_fit':
 
                 robt = self.moveL_target(curve_js[breakpoints[i]],points[i])
-                mp.MoveL(robt,v5000,fine)
+                mp.MoveL(robt,v500,fine)
 
             elif motion == 'movec_fit':
                 robt1, robt2 = self.moveC_target(curve_js[breakpoints[i-1]],curve_js[breakpoints[i]],points[i][0],points[i][1])
-                mp.MoveC(robt1,robt2,v5000,fine)
+                mp.MoveC(robt1,robt2,v500,fine)
 
             else: # movej_fit
                 jointt = self.moveJ_target(points[i])
-                mp.MoveAbsJ(jointt,v5000,fine)
+                mp.MoveAbsJ(jointt,v500,fine)
         
         print(mp.get_program_rapid())
         log_results = self.client.execute_motion_program(mp)
@@ -136,7 +136,7 @@ def main():
 
     ms = MotionSend()
     curve_exe_js=ms.exec_motions(primitives,breakpoints,points_list)
-    f = open("curve_exe.csv", "a")
+    f = open("curve_exe.csv", "w")
     f.write(curve_exe_js)
     f.close()
 

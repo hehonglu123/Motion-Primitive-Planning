@@ -12,6 +12,7 @@ ex=np.array([[1],[0],[0]])
 ey=np.array([[0],[1],[0]])
 ez=np.array([[0],[0],[1]])
 
+#ALL in mm
 class abb6640(object):
 	#default tool paintgun
 	def __init__(self, p_base=np.zeros(3), R_base=np.eye(3),R_tool=Ry(np.radians(120)),p_tool=np.array([0.45,0,-0.05])*1000.):
