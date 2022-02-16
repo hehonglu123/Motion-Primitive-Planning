@@ -35,10 +35,19 @@ class fitting_toolbox(object):
 		for i in range(len(curve)-1):
 			self.lam.append(self.lam[-1]+np.linalg.norm(curve[i+1]-curve[i]))
 
-	def R2w(self, curve_R):
-		curve_w=[np.zeros(3)]
+	def R2w(self, curve_R,R_constraint=[]):
+		if len(R_constraint)==0:
+			R_init=curve_R[0]
+			curve_w=[np.zeros(3)]
+		else:
+			R_init=R_constraint
+			R_diff=np.dot(curve_R[0],R_init.T)
+			k,theta=R2rot(R_diff)
+			k=np.array(k)
+			curve_w=[k*theta]
+		
 		for i in range(1,len(curve_R)):
-			R_diff=np.dot(curve_R[i],curve_R[0].T)
+			R_diff=np.dot(curve_R[i],R_init.T)
 			k,theta=R2rot(R_diff)
 			k=np.array(k)
 			curve_w.append(k*theta)
@@ -57,7 +66,10 @@ class fitting_toolbox(object):
 	def get_angle(self,v1,v2,less90=False):
 		v1=v1/np.linalg.norm(v1)
 		v2=v2/np.linalg.norm(v2)
-		angle=np.arccos(np.dot(v1,v2))
+		dot=np.dot(v1,v2)
+		if abs(dot)>0.999999:
+			return 0
+		angle=np.arccos(dot)
 		if less90 and angle>np.pi/2:
 			angle=np.pi-angle
 		return angle
@@ -67,6 +79,9 @@ class fitting_toolbox(object):
 		curve_fit_proj=curve_fit+self.d*curve_fit_R[:,:,-1]
 
 		return curve_fit_proj
+	def movel_interp(self,p_start,p_end,steps):
+		slope=(p_end-p_start)/(steps-1)
+		return np.dot(np.arange(0,steps).reshape(-1,1),slope.reshape(1,-1))+p_start
 
 	def orientation_interp(self,R_init,R_end,steps):
 		curve_fit_R=[]
@@ -75,7 +90,7 @@ class fitting_toolbox(object):
 		k,theta=R2rot(R_diff)
 		for i in range(steps):
 			###linearly interpolate angle
-			angle=theta*i/steps
+			angle=theta*i/(steps-1)
 			R=rot(k,angle)
 			curve_fit_R.append(np.dot(R_init,R))
 		curve_fit_R=np.array(curve_fit_R)
@@ -146,13 +161,11 @@ class fitting_toolbox(object):
 		slope=slope.flatten()/slope_norm
 
 		angle=np.arccos(np.dot(slope_prev,slope))
-		print('angle original: ',np.degrees(angle))
+
 		if abs(angle)>slope_thresh:
 			slope_ratio=np.sin(slope_thresh)/np.sin(abs(angle)-slope_thresh)
 			slope_new=slope_prev+slope_ratio*slope
 			slope_new=slope_norm*slope_new/np.linalg.norm(slope_new)
-
-			print(np.degrees(self.get_angle(slope_prev,slope_new)))
 
 			return slope_new
 
@@ -160,12 +173,12 @@ class fitting_toolbox(object):
 			return slope
 
 
-	def movel_fit(self,curve,curve_backproj,curve_backproj_js,curve_R,slope_constraint=[]):	###unit vector slope
+	def movel_fit(self,curve,curve_backproj,curve_backproj_js,curve_R,p_constraint=[],R_constraint=[],slope_constraint=[]):	###unit vector slope
 		###convert orientation to w first
-		curve_w=self.R2w(curve_R)
+		curve_w=self.R2w(curve_R,R_constraint)
 		
 		###no constraint
-		if len(self.curve_fit)==0:
+		if len(p_constraint)==0:
 			A=np.vstack((np.ones(len(curve_backproj)),np.arange(0,len(curve_backproj)))).T
 			###assemble b matrix
 			b=np.hstack((curve_backproj,curve_w))
@@ -177,15 +190,18 @@ class fitting_toolbox(object):
 			p_slope=slope[:,:3]
 			w_slope=slope[:,3:]
 
+			start_R=curve_R[0]
+
 		###with constraint point
 		else:
-			p_start_point=self.curve_fit[-1]
+			p_start_point=p_constraint
 			w_start_point=np.zeros(3)
+			start_R=R_constraint
 
 			if len(slope_constraint)!=0:
 				
-				p_slope=slope_constraint.reshape(1,-1)[:3]*np.linalg.norm(curve_backproj[-1]-curve_backproj[0])/len(curve_backproj)
-				w_slope=slope_constraint.reshape(1,-1)[-3:]*np.linalg.norm(curve_w[-1]-curve_w[0])/len(curve_w)
+				p_slope=slope_constraint[:3].reshape(1,-1)*np.linalg.norm(curve_backproj[-1]-curve_backproj[0])/len(curve_backproj)
+				w_slope=slope_constraint[-3:].reshape(1,-1)*np.linalg.norm(curve_w[-1]-curve_w[0])/len(curve_w)
 			else:
 
 				A=np.arange(0,len(curve_backproj)).reshape(-1,1)
@@ -200,7 +216,7 @@ class fitting_toolbox(object):
 
 		curve_fit=np.dot(np.arange(0,len(curve_backproj)).reshape(-1,1),p_slope)+p_start_point
 		curve_fit_w=np.dot(np.arange(0,len(curve_backproj)).reshape(-1,1),w_slope)+w_start_point
-		curve_fit_R=self.w2R(curve_fit_w,curve_R[0])
+		curve_fit_R=self.w2R(curve_fit_w,start_R)
 
 		###calculate fitting error
 		max_error1=np.max(np.linalg.norm(curve_backproj-curve_fit,axis=1))
@@ -266,11 +282,11 @@ class fitting_toolbox(object):
 		return curve_fit,curve_fit_R,curve_fit_js,max_error
 
 
-	def movec_fit(self,curve,curve_backproj,curve_backproj_js,curve_R,slope_constraint=[]):
-		curve_w=self.R2w(curve_R)		
+	def movec_fit(self,curve,curve_backproj,curve_backproj_js,curve_R,p_constraint=[],R_constraint=[],slope_constraint=[]):
+		curve_w=self.R2w(curve_R,R_constraint)	
 
 		###no previous constraint
-		if len(self.curve_fit)==0:
+		if len(p_constraint)==0:
 			curve_fit,curve_fit_circle=circle_fit(curve_backproj)	
 			###fit orientation with regression
 			A=np.vstack((np.ones(len(curve_backproj)),np.arange(0,len(curve_backproj)))).T
@@ -281,17 +297,19 @@ class fitting_toolbox(object):
 			w_start_point=res[0]
 			slope=res[1].reshape(1,-1)
 			w_slope=slope
+
+			start_R=curve_R[0]
 		###with constraint point
 		else:
 			w_start_point=np.zeros(3)
-
+			start_R=R_constraint
 			if len(slope_constraint)!=0:
-				curve_fit,curve_fit_circle=circle_fit(curve_backproj,self.curve_fit[-1],slope_constraint[:3])
+				curve_fit,curve_fit_circle=circle_fit_w_slope1(curve_backproj,p_constraint,slope_constraint[:3])
 
 				w_slope=slope_constraint[-3:].reshape(1,-1)*np.linalg.norm(curve_w[-1]-curve_w[0])/len(curve_w)
 				w_slope.reshape(1,-1)
 			else:
-				curve_fit,curve_fit_circle=circle_fit(curve_backproj,self.curve_fit[-1])
+				curve_fit,curve_fit_circle=circle_fit(curve_backproj,p_constraint)
 				###fit orientation with regression
 				A=np.arange(0,len(curve_backproj)).reshape(-1,1)
 				###assemble b matrix
@@ -303,7 +321,7 @@ class fitting_toolbox(object):
 			
 
 		curve_fit_w=np.dot(np.arange(0,len(curve_backproj)).reshape(-1,1),w_slope)+w_start_point
-		curve_fit_R=self.w2R(curve_fit_w,curve_R[0])
+		curve_fit_R=self.w2R(curve_fit_w,start_R)
 
 		max_error1=np.max(np.linalg.norm(curve_backproj-curve_fit,axis=1))
 
@@ -318,6 +336,22 @@ class fitting_toolbox(object):
 
 		# print(max_error1,max_error2)
 		return curve_fit,curve_fit_R,curve_fit_js,max_error
+
+	def get_slope(self,curve_fit,curve_fit_R,breakpoints):
+		print(len(breakpoints))
+		slope_diff=[]
+		slope_diff_ori=[]
+		for i in range(1,len(breakpoints)-1):
+			slope_diff.append(self.get_angle(curve_fit[breakpoints[i]]-curve_fit[breakpoints[i]-2],curve_fit[breakpoints[i]+2]-curve_fit[breakpoints[i]]))
+
+			R_diff_prev=np.dot(curve_fit_R[breakpoints[i]],curve_fit_R[breakpoints[i-1]].T)
+			k_prev,theta=R2rot(R_diff_prev)
+			R_diff_next=np.dot(curve_fit_R[breakpoints[i+1]-1],curve_fit_R[breakpoints[i]].T)
+			k_next,theta=R2rot(R_diff_next)
+			slope_diff_ori.append(self.get_angle(k_prev,k_next,less90=True))
+
+		return slope_diff,slope_diff_ori
+
 
 def main():
 	###read in points

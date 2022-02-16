@@ -18,22 +18,23 @@ def main():
 	curve=np.vstack((curve_x, curve_y, curve_z)).T
 
 	col_names=['X', 'Y', 'Z','direction_x', 'direction_y', 'direction_z'] 
-	data = read_csv("curve_fit_backproj.csv")
+	data = read_csv("curve_fit_backproj_blend.csv")
 	curve_x=data['x'].tolist()
 	curve_y=data['y'].tolist()
 	curve_z=data['z'].tolist()
 	curve_fit=np.vstack((curve_x, curve_y, curve_z)).T
 
-	data = read_csv("command_backproj.csv")
+	data = read_csv("command_backproj_blend.csv")
 	breakpoints=np.array(data['breakpoints'].tolist())
 	primitives=data['primitives'].tolist()
 	points=data['points'].tolist()
 
 
 	####only every 100 points
-	curve=curve[::100]
-	curve_fit=curve_fit[::100]
-	breakpoints=breakpoints/100
+	steps=10
+	curve=curve[::steps]
+	curve_fit=curve_fit[::steps]
+	breakpoints=breakpoints/steps
 
 
 	###plane projection visualization

@@ -110,6 +110,50 @@ class abb1200(object):
 		q_all=robot6_sphericalwrist_invkin(self.robot_def,pose)
 		return q_all
 
+class arb_robot(object):
+	#R_tool make tool z pointing to +x at 0 config
+	def __init__(self, H,P,joint_type,upper_limit,lowerer_limit, joint_vel_limit,p_base=np.zeros(3), R_base=np.eye(3),R_tool=Ry(np.radians(90)),p_tool=np.zeros(3)):
+		print(H)
+		print(P)
+		print(R_tool)
+		print(p_tool)
+		self.R_base=R_base
+		self.p_base=p_base
+		###All in mm
+		self.H=H
+		self.P=P
+
+		###updated range&vel limit
+		self.joint_type=joint_type
+		self.upper_limit=upper_limit
+		self.lowerer_limit=lowerer_limit
+		self.joint_vel_limit=joint_vel_limit
+		self.joint_acc_limit=10*self.joint_vel_limit
+		self.robot_def=Robot(self.H,self.P,self.joint_type,joint_lower_limit = self.lowerer_limit, joint_upper_limit = self.upper_limit, joint_vel_limit=self.joint_vel_limit, R_tool=R_tool,p_tool=p_tool)
+
+	def jacobian(self,q):
+		return robotjacobian(self.robot_def,q)
+	def fwd(self,q,base_R=np.eye(3),base_p=np.array([0,0,0])):
+		pose_temp=fwdkin(self.robot_def,q)
+		pose_temp.p=np.dot(base_R,pose_temp.p)+base_p
+		pose_temp.R=np.dot(base_R,pose_temp.R)
+		return pose_temp
+
+	def fwd_all(self,q_all,base_R=np.eye(3),base_p=np.array([0,0,0])):
+		pose_p_all=[]
+		pose_R_all=[]
+		for q in q_all:
+			pose_temp=fwd(q,base_R,base_p)
+			pose_p_all.append(pose_temp.p)
+			pose_R_all.append(pose_temp.R)
+
+		return Transform_all(pose_p_all,pose_R_all)
+
+	def inv(self,p,R=np.eye(3)):
+		pose=Transform(R,p)
+		q_all=robot6_sphericalwrist_invkin(self.robot_def,pose)
+		return q_all
+
 
 class Transform_all(object):
 	def __init__(self, p_all, R_all):

@@ -67,7 +67,7 @@ class MotionSend(object):
         jointt = jointtarget([q[0],q[1],q[2],q[3],q[4],q[5]],[0]*6)
         return jointt
 
-    def exec_motions(self,primitives,breakpoints,points,curve_backproj_js_filename='curve_fit_js'):
+    def exec_motions(self,primitives,breakpoints,points,curve_backproj_js_filename='curve_fit_js_blend'):
 
         col_names=['q1', 'q2', 'q3','q4', 'q5', 'q6'] 
         data = read_csv(curve_backproj_js_filename+".csv", names=col_names)
@@ -101,7 +101,7 @@ class MotionSend(object):
         log_results = self.client.execute_motion_program(mp)
         log_results_str = log_results.decode('ascii')
         return log_results_str
-        print(log_results_str)
+        
 def extract_points(primitive_type,points):
     if primitive_type=='movec_fit':
         endpoints=points[8:-3].split('array')
@@ -115,7 +115,7 @@ def extract_points(primitive_type,points):
 def main():
     ms = MotionSend()
 
-    data = read_csv("command_backproj.csv")
+    data = read_csv("command_backproj_blend.csv")
     breakpoints=data['breakpoints'].tolist()
     primitives=data['primitives'].tolist()
     points=data['points'].tolist()
@@ -136,6 +136,7 @@ def main():
 
     ms = MotionSend()
     curve_exe_js=ms.exec_motions(primitives,breakpoints,points_list)
+
     f = open("curve_exe.csv", "w")
     f.write(curve_exe_js)
     f.close()
