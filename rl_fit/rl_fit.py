@@ -175,6 +175,8 @@ class RL_Env(object):
         self.done = False
         self.i_step = 0
 
+        self.longest_primitives = None
+
     def reset(self, target_curve=None):
         if target_curve is not None:
             self.target_curve = target_curve
@@ -190,7 +192,7 @@ class RL_Env(object):
         normalized_curve = PCA_normalization(remaining_curve)
         curve_features = fft_feature(normalized_curve, 5)
 
-        primitives, longest_type = greedy_fit_primitive(last_bp=self.last_bp, curve=self.target_curve, p=self.fit_curve[-1])
+        self.longest_primitives, longest_type = greedy_fit_primitive(last_bp=self.last_bp, curve=self.target_curve, p=self.fit_curve[-1])
         lengths = [(x+1)*0.1 for x in range(10)]
 
         state = State(longest_type=longest_type, curve_features=curve_features, lengths=lengths)
@@ -207,5 +209,7 @@ def train_rl(agent: RL_Agent, data, n_episode=1000):
 
         random_curve_idx = np.random.randint(0, data)
         curve = data[random_curve_idx]
-        fit_curve = [curve[0]]
-        last_bp = 0
+
+        env = RL_Env(target_curve=curve)
+        state = env.reset()
+        action = agent.get_action(state)
