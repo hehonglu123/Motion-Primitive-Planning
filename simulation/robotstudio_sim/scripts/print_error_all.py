@@ -27,7 +27,7 @@ robot=abb6640()
 d=50
 
 
-data_dir="fitting_output/threshold0.5/"
+data_dir="fitting_output/slope_blend/"
 speed={"v50":v50,"v500":v500,"v5000":v5000}
 zone={"fine":fine,"z1":z1,"z10":z10}
 max_error1={}
@@ -61,7 +61,8 @@ for s in speed:
 			curve_exe.append(robot_pose.p)
 			curve_exe_R.append(robot_pose.R)
 			try:
-				act_speed.append(np.linalg.norm(curve_exe[-1]-curve_exe[-2])/(timestamp[-1]- timestamp[-2]))
+				if timestamp[-1]!=timestamp[-2]:
+					act_speed.append(np.linalg.norm(curve_exe[-1]-curve_exe[-2])/(timestamp[-1]- timestamp[-2]))
 			except IndexError:
 				pass
 

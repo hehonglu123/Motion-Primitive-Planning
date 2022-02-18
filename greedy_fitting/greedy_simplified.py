@@ -170,7 +170,7 @@ class greedy_fit(fitting_toolbox):
 
 		while self.breakpoints[-1]<len(self.curve)-1:
 			
-			next_point= min(2000,len(self.curve)-1-self.breakpoints[-1])
+			next_point = min(2000,len(self.curve)-self.breakpoints[-1])
 			prev_point=0
 			prev_possible_point=0
 
@@ -199,7 +199,7 @@ class greedy_fit(fitting_toolbox):
 				else:
 					prev_possible_point=next_point
 					prev_point_temp=next_point
-					next_point= min(next_point + int(np.abs(next_point-prev_point)),len(self.curve)-1-self.breakpoints[-1])
+					next_point= min(next_point + int(np.abs(next_point-prev_point)),len(self.curve)-self.breakpoints[-1])
 					prev_point=prev_point_temp
 					
 
@@ -236,7 +236,7 @@ class greedy_fit(fitting_toolbox):
 					break
 
 				###find the closest but under max_threshold
-				if (min(list(max_errors.values()))<=max_error_threshold and np.abs(next_point-prev_point)<10) or next_point==len(self.curve)-1:
+				if (min(list(max_errors.values()))<=max_error_threshold and np.abs(next_point-prev_point)<10) or next_point==len(self.curve)-self.breakpoints[-1]:
 					primitives_added=False
 					for key in self.primitives: 
 						curve_fit,curve_fit_R,curve_fit_js,max_error=self.primitives[key](self.curve[self.breakpoints[-1]:self.breakpoints[-1]+next_point],self.curve_backproj[self.breakpoints[-1]:self.breakpoints[-1]+next_point],self.curve_backproj_js[self.breakpoints[-1]:self.breakpoints[-1]+next_point],self.curve_R[self.breakpoints[-1]:self.breakpoints[-1]+next_point])
@@ -263,7 +263,7 @@ class greedy_fit(fitting_toolbox):
 			else:
 				idx=next_point
 
-			self.breakpoints.append(self.breakpoints[-1]+idx)
+			self.breakpoints.append(min(self.breakpoints[-1]+idx,len(self.curve)-1))
 			self.curve_fit.extend(curve_fit[:len(curve_fit)-(next_point-idx)])
 			self.curve_fit_R.extend(curve_fit_R[:len(curve_fit)-(next_point-idx)])
 
@@ -304,6 +304,8 @@ class greedy_fit(fitting_toolbox):
 	def smooth_slope(self,slope_diff,slope_diff_ori,curve_fit,curve_fit_R,breakpoints,primitives_choices,points):
 		new_breakpoints=[0]
 		new_breakpoint_idx=[]
+		primitives_choices_new=[primitives_choices[0]]
+		points_new=[points[0]]
 		steps=150
 		for i in range(len(slope_diff)):
 			if slope_diff[i] > np.radians(30) or slope_diff_ori[i] > np.radians(30):
@@ -314,23 +316,37 @@ class greedy_fit(fitting_toolbox):
 				if breakpoints[i+1]+steps-1>len(curve_fit):
 					new_breakpoints.append(breakpoints[i+1])
 					break
-				else:
-					###moveC blending
-					# slope1=curve_fit[breakpoints[i+1]-steps]-curve_fit[breakpoints[i+1]-steps-2]
-					# slope2=curve_fit[breakpoints[i+1]+steps+2]-curve_fit[breakpoints[i+1]+steps]
-					# curve_fit_temp,curve_fit_circle=circle_fit_w_2slope(self.curve_backproj[breakpoints[i+1]-steps:breakpoints[i+1]+steps],curve_fit[breakpoints[i+1]-steps],curve_fit[breakpoints[i+1]+steps-1],slope1,slope2)
-					# primitives_choices.insert(i+1,'movec_fit')
-					# points.insert(i+1,[curve_fit_temp[int(len(curve_fit_temp)/2)],curve_fit_temp[-1]])
-					###moveL blending
-					curve_fit_temp=self.movel_interp(curve_fit[breakpoints[i+1]-steps],curve_fit[breakpoints[i+1]+steps-1],steps*2)
-					primitives_choices.insert(i+1,'movel_fit')
-					points.insert(i+1,[curve_fit_temp[-1]])
 
-
-					curve_fit_R_temp=self.orientation_interp(curve_fit_R[breakpoints[i+1]-steps],curve_fit_R[breakpoints[i+1]+steps-1],steps*2)
+				###moveC blending
+				slope1=curve_fit[breakpoints[i+1]-steps]-curve_fit[breakpoints[i+1]-steps-2]
+				slope2=curve_fit[breakpoints[i+1]+steps+2]-curve_fit[breakpoints[i+1]+steps]
+				curve_fit_temp,curve_fit_circle=circle_fit_w_2slope(self.curve_backproj[breakpoints[i+1]-steps:breakpoints[i+1]+steps],curve_fit[breakpoints[i+1]-steps],curve_fit[breakpoints[i+1]+steps-1],slope1,slope2)
+				
+				###moveL blending
+				# curve_fit_temp=self.movel_interp(curve_fit[breakpoints[i+1]-steps],curve_fit[breakpoints[i+1]+steps-1],steps*2)
+				
+				
+				###orientation interpolation
+				curve_fit_R_temp=self.orientation_interp(curve_fit_R[breakpoints[i+1]-steps],curve_fit_R[breakpoints[i+1]+steps-1],steps*2)
 
 				curve_fit[breakpoints[i+1]-steps:breakpoints[i+1]+steps]=curve_fit_temp
 				curve_fit_R[breakpoints[i+1]-steps:breakpoints[i+1]+steps]=curve_fit_R_temp
+
+				primitives_choices_new.append(primitives_choices[i+1])
+				if primitives_choices_new[-1]=='movec_fit':
+					points_new.append([curve_fit[int((new_breakpoints[-1]+breakpoints[i+1]-steps)/2)],curve_fit_temp[0]])
+				else:
+					points_new.append([curve_fit_temp[0]])
+
+				###moveC blending
+				primitives_choices_new.append('movec_fit')
+				points_new.append([curve_fit_temp[int(len(curve_fit_temp)/2)],curve_fit_temp[-1]])
+				###moveL blending
+				# primitives_choices_new.append('movel_fit')
+				# points_new.append([curve_fit_temp[-1]])
+
+
+
 
 				new_breakpoints.append(breakpoints[i+1]-steps)
 				new_breakpoints.append(breakpoints[i+1]+steps-1)
@@ -338,8 +354,12 @@ class greedy_fit(fitting_toolbox):
 				new_breakpoint_idx.extend([len(new_breakpoints)-2,len(new_breakpoints)-1])
 			else:
 				new_breakpoints.append(breakpoints[i+1])
+				primitives_choices_new.append(primitives_choices[i+1])
+				points_new.append(points[i+1])
 
 		new_breakpoints.append(len(self.curve_backproj)-1)
+		primitives_choices_new.append(primitives_choices[-1])
+		points_new.append(points[-1])
 
 		self.curve_fit=np.array(curve_fit)
 		self.curve_fit_R=np.array(curve_fit_R)
@@ -357,7 +377,8 @@ class greedy_fit(fitting_toolbox):
 		max_error2=np.max(np.linalg.norm(self.curve[:-1]-curve_proj,axis=1))
 		max_error=(max_error1+max_error2)/2
 		# print('new final error: ',max_error)
-		return new_breakpoints,primitives_choices,points
+		print(len(new_breakpoints),len(primitives_choices_new),len(points_new))
+		return new_breakpoints,primitives_choices_new,points_new
 
 
 
@@ -394,7 +415,7 @@ def main():
 	# greedy_fit_obj.primitives={'movec_fit':greedy_fit_obj.movec_fit_greedy}
 	# greedy_fit_obj.primitives={'movel_fit':greedy_fit_obj.movel_fit_greedy}
 
-	breakpoints,primitives_choices,points=greedy_fit_obj.fit_under_error(0.5)
+	breakpoints,primitives_choices,points=greedy_fit_obj.fit_under_error(1.)
 	# breakpoints,primitives_choices,points=greedy_fit_obj.smooth_slope(greedy_fit_obj.curve_fit,greedy_fit_obj.curve_fit_R,breakpoints,primitives_choices,points)
 
 	###plt
@@ -490,14 +511,14 @@ def main2():
 
 
 	df=DataFrame({'breakpoints':breakpoints,'primitives':primitives_choices,'points':points})
-	df.to_csv('command_backproj_blend.csv',header=True,index=False)
+	df.to_csv('command_backproj.csv',header=True,index=False)
 	df=DataFrame({'x':greedy_fit_obj.curve_fit[:,0],'y':greedy_fit_obj.curve_fit[:,1],'z':greedy_fit_obj.curve_fit[:,2],\
 		'R1':greedy_fit_obj.curve_fit_R[:,0,0],'R2':greedy_fit_obj.curve_fit_R[:,0,1],'R3':greedy_fit_obj.curve_fit_R[:,0,2],\
 		'R4':greedy_fit_obj.curve_fit_R[:,1,0],'R5':greedy_fit_obj.curve_fit_R[:,1,1],'R6':greedy_fit_obj.curve_fit_R[:,1,2],\
 		'R7':greedy_fit_obj.curve_fit_R[:,2,0],'R8':greedy_fit_obj.curve_fit_R[:,2,1],'R9':greedy_fit_obj.curve_fit_R[:,2,2]})
-	df.to_csv('curve_fit_backproj_blend.csv',header=True,index=False)
+	df.to_csv('curve_fit_backproj.csv',header=True,index=False)
 	df=DataFrame({'j1':greedy_fit_obj.curve_fit_js[:,0],'j2':greedy_fit_obj.curve_fit_js[:,1],'j3':greedy_fit_obj.curve_fit_js[:,2],'j4':greedy_fit_obj.curve_fit_js[:,3],'j5':greedy_fit_obj.curve_fit_js[:,4],'j6':greedy_fit_obj.curve_fit_js[:,5]})
-	df.to_csv('curve_fit_js_blend.csv',header=False,index=False)
+	df.to_csv('curve_fit_js.csv',header=False,index=False)
 
 
 def main3():
@@ -568,4 +589,4 @@ def main3():
 	df.to_csv('curve_fit_js.csv',header=False,index=False)
 
 if __name__ == "__main__":
-	main3()
+	main()
