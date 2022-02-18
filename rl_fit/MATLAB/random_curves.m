@@ -1,6 +1,16 @@
 clear
-load trajs.mat
-num_traj = 1000;
+load Curve_in_base_frame.csv
+num_traj = 200;
+
+X_coord = Curve_in_base_frame(:,1);
+Y_coord = Curve_in_base_frame(:,2);
+Z_coord = Curve_in_base_frame(:,3);
+X_dir = Curve_in_base_frame(:,4);
+Y_dir = Curve_in_base_frame(:,5);
+Z_dir = Curve_in_base_frame(:,6);
+
+figure(1);
+plot3(X_coord,Y_coord,Z_coord,'r.'); grid on;hold on
 
 for i = 1:num_traj
 
@@ -29,14 +39,14 @@ for i = 1:num_traj
     Y_pert(Bump_start_idx:Bump_start_idx+Bump_length_idx-1) = Y_pert(Bump_start_idx:Bump_start_idx+Bump_length_idx-1) + Dir(2)*Bump;
     Z_pert(Bump_start_idx:Bump_start_idx+Bump_length_idx-1) = Z_pert(Bump_start_idx:Bump_start_idx+Bump_length_idx-1) + Dir(2)*Bump;
 
-    traj_pert = [X_pert Y_pert Z_pert];
-    csv_name = ['data/pert/traj_' num2str(i) '.csv'];
+    traj_pert = [X_pert Y_pert Z_pert X_dir Y_dir Z_dir];
+    csv_name = ['../data/base/traj_' num2str(i) '.csv'];
     writematrix(traj_pert, csv_name);
+    
+    plot3(X_pert,Y_pert,Z_pert,'b.');
+
 
 end
 
-figure(1);
-plot3(X_coord,Y_coord,Z_coord,'r.'); grid on;hold on
-plot3(X_pert,Y_pert,Z_pert,'b.');hold off; 
 
 
