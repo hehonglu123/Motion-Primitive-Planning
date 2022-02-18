@@ -1,5 +1,6 @@
 from general_robotics_toolbox import *
 import numpy as np
+import yaml
 
 
 def Rx(theta):
@@ -113,10 +114,6 @@ class abb1200(object):
 class arb_robot(object):
 	#R_tool make tool z pointing to +x at 0 config
 	def __init__(self, H,P,joint_type,upper_limit,lowerer_limit, joint_vel_limit,p_base=np.zeros(3), R_base=np.eye(3),R_tool=Ry(np.radians(90)),p_tool=np.zeros(3)):
-		print(H)
-		print(P)
-		print(R_tool)
-		print(p_tool)
 		self.R_base=R_base
 		self.p_base=p_base
 		###All in mm
@@ -154,7 +151,42 @@ class arb_robot(object):
 		q_all=robot6_sphericalwrist_invkin(self.robot_def,pose)
 		return q_all
 
+def yml2robdef(file):
+	robot_yml=yaml.full_load(file)
+	kin_chain=robot_yml['chains'][0]
+	joint_info=robot_yml['joint_info']
+	tool_pose=kin_chain['flange_pose']
 
+	###kin chain
+	H = []
+	P = []
+
+	for i in range(len(kin_chain['H'])):
+		H.append(list(kin_chain['H'][i].values()))
+		P.append(list(kin_chain['P'][i].values()))
+	P.append(list(kin_chain['P'][-1].values()))
+	H=np.array(H).reshape((len(kin_chain['H']),3)).T
+	P=np.array(P).reshape((len(kin_chain['P']),3)).T*1000	###make sure in mm
+
+	###joint info
+	joint_type=[]	
+	upper_limit=[]
+	lowerer_limit=[]
+	joint_vel_limit=[]
+	for i in range(len(joint_info)):
+		joint_type.append(0 if joint_info[i]['joint_type']=='revolute' else 1)
+		upper_limit.append(joint_info[i]['joint_limits']['upper'])
+		lowerer_limit.append(joint_info[i]['joint_limits']['lower'])
+		joint_vel_limit.append(joint_info[i]['joint_limits']['velocity'])
+
+	###tool pose
+	R_tool=q2R(list(tool_pose['orientation'].values()))
+	p_tool=np.array(list(tool_pose['position'].values()))*1000
+
+	###create a robot
+	robot=arb_robot(H,P,joint_type,upper_limit,lowerer_limit, joint_vel_limit,R_tool=R_tool,p_tool=p_tool)
+
+	return robot
 class Transform_all(object):
 	def __init__(self, p_all, R_all):
 		self.R_all=np.array(R_all)

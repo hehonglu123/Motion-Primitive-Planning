@@ -394,7 +394,7 @@ def main():
 	# greedy_fit_obj.primitives={'movec_fit':greedy_fit_obj.movec_fit_greedy}
 	# greedy_fit_obj.primitives={'movel_fit':greedy_fit_obj.movel_fit_greedy}
 
-	breakpoints,primitives_choices,points=greedy_fit_obj.fit_under_error(1.)
+	breakpoints,primitives_choices,points=greedy_fit_obj.fit_under_error(0.5)
 	# breakpoints,primitives_choices,points=greedy_fit_obj.smooth_slope(greedy_fit_obj.curve_fit,greedy_fit_obj.curve_fit_R,breakpoints,primitives_choices,points)
 
 	###plt
@@ -502,41 +502,8 @@ def main2():
 
 def main3():
 	###read in robot info file
-	import yaml
 	with open('../toolbox/robot_info/abb6640.yml') as file:
-		robot_yml=yaml.full_load(file)
-		kin_chain=robot_yml['chains'][0]
-		joint_info=robot_yml['joint_info']
-		tool_pose=kin_chain['flange_pose']
-
-	###kin chain
-	H = []
-	P = []
-
-	for i in range(len(kin_chain['H'])):
-		H.append(list(kin_chain['H'][i].values()))
-		P.append(list(kin_chain['P'][i].values()))
-	P.append(list(kin_chain['P'][-1].values()))
-	H=np.array(H).reshape((len(kin_chain['H']),3)).T
-	P=np.array(P).reshape((len(kin_chain['P']),3)).T*1000	###make sure in mm
-
-	###joint info
-	joint_type=[]	
-	upper_limit=[]
-	lowerer_limit=[]
-	joint_vel_limit=[]
-	for i in range(len(joint_info)):
-		joint_type.append(0 if joint_info[i]['joint_type']=='revolute' else 1)
-		upper_limit.append(joint_info[i]['joint_limits']['upper'])
-		lowerer_limit.append(joint_info[i]['joint_limits']['lower'])
-		joint_vel_limit.append(joint_info[i]['joint_limits']['velocity'])
-
-	###tool pose
-	R_tool=q2R(list(tool_pose['orientation'].values()))
-	p_tool=np.array(list(tool_pose['position'].values()))*1000
-
-	###create a robot
-	robot=arb_robot(H,P,joint_type,upper_limit,lowerer_limit, joint_vel_limit,R_tool=R_tool,p_tool=p_tool)
+		robot=yml2robdef(file)
 
 	###read in points
 	col_names=['X', 'Y', 'Z','direction_x', 'direction_y', 'direction_z'] 
@@ -601,4 +568,4 @@ def main3():
 	df.to_csv('curve_fit_js.csv',header=False,index=False)
 
 if __name__ == "__main__":
-	main2()
+	main3()
