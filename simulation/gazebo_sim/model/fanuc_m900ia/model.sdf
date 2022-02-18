@@ -374,7 +374,6 @@
     </joint>
 
     <link name='paint_gun'>
-      <!-- <pose>1.662 0 2.055 0 1.57079632679 0</pose> -->
       <pose relative_to='eef_joint'>0 0 0 0 1.5707963267948966 0</pose>
       <inertial>
         <pose>0 0 0 0 0 0</pose>
@@ -406,6 +405,41 @@
         <cast_shadows>1</cast_shadows>
       </visual>
     </link>
+
+    <!-- <link name='blade'>
+    <pose relative_to='eef_joint'>1 0 0 0 1.5707963267948966 1.5707963267948966</pose>
+      <inertial>
+        <mass>1</mass>
+        <inertia>
+          <ixx>0.145833</ixx>
+          <ixy>0</ixy>
+          <ixz>0</ixz>
+          <iyy>0.145833</iyy>
+          <iyz>0</iyz>
+          <izz>0.125</izz>
+        </inertia>
+        <pose>0 0 0 0 -0 0</pose>
+      </inertial>
+      <self_collide>0</self_collide>
+      <enable_wind>0</enable_wind>
+      <kinematic>0</kinematic>
+      <pose>0 0 0 0 -0 0</pose>
+      <gravity>1</gravity>
+      <visual name='visual'>
+        <geometry>
+          <mesh>
+              <scale>0.001 0.001 0.001</scale>
+              <uri>model://blade/meshes/generic_fan_blade.stl</uri>
+          </mesh>
+        </geometry>
+        <material>
+          <shader type='pixel'/>
+        </material>
+        <pose>0 0 0 0 -0 0</pose>
+        <transparency>0</transparency>
+        <cast_shadows>1</cast_shadows>
+      </visual>
+    </link> -->
 
     <!-- ROS-Industrial 'flange' frame: attachment point for EEF models -->
     <!-- <link name="flange"/>
@@ -445,11 +479,11 @@
       </axis>
     </joint>
 
-    <!-- <joint name='fix to ground' type='fixed'>
+    <joint name='fix to ground' type='fixed'>
       <parent>world</parent>
       <child>base_link</child>
-    </joint> -->
-    <joint name='fix to ground' type='revolute'>
+    </joint>
+    <!-- <joint name='fix to ground' type='revolute'>
       <pose relative_to='world'>0 0 0 0 -0 0</pose>
       <parent>world</parent>
       <child>base_link</child>
@@ -466,7 +500,7 @@
           <spring_stiffness>0</spring_stiffness>
         </dynamics>
       </axis>
-    </joint>
+    </joint> -->
 
     <static>0</static>
     <allow_auto_disable>1</allow_auto_disable>

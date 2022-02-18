@@ -41,6 +41,18 @@
           <spring_stiffness>0</spring_stiffness>
         </dynamics>
       </axis>
+      <physics>
+        <ode>
+          <limit>
+            <cfm>0</cfm>
+            <erp>0.2</erp>
+          </limit>
+          <suspension>
+            <cfm>0</cfm>
+            <erp>0.2</erp>
+          </suspension>
+        </ode>
+      </physics>
     </joint>
     <link name='link_1'>
       <pose relative_to='joint_1'>0 0 0 0 -0 0</pose>
@@ -349,12 +361,12 @@
       <child>paint_gun</child>
     </joint> -->
 
-    <!-- <joint name='fix to ground' type='fixed'>
+    <joint name='fix to ground' type='fixed'>
       <parent>world</parent>
       <child>base_link</child>
-    </joint> -->
+    </joint>
 
-    <joint name='fix to ground' type='revolute'>
+    <!-- <joint name='fix to ground' type='revolute'>
       <pose relative_to='world'>0 0 0 0 -0 0</pose>
       <parent>world</parent>
       <child>base_link</child>
@@ -371,7 +383,7 @@
           <spring_stiffness>0</spring_stiffness>
         </dynamics>
       </axis>
-    </joint>
+    </joint> -->
     
     <static>0</static>
     <allow_auto_disable>1</allow_auto_disable>

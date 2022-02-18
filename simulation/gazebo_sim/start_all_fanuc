@@ -1,0 +1,10 @@
+#!/bin/bash
+
+gnome-terminal --tab -e "bash ./start_gazebo"
+sleep 5s
+python3 initialization_fanuc.py
+gnome-terminal -e "bash ./start_robot_driver_fanuc"
+sleep 2s
+python3 home.py
+
+
