@@ -19,7 +19,8 @@ def PCA_normalization(curve):
 def fft_feature(curve, n_feature):
     fft_curve = fft(curve)
     features = fft_curve[0:n_feature]
-    # features = np.abs(features)
+    features = features.flatten()
+    features = np.abs(features).astype(float)
     return features, fft_curve
 
 

@@ -95,7 +95,7 @@ def greedy_fit_primitive(last_bp, curve, p):
             search_right_l = search_point_l
             search_point_l = np.floor(np.mean([search_left_l, search_point_l]))
 
-    longest_type = 'L' if longest_fits['L'].primitive >= longest_fits['C'] else 'C'
+    longest_type = 'L' if longest_fits['L'].primitive >= longest_fits['C'].primitive else 'C'
     return longest_fits, longest_type
 
 
@@ -130,23 +130,24 @@ class DQN(nn.Module):
 class RL_Agent(object):
 
     def __init__(self, n_curve_feature: int, n_length: int, lr: float = LEARNING_RATE):
-        self.input_dim = n_curve_feature, n_length
-        self.output_dim = n_length
+        self.input_dim = n_curve_feature * 3 + 1
+        self.output_dim = 1
         self._n_curve_feature = n_curve_feature
         self._n_length = n_length
         self.lr = lr
         self.gamma = GAMMA
 
-        self.LL_NN = DQN(self.input_dim, self.output_dim)
-        self.LC_NN = DQN(self.input_dim, self.output_dim)
-        self.CL_NN = DQN(self.input_dim, self.output_dim)
-        self.CC_NN = DQN(self.input_dim, self.output_dim)
-        self.DQNs = {'LL': self.LL_NN, 'LC': self.LC_NN, 'CL': self.CL_NN, 'CC': self.CC_NN}
+        self.LL_policy_net = DQN(self.input_dim, self.output_dim)
+        self.LC_policy_net = DQN(self.input_dim, self.output_dim)
+        self.CL_policy_net = DQN(self.input_dim, self.output_dim)
+        self.CC_policy_net = DQN(self.input_dim, self.output_dim)
+        self.DQNs = {'LL': self.LL_policy_net, 'LC': self.LC_policy_net,
+                     'CL': self.CL_policy_net, 'CC': self.CC_policy_net}
 
-        self.optimizer_LL = optim.RMSprop(self.LL_NN.parameters(), lr=self.lr)
-        self.optimizer_LC = optim.RMSprop(self.LC_NN.parameters(), lr=self.lr)
-        self.optimizer_CL = optim.RMSprop(self.CL_NN.parameters(), lr=self.lr)
-        self.optimizer_CC = optim.RMSprop(self.CC_NN.parameters(), lr=self.lr)
+        self.optimizer_LL = optim.RMSprop(self.LL_policy_net.parameters(), lr=self.lr)
+        self.optimizer_LC = optim.RMSprop(self.LC_policy_net.parameters(), lr=self.lr)
+        self.optimizer_CL = optim.RMSprop(self.CL_policy_net.parameters(), lr=self.lr)
+        self.optimizer_CC = optim.RMSprop(self.CC_policy_net.parameters(), lr=self.lr)
         self.optimizers = {'LL': self.optimizer_LL, 'LC': self.optimizer_LC,
                            'CL': self.optimizer_CL, 'CC': self.optimizer_CC}
 
@@ -165,54 +166,58 @@ class RL_Agent(object):
         sample = np.random.rand()
 
         if state.longest_type == 'L':
-            q_ll = self.LL_NN(x_tensor)
-            q_lc = self.LC_NN(x_tensor)
-            length_ll = (torch.argmax(q_ll) + 1) * 0.1
-            length_lc = (torch.argmax(q_lc) + 1) * 0.1
+            with torch.no_grad():
+                q_ll = self.LL_policy_net(x_tensor.float())
+                q_lc = self.LC_policy_net(x_tensor.float())
+            length_ll = (torch.argmax(q_ll) + 1) * 1/n_action
+            length_lc = (torch.argmax(q_lc) + 1) * 1/n_action
             primitive_type = 'L' if torch.max(q_ll) > torch.max(q_lc) else 'C'
             primitive_length = length_ll if primitive_type == 'L' else length_lc
             q_value = torch.max(q_ll) if primitive_type == 'L' else torch.max(q_lc)
 
             if sample < epsilon:
                 primitive_type = 'C' if primitive_type == 'L' else 'L'
-                q_value_idx = np.random.randint(1, 11)
+                q_value_idx = np.random.randint(1, n_action+1)
                 q_value = q_ll[q_value_idx-1] if primitive_type == 'L' else q_lc[q_value_idx-1]
-                primitive_length = q_value_idx * 0.1
+                primitive_length = q_value_idx * 1/n_action
 
             action = Action(Type=primitive_type, Length=primitive_length)
             nn_activated = 'L{}'.format(primitive_type)
 
         elif state.longest_type == 'C':
-            q_cl = self.CL_NN(x_tensor)
-            q_cc = self.CC_NN(x_tensor)
-            length_ll = (torch.argmax(q_cl) + 1) * 0.1
-            length_lc = (torch.argmax(q_cc) + 1) * 0.1
+            with torch.no_grad():
+                q_cl = self.CL_policy_net(x_tensor.float())
+                q_cc = self.CC_policy_net(x_tensor.float())
+            length_ll = (torch.argmax(q_cl) + 1) * 1/n_action
+            length_lc = (torch.argmax(q_cc) + 1) * 1/n_action
             primitive_type = 'L' if torch.max(q_cl) > torch.max(q_cc) else 'C'
             primitive_length = length_ll if primitive_type == 'L' else length_lc
             q_value = torch.max(q_cl) if primitive_type == 'L' else torch.max(q_cc)
 
             if sample < epsilon:
                 primitive_type = 'C' if primitive_type == 'L' else 'L'
-                q_value_idx = np.random.randint(1, 11)
+                q_value_idx = np.random.randint(1, n_action+1)
                 q_value = q_cl[q_value_idx - 1] if primitive_type == 'L' else q_cc[q_value_idx - 1]
-                primitive_length = q_value_idx * 0.1
+                primitive_length = q_value_idx * 1/n_action
 
             action = Action(Type=primitive_type, Length=primitive_length)
             nn_activated = 'C{}'.format(primitive_type)
-
+        q_value = torch.reshape(q_value, (1, 1))
         return action, q_value, nn_activated
 
-    def learn(self, q, q_next, reward, nn_activated):
+    # TODO: Add target network, change to Q learning
+    def learn(self, q, q_next, reward, nn_activated, done):
         expected_q_next = q_next * GAMMA + reward
         loss = self.criterion(q, expected_q_next)
+        for optimizer in self.optimizers.values():
+            optimizer.zero_grad()
         optimizer = self.optimizers[nn_activated]
-        optimizer.zero_grad()
         loss.backward()
         optimizer.step()
 
 
 class RL_Env(object):
-    def __init__(self, target_curve, target_curve_normal, target_curve_js, greedy_obj):
+    def __init__(self, target_curve, target_curve_normal, target_curve_js, greedy_obj, n_feature=10, n_action=10):
         self.target_curve = target_curve
         self.target_curve_normal = target_curve_normal
         self.target_curve_js = target_curve_js
@@ -221,7 +226,9 @@ class RL_Env(object):
         self.last_bp = 0
 
         self.primitives = []
-        self.lengths = [(x + 1) * 0.1 for x in range(10)]
+        self.n_feature = n_feature
+        self.n_action = n_action
+        self.lengths = [(x + 1) * 0.1 for x in range(self.n_action)]
 
         self.done = False
         self.i_step = 0
@@ -231,7 +238,7 @@ class RL_Env(object):
     def reset(self, target_curve=None):
         if target_curve is not None:
             self.target_curve = target_curve
-        self.fit_curve = [target_curve[0]]
+        self.fit_curve = [self.target_curve[0]]
         self.last_bp = 0
 
         self.primitives = []
@@ -239,9 +246,9 @@ class RL_Env(object):
         self.done = False
         self.i_step = 0
 
-        remaining_curve = self.target_curve[self.last_bp, :]
+        remaining_curve = self.target_curve[self.last_bp:, :]
         normalized_curve = PCA_normalization(remaining_curve)
-        curve_features = fft_feature(normalized_curve, 10)
+        curve_features, _ = fft_feature(normalized_curve, self.n_feature)
 
         self.longest_primitives, longest_type = greedy_fit_primitive(last_bp=self.last_bp, curve=self.target_curve,
                                                                      p=self.fit_curve[-1])
@@ -263,18 +270,22 @@ class RL_Env(object):
 
         self.longest_primitives, longest_type = greedy_fit_primitive(last_bp=self.last_bp, curve=self.target_curve,
                                                                      p=self.fit_curve[-1])
-        remaining_curve = self.target_curve[self.last_bp, :]
+        remaining_curve = self.target_curve[self.last_bp:, :]
         normalized_curve = PCA_normalization(remaining_curve)
-        curve_features = fft_feature(normalized_curve, 10)
+        curve_features, _ = fft_feature(normalized_curve, self.n_feature)
         state = State(longest_type=longest_type, curve_features=curve_features, lengths=self.lengths)
         done = len(self.fit_curve) >= len(self.target_curve)
         reward = reward_function(i_step, done)
 
         return state, reward, done
 
+    def update_greedy_obj(self):
+        pass
+
 
 def train_rl(agent: RL_Agent, curve_base_data, curve_js_data, n_episode=1000):
-    robot = abb6440()
+    robot = abb6640()
+    print("Train Start")
 
     for i_episode in range(n_episode):
         timer = time.time_ns()
@@ -284,9 +295,7 @@ def train_rl(agent: RL_Agent, curve_base_data, curve_js_data, n_episode=1000):
         episode_reward = 0
 
         random_curve_idx = np.random.randint(0, len(curve_base_data))
-        curve_base = curve_base_data[random_curve_idx]
-        curve_normal = curve_base[:, 3:6]
-        curve_base = curve_base[:, 0:3]
+        curve_base, curve_normal = curve_base_data[random_curve_idx]
         curve_js = curve_js_data[random_curve_idx]
 
         greedy_fit_obj = greedy_fit(robot, curve_base, curve_normal, curve_js, d=50)
@@ -295,21 +304,48 @@ def train_rl(agent: RL_Agent, curve_base_data, curve_js_data, n_episode=1000):
 
         env = RL_Env(target_curve=curve_base, target_curve_normal=curve_normal, target_curve_js=curve_js,
                      greedy_obj=greedy_fit_obj)
+
+        print("Episode Start")
+
         state, done = env.reset()
         action, q_value, nn_activated = agent.get_action(state, epsilon=epsilon)
 
         i_step = 0
         while not done:
             i_step += 1
+            print("Step: {} START".format(i_step))
+            print(state)
             next_state, reward, done = env.step(action, i_step)
             next_action, next_q_value, next_nn_activated = agent.get_action(next_state, epsilon=epsilon)
-            agent.learn(q_value, next_q_value, reward, nn_activated)
+            agent.learn(q_value, next_q_value, reward, nn_activated, done)
             episode_reward += reward
 
             state = next_state
             action = next_action
 
+            if i_step > 5:
+                break
+            print("Step: {} END".format(i_step))
+
         print("Episode {} / {} --- {} Steps --- Reward: {:.3f} --- {:.3f}s Curve {}"
               .format(i_episode + 1, n_episode, i_step, episode_reward,
                       (time.time_ns() - timer) / (10 ** 9), random_curve_idx))
+        break
+
+
+def rl_fit(curve_base_data, curve_js_data):
+    n_feature = 10
+    n_action = 10
+    agent = RL_Agent(n_feature, n_action)
+    train_rl(agent, curve_base_data, curve_js_data)
+
+
+def main():
+    curve_base_data = read_base_data("data/base")
+    curve_js_data = read_js_data("data/js")
+    rl_fit(curve_base_data, curve_js_data)
+
+
+if __name__ == '__main__':
+    main()
 
