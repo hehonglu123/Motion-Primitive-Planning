@@ -1,1 +1,2 @@
-set GAZEBO_MODEL_PATH=%GAZEBO_MODEL_PATH%;C:\Users\hehon\Desktop\robodk\Motion-Primitive-Planning\simulation\gazebo_sim\model
+# set GAZEBO_MODEL_PATH=%GAZEBO_MODEL_PATH%;C:\Users\hehon\Desktop\robodk\Motion-Primitive-Planning\simulation\gazebo_sim\model
+export GAZEBO_MODEL_PATH=/home/eric/Motion-Primitive-Planning/simulation/gazebo_sim\model
