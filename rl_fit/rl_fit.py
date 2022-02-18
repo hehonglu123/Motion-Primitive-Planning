@@ -8,6 +8,7 @@ import time
 from collections import namedtuple
 import torch
 import torch.nn as nn
+import torch.optim as optim
 
 from trajectory_utils import Primitive, BreakPoint, read_data
 from curve_normalization import PCA_normalization, fft_feature
@@ -22,6 +23,7 @@ MAX_GREEDY_STEP = 10
 EPS_START = 0.5
 EPS_END = 0.01
 LEARNING_RATE = 0.01
+GAMMA = 0.99
 
 REWARD_FINISH = 2000  # -------------------------------------- HERE
 REWARD_DECAY_FACTOR = 0.9
@@ -35,6 +37,7 @@ def greedy_data_to_dict(greedy_data: pd.DataFrame):
     return ret_dict
 
 
+# TODO: Change to the latest greedy with backproj
 def greedy_fit_primitive(last_bp, curve, p):
     longest_fits = {'C': None, 'L': None}
 
@@ -118,16 +121,28 @@ class DQN(nn.Module):
 
 class RL_Agent(object):
 
-    def __init__(self, n_curve_feature: int, n_length: int):
+    def __init__(self, n_curve_feature: int, n_length: int, lr: float = LEARNING_RATE):
         self.input_dim = n_curve_feature, n_length
         self.output_dim = n_length
         self._n_curve_feature = n_curve_feature
         self._n_length = n_length
+        self.lr = lr
+        self.gamma = GAMMA
 
         self.LL_NN = DQN(self.input_dim, self.output_dim)
         self.LC_NN = DQN(self.input_dim, self.output_dim)
         self.CL_NN = DQN(self.input_dim, self.output_dim)
         self.CC_NN = DQN(self.input_dim, self.output_dim)
+        self.DQNs = {'LL': self.LL_NN, 'LC': self.LC_NN, 'CL': self.CL_NN, 'CC': self.CC_NN}
+
+        self.optimizer_LL = optim.RMSprop(self.LL_NN.parameters(), lr=self.lr)
+        self.optimizer_LC = optim.RMSprop(self.LC_NN.parameters(), lr=self.lr)
+        self.optimizer_CL = optim.RMSprop(self.CL_NN.parameters(), lr=self.lr)
+        self.optimizer_CC = optim.RMSprop(self.CC_NN.parameters(), lr=self.lr)
+        self.optimizers = {'LL': self.optimizer_LL, 'LC': self.optimizer_LC,
+                           'CL': self.optimizer_CL, 'CC': self.optimizer_CC}
+
+        self.criterion = nn.SmoothL1Loss()
 
     def get_action(self, state: State, epsilon: float = 0.):
         n_action = len(state.lengths)
@@ -137,7 +152,8 @@ class RL_Agent(object):
         x_tensor = torch.hstack((curve_feature_tensor, actions_tensor))
 
         action = Action(Type=None, Length=None)
-
+        q_value = 0
+        nn_activated = ''
         sample = np.random.rand()
 
         if state.longest_type == 'L':
@@ -147,12 +163,16 @@ class RL_Agent(object):
             length_lc = (torch.argmax(q_lc) + 1) * 0.1
             primitive_type = 'L' if torch.max(q_ll) > torch.max(q_lc) else 'C'
             primitive_length = length_ll if primitive_type is 'L' else length_lc
+            q_value = torch.max(q_ll) if primitive_type == 'L' else torch.max(q_lc)
 
             if sample < epsilon:
                 primitive_type = 'C' if primitive_type == 'L' else 'L'
-                primitive_length = np.random.randint(1, 11) * 0.1
+                q_value_idx = np.random.randint(1, 11)
+                q_value = q_ll[q_value_idx-1] if primitive_type == 'L' else q_lc[q_value_idx-1]
+                primitive_length = q_value_idx * 0.1
 
             action = Action(Type=primitive_type, Length=primitive_length)
+            nn_activated = 'L{}'.format(primitive_type)
 
         elif state.longest_type == 'C':
             q_cl = self.CL_NN(x_tensor)
@@ -161,18 +181,26 @@ class RL_Agent(object):
             length_lc = (torch.argmax(q_cc) + 1) * 0.1
             primitive_type = 'L' if torch.max(q_cl) > torch.max(q_cc) else 'C'
             primitive_length = length_ll if primitive_type is 'L' else length_lc
+            q_value = torch.max(q_cl) if primitive_type == 'L' else torch.max(q_cc)
 
             if sample < epsilon:
                 primitive_type = 'C' if primitive_type == 'L' else 'L'
-                primitive_length = np.random.randint(1, 11) * 0.1
+                q_value_idx = np.random.randint(1, 11)
+                q_value = q_cl[q_value_idx - 1] if primitive_type == 'L' else q_cc[q_value_idx - 1]
+                primitive_length = q_value_idx * 0.1
 
             action = Action(Type=primitive_type, Length=primitive_length)
+            nn_activated = 'C{}'.format(primitive_type)
 
-        return action
+        return action, q_value, nn_activated
 
-    # TODO: Learning and Back-propagation
-    def learn(self, q, q_next, reward):
-        pass
+    def learn(self, q, q_next, reward, nn_activated):
+        expected_q_next = q_next * GAMMA + reward
+        loss = self.criterion(q, expected_q_next)
+        optimizer = self.optimizers[nn_activated]
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
 
 
 class RL_Env(object):
@@ -235,22 +263,33 @@ class RL_Env(object):
 
 
 def train_rl(agent: RL_Agent, data, n_episode=1000):
+
     for i_episode in range(n_episode):
+        timer = time.time_ns()
+
         epsilon = EPS_START - i_episode * (EPS_START - EPS_END) / n_episode
 
         episode_reward = 0
-        lr = LEARNING_RATE
 
         random_curve_idx = np.random.randint(0, data)
         curve = data[random_curve_idx]
 
         env = RL_Env(target_curve=curve)
         state, done = env.reset()
-        action = agent.get_action(state, epsilon=epsilon)
+        action, q_value, nn_activated = agent.get_action(state, epsilon=epsilon)
 
         i_step = 0
         while not done:
             i_step += 1
             next_state, reward, done = env.step(action, i_step)
-            next_action = agent.get_action(next_state, epsilon=epsilon)
+            next_action, next_q_value, next_nn_activated = agent.get_action(next_state, epsilon=epsilon)
+            agent.learn(q_value, next_q_value, reward, nn_activated)
+            episode_reward += reward
+
+            state = next_state
+            action = next_action
+
+        print("Episode {} / {} --- {} Steps --- Reward: {:.3f} --- {:.3f}s Curve {}"
+              .format(i_episode + 1, n_episode, i_step, episode_reward,
+                      (time.time_ns() - timer) / (10 ** 9), random_curve_idx))
 
