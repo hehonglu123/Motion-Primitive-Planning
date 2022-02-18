@@ -2,7 +2,7 @@ import numpy as np
 from scipy.fft import fft
 
 from sklearn.decomposition import PCA
-from trajectory_utils import read_curve
+from trajectory_utils import read_base_curve
 
 
 def PCA_normalization(curve):
@@ -24,7 +24,7 @@ def fft_feature(curve, n_feature):
 
 
 def main():
-    curve = read_curve("data/Curve_in_base_frame.csv")
+    curve = read_base_curve("data/Curve_in_base_frame.csv")
     curve_normalized = PCA_normalization(curve)
     curve_fft_features, fft_all = fft_feature(curve_normalized, 5)
     print(curve_fft_features)

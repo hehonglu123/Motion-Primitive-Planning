@@ -1,3 +1,5 @@
+import sys
+
 import numpy as np
 import pandas as pd
 import random
@@ -10,8 +12,14 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 
-from trajectory_utils import Primitive, BreakPoint, read_data
+from trajectory_utils import Primitive, BreakPoint, read_base_data, read_js_data
 from curve_normalization import PCA_normalization, fft_feature
+
+sys.path.append('../greedy_fitting/')
+from greedy_simplified import greedy_fit
+
+sys.path.append('../toolbox')
+from robots_def import *
 
 Curve_Error = namedtuple("Curve_Error", ('primitive', 'max_error'))
 State = namedtuple("State", ("longest_type", "curve_features", "lengths"))
@@ -162,7 +170,7 @@ class RL_Agent(object):
             length_ll = (torch.argmax(q_ll) + 1) * 0.1
             length_lc = (torch.argmax(q_lc) + 1) * 0.1
             primitive_type = 'L' if torch.max(q_ll) > torch.max(q_lc) else 'C'
-            primitive_length = length_ll if primitive_type is 'L' else length_lc
+            primitive_length = length_ll if primitive_type == 'L' else length_lc
             q_value = torch.max(q_ll) if primitive_type == 'L' else torch.max(q_lc)
 
             if sample < epsilon:
@@ -180,7 +188,7 @@ class RL_Agent(object):
             length_ll = (torch.argmax(q_cl) + 1) * 0.1
             length_lc = (torch.argmax(q_cc) + 1) * 0.1
             primitive_type = 'L' if torch.max(q_cl) > torch.max(q_cc) else 'C'
-            primitive_length = length_ll if primitive_type is 'L' else length_lc
+            primitive_length = length_ll if primitive_type == 'L' else length_lc
             q_value = torch.max(q_cl) if primitive_type == 'L' else torch.max(q_cc)
 
             if sample < epsilon:
@@ -204,8 +212,11 @@ class RL_Agent(object):
 
 
 class RL_Env(object):
-    def __init__(self, target_curve):
+    def __init__(self, target_curve, target_curve_normal, target_curve_js, greedy_obj):
         self.target_curve = target_curve
+        self.target_curve_normal = target_curve_normal
+        self.target_curve_js = target_curve_js
+        self.greedy_obj = greedy_obj
         self.fit_curve = [target_curve[0]]
         self.last_bp = 0
 
@@ -262,7 +273,8 @@ class RL_Env(object):
         return state, reward, done
 
 
-def train_rl(agent: RL_Agent, data, n_episode=1000):
+def train_rl(agent: RL_Agent, curve_base_data, curve_js_data, n_episode=1000):
+    robot = abb6440()
 
     for i_episode in range(n_episode):
         timer = time.time_ns()
@@ -271,10 +283,18 @@ def train_rl(agent: RL_Agent, data, n_episode=1000):
 
         episode_reward = 0
 
-        random_curve_idx = np.random.randint(0, data)
-        curve = data[random_curve_idx]
+        random_curve_idx = np.random.randint(0, len(curve_base_data))
+        curve_base = curve_base_data[random_curve_idx]
+        curve_normal = curve_base[:, 3:6]
+        curve_base = curve_base[:, 0:3]
+        curve_js = curve_js_data[random_curve_idx]
 
-        env = RL_Env(target_curve=curve)
+        greedy_fit_obj = greedy_fit(robot, curve_base, curve_normal, curve_js, d=50)
+        greedy_fit_obj.primitives = {'movel_fit':greedy_fit_obj.movel_fit_greedy,
+                                     'movec_fit':greedy_fit_obj.movec_fit_greedy}
+
+        env = RL_Env(target_curve=curve_base, target_curve_normal=curve_normal, target_curve_js=curve_js,
+                     greedy_obj=greedy_fit_obj)
         state, done = env.reset()
         action, q_value, nn_activated = agent.get_action(state, epsilon=epsilon)
 

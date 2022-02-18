@@ -15,19 +15,37 @@ BP_Feature = namedtuple("BP_Feature", ('longest_moveL', 'longest_moveC', 'last_b
 ERROR_THRESHOLD = 1.0
 
 
-def read_curve(file_path):
+def read_base_curve(file_path):
     col_names = ['X', 'Y', 'Z', 'direction_x', 'direction_y', 'direction_z']
     data = pd.read_csv(file_path, names=col_names)
     curve_x = data['X'].tolist()
     curve_y = data['Y'].tolist()
     curve_z = data['Z'].tolist()
+    curve_direction_x = data['direction_x'].tolist()
+    curve_direction_y = data['direction_y'].tolist()
+    curve_direction_z = data['direction_z'].tolist()
     curve = np.vstack((curve_x, curve_y, curve_z)).T
+    curve_normal = np.vstack((curve_direction_x, curve_direction_y, curve_direction_z)).T
 
-    return curve
+    return curve, curve_normal
 
-def read_data(dir_path, max_curves=float('inf')):
+
+def read_js_curve(file_path):
+    col_names = ['q1', 'q2', 'q3', 'q4', 'q5', 'q6']
+    data = pd.read_csv(file_path, names=col_names)
+    curve_q1 = data['q1'].tolist()
+    curve_q2 = data['q2'].tolist()
+    curve_q3 = data['q3'].tolist()
+    curve_q4 = data['q4'].tolist()
+    curve_q5 = data['q5'].tolist()
+    curve_q6 = data['q6'].tolist()
+    curve_js = np.vstack((curve_q1, curve_q2, curve_q3, curve_q4, curve_q5, curve_q6)).T
+
+    return curve_js
+
+
+def read_base_data(dir_path, max_curves=float('inf')):
     all_data = []
-    col_names = ['X', 'Y', 'Z', 'direction_x', 'direction_y', 'direction_z']
     count = 0
 
     for file in os.listdir(dir_path):
@@ -35,11 +53,22 @@ def read_data(dir_path, max_curves=float('inf')):
         if count > max_curves:
             break
         file_path = dir_path + os.sep + file
-        data = pd.read_csv(file_path, names=col_names)
-        curve_x = data['X'].tolist()
-        curve_y = data['Y'].tolist()
-        curve_z = data['Z'].tolist()
-        curve = np.vstack((curve_x, curve_y, curve_z)).T
+        curve, curve_normal = read_base_curve(file_path)
+        all_data.append((curve, curve_normal))
+
+    return all_data
+
+
+def read_js_data(dir_path, max_curves=float('inf')):
+    all_data = []
+    count = 0
+
+    for file in os.listdir(dir_path):
+        count += 1
+        if count > max_curves:
+            break
+        file_path = dir_path + os.sep + file
+        curve = read_js_curve(file_path)
         all_data.append(curve)
 
     return all_data
