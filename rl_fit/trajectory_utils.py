@@ -1,6 +1,8 @@
 import os
 import numpy as np
+import sys
 
+sys.path.append('../circular_fit')
 from toolbox_circular_fit import *
 import pandas as pd
 
@@ -12,6 +14,16 @@ from collections import namedtuple
 BP_Feature = namedtuple("BP_Feature", ('longest_moveL', 'longest_moveC', 'last_bp'))
 ERROR_THRESHOLD = 1.0
 
+
+def read_curve(file_path):
+    col_names = ['X', 'Y', 'Z', 'direction_x', 'direction_y', 'direction_z']
+    data = pd.read_csv(file_path, names=col_names)
+    curve_x = data['X'].tolist()
+    curve_y = data['Y'].tolist()
+    curve_z = data['Z'].tolist()
+    curve = np.vstack((curve_x, curve_y, curve_z)).T
+
+    return curve
 
 def read_data(dir_path, max_curves=float('inf')):
     all_data = []
