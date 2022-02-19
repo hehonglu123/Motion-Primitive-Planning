@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 import os
 import time
 
-from collections import namedtuple
+from collections import namedtuple, deque
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -24,6 +24,7 @@ from robots_def import *
 Curve_Error = namedtuple("Curve_Error", ('primitive', 'max_error'))
 State = namedtuple("State", ("longest_type", "curve_features", "lengths"))
 Action = namedtuple("Action", ("Type", "Length"))
+Memory = namedtuple('Memory', ('state', 'action', 'reward', 'next_state', 'next_action'))
 
 ERROR_THRESHOLD = 1.0
 MAX_GREEDY_STEP = 10
@@ -32,6 +33,7 @@ EPS_START = 0.5
 EPS_END = 0.01
 LEARNING_RATE = 0.01
 GAMMA = 0.99
+BATCH_SIZE = 16
 
 REWARD_FINISH = 2000  # -------------------------------------- HERE
 REWARD_DECAY_FACTOR = 0.9
@@ -95,7 +97,14 @@ def greedy_fit_primitive(last_bp, curve, p):
             search_right_l = search_point_l
             search_point_l = np.floor(np.mean([search_left_l, search_point_l]))
 
-    longest_type = 'L' if longest_fits['L'].primitive >= longest_fits['C'].primitive else 'C'
+    longest_type = 'L'
+    if longest_fits['L'] is None or (longest_fits['C'] is not None and
+                                     longest_fits['C'].primitive > longest_fits['L'].primitive):
+        longest_type = 'C'
+    elif longest_fits['C'] is None or (longest_fits['L'] is not None and
+                                       longest_fits['L'].primitive >= longest_fits['C'].primitive):
+        longest_type = 'L'
+
     return longest_fits, longest_type
 
 
@@ -105,6 +114,20 @@ def reward_function(i_step, done):
         reward += REWARD_FINISH * (REWARD_DECAY_FACTOR ** i_step)
 
     return reward
+
+
+class ReplayMemory(object):
+    def __init__(self, capacity=1000):
+        self.memory = deque([], maxlen=capacity)
+
+    def push(self, memory):
+        self.memory.append(memory)
+
+    def sample(self, batch_size):
+        return random.sample(self.memory, batch_size)
+
+    def __len__(self):
+        return len(self.memory)
 
 
 class DQN(nn.Module):
@@ -136,13 +159,26 @@ class RL_Agent(object):
         self._n_length = n_length
         self.lr = lr
         self.gamma = GAMMA
+        self.memory = ReplayMemory()
+        self.batch_size = BATCH_SIZE
 
         self.LL_policy_net = DQN(self.input_dim, self.output_dim)
         self.LC_policy_net = DQN(self.input_dim, self.output_dim)
         self.CL_policy_net = DQN(self.input_dim, self.output_dim)
         self.CC_policy_net = DQN(self.input_dim, self.output_dim)
-        self.DQNs = {'LL': self.LL_policy_net, 'LC': self.LC_policy_net,
-                     'CL': self.CL_policy_net, 'CC': self.CC_policy_net}
+        self.policy_DQNs = {'LL': self.LL_policy_net, 'LC': self.LC_policy_net,
+                            'CL': self.CL_policy_net, 'CC': self.CC_policy_net}
+
+        self.LL_target_net = DQN(self.input_dim, self.output_dim)
+        self.LL_target_net.load_state_dict(self.LL_policy_net.state_dict())
+        self.LC_target_net = DQN(self.input_dim, self.output_dim)
+        self.LC_target_net.load_state_dict(self.LC_policy_net.state_dict())
+        self.CL_target_net = DQN(self.input_dim, self.output_dim)
+        self.CL_target_net.load_state_dict(self.CL_policy_net.state_dict())
+        self.CC_target_net = DQN(self.input_dim, self.output_dim)
+        self.CC_target_net.load_state_dict(self.CC_policy_net.state_dict())
+        self.target_DQNs = {'LL': self.LL_target_net, 'LC': self.LC_target_net,
+                            'CL': self.CL_target_net, 'CC': self.CC_target_net}
 
         self.optimizer_LL = optim.RMSprop(self.LL_policy_net.parameters(), lr=self.lr)
         self.optimizer_LC = optim.RMSprop(self.LC_policy_net.parameters(), lr=self.lr)
@@ -205,15 +241,54 @@ class RL_Agent(object):
         q_value = torch.reshape(q_value, (1, 1))
         return action, q_value, nn_activated
 
-    # TODO: Add target network, change to Q learning
-    def learn(self, q, q_next, reward, nn_activated, done):
-        expected_q_next = q_next * GAMMA + reward
-        loss = self.criterion(q, expected_q_next)
-        for optimizer in self.optimizers.values():
+    def memory_save(self, state, action, reward, next_state, next_action):
+        memory = Memory(state=state, action=action, reward=reward, next_state=next_state, next_action=next_action)
+        self.memory.push(memory)
+
+    def learn(self):
+        if len(self.memory) < self.batch_size:
+            return
+        memory_batch = self.memory.sample(self.batch_size)
+
+        for memory in memory_batch:
+            state = memory.state
+            action = memory.action
+            reward = memory.reward
+            next_state = memory.next_state
+            next_action = memory.next_action
+
+            nn_activated = '{}{}'.format(state.longest_type, action.Type)
+            n_action = len(state.lengths)
+            actions_tensor = torch.reshape(torch.tensor(state.lengths), (n_action, 1))
+            curve_feature_tensor = torch.tensor(state.curve_features)
+            curve_feature_tensor = curve_feature_tensor.repeat(n_action, 1)
+            x_tensor = torch.hstack((curve_feature_tensor, actions_tensor))
+            q_values = self.policy_DQNs[nn_activated](x_tensor.float())
+            q_value = q_values[int(np.floor(action.Length * n_action)) - 1]
+            q_value = q_value.reshape(1)
+
+            next_nn_activated = '{}{}'.format(next_state.longest_type, next_action.Type)
+            n_action = len(next_state.lengths)
+            next_actions_tensor = torch.reshape(torch.tensor(next_state.lengths), (n_action, 1))
+            next_curve_feature_tensor = torch.tensor(next_state.curve_features)
+            next_curve_feature_tensor = next_curve_feature_tensor.repeat(n_action, 1)
+            next_x_tensor = torch.hstack((next_curve_feature_tensor, next_actions_tensor))
+            q_next = self.target_DQNs[next_nn_activated](next_x_tensor.float())
+            q_next = q_next[int(np.floor(next_action.Length * n_action)) - 1]
+            q_next = q_next.reshape(1)
+
+            expected_q = q_next * self.gamma + reward
+            optimizer = self.optimizers[nn_activated]
             optimizer.zero_grad()
-        optimizer = self.optimizers[nn_activated]
-        loss.backward()
-        optimizer.step()
+            loss = self.criterion(q_value, expected_q)
+            loss.backward()
+            optimizer.step()
+
+    def update_target_nets(self):
+        self.LL_target_net.load_state_dict(self.LL_policy_net.state_dict())
+        self.LC_target_net.load_state_dict(self.LC_policy_net.state_dict())
+        self.CL_target_net.load_state_dict(self.CL_policy_net.state_dict())
+        self.CC_target_net.load_state_dict(self.CC_policy_net.state_dict())
 
 
 class RL_Env(object):
@@ -313,23 +388,24 @@ def train_rl(agent: RL_Agent, curve_base_data, curve_js_data, n_episode=1000):
         i_step = 0
         while not done:
             i_step += 1
-            print("Step: {} START".format(i_step))
-            print(state)
+            print("{}/{}".format(len(env.fit_curve), len(env.target_curve)))
+
             next_state, reward, done = env.step(action, i_step)
             next_action, next_q_value, next_nn_activated = agent.get_action(next_state, epsilon=epsilon)
-            agent.learn(q_value, next_q_value, reward, nn_activated, done)
+
+            agent.memory_save(state=state, action=action, reward=reward, next_state=next_state, next_action=next_action)
+            agent.learn()
             episode_reward += reward
 
             state = next_state
             action = next_action
 
-            if i_step > 5:
-                break
-            print("Step: {} END".format(i_step))
+            print("Step: {} END {}".format(i_step, reward))
 
         print("Episode {} / {} --- {} Steps --- Reward: {:.3f} --- {:.3f}s Curve {}"
               .format(i_episode + 1, n_episode, i_step, episode_reward,
                       (time.time_ns() - timer) / (10 ** 9), random_curve_idx))
+        agent.update_target_nets()
         break
 
 
