@@ -63,7 +63,7 @@ def greedy_fit_primitive(last_bp, curve, p):
         # moveC
         left_bp = BreakPoint(idx=last_bp)
         right_bp = BreakPoint(idx=search_point_c)
-        target_curve = curve[last_bp:int(search_point_c) + 1]
+        target_curve = curve[last_bp:max(last_bp+1, int(search_point_c) + 1)]
         # print(len(target_curve), last_bp, search_point_c)
 
         if len(target_curve) >= 2:
@@ -83,7 +83,7 @@ def greedy_fit_primitive(last_bp, curve, p):
         # moveL
         left_bp = BreakPoint(idx=last_bp)
         right_bp = BreakPoint(idx=search_point_l)
-        target_curve = curve[last_bp:int(search_point_l) + 1]
+        target_curve = curve[last_bp:max(last_bp+1, int(search_point_l) + 1)]
 
         primitive_l = Primitive(start=left_bp, end=right_bp, move_type='L')
         curve_fit, max_error = primitive_l.curve_fit(target_curve)
@@ -189,7 +189,7 @@ class RL_Agent(object):
 
         self.criterion = nn.SmoothL1Loss()
 
-    def get_action(self, state: State, epsilon: float = 0.):
+    def get_action(self, state: State, epsilon: float = 0., valid_types: dict = None):
         n_action = len(state.lengths)
         actions_tensor = torch.reshape(torch.tensor(state.lengths), (n_action, 1))
         curve_feature_tensor = torch.tensor(state.curve_features)
@@ -207,12 +207,12 @@ class RL_Agent(object):
                 q_lc = self.LC_policy_net(x_tensor.float())
             length_ll = (torch.argmax(q_ll) + 1) * 1/n_action
             length_lc = (torch.argmax(q_lc) + 1) * 1/n_action
-            primitive_type = 'L' if torch.max(q_ll) > torch.max(q_lc) else 'C'
+            primitive_type = 'L' if torch.max(q_ll) >= torch.max(q_lc) or not valid_types['C'] else 'C'
             primitive_length = length_ll if primitive_type == 'L' else length_lc
             q_value = torch.max(q_ll) if primitive_type == 'L' else torch.max(q_lc)
 
             if sample < epsilon:
-                primitive_type = 'C' if primitive_type == 'L' else 'L'
+                primitive_type = 'C' if primitive_type == 'L' and valid_types['C'] else 'L'
                 q_value_idx = np.random.randint(1, n_action+1)
                 q_value = q_ll[q_value_idx-1] if primitive_type == 'L' else q_lc[q_value_idx-1]
                 primitive_length = q_value_idx * 1/n_action
@@ -226,12 +226,12 @@ class RL_Agent(object):
                 q_cc = self.CC_policy_net(x_tensor.float())
             length_ll = (torch.argmax(q_cl) + 1) * 1/n_action
             length_lc = (torch.argmax(q_cc) + 1) * 1/n_action
-            primitive_type = 'L' if torch.max(q_cl) > torch.max(q_cc) else 'C'
+            primitive_type = 'L' if torch.max(q_cl) >= torch.max(q_cc) or not valid_types['C'] else 'C'
             primitive_length = length_ll if primitive_type == 'L' else length_lc
             q_value = torch.max(q_cl) if primitive_type == 'L' else torch.max(q_cc)
 
             if sample < epsilon:
-                primitive_type = 'C' if primitive_type == 'L' else 'L'
+                primitive_type = 'C' if primitive_type == 'L' and valid_types['C'] else 'L'
                 q_value_idx = np.random.randint(1, n_action+1)
                 q_value = q_cl[q_value_idx - 1] if primitive_type == 'L' else q_cc[q_value_idx - 1]
                 primitive_length = q_value_idx * 1/n_action
@@ -267,17 +267,21 @@ class RL_Agent(object):
             q_value = q_values[int(np.floor(action.Length * n_action)) - 1]
             q_value = q_value.reshape(1)
 
-            next_nn_activated = '{}{}'.format(next_state.longest_type, next_action.Type)
-            n_action = len(next_state.lengths)
-            next_actions_tensor = torch.reshape(torch.tensor(next_state.lengths), (n_action, 1))
-            next_curve_feature_tensor = torch.tensor(next_state.curve_features)
-            next_curve_feature_tensor = next_curve_feature_tensor.repeat(n_action, 1)
-            next_x_tensor = torch.hstack((next_curve_feature_tensor, next_actions_tensor))
-            q_next = self.target_DQNs[next_nn_activated](next_x_tensor.float())
-            q_next = q_next[int(np.floor(next_action.Length * n_action)) - 1]
-            q_next = q_next.reshape(1)
+            q_next = 0.
+            if next_state is not None:
+                next_nn_activated = '{}{}'.format(next_state.longest_type, next_action.Type)
+                n_action = len(next_state.lengths)
+                next_actions_tensor = torch.reshape(torch.tensor(next_state.lengths), (n_action, 1))
+                next_curve_feature_tensor = torch.tensor(next_state.curve_features)
+                next_curve_feature_tensor = next_curve_feature_tensor.repeat(n_action, 1)
+                next_x_tensor = torch.hstack((next_curve_feature_tensor, next_actions_tensor))
+                q_next = self.target_DQNs[next_nn_activated](next_x_tensor.float())
+                q_next = q_next[int(np.floor(next_action.Length * n_action)) - 1]
+                q_next = q_next.reshape(1)
 
             expected_q = q_next * self.gamma + reward
+            if type(expected_q) is float:
+                expected_q = torch.tensor(expected_q).reshape(1)
             optimizer = self.optimizers[nn_activated]
             optimizer.zero_grad()
             loss = self.criterion(q_value, expected_q)
@@ -327,10 +331,11 @@ class RL_Env(object):
 
         self.longest_primitives, longest_type = greedy_fit_primitive(last_bp=self.last_bp, curve=self.target_curve,
                                                                      p=self.fit_curve[-1])
-
+        valid_types = {"L": self.longest_primitives['L'] is not None,
+                       "C": self.longest_primitives['C'] is not None}
         state = State(longest_type=longest_type, curve_features=curve_features, lengths=self.lengths)
         done = False
-        return state, done
+        return state, done, valid_types
 
     def step(self, action: Action, i_step: int):
         self.i_step = i_step
@@ -340,19 +345,25 @@ class RL_Env(object):
         primitive_end_index = int(np.ceil(len(next_primitive) * primitive_length))
         new_curve = next_primitive[0:primitive_end_index]
 
-        self.fit_curve = np.concatenate([self.fit_curve, new_curve], axis=0)
+        self.fit_curve = np.concatenate([self.fit_curve, new_curve[1:, :]], axis=0)
         self.last_bp = len(self.fit_curve)-1
+        done = len(self.fit_curve) >= len(self.target_curve)
+        reward = reward_function(i_step, done)
+        if done:
+            return None, reward, done, None
 
         self.longest_primitives, longest_type = greedy_fit_primitive(last_bp=self.last_bp, curve=self.target_curve,
                                                                      p=self.fit_curve[-1])
+        valid_types = {"L": self.longest_primitives['L'] is not None,
+                       "C": self.longest_primitives['C'] is not None}
         remaining_curve = self.target_curve[self.last_bp:, :]
         normalized_curve = PCA_normalization(remaining_curve)
         curve_features, _ = fft_feature(normalized_curve, self.n_feature)
         state = State(longest_type=longest_type, curve_features=curve_features, lengths=self.lengths)
-        done = len(self.fit_curve) >= len(self.target_curve)
-        reward = reward_function(i_step, done)
+        # done = len(self.fit_curve) >= len(self.target_curve)
+        # reward = reward_function(i_step, done)
 
-        return state, reward, done
+        return state, reward, done, valid_types
 
     def update_greedy_obj(self):
         pass
@@ -382,16 +393,20 @@ def train_rl(agent: RL_Agent, curve_base_data, curve_js_data, n_episode=1000):
 
         print("Episode Start")
 
-        state, done = env.reset()
-        action, q_value, nn_activated = agent.get_action(state, epsilon=epsilon)
+        state, done, valid_actions = env.reset()
+        action, q_value, nn_activated = agent.get_action(state, epsilon=epsilon, valid_types=valid_actions)
 
         i_step = 0
         while not done:
             i_step += 1
             print("{}/{}".format(len(env.fit_curve), len(env.target_curve)))
+            print("Action:", action, valid_actions)
 
-            next_state, reward, done = env.step(action, i_step)
-            next_action, next_q_value, next_nn_activated = agent.get_action(next_state, epsilon=epsilon)
+            next_state, reward, done, valid_actions = env.step(action, i_step)
+            next_action = None
+            if not done:
+                next_action, next_q_value, next_nn_activated = agent.get_action(next_state, epsilon=epsilon,
+                                                                                valid_types=valid_actions)
 
             agent.memory_save(state=state, action=action, reward=reward, next_state=next_state, next_action=next_action)
             agent.learn()
