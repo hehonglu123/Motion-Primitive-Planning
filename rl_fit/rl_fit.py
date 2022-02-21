@@ -39,7 +39,7 @@ REWARD_FINISH = 2000  # -------------------------------------- HERE
 REWARD_DECAY_FACTOR = 0.9
 REWARD_STEP = -10
 
-SAVE_MODEL = 1
+SAVE_MODEL = 10
 
 def greedy_data_to_dict(greedy_data: pd.DataFrame):
     ret_dict = dict()
@@ -285,7 +285,7 @@ class RL_Agent(object):
                 expected_q = torch.tensor(expected_q).reshape(1)
             optimizer = self.optimizers[nn_activated]
             optimizer.zero_grad()
-            loss = self.criterion(q_value, expected_q)
+            loss = -self.criterion(q_value, expected_q)
             loss.backward()
             optimizer.step()
 
@@ -382,6 +382,7 @@ def train_rl(agent: RL_Agent, curve_base_data, curve_js_data, n_episode=1000):
 
     episode_rewards = []
     episode_steps = []
+    episode_target_curve = []
 
     for i_episode in range(n_episode):
         timer = time.time_ns()
@@ -433,10 +434,11 @@ def train_rl(agent: RL_Agent, curve_base_data, curve_js_data, n_episode=1000):
         agent.update_target_nets()
         episode_rewards.append(episode_reward)
         episode_steps.append(i_step)
+        episode_target_curve.append(random_curve_idx)
 
         if (i_episode + 1) % SAVE_MODEL == 0:
             print("=== Saving Model ===")
-            save_data(episode_rewards, episode_steps)
+            save_data(episode_rewards, episode_steps, episode_target_curve)
             agent.save_model('model')
             print("DQNs saved at '{}'".format('model/'))
             print("======")
@@ -444,10 +446,11 @@ def train_rl(agent: RL_Agent, curve_base_data, curve_js_data, n_episode=1000):
     return episode_rewards, episode_steps
 
 
-def save_data(episode_rewards, episode_steps):
+def save_data(episode_rewards, episode_steps, episode_target_curve):
     df = pd.DataFrame({"episode_rewards": episode_rewards,
-                       "episode_steps": episode_steps})
-    df.to_csv()
+                       "episode_steps": episode_steps,
+                       "curve": episode_target_curve})
+    df.to_csv("Training Curve Data.csv")
 
 
 def rl_fit(curve_base_data, curve_js_data):
