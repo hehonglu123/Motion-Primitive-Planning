@@ -74,6 +74,17 @@ def read_js_data(dir_path, max_curves=float('inf')):
     return all_data
 
 
+def running_reward(episode_rewards, n=100):
+    reward = []
+    for i, episode_reward in enumerate(episode_rewards):
+        if i < n:
+            r = np.mean(episode_rewards[:i])
+        else:
+            r = np.mean(episode_rewards[i-n:i])
+        reward.append(r)
+    return reward
+
+
 class Primitive(object):
     id_counter = 0
 

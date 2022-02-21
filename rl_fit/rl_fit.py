@@ -41,6 +41,7 @@ REWARD_STEP = -10
 
 SAVE_MODEL = 10
 
+
 def greedy_data_to_dict(greedy_data: pd.DataFrame):
     ret_dict = dict()
     for index, row in greedy_data.iterrows():
