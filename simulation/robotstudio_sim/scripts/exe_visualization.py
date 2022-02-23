@@ -17,17 +17,17 @@ def main():
 	curve_z=data['Z'].tolist()
 	curve=np.vstack((curve_x, curve_y, curve_z)).T
 
+	data_dir="fitting_output/slope_blend/"
 	col_names=['X', 'Y', 'Z','direction_x', 'direction_y', 'direction_z'] 
-	data = read_csv("fitting_output/slope_blend/curve_fit_backproj.csv")
+	data = read_csv(data_dir+"curve_fit_backproj.csv")
 	curve_x=data['x'].tolist()
 	curve_y=data['y'].tolist()
 	curve_z=data['z'].tolist()
 	curve_fit=np.vstack((curve_x, curve_y, curve_z)).T
-	curve=curve[::100]
-	curve_fit=curve_fit[::100]
+
 	###read in points backprojected
 	col_names=['timestamp', 'cmd_num', 'J1', 'J2','J3', 'J4', 'J5', 'J6'] 
-	data = read_csv("fitting_output/slope_blend/curve_exe_v50_z10.csv",names=col_names)
+	data = read_csv(data_dir+"curve_exe_v50_fine.csv",names=col_names)
 	q1=data['J1'].tolist()[1:]
 	q2=data['J2'].tolist()[1:]
 	q3=data['J3'].tolist()[1:]
@@ -36,9 +36,19 @@ def main():
 	q6=data['J6'].tolist()[1:]
 	
 	cmd_num=np.array(data['cmd_num'].tolist()[1:]).astype(float)
-	start_idx=np.where(cmd_num==2)[0][0]
+	start_idx=np.where(cmd_num==3)[0][0]
 	timestamp=np.array(data['timestamp'].tolist()[1:]).astype(float)[start_idx:]
 	curve_exe_js=np.vstack((q1,q2,q3,q4,q5,q6)).T.astype(float)[start_idx:]
+
+	data = read_csv(data_dir+"command_backproj.csv")
+	breakpoints=np.array(data['breakpoints'].tolist())
+	primitives=data['primitives'].tolist()
+	points=data['points'].tolist()
+	####only every 100 points
+	steps=10
+	curve=curve[::steps]
+	curve_fit=curve_fit[::steps]
+	breakpoints=breakpoints/steps
 
 	curve_exe=[]
 	curve_exe_R=[]
@@ -63,6 +73,7 @@ def main():
 	curve_exe_2d_vis = rodrigues_rot(curve_exe-curve_mean, normal, [0,0,1])[:,:2]
 	plt.plot(curve_2d_vis[:,0],curve_2d_vis[:,1])
 	plt.plot(curve_fit_2d_vis[:,0],curve_fit_2d_vis[:,1])
+	plt.scatter(curve_fit_2d_vis[breakpoints.astype(int),0],curve_fit_2d_vis[breakpoints.astype(int),1])
 	plt.plot(curve_exe_2d_vis[:,0],curve_exe_2d_vis[:,1])
 	plt.legend(['original curve','curve fit','curve execution'])
 

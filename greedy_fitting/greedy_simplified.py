@@ -308,7 +308,7 @@ class greedy_fit(fitting_toolbox):
 		points_new=[points[0]]
 		steps=150
 		for i in range(len(slope_diff)):
-			if slope_diff[i] > np.radians(30) or slope_diff_ori[i] > np.radians(30):
+			if slope_diff[i] > np.radians(0) or slope_diff_ori[i] > np.radians(0):
 				
 				# curve_fit,curve_fit_circle=circle_fit(self.curve_backproj[self.breakpoints[i+1]-steps:min(self.breakpoints[i+1]+steps,len(self.curve_fit))],self.curve_fit[self.breakpoints[i+1]-steps],self.curve_fit[min(self.breakpoints[i+1]+steps-1,len(self.curve_fit)-1)])
 				
@@ -372,9 +372,9 @@ class greedy_fit(fitting_toolbox):
 		print("new slope diff: ",np.degrees(slope_diff))
 		print("new ori diff: ",np.degrees(slope_diff_ori))
 
-		max_error1=np.max(np.linalg.norm(self.curve_backproj[:-1]-self.curve_fit,axis=1))
+		max_error1=np.max(np.linalg.norm(self.curve_backproj-self.curve_fit,axis=1))
 		curve_proj=self.project(self.curve_fit,self.curve_fit_R)
-		max_error2=np.max(np.linalg.norm(self.curve[:-1]-curve_proj,axis=1))
+		max_error2=np.max(np.linalg.norm(self.curve-curve_proj,axis=1))
 		max_error=(max_error1+max_error2)/2
 		# print('new final error: ',max_error)
 		print(len(new_breakpoints),len(primitives_choices_new),len(points_new))
@@ -589,4 +589,4 @@ def main3():
 	df.to_csv('curve_fit_js.csv',header=False,index=False)
 
 if __name__ == "__main__":
-	main()
+	main2()

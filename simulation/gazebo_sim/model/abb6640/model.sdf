@@ -279,6 +279,39 @@
       </visual>
     </link>
 
+    <!-- <link name='generic_fan_blade'>
+      <pose>1.674 -0.3 2.236 -1.0472 0 1.57</pose>
+      <inertial>
+        <pose>0 0 0 0 0 0</pose>
+        <mass>0.137</mass>
+        <inertia>
+          <ixx>0.001</ixx>
+          <ixy>0</ixy>
+          <ixz>0</ixz>
+          <iyy>0.001</iyy>
+          <iyz>0</iyz>
+          <izz>0.001</izz>
+        </inertia>
+      </inertial>
+      <self_collide>0</self_collide>
+      <enable_wind>0</enable_wind>
+      <kinematic>0</kinematic>
+      <visual name='generic_fan_blade_visual'>
+        <pose>0 0 0 0 -0 0</pose>
+        <geometry>
+          <mesh>
+            <scale>0.001 0.001 0.001</scale>
+            <uri>model://abb6650s2/meshes/visual/generic_fan_blade.stl</uri>
+          </mesh>
+        </geometry>
+        <material>
+          <shader type='pixel'/>
+        </material>
+        <transparency>0</transparency>
+        <cast_shadows>1</cast_shadows>
+      </visual>
+    </link> -->
+
     
     <joint name='joint_1' type='revolute'>
       <parent>base_link</parent>
@@ -476,6 +509,10 @@
       <parent>link_6</parent>
       <child>paint_gun</child>
     </joint>
+ <!--    <joint name='eef_joint2' type='fixed'>
+      <parent>link_6</parent>
+      <child>generic_fan_blade</child>
+    </joint> -->
 
     <joint name='fix to ground' type='fixed'>
       <parent>world</parent>

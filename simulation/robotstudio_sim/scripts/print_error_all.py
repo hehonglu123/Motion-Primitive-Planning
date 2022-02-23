@@ -27,7 +27,7 @@ robot=abb6640()
 d=50
 
 
-data_dir="fitting_output/slope_blend/"
+data_dir="fitting_output/threshold1/"
 speed={"v50":v50,"v500":v500,"v5000":v5000}
 zone={"fine":fine,"z1":z1,"z10":z10}
 max_error1={}
@@ -49,7 +49,7 @@ for s in speed:
 		q6=data['J6'].tolist()[1:]
 		
 		cmd_num=np.array(data['cmd_num'].tolist()[1:]).astype(float)
-		start_idx=np.where(cmd_num==2)[0][0]
+		start_idx=np.where(cmd_num==3)[0][0]
 		timestamp=np.array(data['timestamp'].tolist()[1:]).astype(float)[start_idx:]
 		curve_exe_js=np.vstack((q1,q2,q3,q4,q5,q6)).T.astype(float)[start_idx:]
 
@@ -67,13 +67,15 @@ for s in speed:
 				pass
 
 		curve_exe_R=np.array(curve_exe_R)
-		max_error1[z,s],idx=calc_max_error(curve_exe,curve_backproj)
+		max_error1[z,s],idx1=calc_max_error(curve_exe,curve_backproj)
 		curve_exe_proj=curve_exe+d*curve_exe_R[:,:,-1]
-		max_error2[z,s],idx=calc_max_error(curve_exe_proj,curve)
+		max_error2[z,s],idx2=calc_max_error(curve_exe_proj,curve)
+		print(idx1,idx2)
 
+		act_speed=np.array(act_speed)
 		total_time[z,s]=timestamp[-1]-timestamp[0]
-		min_speed[z,s]=min(act_speed)
-		max_speed[z,s]=max(act_speed)
+		min_speed[z,s]=np.min(act_speed[np.nonzero(act_speed)])
+		max_speed[z,s]=np.max(act_speed)
 
 table_names={"max_error1":max_error1,"max_error2":max_error2,"total_time":total_time,"max_speed":max_speed,"min_speed":min_speed}
 

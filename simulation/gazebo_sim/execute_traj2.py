@@ -41,32 +41,37 @@ def main():
     ###normalize lam, 
     lam=np.array(lam)/lam[-1]
 
-    robot1 = RRN.ConnectService('rr+tcp://localhost:12222?service=robot')
+    robot1="abb6640"
+    robot2="abb1200"
+    url={robot1:'rr+tcp://localhost:12222?service=robot',robot2:'rr+tcp://localhost:23333?service=robot'}
+    filename={robot1:'arm1.csv',robot2:'arm2.csv'}
 
-    robot_const = RRN.GetConstants("com.robotraconteur.robotics.robot", robot1)
+    robot1_obj = RRN.ConnectService(url[robot1])
 
-    joint_names = [j.joint_identifier.name for j in robot1.robot_info.joint_info]
+    robot_const = RRN.GetConstants("com.robotraconteur.robotics.robot", robot1_obj)
+
+    joint_names = [j.joint_identifier.name for j in robot1_obj.robot_info.joint_info]
 
     halt_mode = robot_const["RobotCommandMode"]["halt"]
     trajectory_mode = robot_const["RobotCommandMode"]["trajectory"]
     jog_mode = robot_const["RobotCommandMode"]["jog"]
 
-    JointTrajectoryWaypoint = RRN.GetStructureType("com.robotraconteur.robotics.trajectory.JointTrajectoryWaypoint",robot1)
-    JointTrajectory = RRN.GetStructureType("com.robotraconteur.robotics.trajectory.JointTrajectory",robot1)
+    JointTrajectoryWaypoint = RRN.GetStructureType("com.robotraconteur.robotics.trajectory.JointTrajectoryWaypoint",robot1_obj)
+    JointTrajectory = RRN.GetStructureType("com.robotraconteur.robotics.trajectory.JointTrajectory",robot1_obj)
 
     ###jog to start pose first
-    robot1.command_mode = halt_mode
+    robot1_obj.command_mode = halt_mode
     time.sleep(0.1)
-    robot1.command_mode =jog_mode
-    robot1.jog_freespace(curve_js1[0], np.ones(6), True)
+    robot1_obj.command_mode =jog_mode
+    robot1_obj.jog_freespace(curve_js1[0], np.ones(6), True)
 
     ###switch to traj mode
-    robot1.command_mode = halt_mode
+    robot1_obj.command_mode = halt_mode
     time.sleep(0.1)
-    robot1.command_mode = trajectory_mode
+    robot1_obj.command_mode = trajectory_mode
 
 
-    state_w1 = robot1.robot_state.Connect()
+    state_w1 = robot1_obj.robot_state.Connect()
 
     state_w1.WaitInValueValid()
 
@@ -77,7 +82,7 @@ def main():
     for i in range(len(curve_js1)):
         wp = JointTrajectoryWaypoint()
         wp.joint_position = curve_js1[i]
-        wp.time_from_start = 2*lam[i]
+        wp.time_from_start = 5*lam[i]
         waypoints.append(wp)
 
 
@@ -85,37 +90,37 @@ def main():
     traj1.joint_names = joint_names
     traj1.waypoints = waypoints
 
-    robot1.speed_ratio = 1
+    robot1_obj.speed_ratio = 1
 
-    traj1_gen = robot1.execute_trajectory(traj1)
+    traj1_gen = robot1_obj.execute_trajectory(traj1)
 
     ########################################################################
-    robot2 = RRN.ConnectService('rr+tcp://localhost:23333?service=robot')
+    robot2_obj = RRN.ConnectService(url[robot2])
 
-    robot_const = RRN.GetConstants("com.robotraconteur.robotics.robot", robot2)
+    robot_const = RRN.GetConstants("com.robotraconteur.robotics.robot", robot2_obj)
 
-    joint_names = [j.joint_identifier.name for j in robot2.robot_info.joint_info]
+    joint_names = [j.joint_identifier.name for j in robot2_obj.robot_info.joint_info]
 
     halt_mode = robot_const["RobotCommandMode"]["halt"]
     trajectory_mode = robot_const["RobotCommandMode"]["trajectory"]
     jog_mode = robot_const["RobotCommandMode"]["jog"]
 
-    JointTrajectoryWaypoint = RRN.GetStructureType("com.robotraconteur.robotics.trajectory.JointTrajectoryWaypoint",robot2)
-    JointTrajectory = RRN.GetStructureType("com.robotraconteur.robotics.trajectory.JointTrajectory",robot2)
+    JointTrajectoryWaypoint = RRN.GetStructureType("com.robotraconteur.robotics.trajectory.JointTrajectoryWaypoint",robot2_obj)
+    JointTrajectory = RRN.GetStructureType("com.robotraconteur.robotics.trajectory.JointTrajectory",robot2_obj)
 
     ###jog to start pose first
-    robot2.command_mode = halt_mode
+    robot2_obj.command_mode = halt_mode
     time.sleep(0.1)
-    robot2.command_mode =jog_mode
-    robot2.jog_freespace(curve_js2[0], np.ones(6), True)
+    robot2_obj.command_mode =jog_mode
+    robot2_obj.jog_freespace(curve_js2[0], np.ones(6), True)
 
     ###switch to traj mode
-    robot2.command_mode = halt_mode
+    robot2_obj.command_mode = halt_mode
     time.sleep(0.1)
-    robot2.command_mode = trajectory_mode
+    robot2_obj.command_mode = trajectory_mode
 
 
-    state_w2 = robot2.robot_state.Connect()
+    state_w2 = robot2_obj.robot_state.Connect()
 
     state_w2.WaitInValueValid()
 
@@ -126,7 +131,7 @@ def main():
     for i in range(len(curve_js2)):
         wp = JointTrajectoryWaypoint()
         wp.joint_position = curve_js2[i]
-        wp.time_from_start = 2*lam[i]
+        wp.time_from_start = 5*lam[i]
         waypoints.append(wp)
 
 
@@ -134,9 +139,9 @@ def main():
     traj2.joint_names = joint_names
     traj2.waypoints = waypoints
 
-    robot2.speed_ratio = 1
+    robot2_obj.speed_ratio = 1
 
-    traj2_gen = robot2.execute_trajectory(traj2)
+    traj2_gen = robot2_obj.execute_trajectory(traj2)
 
 
     while (True):
