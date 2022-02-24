@@ -17,7 +17,7 @@ def main():
 	curve_z=data['Z'].tolist()
 	curve=np.vstack((curve_x, curve_y, curve_z)).T
 
-	data_dir="fitting_output/slope_blend/"
+	data_dir="fitting_output/movej/"
 	col_names=['X', 'Y', 'Z','direction_x', 'direction_y', 'direction_z'] 
 	data = read_csv(data_dir+"curve_fit_backproj.csv")
 	curve_x=data['x'].tolist()

@@ -134,7 +134,7 @@ def exe_from_file(ms,filename,filename_js,speed,zone):
 
 def main():
     ms = MotionSend()
-    data_dir="fitting_output/threshold1/"
+    data_dir="fitting_output/movej/"
     speed={"v50":v50,"v500":v500,"v5000":v5000}
     zone={"fine":fine,"z1":z1,"z10":z10}
 

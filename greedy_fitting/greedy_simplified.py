@@ -229,14 +229,15 @@ class greedy_fit(fitting_toolbox):
 								points.append([curve_fit_js[-1]])
 							break
 					if not primitives_added:
+						curve_fit,curve_fit_R,curve_fit_js,max_error=self.primitives['movej_fit'](self.curve[self.breakpoints[-1]:self.breakpoints[-1]+next_point],self.curve_backproj[self.breakpoints[-1]:self.breakpoints[-1]+next_point],self.curve_backproj_js[self.breakpoints[-1]:self.breakpoints[-1]+next_point],self.curve_R[self.breakpoints[-1]:self.breakpoints[-1]+next_point])
 						print('primitive skipped1')
-						primitives_choices.append('movel_fit')
-						points.append([curve_fit[-1]])
+						primitives_choices.append('movej_fit')
+						points.append([curve_fit_js[-1]])
 	
 					break
 
 				###find the closest but under max_threshold
-				if (min(list(max_errors.values()))<=max_error_threshold and np.abs(next_point-prev_point)<10) or next_point==len(self.curve)-self.breakpoints[-1]:
+				if (min(list(max_errors.values()))<=max_error_threshold and np.abs(next_point-prev_point)<10):
 					primitives_added=False
 					for key in self.primitives: 
 						curve_fit,curve_fit_R,curve_fit_js,max_error=self.primitives[key](self.curve[self.breakpoints[-1]:self.breakpoints[-1]+next_point],self.curve_backproj[self.breakpoints[-1]:self.breakpoints[-1]+next_point],self.curve_backproj_js[self.breakpoints[-1]:self.breakpoints[-1]+next_point],self.curve_R[self.breakpoints[-1]:self.breakpoints[-1]+next_point])
@@ -591,4 +592,4 @@ def main3():
 	df.to_csv('curve_fit_js.csv',header=False,index=False)
 
 if __name__ == "__main__":
-	main2()
+	main()

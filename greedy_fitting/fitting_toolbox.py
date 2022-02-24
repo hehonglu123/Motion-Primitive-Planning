@@ -234,7 +234,7 @@ class fitting_toolbox(object):
 		return curve_fit,curve_fit_R,curve_fit_js,max_error
 
 
-	def movej_fit(self,curve,curve_backproj,curve_backproj_js,curve_R,q_constraint=[]):
+	def movej_fit(self,curve,curve_backproj,curve_backproj_js,curve_R,q_constraint=[],slope_constraint=[]):
 		###no constraint
 		if len(q_constraint)==0:
 			A=np.vstack((np.ones(len(curve_backproj_js)),np.arange(0,len(curve_backproj_js)))).T
@@ -253,9 +253,8 @@ class fitting_toolbox(object):
 				slope=self.curve_fit_js*np.linalg.norm(curve_backproj_js[-1]-curve_backproj_js[0])/len(curve_backproj_js)
 				slope=slope.reshape(1,-1)
 			else:
-				
 				A=np.arange(0,len(curve_backproj_js)).reshape(-1,1)
-				b=curve_backproj_js-curve_backproj_js[0]
+				b=curve_backproj_js-start_point
 				res=np.linalg.lstsq(A,b,rcond=None)[0]
 				slope=res.reshape(1,-1)
 
