@@ -61,7 +61,7 @@ class PointBaseMesh(object):
         return mesh
 
 class Spray_Simulator(object):
-    def __init__(self,mold_file,a=18,sigma=14,check_ang_margin=88) -> None:
+    def __init__(self,mold_file,a=18,sigma=1.4,check_ang_margin=88) -> None:
         super().__init__()
 
         self.mesh = mesh.Mesh.from_file(mold_file)
@@ -76,9 +76,9 @@ class Spray_Simulator(object):
 
         for n in range(len(joint_p)-1):
             this_pose = robot.fwd(joint_p[n])
-            this_pose = mold_trans*this_pose
+            this_pose = mold_trans*this_pose # transfer to mold frame
             next_pose = robot.fwd(joint_p[n+1])
-            next_pose = mold_trans*next_pose
+            next_pose = mold_trans*next_pose # transfer to mold frame
 
             # compute the nozzle orientation and duration
             nz = -this_pose.R[:,2]
