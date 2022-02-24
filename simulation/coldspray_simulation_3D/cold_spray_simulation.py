@@ -1,4 +1,4 @@
-from math import cos, erf, exp, pi, sqrt
+from math import cos, erf, exp, pi, sqrt, pow
 import numpy as np
 from numpy import deg2rad
 import csv
@@ -8,6 +8,7 @@ import sys
 # from toolbox.robot_def import fwd
 sys.path.append('../../toolbox')
 from robots_def import *
+import general_robotics_toolbox as rox
 
 from matplotlib import pyplot as plt
 from mpl_toolkits import mplot3d
@@ -71,11 +72,13 @@ class Spray_Simulator(object):
         self.sigma = sigma
         self.check_ang_margin = check_ang_margin
     
-    def layer_spray(self,j_stamp,joint_p,robot):
+    def layer_spray(self,j_stamp,joint_p,robot,mold_trans):
 
         for n in range(len(joint_p)-1):
-            this_pose = robot.fwd(np.deg2rad(joint_p[n]))
-            next_pose = robot.fwd(np.deg2rad(joint_p[n+1]))
+            this_pose = robot.fwd(joint_p[n])
+            this_pose = mold_trans*this_pose
+            next_pose = robot.fwd(joint_p[n+1])
+            next_pose = mold_trans*next_pose
 
             # compute the nozzle orientation and duration
             nz = -this_pose.R[:,2]
@@ -97,9 +100,10 @@ class Spray_Simulator(object):
                 R = np.array([nx,ny,nz])
                 pn_noz = np.matmul(R,(point-this_pose.p))
                 g1 = self.a/(2*sqrt(2*pi)*self.sigma*ln)
-                g2 = exp(-(pn_noz[1]^2)/(2*self.sigma^2))
+                g2 = exp(-(pow(pn_noz[1],2))/(2*pow(self.sigma,2)))
                 g3 = erf(pn_noz[0]/(sqrt(2)*self.sigma))-erf((pn_noz[0]-ln)/(sqrt(2)*self.sigma))
                 gp = g1*g2*g3*nz
+                # print(gp)
                 self.point_mesh.points[pti] = point+gp*delta_t
         
         self.mesh = self.point_mesh.update_mesh(self.mesh)
@@ -125,8 +129,8 @@ def main():
     # print("V1",your_mesh.v1)
     # print("V2",your_mesh.v2)
     
-    sim = Spray_Simulator('test_stl.stl')
-    # sim = Spray_Simulator('test_stl_compare.stl')
+    # sim = Spray_Simulator('test_stl.stl')
+    sim = Spray_Simulator('test_stl_compare.stl')
 
     path_file = 'log_cold_spray_lines.csv'
 
@@ -159,21 +163,23 @@ def main():
     stamps = stamps[start_ji:]
     joint_angles = joint_angles[start_ji:]
 
-    new_mesh = sim.layer_spray(stamps,joint_angles,robot)
+    mold_trans = rox.Transform(np.eye(3),np.array([[-1.5],[1],[-1]])*1000.)
+    new_mesh = sim.layer_spray(stamps,joint_angles,robot,mold_trans)
+    new_mesh.save('result.stl')
 
     # Create a new plot
-    figure = plt.figure()
-    axes = mplot3d.Axes3D(figure)
+    # figure = plt.figure()
+    # axes = mplot3d.Axes3D(figure)
 
-    # Load the STL files and add the vectors to the plot
-    axes.add_collection3d(mplot3d.art3d.Poly3DCollection(new_mesh.vectors))
+    # # Load the STL files and add the vectors to the plot
+    # axes.add_collection3d(mplot3d.art3d.Poly3DCollection(new_mesh.vectors))
 
-    # Auto scale to the mesh size
-    scale = new_mesh.points.flatten()
-    axes.auto_scale_xyz(scale, scale, scale)
+    # # Auto scale to the mesh size
+    # scale = new_mesh.points.flatten()
+    # axes.auto_scale_xyz(scale, scale, scale)
 
-    # Show the plot to the screen
-    plt.show()
+    # # Show the plot to the screen
+    # plt.show()
 
 if __name__=='__main__':
     main()
