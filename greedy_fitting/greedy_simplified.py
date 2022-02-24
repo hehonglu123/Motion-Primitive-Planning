@@ -85,7 +85,7 @@ class greedy_fit(fitting_toolbox):
 	def movej_fit_greedy(self,curve,curve_backproj,curve_backproj_js,curve_R):
 		
 
-		return self.movej_fit(curve,curve_backproj,curve_backproj_js,curve_R)
+		return self.movej_fit(curve,curve_backproj,curve_backproj_js,curve_R,self.curve_fit_js[-1] if len(self.curve_fit_js)>0 else [])
 
 
 	def movec_fit_greedy(self,curve,curve_backproj,curve_backproj_js,curve_R):
@@ -411,9 +411,11 @@ def main():
 
 
 	###set primitive choices, defaults are all 3
-	greedy_fit_obj.primitives={'movel_fit':greedy_fit_obj.movel_fit_greedy,'movec_fit':greedy_fit_obj.movec_fit_greedy}
-	# greedy_fit_obj.primitives={'movec_fit':greedy_fit_obj.movec_fit_greedy}
+	# greedy_fit_obj.primitives={'movel_fit':greedy_fit_obj.movel_fit_greedy,'movec_fit':greedy_fit_obj.movec_fit_greedy}
+	
+	greedy_fit_obj.primitives={'movej_fit':greedy_fit_obj.movej_fit_greedy}
 	# greedy_fit_obj.primitives={'movel_fit':greedy_fit_obj.movel_fit_greedy}
+	# greedy_fit_obj.primitives={'movec_fit':greedy_fit_obj.movec_fit_greedy}
 
 	breakpoints,primitives_choices,points=greedy_fit_obj.fit_under_error(1.)
 	# breakpoints,primitives_choices,points=greedy_fit_obj.smooth_slope(greedy_fit_obj.curve_fit,greedy_fit_obj.curve_fit_R,breakpoints,primitives_choices,points)

@@ -1,21 +1,13 @@
 import sys
 sys.path.append('../')
 from constraint_solver import *
+sys.path.append('../../toolbox')
+from robots_def import *
 
 def main():
 
 	###read actual curve
-
-	col_names=['q1', 'q2', 'q3','q4', 'q5', 'q6'] 
-	data = read_csv("curve_poses/arm2_js.csv", names=col_names)
-	curve_q1=data['q1'].tolist()
-	curve_q2=data['q2'].tolist()
-	curve_q3=data['q3'].tolist()
-	curve_q4=data['q4'].tolist()
-	curve_q5=data['q5'].tolist()
-	curve_q6=data['q6'].tolist()
-	curve_js2=np.vstack((curve_q1, curve_q2, curve_q3,curve_q4,curve_q5,curve_q6)).T
-	q_init2=curve_js2[0]
+	q_init2=[0.181847959,	0.435384629,	0.465584225,	0.677493313,	-1.070550513,	-0.266374094]
 
 	col_names=['X', 'Y', 'Z','direction_x','direction_y','direction_z'] 
 	data = read_csv("curve_poses/relative_path_tool_frame.csv", names=col_names)
@@ -28,12 +20,14 @@ def main():
 	relative_path=np.vstack((curve_x, curve_y, curve_z)).T
 	relative_path_direction=np.vstack((curve_direction_x, curve_direction_y, curve_direction_z)).T
 
-	opt=lambda_opt(relative_path,relative_path_direction,base2_R=np.array([[-1,0,0],[0,-1,0],[0,0,1]]),	base2_p=np.array([6000,0,0]))
+	robot1=abb1200()
+	robot2=abb6640()
+	opt=lambda_opt(relative_path,relative_path_direction,robot1=robot1,robot2=robot2,base2_R=np.array([[-1,0,0],[0,-1,0],[0,0,1]]),	base2_p=np.array([3000,0,0]))
 
 
 	###########################################diff evo opt############################################
-	lowerer_limit=np.append(opt.joint_lowerer_limit,[-np.pi])
-	upper_limit=np.append(opt.joint_upper_limit,[np.pi])
+	lowerer_limit=np.append(robot2.lowerer_limit,[-np.pi])
+	upper_limit=np.append(robot2.upper_limit,[np.pi])
 	bnds=tuple(zip(lowerer_limit,upper_limit))
 	res = differential_evolution(opt.dual_arm_opt, bnds, args=None,workers=-1,
 									x0 = np.append(q_init2,[0]),
@@ -46,12 +40,12 @@ def main():
 	print(res)
 
 	q_init2=res.x[:-1]
-	pose2_world_now=fwd(q_init2,opt.base2_R,opt.base2_p)
+	pose2_world_now=robot2.fwd(q_init2,opt.base2_R,opt.base2_p)
 
 	R_temp=opt.direction2R(np.dot(pose2_world_now.R,opt.curve_normal[0]),-opt.curve[1]+opt.curve[0])
 	R=np.dot(R_temp,Rz(res.x[-1]))
 
-	q_init1=inv(pose2_world_now.p,R)[0]
+	q_init1=robot1.inv(pose2_world_now.p,R)[0]
 	###########################################stepwise qp solver#####################################################
 	q_out1, q_out2=opt.dual_arm_stepwise_optimize(q_init1,q_init2)
 

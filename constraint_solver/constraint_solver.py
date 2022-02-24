@@ -21,8 +21,6 @@ class lambda_opt(object):
 		self.base2_R=base2_R
 		self.base2_p=base2_p
 		self.joint_vel_limit=np.radians([110,90,90,150,120,235])
-		self.joint_upper_limit=np.radians([220.,160.,70.,300.,120.,360.])
-		self.joint_lowerer_limit=np.radians([-220.,-40.,-180.,-300.,-120.,-360.])
 
 		###decrease curve density to simplify computation
 		num_per_step=int(len(self.curve)/steps)	
@@ -198,10 +196,10 @@ class lambda_opt(object):
 
 			except:
 				traceback.print_exc()
-				print(q_all1[-1],q_all2[-1])
+				# print(q_all1[-1],q_all2[-1])
 				q_out1.append(q_all1[-1])
 				q_out2.append(q_all2[-1])			
-				# raise AssertionError
+				raise AssertionError
 				break
 
 			q_out1.append(q_all1[-1])

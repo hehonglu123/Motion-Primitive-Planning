@@ -234,9 +234,9 @@ class fitting_toolbox(object):
 		return curve_fit,curve_fit_R,curve_fit_js,max_error
 
 
-	def movej_fit(self,curve,curve_backproj,curve_backproj_js,curve_R):
+	def movej_fit(self,curve,curve_backproj,curve_backproj_js,curve_R,q_constraint=[]):
 		###no constraint
-		if len(self.curve_fit)==0:
+		if len(q_constraint)==0:
 			A=np.vstack((np.ones(len(curve_backproj_js)),np.arange(0,len(curve_backproj_js)))).T
 			b=curve_backproj_js
 			res=np.linalg.lstsq(A,b,rcond=None)[0]
@@ -246,7 +246,7 @@ class fitting_toolbox(object):
 			start_pose=self.robot.fwd(curve_backproj_js[0])
 		###with constraint point
 		else:
-			start_point=self.curve_fit_js[-1]
+			start_point=q_constraint
 			start_pose=self.robot.fwd(start_point)
 
 			if len(slope_constraint)!=0:

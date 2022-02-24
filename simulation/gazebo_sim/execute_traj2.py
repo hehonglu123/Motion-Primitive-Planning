@@ -4,14 +4,15 @@ import numpy as np
 from pandas import *
 
 sys.path.append('../../toolbox')
-from robot_def import *
+from robots_def import *
 
 def main():
     robot1="abb1200"
     robot2="abb6640"
+    robot1_tool=abb1200()
+    robot2_tool=abb6640()
     url={robot1:'rr+tcp://localhost:23333?service=robot',robot2:'rr+tcp://localhost:12222?service=robot'}
     filename={robot1:'arm1.csv',robot2:'arm2.csv'}
-    print(url[robot1])
 
     base2_R=np.array([[-1,0,0],[0,-1,0],[0,0,1]])
     base2_p=np.array([3000,0,0])
@@ -37,10 +38,10 @@ def main():
     curve_js2=np.vstack((curve_q1, curve_q2, curve_q3,curve_q4,curve_q5,curve_q6)).T
 
     p_prev=np.zeros(3)
-    ###find path length
+    ###find path length to sync motion in trajectory mode
     lam=[0]
     for i in range(len(curve_js1)-1):
-        p_new=fwd(curve_js1[i+1]).p-fwd(curve_js2[i+1],base2_R,base2_p).p
+        p_new=robot1_tool.fwd(curve_js1[i+1]).p-robot2_tool.fwd(curve_js2[i+1],base2_R,base2_p).p
         lam.append(lam[-1]+np.linalg.norm(p_new-p_prev))
         p_prev=p_new
     ###normalize lam, 
