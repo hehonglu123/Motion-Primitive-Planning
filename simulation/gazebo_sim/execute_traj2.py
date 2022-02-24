@@ -7,12 +7,17 @@ sys.path.append('../../toolbox')
 from robot_def import *
 
 def main():
-    joint_vel_limit=np.radians([110,90,90,150,120,235])
+    robot1="abb1200"
+    robot2="abb6640"
+    url={robot1:'rr+tcp://localhost:23333?service=robot',robot2:'rr+tcp://localhost:12222?service=robot'}
+    filename={robot1:'arm1.csv',robot2:'arm2.csv'}
+    print(url[robot1])
+
     base2_R=np.array([[-1,0,0],[0,-1,0],[0,0,1]])
-    base2_p=np.array([6000,0,0])
+    base2_p=np.array([3000,0,0])
     ###read actual curve
     col_names=['q1', 'q2', 'q3','q4', 'q5', 'q6'] 
-    data = read_csv("trajectory/dual_arm/arm1.csv", names=col_names)
+    data = read_csv("trajectory/dual_arm/"+filename[robot1], names=col_names)
     curve_q1=data['q1'].tolist()
     curve_q2=data['q2'].tolist()
     curve_q3=data['q3'].tolist()
@@ -22,7 +27,7 @@ def main():
     curve_js1=np.vstack((curve_q1, curve_q2, curve_q3,curve_q4,curve_q5,curve_q6)).T
 
     col_names=['q1', 'q2', 'q3','q4', 'q5', 'q6'] 
-    data = read_csv("trajectory/dual_arm/arm2.csv", names=col_names)
+    data = read_csv("trajectory/dual_arm/"+filename[robot2], names=col_names)
     curve_q1=data['q1'].tolist()
     curve_q2=data['q2'].tolist()
     curve_q3=data['q3'].tolist()
@@ -40,11 +45,6 @@ def main():
         p_prev=p_new
     ###normalize lam, 
     lam=np.array(lam)/lam[-1]
-
-    robot1="abb6640"
-    robot2="abb1200"
-    url={robot1:'rr+tcp://localhost:12222?service=robot',robot2:'rr+tcp://localhost:23333?service=robot'}
-    filename={robot1:'arm1.csv',robot2:'arm2.csv'}
 
     robot1_obj = RRN.ConnectService(url[robot1])
 

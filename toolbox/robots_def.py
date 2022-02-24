@@ -16,9 +16,7 @@ ez=np.array([[0],[0],[1]])
 #ALL in mm
 class abb6640(object):
 	#default tool paintgun
-	def __init__(self, p_base=np.zeros(3), R_base=np.eye(3),R_tool=Ry(np.radians(120)),p_tool=np.array([0.45,0,-0.05])*1000.):
-		self.R_base=R_base
-		self.p_base=p_base
+	def __init__(self,R_tool=Ry(np.radians(120)),p_tool=np.array([0.45,0,-0.05])*1000.):
 		###ABB IRB 6640 180/2.55 Robot Definition
 		self.H=np.concatenate((ez,ey,ey,ex,ey,ex),axis=1)
 		p0=np.array([[0],[0],[0.78]])
@@ -66,9 +64,7 @@ class abb6640(object):
 
 class abb1200(object):
 	#default tool paintgun
-	def __init__(self, p_base=np.zeros(3), R_base=np.eye(3),R_tool=Ry(np.radians(120)),p_tool=np.array([0.45,0,-0.05])*1000.):
-		self.R_base=R_base
-		self.p_base=p_base
+	def __init__(self,R_tool=Ry(np.radians(120)),p_tool=np.array([0.45,0,-0.05])*1000.):
 		###ABB IRB 1200 5/0.9 Robot Definition
 		self.H=np.concatenate((ez,ey,ey,ex,ey,ex),axis=1)
 		p0=np.array([[0],[0],[0.3991]])
@@ -113,9 +109,7 @@ class abb1200(object):
 
 class arb_robot(object):
 	#R_tool make tool z pointing to +x at 0 config
-	def __init__(self, H,P,joint_type,upper_limit,lowerer_limit, joint_vel_limit,p_base=np.zeros(3), R_base=np.eye(3),R_tool=Ry(np.radians(90)),p_tool=np.zeros(3)):
-		self.R_base=R_base
-		self.p_base=p_base
+	def __init__(self, H,P,joint_type,upper_limit,lowerer_limit, joint_vel_limit,R_tool=Ry(np.radians(90)),p_tool=np.zeros(3)):
 		###All in mm
 		self.H=H
 		self.P=P

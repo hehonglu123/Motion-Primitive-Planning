@@ -12,7 +12,7 @@ from lambda_calc import *
 
 class lambda_opt(object):
 	###robot1 hold paint gun for single arm
-	###robot1 hold blade, robot2 hold paint gun for dual arm
+	###robot2 hold paint gun, robot2 hold blade for dual arm
 	def __init__(self,curve,curve_normal,robot1=abb6640(),robot2=abb1200(),base2_R=np.eye(3),base2_p=np.zeros(3),steps=32):
 		self.curve=curve
 		self.curve_normal=curve_normal
@@ -201,7 +201,7 @@ class lambda_opt(object):
 				print(q_all1[-1],q_all2[-1])
 				q_out1.append(q_all1[-1])
 				q_out2.append(q_all2[-1])			
-				raise AssertionError
+				# raise AssertionError
 				break
 
 			q_out1.append(q_all1[-1])

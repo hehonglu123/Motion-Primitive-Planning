@@ -279,7 +279,7 @@
       </visual>
     </link>
 
-    <!-- <link name='generic_fan_blade'>
+    <link name='generic_fan_blade'>
       <pose>1.674 -0.3 2.236 -1.0472 0 1.57</pose>
       <inertial>
         <pose>0 0 0 0 0 0</pose>
@@ -310,7 +310,7 @@
         <transparency>0</transparency>
         <cast_shadows>1</cast_shadows>
       </visual>
-    </link> -->
+    </link>
 
     
     <joint name='joint_1' type='revolute'>
@@ -509,10 +509,10 @@
       <parent>link_6</parent>
       <child>paint_gun</child>
     </joint>
- <!--    <joint name='eef_joint2' type='fixed'>
+    <joint name='eef_joint2' type='fixed'>
       <parent>link_6</parent>
       <child>generic_fan_blade</child>
-    </joint> -->
+    </joint>
 
     <joint name='fix to ground' type='fixed'>
       <parent>world</parent>
