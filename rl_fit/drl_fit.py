@@ -10,6 +10,7 @@ import time
 from collections import namedtuple, deque
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 import torch.optim as optim
 
 from trajectory_utils import Primitive, BreakPoint, read_base_data, read_js_data
@@ -22,9 +23,14 @@ sys.path.append('../toolbox')
 from robots_def import *
 
 Curve_Error = namedtuple("Curve_Error", ('primitive', 'max_error'))
-State = namedtuple("State", ("longest_type", "curve_features", "lengths"))
+State = namedtuple("State", ("longest_type", "curve_features"))
 Action = namedtuple("Action", ("Type", "Length"))
 Memory = namedtuple('Memory', ('state', 'action', 'reward', 'next_state', 'next_action'))
+primitive_type_code = {"L": 0, "C": 1, "J": 2}
+
+torch.manual_seed(42)
+np.random.seed(42)
+random.seed(42)
 
 ERROR_THRESHOLD = 1.0
 MAX_GREEDY_STEP = 10
@@ -49,7 +55,7 @@ def greedy_data_to_dict(greedy_data: pd.DataFrame):
     return ret_dict
 
 
-# TODO: Change to the latest greedy with backproj
+# TODO: Change to the latest greedy with backproj_js
 def greedy_fit_primitive(last_bp, curve, p):
     longest_fits = {'C': None, 'L': None}
 
@@ -123,7 +129,22 @@ class ReplayMemory(object):
         self.memory = deque([], maxlen=capacity)
 
     def push(self, memory):
-        self.memory.append(memory)
+        state = memory.state
+        type_encode = primitive_type_code[state.longest_type]
+        state_encode = np.hstack([state.curve_features, type_encode])
+        state_tensor = torch.tensor(state_encode)
+
+        next_state = memory.next_state
+        next_state_tensor = None
+        if next_state is not None:
+            next_type_encode = primitive_type_code[next_state.longest_type]
+            next_state_encode = np.hstack([next_state.curve_features, next_type_encode])
+            next_state_tensor = torch.tensor(next_state_encode)
+
+        new_memory = Memory(state=state_tensor, action=memory.action, reward=memory.reward,
+                            next_state=next_state_tensor, next_action=memory.next_action)
+
+        self.memory.append(new_memory)
 
     def sample(self, batch_size):
         return random.sample(self.memory, batch_size)
@@ -156,7 +177,7 @@ class RL_Agent(object):
 
     def __init__(self, n_curve_feature: int, n_length: int, lr: float = LEARNING_RATE):
         self.input_dim = n_curve_feature * 3 + 1
-        self.output_dim = 1
+        self.output_dim = 3
         self._n_curve_feature = n_curve_feature
         self._n_length = n_length
         self.lr = lr
@@ -164,84 +185,28 @@ class RL_Agent(object):
         self.memory = ReplayMemory()
         self.batch_size = BATCH_SIZE
 
-        self.LL_policy_net = DQN(self.input_dim, self.output_dim)
-        self.LC_policy_net = DQN(self.input_dim, self.output_dim)
-        self.CL_policy_net = DQN(self.input_dim, self.output_dim)
-        self.CC_policy_net = DQN(self.input_dim, self.output_dim)
-        self.policy_DQNs = {'LL': self.LL_policy_net, 'LC': self.LC_policy_net,
-                            'CL': self.CL_policy_net, 'CC': self.CC_policy_net}
-
-        self.LL_target_net = DQN(self.input_dim, self.output_dim)
-        self.LL_target_net.load_state_dict(self.LL_policy_net.state_dict())
-        self.LC_target_net = DQN(self.input_dim, self.output_dim)
-        self.LC_target_net.load_state_dict(self.LC_policy_net.state_dict())
-        self.CL_target_net = DQN(self.input_dim, self.output_dim)
-        self.CL_target_net.load_state_dict(self.CL_policy_net.state_dict())
-        self.CC_target_net = DQN(self.input_dim, self.output_dim)
-        self.CC_target_net.load_state_dict(self.CC_policy_net.state_dict())
-        self.target_DQNs = {'LL': self.LL_target_net, 'LC': self.LC_target_net,
-                            'CL': self.CL_target_net, 'CC': self.CC_target_net}
-
-        self.optimizer_LL = optim.RMSprop(self.LL_policy_net.parameters(), lr=self.lr)
-        self.optimizer_LC = optim.RMSprop(self.LC_policy_net.parameters(), lr=self.lr)
-        self.optimizer_CL = optim.RMSprop(self.CL_policy_net.parameters(), lr=self.lr)
-        self.optimizer_CC = optim.RMSprop(self.CC_policy_net.parameters(), lr=self.lr)
-        self.optimizers = {'LL': self.optimizer_LL, 'LC': self.optimizer_LC,
-                           'CL': self.optimizer_CL, 'CC': self.optimizer_CC}
+        self.target_net = DQN(input_dim=self.input_dim, output_dim=self.output_dim)
+        self.policy_net = DQN(input_dim=self.input_dim, output_dim=self.output_dim)
+        self.target_net.load_state_dict(self.policy_net.state_dict())
+        self.optimizer = optim.RMSprop(self.policy_net.parameters(), lr=self.lr)
 
         self.criterion = nn.SmoothL1Loss()
 
-    def get_action(self, state: State, epsilon: float = 0., valid_types: dict = None):
-        n_action = len(state.lengths)
-        actions_tensor = torch.reshape(torch.tensor(state.lengths), (n_action, 1))
-        curve_feature_tensor = torch.tensor(state.curve_features)
-        curve_feature_tensor = curve_feature_tensor.repeat(n_action, 1)
-        x_tensor = torch.hstack((curve_feature_tensor, actions_tensor))
+    def get_action(self, state: State, valid_types: dict = None):
+        with torch.no_grad():
+            type_code = primitive_type_code[state.longest_type]
+            curve_feature_tensor = torch.tensor(state.curve_features)
+            x_tensor = torch.hstack((curve_feature_tensor, torch.tensor(type_code)))
 
-        action = Action(Type=None, Length=None)
-        q_value = 0
-        nn_activated = ''
-        sample = np.random.rand()
+            output = self.policy_net(x_tensor.float())
+            length = torch.sigmoid(output[0])
+            primitive_probs = torch.softmax(output[1:], 0)
+            primitive_type_encode = np.random.choice(2, p=primitive_probs.detach().numpy())
+            primitive_type = 'C' if primitive_type_encode == 1 and valid_types['C'] else 'L'
 
-        if state.longest_type == 'L':
-            with torch.no_grad():
-                q_ll = self.LL_policy_net(x_tensor.float())
-                q_lc = self.LC_policy_net(x_tensor.float())
-            length_ll = (torch.argmax(q_ll) + 1) * 1/n_action
-            length_lc = (torch.argmax(q_lc) + 1) * 1/n_action
-            primitive_type = 'L' if torch.max(q_ll) >= torch.max(q_lc) or not valid_types['C'] else 'C'
-            primitive_length = length_ll if primitive_type == 'L' else length_lc
-            q_value = torch.max(q_ll) if primitive_type == 'L' else torch.max(q_lc)
+            action = Action(Type=primitive_type, Length=length.detach().numpy())
 
-            if sample < epsilon:
-                primitive_type = 'C' if primitive_type == 'L' and valid_types['C'] else 'L'
-                q_value_idx = np.random.randint(1, n_action+1)
-                q_value = q_ll[q_value_idx-1] if primitive_type == 'L' else q_lc[q_value_idx-1]
-                primitive_length = q_value_idx * 1/n_action
-
-            action = Action(Type=primitive_type, Length=primitive_length)
-            nn_activated = 'L{}'.format(primitive_type)
-
-        elif state.longest_type == 'C':
-            with torch.no_grad():
-                q_cl = self.CL_policy_net(x_tensor.float())
-                q_cc = self.CC_policy_net(x_tensor.float())
-            length_ll = (torch.argmax(q_cl) + 1) * 1/n_action
-            length_lc = (torch.argmax(q_cc) + 1) * 1/n_action
-            primitive_type = 'L' if torch.max(q_cl) >= torch.max(q_cc) or not valid_types['C'] else 'C'
-            primitive_length = length_ll if primitive_type == 'L' else length_lc
-            q_value = torch.max(q_cl) if primitive_type == 'L' else torch.max(q_cc)
-
-            if sample < epsilon:
-                primitive_type = 'C' if primitive_type == 'L' and valid_types['C'] else 'L'
-                q_value_idx = np.random.randint(1, n_action+1)
-                q_value = q_cl[q_value_idx - 1] if primitive_type == 'L' else q_cc[q_value_idx - 1]
-                primitive_length = q_value_idx * 1/n_action
-
-            action = Action(Type=primitive_type, Length=primitive_length)
-            nn_activated = 'C{}'.format(primitive_type)
-        q_value = torch.reshape(q_value, (1, 1))
-        return action, q_value, nn_activated
+            return action
 
     def memory_save(self, state, action, reward, next_state, next_action):
         memory = Memory(state=state, action=action, reward=reward, next_state=next_state, next_action=next_action)
@@ -257,50 +222,29 @@ class RL_Agent(object):
             action = memory.action
             reward = memory.reward
             next_state = memory.next_state
-            next_action = memory.nexddt_action
+            next_action = memory.next_action
 
-            nn_activated = '{}{}'.format(state.longest_type, action.Type)
-            n_action = len(state.lengths)
-            actions_tensor = torch.reshape(torch.tensor(state.lengths), (n_action, 1))
-            curve_feature_tensor = torch.tensor(state.curve_features)
-            curve_feature_tensor = curve_feature_tensor.repeat(n_action, 1)
-            x_tensor = torch.hstack((curve_feature_tensor, actions_tensor))
-            q_values = self.policy_DQNs[nn_activated](x_tensor.float())
-            q_value = q_values[int(np.floor(action.Length * n_action)) - 1]
-            q_value = q_value.reshape(1)
+            x_tensor = state
+            q_value = self.policy_net(x_tensor.float())
 
-            q_next = 0.
+            q_next = torch.tensor([0., 0., 0.])
             if next_state is not None:
-                next_nn_activated = '{}{}'.format(next_state.longest_type, next_action.Type)
-                n_action = len(next_state.lengths)
-                next_actions_tensor = torch.reshape(torch.tensor(next_state.lengths), (n_action, 1))
-                next_curve_feature_tensor = torch.tensor(next_state.curve_features)
-                next_curve_feature_tensor = next_curve_feature_tensor.repeat(n_action, 1)
-                next_x_tensor = torch.hstack((next_curve_feature_tensor, next_actions_tensor))
-                q_next = self.target_DQNs[next_nn_activated](next_x_tensor.float())
-                q_next = q_next[int(np.floor(next_action.Length * n_action)) - 1]
-                q_next = q_next.reshape(1)
+                next_x_tensor = next_state
+                q_next = self.target_net(next_x_tensor.float())
 
             expected_q = q_next * self.gamma + reward
             if type(expected_q) is float:
                 expected_q = torch.tensor(expected_q).reshape(1)
-            optimizer = self.optimizers[nn_activated]
-            optimizer.zero_grad()
+            self.optimizer.zero_grad()
             loss = -self.criterion(q_value, expected_q)
             loss.backward()
-            optimizer.step()
+            self.optimizer.step()
 
     def update_target_nets(self):
-        self.LL_target_net.load_state_dict(self.LL_policy_net.state_dict())
-        self.LC_target_net.load_state_dict(self.LC_policy_net.state_dict())
-        self.CL_target_net.load_state_dict(self.CL_policy_net.state_dict())
-        self.CC_target_net.load_state_dict(self.CC_policy_net.state_dict())
+        self.target_net.load_state_dict(self.policy_net.state_dict())
 
     def save_model(self, path):
-        torch.save(self.LL_policy_net.state_dict(), path + os.sep + 'LL_target_net.pth')
-        torch.save(self.LC_policy_net.state_dict(), path + os.sep + 'LC_target_net.pth')
-        torch.save(self.CL_policy_net.state_dict(), path + os.sep + 'CL_target_net.pth')
-        torch.save(self.CC_policy_net.state_dict(), path + os.sep + 'CC_target_net.pth')
+        torch.save(self.policy_net.state_dict(), path + os.sep + 'DQN_policy_net.pth')
 
 
 class RL_Env(object):
@@ -315,7 +259,6 @@ class RL_Env(object):
         self.primitives = []
         self.n_feature = n_feature
         self.n_action = n_action
-        self.lengths = [(x + 1) * 0.1 for x in range(self.n_action)]
 
         self.done = False
         self.i_step = 0
@@ -341,7 +284,7 @@ class RL_Env(object):
                                                                      p=self.fit_curve[-1])
         valid_types = {"L": self.longest_primitives['L'] is not None,
                        "C": self.longest_primitives['C'] is not None}
-        state = State(longest_type=longest_type, curve_features=curve_features, lengths=self.lengths)
+        state = State(longest_type=longest_type, curve_features=curve_features)
         done = False
         return state, done, valid_types
 
@@ -367,7 +310,7 @@ class RL_Env(object):
         remaining_curve = self.target_curve[self.last_bp:, :]
         normalized_curve = PCA_normalization(remaining_curve)
         curve_features, _ = fft_feature(normalized_curve, self.n_feature)
-        state = State(longest_type=longest_type, curve_features=curve_features, lengths=self.lengths)
+        state = State(longest_type=longest_type, curve_features=curve_features)
         # done = len(self.fit_curve) >= len(self.target_curve)
         # reward = reward_function(i_step, done)
 
@@ -406,7 +349,7 @@ def train_rl(agent: RL_Agent, curve_base_data, curve_js_data, n_episode=1000):
         # print("Episode Start")
 
         state, done, valid_actions = env.reset()
-        action, q_value, nn_activated = agent.get_action(state, epsilon=epsilon, valid_types=valid_actions)
+        action = agent.get_action(state, valid_types=valid_actions)
 
         i_step = 0
         while not done:
@@ -417,8 +360,7 @@ def train_rl(agent: RL_Agent, curve_base_data, curve_js_data, n_episode=1000):
             next_state, reward, done, valid_actions = env.step(action, i_step)
             next_action = None
             if not done:
-                next_action, next_q_value, next_nn_activated = agent.get_action(next_state, epsilon=epsilon,
-                                                                                valid_types=valid_actions)
+                next_action = agent.get_action(next_state, valid_types=valid_actions)
 
             agent.memory_save(state=state, action=action, reward=reward, next_state=next_state, next_action=next_action)
             agent.learn()
