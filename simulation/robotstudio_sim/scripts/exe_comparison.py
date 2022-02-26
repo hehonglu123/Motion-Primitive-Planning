@@ -114,10 +114,11 @@ def extract_points(primitive_type,points):
 
 def exe_from_file(ms,filename,filename_js,speed,zone):
     data = read_csv(filename)
-    breakpoints=data['breakpoints'].tolist()
+    breakpoints=np.array(data['breakpoints'].tolist())
     primitives=data['primitives'].tolist()
     points=data['points'].tolist()
     
+    breakpoints[1:]=breakpoints[1:]-1
     
 
     points_list=[]
@@ -136,7 +137,7 @@ def exe_from_file(ms,filename,filename_js,speed,zone):
 
 def main():
     ms = MotionSend()
-    data_dir="fitting_output/threshold0.25/"
+    data_dir="fitting_output/threshold1/"
     speed={"v50":v50,"v500":v500,"v5000":v5000}
     zone={"fine":fine,"z1":z1,"z10":z10}
 

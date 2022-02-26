@@ -209,8 +209,7 @@ class greedy_fit(fitting_toolbox):
 
 				# print(max_errors)
 				if next_point==prev_point:
-					print('stuck')		###if ever getting stuck, restore
-					###TODO: debug why <2
+					print('stuck, restoring previous possible index')		###if ever getting stuck, restore
 					next_point=max(prev_possible_point,2)
 					# if self.breakpoints[-1]+next_point+1==len(self.curve)-1:
 					# 	next_point=3
@@ -264,7 +263,7 @@ class greedy_fit(fitting_toolbox):
 			else:
 				idx=next_point
 
-			self.breakpoints.append(min(self.breakpoints[-1]+idx,len(self.curve)-1))
+			self.breakpoints.append(min(self.breakpoints[-1]+idx,len(self.curve)))
 			self.curve_fit.extend(curve_fit[:len(curve_fit)-(next_point-idx)])
 			self.curve_fit_R.extend(curve_fit_R[:len(curve_fit)-(next_point-idx)])
 
@@ -288,7 +287,9 @@ class greedy_fit(fitting_toolbox):
 
 			print(self.breakpoints)
 			print(primitives_choices)
-			# print(points)
+			
+			# if len(self.breakpoints)>2:
+			# 	break
 
 		##############################check error (against fitting back projected curve)##############################
 
@@ -358,7 +359,7 @@ class greedy_fit(fitting_toolbox):
 				primitives_choices_new.append(primitives_choices[i+1])
 				points_new.append(points[i+1])
 
-		new_breakpoints.append(len(self.curve_backproj)-1)
+		new_breakpoints.append(len(self.curve_backproj))
 		primitives_choices_new.append(primitives_choices[-1])
 		points_new.append(points[-1])
 
@@ -413,12 +414,12 @@ def main():
 
 	###set primitive choices, defaults are all 3
 	# greedy_fit_obj.primitives={'movel_fit':greedy_fit_obj.movel_fit_greedy,'movec_fit':greedy_fit_obj.movec_fit_greedy}
-	
-	greedy_fit_obj.primitives={'movej_fit':greedy_fit_obj.movej_fit_greedy}
+
 	# greedy_fit_obj.primitives={'movel_fit':greedy_fit_obj.movel_fit_greedy}
+	# greedy_fit_obj.primitives={'movej_fit':greedy_fit_obj.movej_fit_greedy}
 	# greedy_fit_obj.primitives={'movec_fit':greedy_fit_obj.movec_fit_greedy}
 
-	breakpoints,primitives_choices,points=greedy_fit_obj.fit_under_error(1.)
+	breakpoints,primitives_choices,points=greedy_fit_obj.fit_under_error(0.1)
 	# breakpoints,primitives_choices,points=greedy_fit_obj.smooth_slope(greedy_fit_obj.curve_fit,greedy_fit_obj.curve_fit_R,breakpoints,primitives_choices,points)
 
 	###plt
@@ -592,4 +593,4 @@ def main3():
 	df.to_csv('curve_fit_js.csv',header=False,index=False)
 
 if __name__ == "__main__":
-	main()
+	main2()

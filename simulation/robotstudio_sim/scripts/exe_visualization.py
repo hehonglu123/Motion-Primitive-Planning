@@ -56,9 +56,9 @@ def main():
 	curve_z=data['Z'].tolist()
 	curve=np.vstack((curve_x, curve_y, curve_z)).T
 
-	data_dir="fitting_output/threshold1/"
-	speed="v5000"
-	zone="fine"
+	data_dir="fitting_output/threshold0.1/"
+	speed="v50"
+	zone="z10"
 	col_names=['X', 'Y', 'Z','direction_x', 'direction_y', 'direction_z'] 
 	data = read_csv(data_dir+"curve_fit_backproj.csv")
 	curve_x=data['x'].tolist()
@@ -89,6 +89,7 @@ def main():
 
 	data = read_csv(data_dir+"command_backproj.csv")
 	breakpoints=np.array(data['breakpoints'].tolist())
+	breakpoints[1:]=breakpoints[1:]-1
 	primitives=data['primitives'].tolist()
 	points=data['points'].tolist()
 	####only every 100 points

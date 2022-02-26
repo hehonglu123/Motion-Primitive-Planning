@@ -259,6 +259,10 @@ def circle_fit(curve,p=[],p2=[]):
         ###get 3D circular arc
         u = curve[0] - C
         v = curve[-1] - C
+
+        theta = angle_between(u, v, normal)
+        l = np.linspace(0, theta, len(curve))
+        curve_fitarc = generate_circle_by_vectors(l, C, r, normal, u)
  
 
     elif len(p2)==0:    #single point constraint
@@ -296,6 +300,10 @@ def circle_fit(curve,p=[],p2=[]):
             v=curve[-1] - C
         else:
             v=curve[0] - C
+
+        theta = angle_between(u, v, normal)
+        l = np.linspace(0, theta, len(curve)+1)
+        curve_fitarc = generate_circle_by_vectors(l, C, r, normal, u)[1:]
 
     else:
         ###fit a plane with 2 point constraint
@@ -335,13 +343,14 @@ def circle_fit(curve,p=[],p2=[]):
         u=p-C
         v=p2-C
 
+        theta = angle_between(u, v, normal)
+        l = np.linspace(0, theta, len(curve)+1)
+        curve_fitarc = generate_circle_by_vectors(l, C, r, normal, u)[1:]
+
    
     
 
-    theta = angle_between(u, v, normal)
-
-    l = np.linspace(0, theta, len(curve))
-    curve_fitarc = generate_circle_by_vectors(l, C, r, normal, u)
+    
     l = np.linspace(0, 2*np.pi, 1000)
     curve_fitcircle = generate_circle_by_vectors(l, C, r, normal, u)
 
