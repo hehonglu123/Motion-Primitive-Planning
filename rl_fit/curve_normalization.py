@@ -4,6 +4,8 @@ from scipy.fft import fft
 from sklearn.decomposition import PCA
 from trajectory_utils import read_base_curve
 
+from plot_functions import plot_curve
+
 
 def reduce_interpolate(curve, n_points):
     interval = len(curve) / (n_points - 1)
@@ -72,13 +74,16 @@ def fft_feature(curve, n_feature):
     fft_curve = fft(curve)
     features = fft_curve[0:n_feature]
     features = features.flatten()
-    features = np.abs(features).astype(float)
+    features_real = np.real(features).astype(float)
+    features_imag = np.imag(features).astype(float)
+    features = np.vstack([features_real, features_imag])
+    features = features.T.flatten()
     return features, fft_curve
 
 
 def main():
     curve, curve_normal = read_base_curve("data/Curve_in_base_frame.csv")
-    curve = curve[0:500, :]
+    curve = curve[:, :]
     curve_normalized = PCA_normalization(curve)
     curve_fft_features, fft_all = fft_feature(curve_normalized, 5)
     print(curve_fft_features)

@@ -37,9 +37,9 @@ MAX_GREEDY_STEP = 10
 
 EPS_START = 0.5
 EPS_END = 0.01
-LEARNING_RATE = 0.01
+LEARNING_RATE = 0.001
 GAMMA = 0.99
-BATCH_SIZE = 16
+BATCH_SIZE = 4
 
 REWARD_FINISH = 2000  # -------------------------------------- HERE
 REWARD_DECAY_FACTOR = 0.9
@@ -157,18 +157,22 @@ class DQN(nn.Module):
     def __init__(self, input_dim, output_dim):
         super(DQN, self).__init__()
 
-        self.input = nn.Linear(input_dim, 64)
-        self.hidden1 = nn.Linear(64, 64)
-        self.hidden2 = nn.Linear(64, 64)
-        self.output = nn.Linear(64, output_dim)
+        self.input = nn.Linear(input_dim, 128)
+        self.hidden1 = nn.Linear(128, 128)
+        self.hidden2 = nn.Linear(128, 128)
+        self.hidden3 = nn.Linear(128, 128)
+        self.hidden4 = nn.Linear(128, 128)
+        self.output = nn.Linear(128, output_dim)
 
-        # self.drop_out = nn.Dropout(p=0.2)
+        self.drop_out = nn.Dropout(p=0.25)
         self.relu = nn.ReLU()
 
     def forward(self, x):
         x = self.relu(self.input(x))
         x = self.relu(self.hidden1(x))
-        x = self.relu(self.hidden1(x))
+        x = self.relu(self.hidden2(x))
+        x = self.relu(self.hidden3(x))
+        x = self.relu(self.hidden4(x))
         x = self.output(x)
         return x
 
@@ -176,7 +180,7 @@ class DQN(nn.Module):
 class RL_Agent(object):
 
     def __init__(self, n_curve_feature: int, n_length: int, lr: float = LEARNING_RATE):
-        self.input_dim = n_curve_feature * 3 + 1
+        self.input_dim = n_curve_feature * 3 * 2 + 1
         self.output_dim = 3
         self._n_curve_feature = n_curve_feature
         self._n_length = n_length
@@ -320,7 +324,7 @@ class RL_Env(object):
         pass
 
 
-def train_rl(agent: RL_Agent, curve_base_data, curve_js_data, n_episode=1000):
+def train_rl(agent: RL_Agent, curve_base_data, curve_js_data, n_episode=10000):
     robot = abb6640()
     print("Train Start")
 

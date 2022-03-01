@@ -31,6 +31,7 @@ MAX_GREEDY_STEP = 10
 
 EPS_START = 0.5
 EPS_END = 0.01
+MAX_EPS_EPISODE = 0.6
 LEARNING_RATE = 0.01
 GAMMA = 0.99
 BATCH_SIZE = 16
@@ -147,7 +148,7 @@ class DQN(nn.Module):
     def forward(self, x):
         x = self.relu(self.input(x))
         x = self.relu(self.hidden1(x))
-        x = self.relu(self.hidden1(x))
+        x = self.relu(self.hidden2(x))
         x = self.output(x)
         return x
 
