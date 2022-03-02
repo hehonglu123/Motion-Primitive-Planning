@@ -28,24 +28,32 @@ Action = namedtuple("Action", ("Type", "Length"))
 Memory = namedtuple('Memory', ('state', 'action', 'reward', 'next_state', 'next_action'))
 primitive_type_code = {"L": 0, "C": 1, "J": 2}
 
-torch.manual_seed(42)
-np.random.seed(42)
-random.seed(42)
+torch.manual_seed(1234)
+np.random.seed(1234)
+random.seed(1234)
 
 ERROR_THRESHOLD = 1.0
 MAX_GREEDY_STEP = 10
 
-EPS_START = 0.5
-EPS_END = 0.01
-LEARNING_RATE = 0.001
+TAU_START = 10
+TAU_END = 0.01
+MAX_TAU_EPISODE = 0.6
+LEARNING_RATE = 0.0001
 GAMMA = 0.99
-BATCH_SIZE = 4
+BATCH_SIZE = 16
 
 REWARD_FINISH = 2000  # -------------------------------------- HERE
 REWARD_DECAY_FACTOR = 0.9
 REWARD_STEP = -10
 
 SAVE_MODEL = 10
+
+
+def episode_tau(i_episode, n_episode):
+    # factor = min(1, i_episode/(n_episode * MAX_TAU_EPISODE))
+    factor = min(1, i_episode / 200)
+    tau = TAU_START - factor * (TAU_START - TAU_END)
+    return tau
 
 
 def greedy_data_to_dict(greedy_data: pd.DataFrame):
@@ -182,7 +190,7 @@ class RL_Agent(object):
     def __init__(self, n_curve_feature: int, n_length: int, lr: float = LEARNING_RATE):
         self.input_dim = n_curve_feature * 3 * 2 + 1
         self.output_dim = 3
-        self._n_curve_feature = n_curve_feature
+        self.n_curve_feature = n_curve_feature
         self._n_length = n_length
         self.lr = lr
         self.gamma = GAMMA
@@ -196,7 +204,7 @@ class RL_Agent(object):
 
         self.criterion = nn.SmoothL1Loss()
 
-    def get_action(self, state: State, valid_types: dict = None):
+    def get_action(self, state: State, valid_types: dict = None, tau=0.01):
         with torch.no_grad():
             type_code = primitive_type_code[state.longest_type]
             curve_feature_tensor = torch.tensor(state.curve_features)
@@ -204,7 +212,8 @@ class RL_Agent(object):
 
             output = self.policy_net(x_tensor.float())
             length = torch.sigmoid(output[0])
-            primitive_probs = torch.softmax(output[1:], 0)
+            # primitive_probs = torch.softmax(output[1:], 0)
+            primitive_probs = F.gumbel_softmax(output[1:], dim=0, tau=tau)
             primitive_type_encode = np.random.choice(2, p=primitive_probs.detach().numpy())
             primitive_type = 'C' if primitive_type_encode == 1 and valid_types['C'] else 'L'
 
@@ -335,7 +344,7 @@ def train_rl(agent: RL_Agent, curve_base_data, curve_js_data, n_episode=10000):
     for i_episode in range(n_episode):
         timer = time.time_ns()
 
-        epsilon = EPS_START - i_episode * (EPS_START - EPS_END) / n_episode
+        tau = episode_tau(i_episode, n_episode)
 
         episode_reward = 0
 
@@ -348,12 +357,12 @@ def train_rl(agent: RL_Agent, curve_base_data, curve_js_data, n_episode=10000):
                                      'movec_fit':greedy_fit_obj.movec_fit_greedy}
 
         env = RL_Env(target_curve=curve_base, target_curve_normal=curve_normal, target_curve_js=curve_js,
-                     greedy_obj=greedy_fit_obj)
+                     greedy_obj=greedy_fit_obj, n_feature=agent.n_curve_feature)
 
         # print("Episode Start")
 
         state, done, valid_actions = env.reset()
-        action = agent.get_action(state, valid_types=valid_actions)
+        action = agent.get_action(state, valid_types=valid_actions, tau=tau)
 
         i_step = 0
         while not done:
@@ -364,7 +373,7 @@ def train_rl(agent: RL_Agent, curve_base_data, curve_js_data, n_episode=10000):
             next_state, reward, done, valid_actions = env.step(action, i_step)
             next_action = None
             if not done:
-                next_action = agent.get_action(next_state, valid_types=valid_actions)
+                next_action = agent.get_action(next_state, valid_types=valid_actions, tau=tau)
 
             agent.memory_save(state=state, action=action, reward=reward, next_state=next_state, next_action=next_action)
             agent.learn()
@@ -401,7 +410,7 @@ def save_data(episode_rewards, episode_steps, episode_target_curve):
 
 
 def rl_fit(curve_base_data, curve_js_data):
-    n_feature = 10
+    n_feature = 20
     n_action = 10
     agent = RL_Agent(n_feature, n_action)
     train_rl(agent, curve_base_data, curve_js_data)
