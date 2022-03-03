@@ -419,7 +419,7 @@ def main():
 	# greedy_fit_obj.primitives={'movej_fit':greedy_fit_obj.movej_fit_greedy}
 	# greedy_fit_obj.primitives={'movec_fit':greedy_fit_obj.movec_fit_greedy}
 
-	breakpoints,primitives_choices,points=greedy_fit_obj.fit_under_error(0.1)
+	breakpoints,primitives_choices,points=greedy_fit_obj.fit_under_error(0.01)
 	# breakpoints,primitives_choices,points=greedy_fit_obj.smooth_slope(greedy_fit_obj.curve_fit,greedy_fit_obj.curve_fit_R,breakpoints,primitives_choices,points)
 
 	###plt
@@ -593,4 +593,4 @@ def main3():
 	df.to_csv('curve_fit_js.csv',header=False,index=False)
 
 if __name__ == "__main__":
-	main2()
+	main()

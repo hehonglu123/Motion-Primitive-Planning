@@ -74,6 +74,7 @@ class MotionSend(object):
         mp = MotionProgram(tool=self.tool)
         
         for i in range(len(primitives)):
+            ###force last point to be fine
             if i==len(primitives)-1:
                 zone=fine
             motion = primitives[i]
@@ -137,9 +138,11 @@ def exe_from_file(ms,filename,filename_js,speed,zone):
 
 def main():
     ms = MotionSend()
-    data_dir="fitting_output/threshold1/"
-    speed={"v50":v50,"v500":v500,"v5000":v5000}
-    zone={"fine":fine,"z1":z1,"z10":z10}
+    data_dir="fitting_output/threshold0.1/"
+    # speed={"v50":v50,"v500":v500,"v5000":v5000}
+    # zone={"fine":fine,"z1":z1,"z10":z10}
+    speed={"v160":v160,"v170":v170,"v180":v180,"v190":v190}
+    zone={"z10":z10}
 
     for s in speed:
         for z in zone: 
