@@ -3,7 +3,7 @@ from pandas import *
 import sys, traceback, time
 from general_robotics_toolbox import *
 import matplotlib.pyplot as plt
-from scipy.optimize import differential_evolution, shgo, NonlinearConstraint, minimize
+from scipy.optimize import differential_evolution, shgo, NonlinearConstraint, minimize, fminbound
 from qpsolvers import solve_qp
 
 sys.path.append('../../toolbox')
@@ -63,6 +63,12 @@ class lambda_opt(object):
 		q=q/(np.linalg.norm(q)) 
 		return q
 
+	###error calculation for line search
+	def error_calc(self,alpha,q_cur,qdot_star,pd,pd_normal):
+		q_next=q_cur+alpha*qdot_star
+		pose_next=self.robot1.fwd(q_next)
+		return np.linalg.norm(pose_next.p-pd)+np.linalg.norm(pose_next.R[:,-1]-pd_normal)
+
 	def single_arm_stepwise_optimize(self,q_init,curve=[],curve_normal=[]):
 		if len(curve)==0:
 			curve=self.curve
@@ -72,10 +78,11 @@ class lambda_opt(object):
 		for i in range(len(curve)):
 			try:
 				error_fb=999
+				error_fb_prev=999
 				if i==0:
 					continue
 
-				while error_fb>0.1:
+				while error_fb>0.01:
 
 					pose_now=self.robot1.fwd(q_all[-1])
 					error_fb=np.linalg.norm(pose_now.p-curve[i])+np.linalg.norm(pose_now.R[:,-1]-curve_normal[i])
@@ -102,7 +109,15 @@ class lambda_opt(object):
 					f=-np.dot(np.transpose(Jp),vd)-w*np.dot(np.transpose(JR),wd)
 					qdot=solve_qp(H,f)
 
-					q_all.append(q_all[-1]+qdot)
+					#avoid getting stuck
+					if abs(error_fb-error_fb_prev)<0.0001:
+						break
+					error_fb_prev=error_fb
+					
+					###line search
+					alpha=fminbound(self.error_calc,0,1,args=(q_all[-1],qdot,curve[i],curve_normal[i],))
+					
+					q_all.append(q_all[-1]+alpha*qdot)
 					# print(q_all[-1])
 			except:
 				q_out.append(q_all[-1])

@@ -26,7 +26,6 @@ def main():
 	curve_q6=data['q6'].tolist()
 	curve_js=np.vstack((curve_q1, curve_q2, curve_q3,curve_q4,curve_q5,curve_q6)).T
 
-
 	q_init=curve_js[0]
 
 	opt=lambda_opt(curve,curve_normal)
@@ -49,7 +48,7 @@ def main():
 
 	R_temp=opt.direction2R(opt.curve_normal[0],-curve[1]+curve[0])
 	R=np.dot(R_temp,Rz(res.x[0]))
-	q_init=inv(curve[0],R)[0]
+	q_init=opt.robot1.inv(curve[0],R)[0]
 	q_out=opt.single_arm_stepwise_optimize(q_init)
 
 	####output to trajectory csv

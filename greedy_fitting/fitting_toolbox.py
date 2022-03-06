@@ -172,6 +172,29 @@ class fitting_toolbox(object):
 		else:
 			return slope
 
+	def linear_fit(self,data,p_constraint=[]):
+		###no constraint
+		if len(p_constraint)==0:
+			A=np.vstack((np.ones(len(data)),np.arange(0,len(data)))).T
+			b=data
+			res=np.linalg.lstsq(A,b,rcond=None)[0]
+			start_point=res[0]
+			slope=res[1].reshape(1,-1)
+
+			data_fit=np.dot(np.arange(0,len(data)).reshape(-1,1),slope)+start_point
+		###with constraint point
+		else:
+			start_point=p_constraint
+
+			A=np.arange(1,len(curve_backproj_js)+1).reshape(-1,1)
+			b=curve_backproj_js-start_point
+			res=np.linalg.lstsq(A,b,rcond=None)[0]
+			slope=res.reshape(1,-1)
+
+			data_fit=np.dot(np.arange(1,len(data)+1).reshape(-1,1),slope)+start_point
+
+		return data_fit
+
 
 	def movel_fit(self,curve,curve_backproj,curve_backproj_js,curve_R,p_constraint=[],R_constraint=[],slope_constraint=[]):	###unit vector slope
 		###convert orientation to w first

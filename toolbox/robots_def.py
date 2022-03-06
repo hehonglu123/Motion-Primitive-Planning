@@ -16,7 +16,7 @@ ez=np.array([[0],[0],[1]])
 #ALL in mm
 class abb6640(object):
 	#default tool paintgun
-	def __init__(self,R_tool=Ry(np.radians(120)),p_tool=np.array([0.45,0,-0.05])*1000.):
+	def __init__(self,R_tool=Ry(np.radians(120)),p_tool=np.array([0.45,0,-0.05])*1000.,d=0):
 		###ABB IRB 6640 180/2.55 Robot Definition
 		self.H=np.concatenate((ez,ey,ey,ex,ey,ex),axis=1)
 		p0=np.array([[0],[0],[0.78]])
@@ -27,6 +27,9 @@ class abb6640(object):
 		p5=np.array([[0.2],[0],[0]])
 		p6=np.array([[0.0],[0],[0.0]])
 
+		###fake link for fitting
+		tcp_new=p_tool+np.dot(R_tool,np.array([0,0,d]))
+
 
 		self.P=np.concatenate((p0,p1,p2,p3,p4,p5,p6),axis=1)*1000.
 		self.joint_type=np.zeros(6)
@@ -36,7 +39,7 @@ class abb6640(object):
 		self.lowerer_limit=np.radians([-170.,-65.,-180.,-300.,-120.,-360.])
 		self.joint_vel_limit=np.radians([100,90,90,190,140,190])
 		self.joint_acc_limit=10*self.joint_vel_limit
-		self.robot_def=Robot(self.H,self.P,self.joint_type,joint_lower_limit = self.lowerer_limit, joint_upper_limit = self.upper_limit, joint_vel_limit=self.joint_vel_limit, R_tool=R_tool,p_tool=p_tool)
+		self.robot_def=Robot(self.H,self.P,self.joint_type,joint_lower_limit = self.lowerer_limit, joint_upper_limit = self.upper_limit, joint_vel_limit=self.joint_vel_limit, R_tool=R_tool,p_tool=tcp_new)
 
 	def jacobian(self,q):
 		return robotjacobian(self.robot_def,q)
@@ -64,7 +67,7 @@ class abb6640(object):
 
 class abb1200(object):
 	#default tool paintgun
-	def __init__(self,R_tool=Ry(np.radians(120)),p_tool=np.array([0.45,0,-0.05])*1000.):
+	def __init__(self,R_tool=Ry(np.radians(120)),p_tool=np.array([0.45,0,-0.05])*1000.,d=0):
 		###ABB IRB 1200 5/0.9 Robot Definition
 		self.H=np.concatenate((ez,ey,ey,ex,ey,ex),axis=1)
 		p0=np.array([[0],[0],[0.3991]])
@@ -75,6 +78,9 @@ class abb1200(object):
 		p5=np.array([[0.082],[0],[0]])
 		p6=np.array([[0],[0],[0]])
 
+		###fake link for fitting
+		tcp_new=p_tool+np.dot(R_tool,np.array([0,0,d]))
+
 		###updated range&vel limit
 		self.P=np.concatenate((p0,p1,p2,p3,p4,p5,p6),axis=1)*1000.
 		self.joint_type=np.zeros(6)
@@ -82,7 +88,7 @@ class abb1200(object):
 		self.lowerer_limit=np.radians([-170.,-100.,-200.,-270.,-130.,-360.])
 		self.joint_vel_limit=np.radians([288,240,297,400,405,600])
 		self.joint_acc_limit=10*self.joint_vel_limit
-		self.robot_def=Robot(self.H,self.P,self.joint_type,joint_lower_limit = self.lowerer_limit, joint_upper_limit = self.upper_limit, joint_vel_limit=self.joint_vel_limit, R_tool=R_tool,p_tool=p_tool)
+		self.robot_def=Robot(self.H,self.P,self.joint_type,joint_lower_limit = self.lowerer_limit, joint_upper_limit = self.upper_limit, joint_vel_limit=self.joint_vel_limit, R_tool=R_tool,p_tool=tcp_new)
 
 	def jacobian(self,q):
 		return robotjacobian(self.robot_def,q)
@@ -114,13 +120,16 @@ class arb_robot(object):
 		self.H=H
 		self.P=P
 
+		###fake link for fitting
+		tcp_new=p_tool+np.dot(R_tool,np.array([0,0,d]))
+
 		###updated range&vel limit
 		self.joint_type=joint_type
 		self.upper_limit=upper_limit
 		self.lowerer_limit=lowerer_limit
 		self.joint_vel_limit=joint_vel_limit
 		self.joint_acc_limit=10*self.joint_vel_limit
-		self.robot_def=Robot(self.H,self.P,self.joint_type,joint_lower_limit = self.lowerer_limit, joint_upper_limit = self.upper_limit, joint_vel_limit=self.joint_vel_limit, R_tool=R_tool,p_tool=p_tool)
+		self.robot_def=Robot(self.H,self.P,self.joint_type,joint_lower_limit = self.lowerer_limit, joint_upper_limit = self.upper_limit, joint_vel_limit=self.joint_vel_limit, R_tool=R_tool,p_tool=tcp_new)
 
 	def jacobian(self,q):
 		return robotjacobian(self.robot_def,q)

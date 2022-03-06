@@ -228,7 +228,7 @@ class greedy_fit(fitting_toolbox):
 								points.append([curve_fit_js[-1]])
 							break
 					if not primitives_added:
-						curve_fit,curve_fit_R,curve_fit_js,max_error=self.primitives['movej_fit'](self.curve[self.breakpoints[-1]:self.breakpoints[-1]+next_point],self.curve_backproj[self.breakpoints[-1]:self.breakpoints[-1]+next_point],self.curve_backproj_js[self.breakpoints[-1]:self.breakpoints[-1]+next_point],self.curve_R[self.breakpoints[-1]:self.breakpoints[-1]+next_point])
+						curve_fit,curve_fit_R,curve_fit_js,max_error=self.movej_fit_greedy(self.curve[self.breakpoints[-1]:self.breakpoints[-1]+next_point],self.curve_backproj[self.breakpoints[-1]:self.breakpoints[-1]+next_point],self.curve_backproj_js[self.breakpoints[-1]:self.breakpoints[-1]+next_point],self.curve_R[self.breakpoints[-1]:self.breakpoints[-1]+next_point])
 						print('primitive skipped1')
 						primitives_choices.append('movej_fit')
 						points.append([curve_fit_js[-1]])
@@ -387,7 +387,7 @@ class greedy_fit(fitting_toolbox):
 def main():
 	###read in points
 	col_names=['X', 'Y', 'Z','direction_x', 'direction_y', 'direction_z'] 
-	data = read_csv("../data/from_ge/Curve_in_base_frame.csv", names=col_names)
+	data = read_csv("../data/from_ge/Curve_in_base_frame2.csv", names=col_names)
 	curve_x=data['X'].tolist()
 	curve_y=data['Y'].tolist()
 	curve_z=data['Z'].tolist()
@@ -398,7 +398,7 @@ def main():
 	curve_normal=np.vstack((curve_direction_x, curve_direction_y, curve_direction_z)).T
 
 	col_names=['q1', 'q2', 'q3','q4', 'q5', 'q6'] 
-	data = read_csv("../data/from_ge/curve_backproj_js.csv", names=col_names)
+	data = read_csv("../data/from_ge/curve_backproj_js2.csv", names=col_names)
 	curve_q1=data['q1'].tolist()
 	curve_q2=data['q2'].tolist()
 	curve_q3=data['q3'].tolist()
@@ -417,9 +417,9 @@ def main():
 
 	# greedy_fit_obj.primitives={'movel_fit':greedy_fit_obj.movel_fit_greedy}
 	# greedy_fit_obj.primitives={'movej_fit':greedy_fit_obj.movej_fit_greedy}
-	# greedy_fit_obj.primitives={'movec_fit':greedy_fit_obj.movec_fit_greedy}
+	greedy_fit_obj.primitives={'movec_fit':greedy_fit_obj.movec_fit_greedy}
 
-	breakpoints,primitives_choices,points=greedy_fit_obj.fit_under_error(0.01)
+	breakpoints,primitives_choices,points=greedy_fit_obj.fit_under_error(1.)
 	# breakpoints,primitives_choices,points=greedy_fit_obj.smooth_slope(greedy_fit_obj.curve_fit,greedy_fit_obj.curve_fit_R,breakpoints,primitives_choices,points)
 
 	###plt
