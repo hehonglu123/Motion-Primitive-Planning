@@ -213,18 +213,21 @@ class RL_Agent(object):
             x_tensor = torch.hstack((curve_feature_tensor, torch.tensor(type_code)))
 
             output = self.policy_net(x_tensor.float())
-            action_softmax = torch.softmax(output, dim=0)
-            action_code = torch.argmax(action_softmax)
+            # action_softmax = torch.softmax(output, dim=0)
 
-            eps_sample = np.random.rand()
-            if eps_sample < epsilon:
-                action_code = np.random.randint(0, self.output_dim)
+            # action_code = torch.argmax(action_softmax)
+            action_softmax = F.gumbel_softmax(output, tau=tau, dim=0)
+            action_code = np.random.choice(self.output_dim, p=action_softmax.detach().numpy())
+
+            # eps_sample = np.random.rand()
+            # if eps_sample < epsilon:
+            #     action_code = np.random.randint(0, self.output_dim)
 
             primitive_type = 'C' if action_code >= self.n_action and valid_types['C'] else 'L'
 
             length = ((action_code % self.n_action) + 1) * (1 / self.n_action)
 
-            action = Action(Type=primitive_type, Length=length.detach().numpy(), Code=action_code)
+            action = Action(Type=primitive_type, Length=length, Code=action_code)
 
             return action
 
