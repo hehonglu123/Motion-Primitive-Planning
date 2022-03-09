@@ -6,7 +6,7 @@ sys.path.append('../toolbox')
 from robot_def import *
 
 class fitting_toolbox(object):
-	def __init__(self,robot,curve,curve_normal,curve_js,d=50):
+	def __init__(self,robot,curve,curve_normal,curve_js,d=50, orientation_weight=50):
 		###robot: robot class
 		###curve: xyz position points
 		###curve_js: points in joint space
@@ -16,7 +16,7 @@ class fitting_toolbox(object):
 		self.curve_js=curve_js
 		self.d=d
 
-		self.orientation_weight=d
+		self.orientation_weight=orientation_weight
 
 		self.robot=robot
 

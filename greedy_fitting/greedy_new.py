@@ -17,8 +17,8 @@ from error_check import *
 #####################3d curve-fitting with MoveL, MoveJ, MoveC; stepwise incremental bi-section searched self.breakpoints###############################
 
 class greedy_fit(fitting_toolbox):
-	def __init__(self,robot,curve,curve_normal,curve_js,d=50):
-		super().__init__(robot,curve,curve_normal,curve_js,d)
+	def __init__(self,robot,curve,curve_normal,curve_js,d=50, orientation_weight=50):
+		super().__init__(robot,curve,curve_normal,curve_js,d,orientation_weight)
 		self.slope_constraint=np.radians(180)
 		self.break_early=False
 		###initial primitive candidates
@@ -225,7 +225,7 @@ def main():
 
 	robot=abb6640(d=50)
 
-	greedy_fit_obj=greedy_fit(robot,curve,curve_normal,curve_js,d=50)
+	greedy_fit_obj=greedy_fit(robot,curve,curve_normal,curve_js,d=50,orientation_weight=1)
 
 
 	###set primitive choices, defaults are all 3
@@ -235,7 +235,7 @@ def main():
 	# greedy_fit_obj.primitives={'movej_fit':greedy_fit_obj.movej_fit_greedy}
 	# greedy_fit_obj.primitives={'movec_fit':greedy_fit_obj.movec_fit_greedy}
 
-	breakpoints,primitives_choices,points=greedy_fit_obj.fit_under_error(1)
+	breakpoints,primitives_choices,points=greedy_fit_obj.fit_under_error(0.05)
 	# breakpoints,primitives_choices,points=greedy_fit_obj.smooth_slope(greedy_fit_obj.curve_fit,greedy_fit_obj.curve_fit_R,breakpoints,primitives_choices,points)
 
 	###plt

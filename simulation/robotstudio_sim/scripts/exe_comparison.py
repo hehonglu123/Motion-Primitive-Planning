@@ -29,9 +29,13 @@ class MotionSend(object):
         
         self.client = MotionProgramExecClient()
         self.robot=abb6640()
-
         quatR = R2q(rot([0,1,0],math.radians(30)))
         self.tool = tooldata(True,pose([50,0,450],[quatR[0],quatR[1],quatR[2],quatR[3]]),loaddata(1,[0,0,0.001],[1,0,0,0],0,0,0))
+
+        ###with fake link
+        # self.robot=abb6640(d=50)
+        # quatR = R2q(rot([0,1,0],math.radians(30)))
+        # self.tool = tooldata(True,pose([75,0,493.30127019],[quatR[0],quatR[1],quatR[2],quatR[3]]),loaddata(1,[0,0,0.001],[1,0,0,0],0,0,0))
 
     def moveL_target(self,q,point):
         quat=R2q(self.robot.fwd(q).R)
@@ -138,10 +142,10 @@ def exe_from_file(ms,filename,filename_js,speed,zone):
 
 def main():
     ms = MotionSend()
-    data_dir="fitting_output/threshold0.1/"
+    data_dir="fitting_output/threshold1/"
     # speed={"v50":v50,"v500":v500,"v5000":v5000}
     # zone={"fine":fine,"z1":z1,"z10":z10}
-    speed={"v160":v160,"v170":v170,"v180":v180,"v190":v190}
+    speed={"v500":v500}
     zone={"z10":z10}
 
     for s in speed:
