@@ -270,7 +270,53 @@ def main():
 	df=DataFrame({'j1':greedy_fit_obj.curve_fit_js[:,0],'j2':greedy_fit_obj.curve_fit_js[:,1],'j3':greedy_fit_obj.curve_fit_js[:,2],'j4':greedy_fit_obj.curve_fit_js[:,3],'j5':greedy_fit_obj.curve_fit_js[:,4],'j6':greedy_fit_obj.curve_fit_js[:,5]})
 	df.to_csv('curve_fit_js.csv',header=False,index=False)
 
+def rl_fit_data():
+	import glob, pickle
+	robot=abb6640(d=50)
+	# curve_file_list=sorted(glob.glob("../rl_fit/data/base/*.csv"))
+	# with open("../rl_fit/data/curve_file_list",'wb') as fp:
+	# 	pickle.dump(curve_file_list,fp)
+	with open("../rl_fit/data/curve_file_list",'rb') as fp:
+		curve_file_list=pickle.load(fp)
+
+	for i in range(len(curve_file_list)):
+		curve_js_file='../rl_fit/data/js_new/'+curve_file_list[i][20:-4]+'_js_new.csv'
+		###read in points
+		col_names=['X', 'Y', 'Z','direction_x', 'direction_y', 'direction_z'] 
+		data = read_csv(curve_file_list[i], names=col_names)
+		curve_x=data['X'].tolist()
+		curve_y=data['Y'].tolist()
+		curve_z=data['Z'].tolist()
+		curve_direction_x=data['direction_x'].tolist()
+		curve_direction_y=data['direction_y'].tolist()
+		curve_direction_z=data['direction_z'].tolist()
+		curve=np.vstack((curve_x, curve_y, curve_z)).T
+		curve_normal=np.vstack((curve_direction_x, curve_direction_y, curve_direction_z)).T
+
+
+		col_names=['q1', 'q2', 'q3','q4', 'q5', 'q6'] 
+		data = read_csv(curve_js_file, names=col_names)
+		curve_q1=data['q1'].tolist()
+		curve_q2=data['q2'].tolist()
+		curve_q3=data['q3'].tolist()
+		curve_q4=data['q4'].tolist()
+		curve_q5=data['q5'].tolist()
+		curve_q6=data['q6'].tolist()
+		curve_js=np.vstack((curve_q1, curve_q2, curve_q3,curve_q4,curve_q5,curve_q6)).T
+
+
+		greedy_fit_obj=greedy_fit(robot,curve,curve_normal,curve_js,d=50,orientation_weight=1)
+		breakpoints,primitives_choices,points=greedy_fit_obj.fit_under_error(1)
+
+		breakpoints=np.array(breakpoints)
+
+		breakpoints[1:]=breakpoints[1:]-1
+
+		df=DataFrame({'breakpoints':breakpoints[1:],'primitives':primitives_choices})
+		df.to_csv('../rl_fit/data/greedy_results/result_traj'+curve_file_list[i][20:-4]+'.csv',header=True,index=False)
+
+
 
 
 if __name__ == "__main__":
-	main()
+	rl_fit_data()

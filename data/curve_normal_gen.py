@@ -83,6 +83,20 @@ def main():
 	# df=DataFrame({'x':curve_backproj[:,0],'y':curve_backproj[:,1], 'z':curve_backproj[:,2],'x_dir':curve_normal[:,0],'y_dir':curve_normal[:,1], 'z_dir':curve_normal[:,2]})
 	# df.to_csv('from_ge/Curve_backproj_in_base_frame2.csv',header=False,index=False)
 
+def rl_traj_gen():
+	import glob
+	file_list=glob.glob("../rl_fit/data/base/*.csv")
+	for filename in file_list:
+		col_names=['X', 'Y', 'Z','direction_x','direction_y','direction_z']
+		data = read_csv(filename, names=col_names)
+		curve_x=data['X'].tolist()
+		curve_y=data['Y'].tolist()
+		curve_z=data['Z'].tolist()
+		curve=np.vstack((curve_x, curve_y, curve_z)).T
+		curve_normal=gen_curve_normal([0.97324,	0.091,	-0.21101],curve)
+		df=DataFrame({'x':curve[:,0],'y':curve[:,1], 'z':curve[:,2],'x_dir':curve_normal[:,0],'y_dir':curve_normal[:,1], 'z_dir':curve_normal[:,2]})
+		df.to_csv(filename,header=False,index=False)
+
 
 if __name__ == "__main__":
-	main()
+	rl_traj_gen()
