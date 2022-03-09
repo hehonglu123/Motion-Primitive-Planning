@@ -26,7 +26,7 @@ from robots_def import *
 Curve_Error = namedtuple("Curve_Error", ('primitive', 'max_error'))
 State = namedtuple("State", ("longest_type", "curve_features"))
 Action = namedtuple("Action", ("Type", "Length", "Code"))
-Memory = namedtuple('Memory', ('state', 'action', 'reward', 'next_state', 'next_action'))
+Memory = namedtuple('Memory', ('state', 'action', 'reward', 'next_state', 'done'))
 primitive_type_code = {"L": 0, "C": 1, "J": 2}
 
 torch.manual_seed(1234)
@@ -36,12 +36,16 @@ random.seed(1234)
 ERROR_THRESHOLD = 1.0
 MAX_GREEDY_STEP = 10
 
+EPS_START = 0.5
+EPS_END = 0.01
+MAX_EPS_EPISODE = 0.6
+
 TAU_START = 10
 TAU_END = 0.01
 MAX_TAU_EPISODE = 0.6
 LEARNING_RATE = 0.0001
 GAMMA = 0.99
-BATCH_SIZE = 16
+BATCH_SIZE = 4
 
 REWARD_FINISH = 2000  # -------------------------------------- HERE
 REWARD_DECAY_FACTOR = 0.9
@@ -141,22 +145,29 @@ class ReplayMemory(object):
         state = memory.state
         type_encode = primitive_type_code[state.longest_type]
         state_encode = np.hstack([state.curve_features, type_encode])
-        state_tensor = torch.tensor(state_encode)
+
+        action = memory.action
+        action_type_encode = action.Code
 
         next_state = memory.next_state
-        next_state_tensor = None
+        next_state_encode = np.zeros_like(state_encode)
         if next_state is not None:
             next_type_encode = primitive_type_code[next_state.longest_type]
             next_state_encode = np.hstack([next_state.curve_features, next_type_encode])
-            next_state_tensor = torch.tensor(next_state_encode)
 
-        new_memory = Memory(state=state_tensor, action=memory.action, reward=memory.reward,
-                            next_state=next_state_tensor, next_action=memory.next_action)
+        new_memory = Memory(state=state_encode, action=action_type_encode, reward=memory.reward,
+                            next_state=next_state_encode, done=memory.done)
 
         self.memory.append(new_memory)
 
     def sample(self, batch_size):
-        return random.sample(self.memory, batch_size)
+        sample_batch = random.sample(self.memory, batch_size)
+        state_batch = np.vstack([m.state for m in sample_batch])
+        action_batch = np.array([m.action for m in sample_batch])
+        reward_batch = np.array([m.reward for m in sample_batch])
+        next_state_batch = np.vstack([m.next_state for m in sample_batch])
+        done_batch = np.array([m.done for m in sample_batch])
+        return state_batch, action_batch, reward_batch, next_state_batch, done_batch
 
     def __len__(self):
         return len(self.memory)
@@ -189,7 +200,8 @@ class DQN(nn.Module):
 class RL_Agent(object):
 
     def __init__(self, n_curve_feature: int, n_action: int, lr: float = LEARNING_RATE):
-        self.input_dim = n_curve_feature + 1
+        # self.input_dim = n_curve_feature + 1
+        self.input_dim = n_curve_feature * 3 * 2 + 1
         self.output_dim = n_action * 2
         self.n_curve_feature = n_curve_feature
         self.n_action = n_action
@@ -205,23 +217,25 @@ class RL_Agent(object):
 
         self.criterion = nn.SmoothL1Loss()
 
-    def get_action(self, state: State, valid_types: dict = None, tau=0.01, epsilon=0):
+    def get_action(self, state: State, valid_types: dict = None, tau=0.01, epsilon=0.):
         self.policy_net.eval()
         with torch.no_grad():
             type_code = primitive_type_code[state.longest_type]
             curve_feature_tensor = torch.tensor(state.curve_features)
             x_tensor = torch.hstack((curve_feature_tensor, torch.tensor(type_code)))
 
-            output = self.policy_net(x_tensor.float())
             # action_softmax = torch.softmax(output, dim=0)
 
             # action_code = torch.argmax(action_softmax)
-            action_softmax = F.gumbel_softmax(output, tau=tau, dim=0)
-            action_code = np.random.choice(self.output_dim, p=action_softmax.detach().numpy())
+            # action_softmax = F.gumbel_softmax(output, tau=tau, dim=0)
+            # action_code = np.random.choice(self.output_dim, p=action_softmax.detach().numpy())
 
-            # eps_sample = np.random.rand()
-            # if eps_sample < epsilon:
-            #     action_code = np.random.randint(0, self.output_dim)
+            eps_sample = np.random.rand()
+            if eps_sample < epsilon:
+                action_code = np.random.randint(0, self.output_dim)
+            else:
+                output = self.policy_net(x_tensor.float())
+                action_code = torch.argmax(output).data.detach().numpy()
 
             primitive_type = 'C' if action_code >= self.n_action and valid_types['C'] else 'L'
 
@@ -231,44 +245,43 @@ class RL_Agent(object):
 
             return action
 
-    def memory_save(self, state, action, reward, next_state, next_action):
-        memory = Memory(state=state, action=action, reward=reward, next_state=next_state, next_action=next_action)
+    def memory_save(self, state, action, reward, next_state, done):
+        memory = Memory(state=state, action=action, reward=reward, next_state=next_state, done=done)
         self.memory.push(memory)
 
-    def learn(self, algo='Q_Learning'):
+    def td_estimate(self, state, action):
+        state_tensor = torch.from_numpy(state).float()
+        q_value = self.policy_net(state_tensor)
+        state_action_value = q_value[:, action]
+        return state_action_value
+
+    def td_target(self, reward, next_state, done):
+
+        with torch.no_grad():
+            next_state_tensor = torch.from_numpy(next_state).float()
+            reward_tensor = torch.from_numpy(reward).float()
+            done_tensor = torch.from_numpy(done).float()
+            next_q_value = self.policy_net(next_state_tensor)
+            best_action = torch.argmax(next_q_value, dim=1)
+            next_q_target = self.target_net(next_state_tensor)
+            next_state_action_value = next_q_target[:, best_action]
+            expected_reward = reward_tensor + (1 - done_tensor) * self.gamma * next_state_action_value
+            return expected_reward
+
+    def learn(self):
         if len(self.memory) < self.batch_size:
             return
-        memory_batch = self.memory.sample(self.batch_size)
+        state_batch, action_batch, reward_batch, next_state_batch, done_batch = self.memory.sample(self.batch_size)
 
         self.policy_net.train()
 
-        for memory in memory_batch:
-            state = memory.state
-            action = memory.action.Code
-            reward = memory.reward
-            next_state = memory.next_state
+        td_est = self.td_estimate(state_batch, action_batch)
+        td_tgt = self.td_target(reward_batch, next_state_batch, done_batch)
 
-            x_tensor = state
-            q_value = self.policy_net(x_tensor.float())
-            state_action_value = q_value[action]
-
-            q_next = torch.zeros_like(q_value)
-            if next_state is not None:
-                next_x_tensor = next_state
-                next_action = memory.next_action.Code
-                q_next = self.target_net(next_x_tensor.float())
-            if algo == 'SARSA':
-                next_state_action_value = q_next[next_action]
-            else:
-                next_state_action_value = torch.max(q_next)
-
-            expected_q = next_state_action_value * self.gamma + reward
-            if type(expected_q) is float:
-                expected_q = torch.tensor(expected_q).reshape(1)
-            self.optimizer.zero_grad()
-            loss = self.criterion(state_action_value, expected_q)
-            loss.backward()
-            self.optimizer.step()
+        self.optimizer.zero_grad()
+        loss = self.criterion(td_est, td_tgt)
+        loss.backward()
+        self.optimizer.step()
 
     def update_target_nets(self):
         self.target_net.load_state_dict(self.policy_net.state_dict())
@@ -311,10 +324,10 @@ class RL_Env(object):
 
         remaining_curve = self.target_curve[self.last_bp:, :]
         normalized_curve = PCA_normalization(remaining_curve)
-        # curve_features, _ = fft_feature(normalized_curve, self.n_feature)
-        normalized_curve_tensor = torch.from_numpy(np.array([normalized_curve.T])).float()
-        curve_features = self.encoder(normalized_curve_tensor)
-        curve_features = curve_features.detach().numpy().flatten()
+        curve_features, _ = fft_feature(normalized_curve, self.n_feature)
+        # normalized_curve_tensor = torch.from_numpy(np.array([normalized_curve.T])).float()
+        # curve_features = self.encoder(normalized_curve_tensor)
+        # curve_features = curve_features.detach().numpy().flatten()
 
         self.longest_primitives, longest_type = greedy_fit_primitive(last_bp=self.last_bp, curve=self.target_curve,
                                                                      p=self.fit_curve[-1])
@@ -345,10 +358,10 @@ class RL_Env(object):
                        "C": self.longest_primitives['C'] is not None}
         remaining_curve = self.target_curve[self.last_bp:, :]
         normalized_curve = PCA_normalization(remaining_curve)
-        # curve_features, _ = fft_feature(normalized_curve, self.n_feature)
-        normalized_curve_tensor = torch.from_numpy(np.array([normalized_curve.T])).float()
-        curve_features = self.encoder(normalized_curve_tensor)
-        curve_features = curve_features.detach().numpy().flatten()
+        curve_features, _ = fft_feature(normalized_curve, self.n_feature)
+        # normalized_curve_tensor = torch.from_numpy(np.array([normalized_curve.T])).float()
+        # curve_features = self.encoder(normalized_curve_tensor)
+        # curve_features = curve_features.detach().numpy().flatten()
 
         state = State(longest_type=longest_type, curve_features=curve_features)
         # done = len(self.fit_curve) >= len(self.target_curve)
@@ -360,7 +373,7 @@ class RL_Env(object):
         pass
 
 
-def train_rl(agent: RL_Agent, curve_base_data, curve_js_data, n_episode=10000):
+def train_rl(agent: RL_Agent, curve_base_data, curve_js_data, n_episode=1000):
     robot = abb6640()
     print("Train Start")
 
@@ -375,6 +388,7 @@ def train_rl(agent: RL_Agent, curve_base_data, curve_js_data, n_episode=10000):
         timer = time.time_ns()
 
         tau = episode_tau(i_episode, n_episode)
+        epsilon = EPS_START - i_episode * (EPS_START - EPS_END) / n_episode
 
         episode_reward = 0
 
@@ -392,7 +406,6 @@ def train_rl(agent: RL_Agent, curve_base_data, curve_js_data, n_episode=10000):
         # print("Episode Start")
 
         state, done, valid_actions = env.reset()
-        action = agent.get_action(state, valid_types=valid_actions, tau=tau)
 
         i_step = 0
         while not done:
@@ -400,17 +413,19 @@ def train_rl(agent: RL_Agent, curve_base_data, curve_js_data, n_episode=10000):
             # print("{}/{}".format(len(env.fit_curve), len(env.target_curve)))
             # print("Action:", action, valid_actions)
 
-            next_state, reward, done, valid_actions = env.step(action, i_step)
-            next_action = None
-            if not done:
-                next_action = agent.get_action(next_state, valid_types=valid_actions, tau=tau)
+            action = agent.get_action(state, valid_types=valid_actions, tau=tau, epsilon=epsilon)
+            # print(action)
 
-            agent.memory_save(state=state, action=action, reward=reward, next_state=next_state, next_action=next_action)
+            next_state, reward, done, valid_actions = env.step(action, i_step)
+
+            agent.memory_save(state=state, action=action, reward=reward, next_state=next_state, done=done)
             agent.learn()
             episode_reward += reward
 
             state = next_state
-            action = next_action
+
+            if done:
+                break
 
             # print("Step: {} END {}".format(i_step, reward))
 
@@ -421,9 +436,6 @@ def train_rl(agent: RL_Agent, curve_base_data, curve_js_data, n_episode=10000):
         episode_rewards.append(episode_reward)
         episode_steps.append(i_step)
         episode_target_curve.append(random_curve_idx)
-
-        if i_episode >= 10:
-            break
 
         if (i_episode + 1) % SAVE_MODEL == 0:
             print("=== Saving Model ===")
@@ -443,7 +455,7 @@ def save_data(episode_rewards, episode_steps, episode_target_curve):
 
 
 def rl_fit(curve_base_data, curve_js_data):
-    n_feature = 128
+    n_feature = 20
     n_action = 10
     agent = RL_Agent(n_feature, n_action)
     train_rl(agent, curve_base_data, curve_js_data)
