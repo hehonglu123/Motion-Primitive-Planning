@@ -37,8 +37,8 @@ model_name="abb6640"
 f = open('model/abb6640/model.sdf','r')
 robot_sdf = f.read()
 with open('calibration/abb6640.yaml') as file:
-	H = np.array(yaml.load(file)['H'],dtype=np.float64)
-initialize(robot_sdf,model_name,H)
+	H_6640 = np.array(yaml.load(file)['H'],dtype=np.float64)
+initialize(robot_sdf,model_name,H_6640)
 #read sdf file
 model_name="abb1200"
 f = open('model/abb1200/model.sdf','r')
@@ -51,9 +51,10 @@ initialize(robot_sdf,model_name,H)
 model_name="blade"
 f = open('model/blade/model.sdf','r')
 bade_sdf = f.read()
-with open('trajectory/single_arm/curve_pose_opt/curve_pose.yaml') as file:
+# with open('trajectory/single_arm/curve_pose_opt/curve_pose.yaml') as file:
+with open('trajectory/single_arm/all_theta_opt/curve_pose.yaml') as file:
 	H = np.array(yaml.load(file)['H'],dtype=np.float64)
-initialize(bade_sdf,model_name,H)
+initialize(bade_sdf,model_name,np.dot(H_6640,H))
 
 
 print("Done!")

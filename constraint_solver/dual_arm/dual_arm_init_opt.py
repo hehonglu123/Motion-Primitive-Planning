@@ -39,6 +39,8 @@ def main():
 									atol=0.)
 	print(res)
 
+	# x=[-0.09376803,  0.86301891,  0.55703144, -0.47267726, -1.66004072,1.85797113, -2.49958766]
+
 	q_init2=res.x[:-1]
 	pose2_world_now=robot2.fwd(q_init2,opt.base2_R,opt.base2_p)
 
@@ -63,7 +65,7 @@ def main():
 	plt.xlabel("lambda")
 	plt.ylabel("lambda_dot")
 	plt.title("DUALARM max lambda_dot vs lambda (path index)")
-	plt.ylim([0.5,3.5])
+	plt.ylim([1000,4000])
 	plt.savefig("trajectory/results.png")
 	plt.show()
 

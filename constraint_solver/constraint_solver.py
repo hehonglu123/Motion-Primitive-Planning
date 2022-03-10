@@ -32,8 +32,6 @@ class lambda_opt(object):
 		self.lam=[0]
 		for i in range(len(curve)-1):
 			self.lam.append(self.lam[-1]+np.linalg.norm(curve[i+1]-curve[i]))
-		###normalize lam, 
-		self.lam=np.array(self.lam)/self.lam[-1]
 		self.lam=self.lam[0:-1:num_per_step]
 
 

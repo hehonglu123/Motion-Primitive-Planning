@@ -15,27 +15,15 @@ def main():
 	curve=np.vstack((curve_x, curve_y, curve_z)).T
 	curve_normal=np.vstack((curve_direction_x, curve_direction_y, curve_direction_z)).T
 
-	###read actual curve
-	col_names=['q1', 'q2', 'q3','q4', 'q5', 'q6'] 
-	data = read_csv("curve_poses/curve_pose0/Curve_backproj_js0.csv", names=col_names)
-	curve_q1=data['q1'].tolist()
-	curve_q2=data['q2'].tolist()
-	curve_q3=data['q3'].tolist()
-	curve_q4=data['q4'].tolist()
-	curve_q5=data['q5'].tolist()
-	curve_q6=data['q6'].tolist()
-	curve_js=np.vstack((curve_q1, curve_q2, curve_q3,curve_q4,curve_q5,curve_q6)).T
-
-	q_init=curve_js[0]
-
-	opt=lambda_opt(curve,curve_normal)
+	robot=abb6640()
+	opt=lambda_opt(curve,curve_normal,robot1=robot)
 
 	lowerer_limit=[-np.pi]
 	upper_limit=[np.pi]
 	bnds=tuple(zip(lowerer_limit,upper_limit))
 	res = differential_evolution(opt.single_arm_theta0_opt, bnds, args=None,workers=1,
 									x0 = [0],
-									strategy='best1bin', maxiter=2000,
+									strategy='best1bin', maxiter=500,
 									popsize=15, tol=1e-10,
 									mutation=(0.5, 1), recombination=0.7,
 									seed=None, callback=None, disp=False,

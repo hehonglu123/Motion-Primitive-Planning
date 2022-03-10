@@ -19,20 +19,8 @@ def main():
 	curve=np.vstack((curve_x, curve_y, curve_z)).T
 	curve_normal=np.vstack((curve_direction_x, curve_direction_y, curve_direction_z)).T
 
-	###read actual curve
-	col_names=['q1', 'q2', 'q3','q4', 'q5', 'q6'] 
-	data = read_csv("curve_poses/curve_pose0/Curve_backproj_js0.csv", names=col_names)
-	curve_q1=data['q1'].tolist()
-	curve_q2=data['q2'].tolist()
-	curve_q3=data['q3'].tolist()
-	curve_q4=data['q4'].tolist()
-	curve_q5=data['q5'].tolist()
-	curve_q6=data['q6'].tolist()
-	curve_js=np.vstack((curve_q1, curve_q2, curve_q3,curve_q4,curve_q5,curve_q6)).T
 
-	q_init=curve_js[0]
-
-	opt=lambda_opt(curve,curve_normal)
+	opt=lambda_opt(curve,curve_normal,robot1=abb6640())
 
 	###path constraints, position constraint and curve normal constraint
 	lowerer_limit=[-np.pi]
@@ -43,7 +31,7 @@ def main():
 	###diff evolution
 	res = differential_evolution(opt.single_arm_global_opt, bnds,workers=-1,
 									x0 = np.zeros(len(opt.curve)),
-									strategy='best1bin', maxiter=2000,
+									strategy='best1bin', maxiter=500,
 									popsize=15, tol=1e-2,
 									mutation=(0.5, 1), recombination=0.7,
 									seed=None, callback=None, disp=False,
@@ -56,13 +44,13 @@ def main():
 		if i==0:
 			R_temp=opt.direction2R(opt.curve_normal[i],-opt.curve[i+1]+opt.curve[i])
 			R=np.dot(R_temp,Rz(res.x[i]))
-			q_out=[inv(opt.curve[i],R)[0]]
+			q_out=[opt.robot1.inv(opt.curve[i],R)[0]]
 
 		else:
 			R_temp=opt.direction2R(opt.curve_normal[i],-opt.curve[i]+opt.curve[i-1])
 			R=np.dot(R_temp,Rz(res.x[i]))
 			###get closet config to previous one
-			q_inv_all=inv(opt.curve[i],R)
+			q_inv_all=opt.robot1.inv(opt.curve[i],R)
 			temp_q=q_inv_all-q_out[-1]
 			order=np.argsort(np.linalg.norm(temp_q,axis=1))
 			q_out.append(q_inv_all[order[0]])
@@ -82,8 +70,9 @@ def main():
 	plt.plot(opt.lam[:len(q_out)-1],dlam_out,label="lambda_dot_max")
 	plt.xlabel("lambda")
 	plt.ylabel("lambda_dot")
+	plt.ylim([1000,4000])
 	plt.title("max lambda_dot vs lambda (path index)")
-	plt.savefig("velocity-constraint_js.png")
+	plt.savefig("trajectory/all_theta_opt/results.png")
 	plt.show()
 
 if __name__ == "__main__":

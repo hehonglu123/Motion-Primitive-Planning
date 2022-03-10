@@ -4,7 +4,7 @@ import numpy as np
 from pandas import *
 
 sys.path.append('../../toolbox')
-from robot_def import *
+from robots_def import *
 
 
 def main():
@@ -19,11 +19,12 @@ def main():
     curve_q6=data['q6'].tolist()
     curve_js1=np.vstack((curve_q1, curve_q2, curve_q3,curve_q4,curve_q5,curve_q6)).T
 
-    p_prev=fwd(curve_js1[0]).p
+    robot=abb6640()
+    p_prev=robot.fwd(curve_js1[0]).p
     ###find path length
     lam=[0]
     for i in range(len(curve_js1)-1):
-        p_new=fwd(curve_js1[i+1]).p
+        p_new=robot.fwd(curve_js1[i+1]).p
         lam.append(lam[-1]+np.linalg.norm(p_new-p_prev))
         p_prev=p_new
     ###normalize lam, 

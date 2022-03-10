@@ -15,7 +15,8 @@ def main():
 	curve=np.vstack((curve_x, curve_y, curve_z)).T
 	curve_normal=np.vstack((curve_direction_x, curve_direction_y, curve_direction_z)).T
 
-	opt=lambda_opt(curve,curve_normal)
+	robot=abb6640(d=50)
+	opt=lambda_opt(curve,curve_normal,robot1=robot)
 
 
 	###path constraints, position constraint and curve normal constraint
@@ -24,20 +25,21 @@ def main():
 	bnds=tuple(zip(lowerer_limit,upper_limit))
 
 
-	res = minimize(opt.curve_pose_opt, [0.57735027, 0.57735027, 0.57735027,2.0943951023931957,2700,-800,500,0], method='SLSQP',tol=1e-10,bounds=bnds)
+	# res = minimize(opt.curve_pose_opt, [0.57735027, 0.57735027, 0.57735027,2.0943951023931957,2700,-800,500,0], method='SLSQP',tol=1e-10,bounds=bnds)
 
-	# res = differential_evolution(opt.curve_pose_opt, bnds, args=None,workers=-1,
-	# 								x0 = [1,0,0,0,2327.1365,1084.361,757.6133,0],
-	# 								strategy='best1bin', maxiter=200,
-	# 								popsize=15, tol=1e-10,
-	# 								mutation=(0.5, 1), recombination=0.7,
-	# 								seed=None, callback=None, disp=False,
-	# 								polish=True, init='latinhypercube',
-	# 								atol=0.)
+	res = differential_evolution(opt.curve_pose_opt, bnds, args=None,workers=-1,
+									x0 = [0.57735027, 0.57735027, 0.57735027,2.0943951023931957,2700,-800,500,0],
+									strategy='best1bin', maxiter=200,
+									popsize=15, tol=1e-10,
+									mutation=(0.5, 1), recombination=0.7,
+									seed=None, callback=None, disp=False,
+									polish=True, init='latinhypercube',
+									atol=0.)
 	
 
 
 	print(res)
+	x=np.array([1.60626126e-02, -7.22431610e-01, -2.80047781e-01, -2.67246065e+00,-9.96959675e+01, -7.17980915e+02,  5.83590041e+02,  9.08683311e-01])
 
 	k=res.x[:3]/np.linalg.norm(res.x[:3])
 	theta0=res.x[3]
@@ -53,7 +55,7 @@ def main():
 
 	R_temp=opt.direction2R(curve_normal_new[0],-curve_new[1]+curve_new[0])
 	R=np.dot(R_temp,Rz(theta1))
-	q_init=inv(curve_new[0],R)[0]
+	q_init=robot.inv(curve_new[0],R)[0]
 
 
 	q_out=opt.single_arm_stepwise_optimize(q_init,curve_new,curve_normal_new)
@@ -71,7 +73,7 @@ def main():
 	plt.plot(opt.lam[:len(q_out)-1],dlam_out,label="lambda_dot_max")
 	plt.xlabel("lambda")
 	plt.ylabel("lambda_dot")
-	plt.ylim([0.5,3.5])
+	plt.ylim([1000,4000])
 	plt.title("max lambda_dot vs lambda (path index)")
 	plt.savefig("trajectory/curve_pose_opt/results.png")
 	plt.show()
