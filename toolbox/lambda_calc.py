@@ -3,7 +3,7 @@ from pandas import *
 import sys, traceback
 from general_robotics_toolbox import *
 import matplotlib.pyplot as plt
-from robot_def import *
+from robots_def import *
 
 def calc_lam(curve):
 	###find path length
@@ -11,7 +11,7 @@ def calc_lam(curve):
 	for i in range(len(curve)-1):
 		lam.append(lam[-1]+np.linalg.norm(curve[i+1]-curve[i]))
 	###normalize lam, 
-	return np.array(lam)/lam[-1]
+	return np.array(lam)
 
 def calc_lamdot(curve_js,lam,joint_vel_limit,step):
 	############find maximum lambda dot vs lambda
@@ -93,3 +93,35 @@ def calc_lamdot_dual(curve_js1,curve_js2,lam,joint_vel_limit1,joint_vel_limit2,s
 
 
 	return dlam_max
+
+
+def main():
+	col_names=['x', 'y', 'z','R1','R2','R3','R4','R5','R6','R7','R8','R9'] 
+	data = read_csv("../greedy_fitting/curve_fit_backproj.csv")
+	curve_x=data['x'].tolist()
+	curve_y=data['y'].tolist()
+	curve_z=data['z'].tolist()
+	curve=np.vstack((curve_x, curve_y, curve_z)).T
+	print(curve)
+
+	col_names=['q1', 'q2', 'q3','q4', 'q5', 'q6'] 
+	data = read_csv("../greedy_fitting/curve_fit_js.csv", names=col_names)
+	curve_q1=data['q1'].tolist()
+	curve_q2=data['q2'].tolist()
+	curve_q3=data['q3'].tolist()
+	curve_q4=data['q4'].tolist()
+	curve_q5=data['q5'].tolist()
+	curve_q6=data['q6'].tolist()
+	curve_js=np.vstack((curve_q1, curve_q2, curve_q3,curve_q4,curve_q5,curve_q6)).T
+	lam=calc_lam(curve)
+	robot=abb6640()
+	step=1
+	lam_dot=calc_lamdot(curve_js,lam,robot.joint_vel_limit,step)
+	plt.plot(lam[::step][1:],lam_dot)
+	plt.xlabel('path length (mm)')
+	plt.ylabel('max lambda_dot')
+	plt.title('lambda_dot vs lambda')
+	plt.show()
+
+if __name__ == "__main__":
+	main()
