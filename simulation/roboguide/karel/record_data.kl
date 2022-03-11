@@ -16,13 +16,14 @@ VAR
     timeStr    : STRING[18] -- formated
     
     IntANGa1,IntANGa2,IntANGa3,IntANGa4,IntANGa5,IntANGa6    : REAL
-    IntANGa1Str, IntANGa2Str, IntANGa3Str,IntANGa4Str, IntANGa5Str, IntANGa6Str: STRING[7]
+    IntANGa1Str, IntANGa2Str, IntANGa3Str,IntANGa4Str, IntANGa5Str, IntANGa6Str: STRING[8]
  
     entry      : INTEGER
     status     : INTEGER
     -- tests
     test       : INTEGER
     clocky     : INTEGER
+    PI         : REAL
 -----------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------
 -- routine to get angle of axis
@@ -37,20 +38,32 @@ BEGIN
         GET_VAR(entry, '*SYSTEM*', '$MOR_GRP_SV[1].$CUR_SV_ANG[4]', IntANGa4, status)
         GET_VAR(entry, '*SYSTEM*', '$MOR_GRP_SV[1].$CUR_SV_ANG[5]', IntANGa5, status)
         GET_VAR(entry, '*SYSTEM*', '$MOR_GRP_SV[1].$CUR_SV_ANG[6]', IntANGa6, status)
+
+        IntANGa3 = IntANGa2+IntANGa3
+        IntANGa1 = IntANGa1*180/PI
+        IntANGa2 = IntANGa2*180/PI
+        IntANGa3 = IntANGa3*180/PI
+        IntANGa4 = IntANGa4*180/PI
+        IntANGa5 = IntANGa5*180/PI
+        IntANGa6 = IntANGa6*180/PI
     ENDIF
 
 END GET_INT_ANG
 -----------------------------------------------------------------------------------
 -- main routine
 BEGIN -- execute the program
+    PI = 3.14159265358979323846
     clock_var = 0
     -- begin the clock time count
     CONNECT TIMER TO clock_var
     
     period = 2 -- ms
 
-    
-    filename = 'UD1:'+'TEST'+'.dt'
+    -- get actual time and convert it into string
+    GET_TIME(timeInt)
+    CNV_TIME_STR(timeInt, timeStr)
+
+    filename = 'UD1:'+'log'+'.csv'
     
     entry = 0
     status = 0
@@ -59,25 +72,29 @@ BEGIN -- execute the program
     -- test = 0
     -- clocky = 0
     
-    -- get actual time and convert it into string
-    GET_TIME(timeInt)
-    CNV_TIME_STR(timeInt, timeStr)
     
-    -- open the log file
-    OPEN FILE logFile ('AP', filename)
+    -- open the log file and overwrite previous
+    -- OPEN FILE logFile ('W', filename)
     -- write actual time and make a carriage return
-    WRITE logFile (timeStr, CR)
+    -- WRITE logFile (timeStr, CR)
+    -- CLOSE FILE logFile
+
+
+    OPEN FILE logFile ('AP', filename)
+    -- WRITE logFile (timeStr, CR)
+    WRITE logFile ('timestamp,J1,J2,J3,J4,J5,J6', CR)
      -- start recording
     REPEAT
       -- clocky = clock_var
       -- test = clocky+period
       GET_INT_ANG(TRUE) -- call internal angle routine
-      CNV_REAL_STR(IntANGa1, 7, 4, IntANGa1Str)
-      CNV_REAL_STR(IntANGa2, 7, 4, IntANGa2Str)
-      CNV_REAL_STR(IntANGa3, 7, 4, IntANGa3Str)
-      CNV_REAL_STR(IntANGa4, 7, 4, IntANGa4Str)
-      CNV_REAL_STR(IntANGa5, 7, 4, IntANGa5Str)
-      CNV_REAL_STR(IntANGa6, 7, 4, IntANGa6Str)
+      
+      CNV_REAL_STR(IntANGa1, 8, 4, IntANGa1Str)
+      CNV_REAL_STR(IntANGa2, 8, 4, IntANGa2Str)
+      CNV_REAL_STR(IntANGa3, 8, 4, IntANGa3Str)
+      CNV_REAL_STR(IntANGa4, 8, 4, IntANGa4Str)
+      CNV_REAL_STR(IntANGa5, 8, 4, IntANGa5Str)
+      CNV_REAL_STR(IntANGa6, 8, 4, IntANGa6Str)
       WRITE logFile(clock_var)
       WRITE logFile(',')
       WRITE logFile(IntANGa1Str)
