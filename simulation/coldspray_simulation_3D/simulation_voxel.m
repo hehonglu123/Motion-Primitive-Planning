@@ -9,8 +9,8 @@ robot.joint_type = [0 0 0 0 0 0];
 robot.tool = [[rot(ey,deg2rad(120)) [0.45;0;-0.05]*1000.];0 0 0 1];
 
 % import stl files
-file_name = 'test_stl_compare.stl';
-% file_name = 'test_stl_dense.stl';
+% file_name = 'test_stl_compare.stl';
+file_name = 'test_stl_dense.stl';
 
 gm = importGeometry(file_name);
 
@@ -24,8 +24,8 @@ title("The mold (mesh)");
 
 % read joint trajectory
 % joint_data = readmatrix('log_cold_spray.csv');
-joint_data = readmatrix('log_cold_spray_circle.csv');
-% joint_data = readmatrix('log_cold_spray_lines.csv');
+% joint_data = readmatrix('log_cold_spray_circle.csv');
+joint_data = readmatrix('log_cold_spray_lines.csv');
 j_stamp = joint_data(:,1);
 j_cmdnum = joint_data(:,2);
 joint_p = joint_data(:,3:8)';
@@ -131,7 +131,7 @@ end
 disp(mean(T));
 disp(std(T));
 
-
+% data_result = stlread('result.stl');
 data_final = triangulation(data.ConnectivityList, p_progress');
 % figure(2); trimesh(data_final,'FaceColor','none','EdgeColor','k'); hold
 figure(2); trimesh(data_final,'FaceColor','none','EdgeColor','red'); hold on; 
