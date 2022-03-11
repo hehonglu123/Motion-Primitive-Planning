@@ -11,8 +11,11 @@ def main():
     parser.add_argument("--robot-name",type=str)
     args, _ = parser.parse_known_args()
 
-    url={'6650s1':'rr+tcp://localhost:12222?service=robot','6650s2':'rr+tcp://localhost:23333?service=robot'}
-    filename={'6650s1':'arm1.csv','6650s2':'arm2.csv'}
+    robot1="abb6640"
+    robot2="abb1200"
+
+    url={robot1:'rr+tcp://localhost:12222?service=robot',robot2:'rr+tcp://localhost:23333?service=robot'}
+    filename={robot1:'arm1.csv',robot2:'arm2.csv'}
 
     ###read actual curve
     col_names=['q1', 'q2', 'q3','q4', 'q5', 'q6'] 

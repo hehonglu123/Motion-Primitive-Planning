@@ -5,7 +5,7 @@ device_info:
     name: FANUC
     uuid: ee260e78-d731-415a-84ca-4b02c487410c
   model:
-    name: FANUC_m710ic_45m
+    name: FANUC_m710ic_70
     uuid: 9ad3c0ee-ec5e-4057-a297-d340e1484f01
   user_description: Rethink Robotics Sawyer Robot
   serial_number: 123456789
@@ -53,11 +53,11 @@ chains:
     z: 0.0
   - x: 0.0
     y: 0.0
-    z: 1.15
+    z: 0.87
   - x: 0.0
     y: 0.0
     z: 0.17
-  - x: 1.295
+  - x: 1.016
     y: 0.0
     z: 0.0
   - x: 0.175
@@ -98,10 +98,9 @@ joint_info:
   joint_identifier: joint_1
   joint_limits:
     effort: 0.0
-    lower: -3.141592653589793
-    upper: 3.141592653589793
-    velocity: 3.141592653589793
-    acceleration: 3.15
+    lower: -3.1415
+    upper: 3.1415
+    velocity: 2.7925
   joint_type: revolute
   passive: false
 - default_effort_units: newton_meter
@@ -109,10 +108,9 @@ joint_info:
   joint_identifier: joint_2
   joint_limits:
     effort: 0.0
-    lower: -1.5707963267948966
-    upper: 2.356194490192345
-    velocity: 3.141592653589793
-    acceleration: 3.15
+    lower: -1.5707
+    upper: 2.3561
+    velocity: 2.0943
   joint_type: revolute
   passive: false
 - default_effort_units: newton_meter
@@ -120,10 +118,9 @@ joint_info:
   joint_identifier: joint_3
   joint_limits:
     effort: 0.0
-    lower: -2.792526803190927
-    upper: 4.886921905584122
-    velocity: 3.141592653589793
-    acceleration: 3.15
+    lower: -2.7925
+    upper: 4.8869
+    velocity: 2.0943
   joint_type: revolute
   passive: false
 - default_effort_units: newton_meter
@@ -131,10 +128,9 @@ joint_info:
   joint_identifier: joint_4
   joint_limits:
     effort: 0.0
-    lower: -6.981317007977318
-    upper: 6.981317007977318
-    velocity: 4.363323129985824
-    acceleration: 3.15
+    lower: -6.283
+    upper: 6.283
+    velocity: 3.9269
   joint_type: revolute
   passive: false
 - default_effort_units: newton_meter
@@ -142,10 +138,9 @@ joint_info:
   joint_identifier: joint_5
   joint_limits:
     effort: 0.0
-    lower: -2.181661564992912
-    upper: 2.181661564992912
-    velocity: 4.363323129985824
-    acceleration: 3.15
+    lower: -2.1816
+    upper: 2.1816
+    velocity: 3.9269
   joint_type: revolute
   passive: false
 - default_effort_units: newton_meter
@@ -153,10 +148,9 @@ joint_info:
   joint_identifier: joint_6
   joint_limits:
     effort: 0.0
-    lower: -6.981317007977318
-    upper: 6.981317007977318
-    velocity: 6.283185307179586
-    acceleration: 3.15
+    lower: -6.2831
+    upper: 6.2831
+    velocity: 3.9269
   joint_type: revolute
   passive: false
 

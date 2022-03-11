@@ -15,10 +15,31 @@ def get_distance(p1,p2,p3):
 def calc_error(p,curve):
 	dist=np.linalg.norm(curve-np.tile(p,(len(curve),1)),axis=1)
 	order=np.argsort(dist)
-	return dist[order[0]]
+	return dist[order[0]], order[0]
 	
 ###calculate maximum error between fit curve and original curve in cartesian space, distance only
 def calc_max_error(fit,curve):
+	max_error=0
+	idx=0
+	max_error_idx=0
+	for p in fit:
+		error,idx2=calc_error(p,curve)
+		if error>max_error:
+			max_error_idx=idx
+			max_error=copy.deepcopy(error)
+		idx+=1
+
+	return max_error, max_error_idx
+
+def calc_max_error_js(robot,fit_js,curve_js):
+	fit=[]
+	for i in range(len(fit_js)):
+		fit.append(robot.fwd(fit_js[i]).p)
+	curve=[]
+	for i in range(len(curve_js)):
+		curve.append(robot.fwd(curve_js[i]).p)
+		
+
 	max_error=0
 	idx=0
 	max_error_idx=0

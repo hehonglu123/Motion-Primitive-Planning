@@ -1,0 +1,120 @@
+import numpy as np
+from general_robotics_toolbox import *
+from pandas import *
+import sys
+# sys.path.append('../abb_motion_program_exec')
+from abb_motion_program_exec_client import *
+sys.path.append('../../../toolbox')
+from robots_def import *
+from error_check import *
+from j_analysis import *
+
+
+col_names=['X', 'Y', 'Z','direction_x', 'direction_y', 'direction_z'] 
+data = read_csv("../../../data/from_ge/Curve_backproj_in_base_frame.csv", names=col_names)
+curve_x=data['X'].tolist()
+curve_y=data['Y'].tolist()
+curve_z=data['Z'].tolist()
+curve_backproj=np.vstack((curve_x, curve_y, curve_z)).T
+
+col_names=['X', 'Y', 'Z','direction_x', 'direction_y', 'direction_z'] 
+data = read_csv("../../../data/from_ge/Curve_in_base_frame.csv", names=col_names)
+curve_x=data['X'].tolist()
+curve_y=data['Y'].tolist()
+curve_z=data['Z'].tolist()
+curve=np.vstack((curve_x, curve_y, curve_z)).T
+
+robot=abb6640()
+d=50
+
+
+data_dir="fitting_output/threshold0.1/"
+# speed={"v50":v50,"v500":v500,"v5000":v5000}
+# zone={"fine":fine,"z1":z1,"z10":z10}
+speed={"v160":v160,"v170":v170,"v180":v180,"v190":v190}
+zone={"z10":z10}
+max_error1={}
+max_error2={}
+max_error1_idx={}
+max_error2_idx={}
+jacobian_min_sing={}
+jacobian_min_sing_idx={}
+
+min_speed={}
+max_speed={}
+total_time={}
+for s in speed:
+	for z in zone: 
+		act_speed=[]
+		###read in curve_exe
+		col_names=['timestamp', 'cmd_num', 'J1', 'J2','J3', 'J4', 'J5', 'J6'] 
+		data = read_csv(data_dir+"curve_exe"+"_"+s+"_"+z+".csv",names=col_names)
+		q1=data['J1'].tolist()[1:]
+		q2=data['J2'].tolist()[1:]
+		q3=data['J3'].tolist()[1:]
+		q4=data['J4'].tolist()[1:]
+		q5=data['J5'].tolist()[1:]
+		q6=data['J6'].tolist()[1:]
+		
+		cmd_num=np.array(data['cmd_num'].tolist()[1:]).astype(float)
+		start_idx=np.where(cmd_num==3)[0][0]
+		timestamp=np.array(data['timestamp'].tolist()[1:]).astype(float)[start_idx:]
+		curve_exe_js=np.radians(np.vstack((q1,q2,q3,q4,q5,q6)).T.astype(float)[start_idx:])
+
+
+		curve_exe=[]
+		curve_exe_R=[]
+		for i in range(len(curve_exe_js)):
+			robot_pose=robot.fwd(curve_exe_js[i])
+			curve_exe.append(robot_pose.p)
+			curve_exe_R.append(robot_pose.R)
+			try:
+				if timestamp[-1]!=timestamp[-2]:
+					act_speed.append(np.linalg.norm(curve_exe[-1]-curve_exe[-2])/(timestamp[-1]- timestamp[-2]))
+			except IndexError:
+				pass
+
+		curve_exe_R=np.array(curve_exe_R)
+		max_error1[z,s],max_error1_idx[z,s]=calc_max_error(curve_exe,curve_backproj)
+		curve_exe_proj=curve_exe+d*curve_exe_R[:,:,-1]
+		max_error2[z,s],max_error2_idx[z,s]=calc_max_error(curve_exe_proj,curve)
+
+		jacobian_min_sing[z,s],jacobian_min_sing_idx[z,s]=find_j_min(robot,curve_exe_js)
+
+		act_speed=np.array(act_speed)
+		total_time[z,s]=timestamp[-1]-timestamp[0]
+		min_speed[z,s]=np.min(act_speed[np.nonzero(act_speed)])
+		max_speed[z,s]=np.max(act_speed)
+
+table_names={"max_error1":max_error1,"max_error2":max_error2,"max_error1_idx":max_error1_idx,"max_error2_idx":max_error2_idx,"total_time":total_time,"max_speed":max_speed,"min_speed":min_speed,\
+			"jacobian_min_sing":jacobian_min_sing,"jacobian_min_sing_idx":jacobian_min_sing_idx}
+
+data_all=[]
+for table_name in table_names:
+	data={}
+	for s in speed:
+		data[s]=[]
+		for z in zone: 
+			data[s].append(table_names[table_name][z,s])
+
+	df = DataFrame(data, index=list(zone.keys()))
+	df.name=table_name
+	print(table_name)
+	print(df)
+	data_all.append(df)
+
+
+writer = ExcelWriter(data_dir+'comparison.xlsx',engine='xlsxwriter')
+workbook=writer.book
+worksheet=workbook.add_worksheet('Result')
+writer.sheets['Result'] = worksheet
+
+
+for i in range(len(data_all)):
+	try:
+		worksheet.write_string(data_all[i-1].shape[0]+(data_all[i-1].shape[0]+2)*i, 0, data_all[i].name)
+		data_all[i].to_excel(writer,sheet_name='Result',startrow=data_all[i-1].shape[0]+1+(data_all[i-1].shape[0]+2)*i , startcol=0)
+	except IndexError:
+		worksheet.write_string(0, 0, data_all[i].name)
+		data_all[i].to_excel(writer,sheet_name='Result',startrow=1 , startcol=0)
+writer.save()

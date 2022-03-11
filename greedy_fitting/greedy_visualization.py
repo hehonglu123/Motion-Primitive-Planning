@@ -11,29 +11,32 @@ from toolbox_circular_fit import *
 
 def main():
 	col_names=['X', 'Y', 'Z','direction_x', 'direction_y', 'direction_z'] 
-	data = read_csv("../data/from_ge/Curve_backproj_in_base_frame.csv", names=col_names)
+	data = read_csv("../data/from_ge/Curve_in_base_frame.csv", names=col_names)
 	curve_x=data['X'].tolist()
 	curve_y=data['Y'].tolist()
 	curve_z=data['Z'].tolist()
 	curve=np.vstack((curve_x, curve_y, curve_z)).T
 
 	col_names=['X', 'Y', 'Z','direction_x', 'direction_y', 'direction_z'] 
-	data = read_csv("curve_fit_backproj.csv")
+	data = read_csv("curve_fit.csv")
 	curve_x=data['x'].tolist()
 	curve_y=data['y'].tolist()
 	curve_z=data['z'].tolist()
 	curve_fit=np.vstack((curve_x, curve_y, curve_z)).T
 
-	data = read_csv("command_backproj.csv")
+	data = read_csv("command.csv")
 	breakpoints=np.array(data['breakpoints'].tolist())
 	primitives=data['primitives'].tolist()
 	points=data['points'].tolist()
 
+	breakpoints[1:]=breakpoints[1:]-1
+
 
 	####only every 100 points
-	curve=curve[::100]
-	curve_fit=curve_fit[::100]
-	breakpoints=breakpoints/100
+	steps=10
+	curve=curve[::steps]
+	curve_fit=curve_fit[::steps]
+	breakpoints=breakpoints/steps
 
 
 	###plane projection visualization
@@ -49,10 +52,17 @@ def main():
 	plt.plot(curve_2d_vis[:,0],curve_2d_vis[:,1])
 	plt.plot(curve_fit_2d_vis[:,0],curve_fit_2d_vis[:,1])
 	plt.scatter(curve_fit_2d_vis[breakpoints.astype(int),0],curve_fit_2d_vis[breakpoints.astype(int),1])
-	plt.legend(['original curve','curve fit','curve execution'])
+	plt.legend(['original curve','curve fit','breakpoints'])
 
-	plt.xlim([-1300, -500])
-	plt.ylim([200,1800])
+
+	# fig = plt.figure()
+	# ax = plt.axes(projection='3d')
+	# ax.plot3D(curve[:,0], curve[:,1], curve[:,2],label='original',c='gray')
+	# ax.plot3D(curve_fit[:,0], curve_fit[:,1], curve_fit[:,2],label='curve_fit',c='red')
+	# ax.scatter(curve_fit[breakpoints.astype(int),0],curve_fit[breakpoints.astype(int),1],curve_fit[breakpoints.astype(int),2])
+	# ax.legend()
+
+	
 
 	plt.show()
 

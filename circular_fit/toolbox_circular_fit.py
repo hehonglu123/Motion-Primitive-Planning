@@ -1,6 +1,5 @@
 import numpy as np
 import traceback
-from qpsolvers import solve_qp
 from scipy.optimize import minimize
 def generate_circle_by_vectors(t, C, r, n, u):
     n = n/np.linalg.norm(n)
@@ -8,7 +7,7 @@ def generate_circle_by_vectors(t, C, r, n, u):
     P_circle = r*np.cos(t)[:,np.newaxis]*u + r*np.sin(t)[:,np.newaxis]*np.cross(n,u) + C
     return P_circle
 
-def fit_circle_2d(x, y, p=[]):
+def fit_circle_2d(x, y, p=[], p2=[]):
     if len(p)==0:
         A = np.array([x, y, np.ones(len(x))]).T
         b = x**2 + y**2
@@ -21,7 +20,7 @@ def fit_circle_2d(x, y, p=[]):
         yc = c[1]/2
         r = np.sqrt(c[2] + xc**2 + yc**2)
         return xc, yc, r
-    else:
+    elif len(p2)==0:
 
         ###rewrite lstsq to fit point p on circle
         A = np.array([x-p[0], y-p[1]]).T
@@ -35,7 +34,20 @@ def fit_circle_2d(x, y, p=[]):
         yc = c[1]/2
         r=np.linalg.norm(p[:-1]-np.array([xc,yc]))
         return xc, yc, r
-        
+    else:
+        A_x=(p[0]+p2[0])/2
+        A_y=(p[1]+p2[1])/2
+        vT=np.array([p[1]-p2[1],p2[0]-p[0]])
+        vT=vT/np.linalg.norm(vT)
+        A=np.array([vT[0]*(x-p[0])+vT[1]*(y-p[1])]).T
+        b=x**2 + y**2 - p[0]**2 - p[1]**2-2*A_x*x+2*A_x*p[0]-2*A_y*y+2*A_y*p[1]
+        d = np.linalg.lstsq(A,b,rcond=None)[0][0]
+        xc=A_x + d*vT[0]
+        yc=A_y + d*vT[1]
+        r = abs(d)
+
+        return xc, yc, r
+
 def fit_circle_2d_w_slope(x,curve,p):
     #x:0-2 direction, 3 radius
     center=p-x[-1]*x[:3]
@@ -103,99 +115,133 @@ def set_axes_equal_3d(ax):
     ax.set_ylim3d([centers[1]-radius, centers[1]+radius])
     ax.set_zlim3d([centers[2]-radius, centers[2]+radius])
 
-def circle_fit(curve,p=[],slope=[]):
+    ###fit curve with slope and 1 p constraint
+def circle_fit_w_slope1(curve,p,slope):
+    ###fit on a plane first
+    curve_mean = curve.mean(axis=0)
+    curve_centered = curve - curve_mean
+    p_centered = p - curve_mean
+
+    ###constraint fitting
+    ###rewrite lstsq to fit point p on plane
+    A = np.array([curve_centered[:,0]-p_centered[0]*curve_centered[:,2]/p_centered[2], curve_centered[:,1]-p_centered[1]*curve_centered[:,2]/p_centered[2]]).T
+    b = np.ones(len(curve))-curve_centered[:,2]/p_centered[2]
+    c = np.linalg.lstsq(A,b,rcond=None)[0]
+    normal=np.array([c[0],c[1],(1-c[0]*p_centered[0]-c[1]*p_centered[1])/p_centered[2]])
+
+    ###make sure constraint point is on plane
+    # print(np.dot(normal,p_centered))
+    ###normalize plane normal
+    normal=normal/np.linalg.norm(normal)
+
+    ###find the line direction where the center of the circle reside
+    r_dir=np.cross(slope,normal)
+    r_dir=r_dir/np.linalg.norm(r_dir)
+
+    circle_plane_normal=np.cross(r_dir,slope)
+    circle_plane_normal=circle_plane_normal/np.linalg.norm(circle_plane_normal)
+
+    res = minimize(fit_circle_2d_w_slope2, [5000], method='SLSQP',tol=1e-10, args=(curve,p,r_dir,))
+    # print('radius: ',res.x)
+    r=abs(res.x)
+    C=p-res.x*r_dir
+    end_vec=vec_proj_plane(curve[-1]-C,circle_plane_normal)
+
+    ###get 3D circular arc
+    u = p - C
+    if np.linalg.norm(p-curve[0])<np.linalg.norm(p-curve[-1]):
+        v=curve[-1] - C
+    else:
+        v=curve[0] - C
+    theta = angle_between(u, v, circle_plane_normal)
+
+    l = np.linspace(0, theta, len(curve))
+    curve_fitarc = generate_circle_by_vectors(l, C, r, circle_plane_normal, u)
+    l = np.linspace(0, 2*np.pi, 1000)
+    curve_fitcircle = generate_circle_by_vectors(l, C, r, circle_plane_normal, u)
+
+    return curve_fitarc, curve_fitcircle
+
+def get_intersect(a1, a2, b1, b2):
+    """ 
+    Returns the point of intersection of the lines passing through a2,a1 and b2,b1.
+    a1: [x, y] a point on the first line
+    a2: [x, y] another point on the first line
+    b1: [x, y] a point on the second line
+    b2: [x, y] another point on the second line
+    """
+    s = np.vstack([a1,a2,b1,b2])        # s for stacked
+    h = np.hstack((s, np.ones((4, 1)))) # h for homogeneous
+    l1 = np.cross(h[0], h[1])           # get first line
+    l2 = np.cross(h[2], h[3])           # get second line
+    x, y, z = np.cross(l1, l2)          # point of intersection
+    if z == 0:                          # lines are parallel
+        return (float('inf'), float('inf'))
+    return (x/z, y/z)
+
+def circle_fit_w_2slope(curve,p,p2,slope1,slope2):
+    ###fit a circle with 2 points constraint and 2 slope constraints
+    ###fit a plane with 2 point constraint
+    curve_mean = curve.mean(axis=0)
+    curve_centered = curve - curve_mean
+    p_centered = p - curve_mean
+    p2_centered= p2 - curve_mean
+
+    ###constraint fitting
+    ###rewrite lstsq to fit point p on plane
+    A = np.array([curve_centered[:,0]-p_centered[0]*curve_centered[:,2]/p_centered[2]-(p2_centered[0]-p_centered[0]*p2_centered[2]/p_centered[2])*(curve_centered[:,1]-p_centered[1]*curve_centered[:,2]/p_centered[2])/(p2_centered[1]-p_centered[1]*p2_centered[2]/p_centered[2])]).T
+    b = np.ones(len(curve))-curve_centered[:,2]/p_centered[2]-(1-p2_centered[2]/p_centered[2])*(curve_centered[:,1]-p_centered[1]*curve_centered[:,2]/p_centered[2])/(p2_centered[1]-p_centered[1]*p2_centered[2]/p_centered[2])
+
+    c = np.linalg.lstsq(A,b,rcond=None)[0]
+    A_out=c[0]
+    B_out=(1-p2_centered[2]/p_centered[2]-A_out*(p2_centered[0]-p_centered[0]*p2_centered[2]/p_centered[2]))/(p2_centered[1]-p_centered[1]*p2_centered[2]/p_centered[2])
+    normal=np.array([A_out,B_out,(1-A_out*p_centered[0]-B_out*p_centered[1])/p_centered[2]])
+
+    ###make sure constraint point is on plane
+    # print(np.dot(normal,p_centered))
+    # print(np.dot(normal,p2_centered))
+    ###normalize plane normal
+    normal=normal/np.linalg.norm(normal)
+
+    curve_xy = rodrigues_rot(curve_centered, normal, [0,0,1])
+    p_temp1 = rodrigues_rot(p_centered, normal, [0,0,1]).flatten()[:-1]
+    p_temp2 = rodrigues_rot(p2_centered, normal, [0,0,1]).flatten()[:-1]
+    slope_temp1 = rodrigues_rot(slope1, normal, [0,0,1]).flatten()[:-1]
+    slope_temp2 = rodrigues_rot(slope2, normal, [0,0,1]).flatten()[:-1]
+
+    xc, yc = get_intersect(p_temp1,p_temp1+np.array([-slope_temp1[1],slope_temp1[0]]),p_temp2,p_temp2+np.array([-slope_temp2[1],slope_temp2[0]]))
+    r=np.linalg.norm(p_temp1-np.array([xc,yc]))
+
+    ###convert to 3D coordinates
+    C = rodrigues_rot(np.array([xc,yc,0]), [0,0,1], normal) + curve_mean
+    C = C.flatten()
+    ###get 3D circular arc
+    ###always start from constraint p
+    u=p-C
+    v=p2-C
+
+   
+    
+
+    theta = angle_between(u, v, normal)
+
+    l = np.linspace(0, theta, len(curve))
+    curve_fitarc = generate_circle_by_vectors(l, C, r, normal, u)
+    l = np.linspace(0, 2*np.pi, 1000)
+    curve_fitcircle = generate_circle_by_vectors(l, C, r, normal, u)
+
+    return curve_fitarc, curve_fitcircle
+
+
+
+
+def circle_fit(curve,p=[],p2=[]):
     ###curve: 3D point data
     ###p:   constraint point of the arc
     ########################################
     ###return curve_fit: 3D point data
 
-    if len(p)!=0:
-        if len(slope)==0:       ###fit only continuity constraint
-            ###fit on a plane first
-            curve_mean = curve.mean(axis=0)
-            curve_centered = curve - curve_mean
-            p_centered = p - curve_mean
-
-            ###constraint fitting
-            ###rewrite lstsq to fit point p on plane
-            A = np.array([curve_centered[:,0]-p_centered[0]*curve_centered[:,2]/p_centered[2], curve_centered[:,1]-p_centered[1]*curve_centered[:,2]/p_centered[2]]).T
-            b = np.ones(len(curve))-curve_centered[:,2]/p_centered[2]
-            c = np.linalg.lstsq(A,b,rcond=None)[0]
-            normal=np.array([c[0],c[1],(1-c[0]*p_centered[0]-c[1]*p_centered[1])/p_centered[2]])
-
-            ###make sure constraint point is on plane
-            # print(np.dot(normal,p_centered))
-            ###normalize plane normal
-            normal=normal/np.linalg.norm(normal)
-
-            ###project points onto regression plane
-            #https://stackoverflow.com/questions/9605556/how-to-project-a-point-onto-a-plane-in-3d
-            # curve_xy = curve_centered - np.dot(curve_centered-p_centered,normal)*normal
-
-            curve_xy = rodrigues_rot(curve_centered, normal, [0,0,1])
-            p_temp = rodrigues_rot(p_centered, normal, [0,0,1])
-            p_temp = p_temp.flatten()
-
-
-            xc, yc, r = fit_circle_2d(curve_xy[:,0], curve_xy[:,1],p_temp)
-
-            ###convert to 3D coordinates
-            C = rodrigues_rot(np.array([xc,yc,0]), [0,0,1], normal) + curve_mean
-            C = C.flatten()
-            ###get 3D circular arc
-            ###always start from constraint p
-            u=p-C
-            if np.linalg.norm(p-curve[0])<np.linalg.norm(p-curve[-1]):
-                v=curve[-1] - C
-            else:
-                v=curve[0] - C
-        else:               ###fit with same slope and continuity constraint
-            ###fit on a plane first
-            curve_mean = curve.mean(axis=0)
-            curve_centered = curve - curve_mean
-            p_centered = p - curve_mean
-
-            ###constraint fitting
-            ###rewrite lstsq to fit point p on plane
-            A = np.array([curve_centered[:,0]-p_centered[0]*curve_centered[:,2]/p_centered[2], curve_centered[:,1]-p_centered[1]*curve_centered[:,2]/p_centered[2]]).T
-            b = np.ones(len(curve))-curve_centered[:,2]/p_centered[2]
-            c = np.linalg.lstsq(A,b,rcond=None)[0]
-            normal=np.array([c[0],c[1],(1-c[0]*p_centered[0]-c[1]*p_centered[1])/p_centered[2]])
-
-            ###make sure constraint point is on plane
-            # print(np.dot(normal,p_centered))
-            ###normalize plane normal
-            normal=normal/np.linalg.norm(normal)
-
-            ###find the line direction where the center of the circle reside
-            r_dir=np.cross(slope,normal)
-            r_dir=r_dir/np.linalg.norm(r_dir)
-
-            circle_plane_normal=np.cross(r_dir,slope)
-            circle_plane_normal=circle_plane_normal/np.linalg.norm(circle_plane_normal)
-
-            res = minimize(fit_circle_2d_w_slope2, [5000], method='SLSQP',tol=1e-10, args=(curve,p,r_dir,))
-            # print('radius: ',res.x)
-            r=abs(res.x)
-            C=p-res.x*r_dir
-            end_vec=vec_proj_plane(curve[-1]-C,circle_plane_normal)
-
-            ###get 3D circular arc
-            u = p - C
-            if np.linalg.norm(p-curve[0])<np.linalg.norm(p-curve[-1]):
-                v=curve[-1] - C
-            else:
-                v=curve[0] - C
-            theta = angle_between(u, v, circle_plane_normal)
-
-            l = np.linspace(0, theta, len(curve))
-            curve_fitarc = generate_circle_by_vectors(l, C, r, circle_plane_normal, u)
-            l = np.linspace(0, 2*np.pi, 1000)
-            curve_fitcircle = generate_circle_by_vectors(l, C, r, circle_plane_normal, u)
-
-            return curve_fitarc, curve_fitcircle
-
-    else:
+    if len(p)==0:   #no constraint
         ###fit on a plane first
         curve_mean = curve.mean(axis=0)
         curve_centered = curve - curve_mean
@@ -213,13 +259,98 @@ def circle_fit(curve,p=[],slope=[]):
         ###get 3D circular arc
         u = curve[0] - C
         v = curve[-1] - C
+
+        theta = angle_between(u, v, normal)
+        l = np.linspace(0, theta, len(curve))
+        curve_fitarc = generate_circle_by_vectors(l, C, r, normal, u)
+ 
+
+    elif len(p2)==0:    #single point constraint
+        ###fit on a plane first
+        curve_mean = curve.mean(axis=0)
+        curve_centered = curve - curve_mean
+        p_centered = p - curve_mean
+
+        ###constraint fitting
+        ###rewrite lstsq to fit point p on plane
+        A = np.array([curve_centered[:,0]-p_centered[0]*curve_centered[:,2]/p_centered[2], curve_centered[:,1]-p_centered[1]*curve_centered[:,2]/p_centered[2]]).T
+        b = np.ones(len(curve))-curve_centered[:,2]/p_centered[2]
+        c = np.linalg.lstsq(A,b,rcond=None)[0]
+        normal=np.array([c[0],c[1],(1-c[0]*p_centered[0]-c[1]*p_centered[1])/p_centered[2]])
+
+        ###make sure constraint point is on plane
+        # print(np.dot(normal,p_centered))
+        ###normalize plane normal
+        normal=normal/np.linalg.norm(normal)
+
+        curve_xy = rodrigues_rot(curve_centered, normal, [0,0,1])
+        p_temp = rodrigues_rot(p_centered, normal, [0,0,1])
+        p_temp = p_temp.flatten()
+
+
+        xc, yc, r = fit_circle_2d(curve_xy[:,0], curve_xy[:,1],p_temp)
+
+        ###convert to 3D coordinates
+        C = rodrigues_rot(np.array([xc,yc,0]), [0,0,1], normal) + curve_mean
+        C = C.flatten()
+        ###get 3D circular arc
+        ###always start from constraint p
+        u=p-C
+        if np.linalg.norm(p-curve[0])<np.linalg.norm(p-curve[-1]):
+            v=curve[-1] - C
+        else:
+            v=curve[0] - C
+
+        theta = angle_between(u, v, normal)
+        l = np.linspace(0, theta, len(curve)+1)
+        curve_fitarc = generate_circle_by_vectors(l, C, r, normal, u)[1:]
+
+    else:
+        ###fit a plane with 2 point constraint
+        curve_mean = curve.mean(axis=0)
+        curve_centered = curve - curve_mean
+        p_centered = p - curve_mean
+        p2_centered= p2 - curve_mean
+
+        ###constraint fitting
+        ###rewrite lstsq to fit point p on plane
+        A = np.array([curve_centered[:,0]-p_centered[0]*curve_centered[:,2]/p_centered[2]-(p2_centered[0]-p_centered[0]*p2_centered[2]/p_centered[2])*(curve_centered[:,1]-p_centered[1]*curve_centered[:,2]/p_centered[2])/(p2_centered[1]-p_centered[1]*p2_centered[2]/p_centered[2])]).T
+        b = np.ones(len(curve))-curve_centered[:,2]/p_centered[2]-(1-p2_centered[2]/p_centered[2])*(curve_centered[:,1]-p_centered[1]*curve_centered[:,2]/p_centered[2])/(p2_centered[1]-p_centered[1]*p2_centered[2]/p_centered[2])
+
+        c = np.linalg.lstsq(A,b,rcond=None)[0]
+        A_out=c[0]
+        B_out=(1-p2_centered[2]/p_centered[2]-A_out*(p2_centered[0]-p_centered[0]*p2_centered[2]/p_centered[2]))/(p2_centered[1]-p_centered[1]*p2_centered[2]/p_centered[2])
+        normal=np.array([A_out,B_out,(1-A_out*p_centered[0]-B_out*p_centered[1])/p_centered[2]])
+
+        ###make sure constraint point is on plane
+        # print(np.dot(normal,p_centered))
+        # print(np.dot(normal,p2_centered))
+        ###normalize plane normal
+        normal=normal/np.linalg.norm(normal)
+
+        curve_xy = rodrigues_rot(curve_centered, normal, [0,0,1])
+        p_temp1 = rodrigues_rot(p_centered, normal, [0,0,1]).flatten()
+        p_temp2 = rodrigues_rot(p2_centered, normal, [0,0,1]).flatten()
+
+
+        xc, yc, r = fit_circle_2d(curve_xy[:,0], curve_xy[:,1],p_temp1,p_temp2)
+
+        ###convert to 3D coordinates
+        C = rodrigues_rot(np.array([xc,yc,0]), [0,0,1], normal) + curve_mean
+        C = C.flatten()
+        ###get 3D circular arc
+        ###always start from constraint p
+        u=p-C
+        v=p2-C
+
+        theta = angle_between(u, v, normal)
+        l = np.linspace(0, theta, len(curve)+1)
+        curve_fitarc = generate_circle_by_vectors(l, C, r, normal, u)[1:]
+
    
     
 
-    theta = angle_between(u, v, normal)
-
-    l = np.linspace(0, theta, len(curve))
-    curve_fitarc = generate_circle_by_vectors(l, C, r, normal, u)
+    
     l = np.linspace(0, 2*np.pi, 1000)
     curve_fitcircle = generate_circle_by_vectors(l, C, r, normal, u)
 

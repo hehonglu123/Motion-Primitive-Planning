@@ -3,22 +3,24 @@ from pandas import *
 import sys, traceback, time
 from general_robotics_toolbox import *
 import matplotlib.pyplot as plt
-from scipy.optimize import differential_evolution, shgo, NonlinearConstraint, minimize
+from scipy.optimize import differential_evolution, shgo, NonlinearConstraint, minimize, fminbound
 from qpsolvers import solve_qp
 
 sys.path.append('../../toolbox')
-from robot_def import *
+from robots_def import *
 from lambda_calc import *
 
 class lambda_opt(object):
-	def __init__(self,curve,curve_normal,base2_R=np.eye(3),base2_p=np.zeros(3),steps=32):
+	###robot1 hold paint gun for single arm
+	###robot1 hold paint gun, robot2 hold blade for dual arm
+	def __init__(self,curve,curve_normal,robot1=abb6640(),robot2=abb1200(),base2_R=np.eye(3),base2_p=np.zeros(3),steps=32):
 		self.curve=curve
 		self.curve_normal=curve_normal
+		self.robot1=robot1
+		self.robot2=robot2
 		self.base2_R=base2_R
 		self.base2_p=base2_p
 		self.joint_vel_limit=np.radians([110,90,90,150,120,235])
-		self.joint_upper_limit=np.radians([220.,160.,70.,300.,120.,360.])
-		self.joint_lowerer_limit=np.radians([-220.,-40.,-180.,-300.,-120.,-360.])
 
 		###decrease curve density to simplify computation
 		num_per_step=int(len(self.curve)/steps)	
@@ -61,6 +63,12 @@ class lambda_opt(object):
 		q=q/(np.linalg.norm(q)) 
 		return q
 
+	###error calculation for line search
+	def error_calc(self,alpha,q_cur,qdot_star,pd,pd_normal):
+		q_next=q_cur+alpha*qdot_star
+		pose_next=self.robot1.fwd(q_next)
+		return np.linalg.norm(pose_next.p-pd)+np.linalg.norm(pose_next.R[:,-1]-pd_normal)
+
 	def single_arm_stepwise_optimize(self,q_init,curve=[],curve_normal=[]):
 		if len(curve)==0:
 			curve=self.curve
@@ -70,19 +78,20 @@ class lambda_opt(object):
 		for i in range(len(curve)):
 			try:
 				error_fb=999
+				error_fb_prev=999
 				if i==0:
 					continue
 
-				while error_fb>0.1:
+				while error_fb>0.01:
 
-					pose_now=fwd(q_all[-1])
+					pose_now=self.robot1.fwd(q_all[-1])
 					error_fb=np.linalg.norm(pose_now.p-curve[i])+np.linalg.norm(pose_now.R[:,-1]-curve_normal[i])
 					
 					w=0.2
 					Kq=.01*np.eye(6)    #small value to make sure positive definite
 					KR=np.eye(3)        #gains for position and orientation error
 
-					J=jacobian(q_all[-1])        #calculate current Jacobian
+					J=self.robot1.jacobian(q_all[-1])        #calculate current Jacobian
 					Jp=J[3:,:]
 					JR=J[:3,:] 
 					H=np.dot(np.transpose(Jp),Jp)+Kq+w*np.dot(np.transpose(JR),JR)
@@ -100,7 +109,15 @@ class lambda_opt(object):
 					f=-np.dot(np.transpose(Jp),vd)-w*np.dot(np.transpose(JR),wd)
 					qdot=solve_qp(H,f)
 
-					q_all.append(q_all[-1]+qdot)
+					#avoid getting stuck
+					if abs(error_fb-error_fb_prev)<0.0001:
+						break
+					error_fb_prev=error_fb
+					
+					###line search
+					alpha=fminbound(self.error_calc,0,1,args=(q_all[-1],qdot,curve[i],curve_normal[i],))
+					
+					q_all.append(q_all[-1]+alpha*qdot)
 					# print(q_all[-1])
 			except:
 				q_out.append(q_all[-1])
@@ -124,18 +141,18 @@ class lambda_opt(object):
 			try:
 				error_fb=999
 				if i==0:
-					pose1_now=fwd(q_all1[-1])
-					pose2_now=fwd(q_all2[-1])
+					pose1_now=self.robot1.fwd(q_all1[-1])
+					pose2_now=self.robot2.fwd(q_all2[-1])
 
-					pose2_world_now=fwd(q_all2[-1],self.base2_R,self.base2_p)					
+					pose2_world_now=self.robot2.fwd(q_all2[-1],self.base2_R,self.base2_p)					
 					continue
 
 
 				while error_fb>0.1:
-					pose1_now=fwd(q_all1[-1])
-					pose2_now=fwd(q_all2[-1])
+					pose1_now=self.robot1.fwd(q_all1[-1])
+					pose2_now=self.robot2.fwd(q_all2[-1])
 
-					pose2_world_now=fwd(q_all2[-1],self.base2_R,self.base2_p)
+					pose2_world_now=self.robot2.fwd(q_all2[-1],self.base2_R,self.base2_p)
 
 					error_fb=np.linalg.norm(np.dot(pose2_world_now.R.T,pose1_now.p-pose2_world_now.p)-self.curve[i])+np.linalg.norm(np.dot(pose2_world_now.R.T,pose1_now.R[:,-1])-self.curve_normal[i])	
 
@@ -148,7 +165,7 @@ class lambda_opt(object):
 					KR=np.eye(3)        #gains for position and orientation error
 					Kp=0.1				#gains for vd
 
-					J1=jacobian(q_all1[-1])        #calculate current Jacobian
+					J1=self.robot1.jacobian(q_all1[-1])        #calculate current Jacobian
 					J1p=J1[3:,:]
 					J1R=J1[:3,:] 
 					H=np.dot(np.transpose(J1p),J1p)+Kq+w*np.dot(np.transpose(J1R),J1R)
@@ -173,7 +190,7 @@ class lambda_opt(object):
 					q_all1.append(q_all1[-1]+qdot)
 
 					########################################################Second robot###########################################
-					J2=jacobian(q_all2[-1])        #calculate current Jacobian, mapped to robot1 base frame
+					J2=self.robot2.jacobian(q_all2[-1])        #calculate current Jacobian, mapped to robot1 base frame
 					J2p=np.dot(self.base2_R,J2[3:,:])
 					J2R=np.dot(self.base2_R,J2[:3,:] )
 					H=np.dot(np.transpose(J2p),J2p)+Kq+w*np.dot(np.transpose(J2R),J2R)
@@ -193,9 +210,10 @@ class lambda_opt(object):
 					q_all2.append(q_all2[-1]+qdot)
 
 			except:
-				q_out1.append(q_all1[-1])
-				q_out2.append(q_all2[-1])
 				traceback.print_exc()
+				# print(q_all1[-1],q_all2[-1])
+				q_out1.append(q_all1[-1])
+				q_out2.append(q_all2[-1])			
 				raise AssertionError
 				break
 
@@ -207,6 +225,7 @@ class lambda_opt(object):
 		return q_out1, q_out2
 
 	def curve_pose_opt(self,x):
+		###optimize on curve pose for single arm
 		k=x[:3]/np.linalg.norm(x[:3])	###pose rotation axis
 		theta0=x[3]		###pose rotation angle
 		shift=x[4:-1]
@@ -219,7 +238,7 @@ class lambda_opt(object):
 		R_temp=self.direction2R(curve_normal_new[0],-curve_new[1]+curve_new[0])
 		R=np.dot(R_temp,Rz(theta1))
 		try:
-			q_init=inv(curve_new[0],R)[0]
+			q_init=self.robot1.inv(curve_new[0],R)[0]
 			q_out=self.single_arm_stepwise_optimize(q_init,curve_new,curve_normal_new)
 		except:
 			# traceback.print_exc()
@@ -233,12 +252,12 @@ class lambda_opt(object):
 	def dual_arm_opt(self,x):
 		q_init2=x[:-1]
 
-		pose2_world_now=fwd(q_init2,self.base2_R,self.base2_p)
+		pose2_world_now=self.robot2.fwd(q_init2,self.base2_R,self.base2_p)
 
 		R_temp=self.direction2R(np.dot(pose2_world_now.R,self.curve_normal[0]),-self.curve[1]+self.curve[0])
 		R=np.dot(R_temp,Rz(x[-1]))
 		try:
-			q_init1=inv(pose2_world_now.p,R)[0]
+			q_init1=self.robot1.inv(pose2_world_now.p,R)[0]
 			q_out1,q_out2=self.dual_arm_stepwise_optimize(q_init1,q_init2)
 		except:
 			# traceback.print_exc()
@@ -254,7 +273,7 @@ class lambda_opt(object):
 		R_temp=self.direction2R(self.curve_normal[0],-self.curve[1]+self.curve[0])
 		R=np.dot(R_temp,Rz(theta0[0]))
 		try:
-			q_init=inv(self.curve[0],R)[0]
+			q_init=self.robot1.inv(self.curve[0],R)[0]
 			q_out=self.single_arm_stepwise_optimize(q_init)
 		except:
 			return 999
@@ -272,7 +291,7 @@ class lambda_opt(object):
 				R_temp=self.direction2R(self.curve_normal[i],-self.curve[i+1]+self.curve[i])
 				R=np.dot(R_temp,Rz(theta[i]))
 				try:
-					q_out=[inv(self.curve[i],R)[0]]
+					q_out=[self.robot1.inv(self.curve[i],R)[0]]
 				except:
 					traceback.print_exc()
 					return 999
@@ -282,7 +301,7 @@ class lambda_opt(object):
 				R=np.dot(R_temp,Rz(theta[i]))
 				try:
 					###get closet config to previous one
-					q_inv_all=inv(self.curve[i],R)
+					q_inv_all=self.robot1.inv(self.curve[i],R)
 					temp_q=q_inv_all-q_out[-1]
 					order=np.argsort(np.linalg.norm(temp_q,axis=1))
 					q_out.append(q_inv_all[order[0]])
@@ -296,13 +315,13 @@ class lambda_opt(object):
 		return -min(dlam)	
 
 	def calc_js_from_theta(self,theta,curve,curve_normal):
-
+		###solve inv given 6th dof constraint theta
 		for i in range(len(curve)):
 			if i==0:
 				R_temp=direction2R(curve_normal[i],-curve[i+1]+curve[i])
 				R=np.dot(R_temp,Rz(theta[i]))
 				try:
-					q_out=[inv(curve[i],R)[0]]
+					q_out=[self.robot1.inv(curve[i],R)[0]]
 				except:
 					traceback.print_exc()
 					return 999
@@ -312,7 +331,7 @@ class lambda_opt(object):
 				R=np.dot(R_temp,Rz(theta[i]))
 				try:
 					###get closet config to previous one
-					q_inv_all=inv(curve[i],R)
+					q_inv_all=self.robot1inv(curve[i],R)
 					temp_q=q_inv_all-q_out[-1]
 					order=np.argsort(np.linalg.norm(temp_q,axis=1))
 					q_out.append(q_inv_all[order[0]])
