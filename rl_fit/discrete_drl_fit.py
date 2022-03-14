@@ -43,9 +43,9 @@ MAX_EPS_EPISODE = 0.6
 TAU_START = 10
 TAU_END = 0.01
 MAX_TAU_EPISODE = 0.6
-LEARNING_RATE = 0.0001
+LEARNING_RATE = 0.01
 GAMMA = 0.99
-BATCH_SIZE = 4
+BATCH_SIZE = 16
 
 REWARD_FINISH = 2000  # -------------------------------------- HERE
 REWARD_DECAY_FACTOR = 0.9
@@ -200,8 +200,8 @@ class DQN(nn.Module):
 class RL_Agent(object):
 
     def __init__(self, n_curve_feature: int, n_action: int, lr: float = LEARNING_RATE):
-        # self.input_dim = n_curve_feature + 1
-        self.input_dim = n_curve_feature * 3 * 2 + 1
+        self.input_dim = n_curve_feature + 1
+        # self.input_dim = n_curve_feature * 3 * 2 + 1
         self.output_dim = n_action * 2
         self.n_curve_feature = n_curve_feature
         self.n_action = n_action
@@ -324,10 +324,10 @@ class RL_Env(object):
 
         remaining_curve = self.target_curve[self.last_bp:, :]
         normalized_curve = PCA_normalization(remaining_curve)
-        curve_features, _ = fft_feature(normalized_curve, self.n_feature)
-        # normalized_curve_tensor = torch.from_numpy(np.array([normalized_curve.T])).float()
-        # curve_features = self.encoder(normalized_curve_tensor)
-        # curve_features = curve_features.detach().numpy().flatten()
+        # curve_features, _ = fft_feature(normalized_curve, self.n_feature)
+        normalized_curve_tensor = torch.from_numpy(np.array([normalized_curve.T])).float()
+        curve_features = self.encoder(normalized_curve_tensor)
+        curve_features = curve_features.detach().numpy().flatten()
 
         self.longest_primitives, longest_type = greedy_fit_primitive(last_bp=self.last_bp, curve=self.target_curve,
                                                                      p=self.fit_curve[-1])
@@ -358,10 +358,10 @@ class RL_Env(object):
                        "C": self.longest_primitives['C'] is not None}
         remaining_curve = self.target_curve[self.last_bp:, :]
         normalized_curve = PCA_normalization(remaining_curve)
-        curve_features, _ = fft_feature(normalized_curve, self.n_feature)
-        # normalized_curve_tensor = torch.from_numpy(np.array([normalized_curve.T])).float()
-        # curve_features = self.encoder(normalized_curve_tensor)
-        # curve_features = curve_features.detach().numpy().flatten()
+        # curve_features, _ = fft_feature(normalized_curve, self.n_feature)
+        normalized_curve_tensor = torch.from_numpy(np.array([normalized_curve.T])).float()
+        curve_features = self.encoder(normalized_curve_tensor)
+        curve_features = curve_features.detach().numpy().flatten()
 
         state = State(longest_type=longest_type, curve_features=curve_features)
         # done = len(self.fit_curve) >= len(self.target_curve)
@@ -455,7 +455,7 @@ def save_data(episode_rewards, episode_steps, episode_target_curve):
 
 
 def rl_fit(curve_base_data, curve_js_data):
-    n_feature = 20
+    n_feature = 128
     n_action = 10
     agent = RL_Agent(n_feature, n_action)
     train_rl(agent, curve_base_data, curve_js_data)

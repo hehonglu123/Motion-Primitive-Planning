@@ -62,7 +62,16 @@ def PCA_normalization(curve):
     curve = normalize_points(curve)
     pca = PCA(n_components=3)
     curve_pca = pca.fit_transform(curve)
-    curve_center = curve_pca - curve_pca[0, :]
+    mass_center = np.mean(curve_pca, axis=0)
+    curve_center = curve_pca - mass_center
+    if np.abs(np.min(curve_center[:, 0])) > np.abs(np.max(curve_center[:, 0])):
+        curve_center[:, 0] = -curve_center[:, 0]
+    if np.abs(np.min(curve_center[:, 1])) > np.abs(np.max(curve_center[:, 1])):
+        curve_center[:, 1] = -curve_center[:, 1]
+    if np.abs(np.min(curve_center[:, 2])) > np.abs(np.max(curve_center[:, 2])):
+        curve_center[:, 2] = -curve_center[:, 2]
+
+    curve_center = curve_pca - curve_center[0, :]
     diagonal = curve_center[-1, :]
     rescale_factor = 1 / np.linalg.norm(diagonal)
     curve_rescale = curve_center * rescale_factor

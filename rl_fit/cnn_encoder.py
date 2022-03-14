@@ -61,28 +61,19 @@ class CNN(nn.Module):
     def __init__(self, output_dim=2):
         super(CNN, self).__init__()
 
-        self.conv1 = nn.Conv1d(in_channels=3, out_channels=16, kernel_size=5)
-        self.conv2 = nn.Conv1d(in_channels=16, out_channels=32, kernel_size=5)
-        self.linear1 = nn.Linear(in_features=3488, out_features=512)
-        self.linear2 = nn.Linear(in_features=512, out_features=128)
+        self.conv1 = nn.Conv1d(in_channels=3, out_channels=8, kernel_size=200, stride=50)
+        self.linear1 = nn.Linear(in_features=136, out_features=128)
+        # self.linear2 = nn.Linear(in_features=256, out_features=128)
         self.linear3 = nn.Linear(in_features=128, out_features=output_dim)
 
-        self.max_pool = nn.MaxPool1d(3)
         self.relu = nn.ReLU()
-        # self.dropout = nn.Dropout(p=0.5)
 
     def forward(self, x):
-        x = self.max_pool(self.conv1(x))
-        x = self.max_pool(self.conv2(x))
-        # x = self.relu(self.conv1(x))
-        # x = self.relu(self.conv2(x))
+        x = self.relu(self.conv1(x))
         x = torch.flatten(x, 1)
-        # print(x.shape)
-        # x = self.dropout(x)
+
         x = self.relu(self.linear1(x))
-        # x = self.dropout(x)
-        x = self.relu(self.linear2(x))
-        # x = self.dropout(x)
+        # x = self.relu(self.linear2(x))
         x = self.linear3(x)
         return x
 
@@ -90,24 +81,18 @@ class CNN(nn.Module):
 class CNNEncoder(nn.Module):
     def __init__(self, output_dim=2):
         super(CNNEncoder, self).__init__()
-        self.conv1 = nn.Conv1d(in_channels=3, out_channels=16, kernel_size=5)
-        self.conv2 = nn.Conv1d(in_channels=16, out_channels=32, kernel_size=5)
-        self.linear1 = nn.Linear(in_features=3488, out_features=512)
-        self.linear2 = nn.Linear(in_features=512, out_features=128)
+        self.conv1 = nn.Conv1d(in_channels=3, out_channels=8, kernel_size=200, stride=50)
+        self.linear1 = nn.Linear(in_features=136, out_features=128)
+        # self.linear2 = nn.Linear(in_features=256, out_features=128)
         self.linear3 = nn.Linear(in_features=128, out_features=output_dim)
 
-        self.max_pool = nn.MaxPool1d(3)
         self.relu = nn.ReLU()
-        # self.dropout = nn.Dropout(p=0.5)
 
     def forward(self, x):
-        x = self.max_pool(self.conv1(x))
-        x = self.max_pool(self.conv2(x))
+        x = self.relu(self.conv1(x))
         x = torch.flatten(x, 1)
-        # x = self.dropout(x)
-        x = self.relu(self.linear1(x))
-        # x = self.dropout(x)
-        x = self.linear2(x)
+
+        x = self.linear1(x)
         return x
 
 
