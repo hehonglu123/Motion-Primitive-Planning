@@ -5,7 +5,7 @@ from constraint_solver import *
 def main():
 	###read actual curve
 	col_names=['X', 'Y', 'Z','direction_x','direction_y','direction_z'] 
-	data = read_csv("curve_poses/relative_path.csv", names=col_names)
+	data = data = read_csv("../../data/from_ge/relative_path.csv", names=col_names)
 	curve_x=data['X'].tolist()
 	curve_y=data['Y'].tolist()
 	curve_z=data['Z'].tolist()
@@ -20,6 +20,7 @@ def main():
 
 
 	###path constraints, position constraint and curve normal constraint
+
 	lowerer_limit=np.array([-1,-1,-1,-np.pi,-3000,-3000,-3000,-np.pi])
 	upper_limit=-lowerer_limit
 	bnds=tuple(zip(lowerer_limit,upper_limit))
@@ -66,8 +67,7 @@ def main():
 	with open(r'trajectory/curve_pose_opt/curve_pose.yaml', 'w') as file:
 		documents = yaml.dump({'H':curve_pose.tolist()}, file)
 
-	print(opt.lam[:len(q_out)])
-	dlam_out=calc_lamdot(q_out,opt.lam[:len(q_out)],opt.joint_vel_limit,1)
+	dlam_out=calc_lamdot(q_out,opt.lam[:len(q_out)],opt.robot1,1)
 
 
 	plt.plot(opt.lam[:len(q_out)-1],dlam_out,label="lambda_dot_max")

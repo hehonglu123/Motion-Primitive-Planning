@@ -203,7 +203,8 @@ class greedy_fit(fitting_toolbox):
 def main():
 	###read in points
 	col_names=['X', 'Y', 'Z','direction_x', 'direction_y', 'direction_z'] 
-	data = read_csv("../data/from_ge/Curve_in_base_frame.csv", names=col_names)
+	data = read_csv("../data/from_ge/Curve_in_base_frame2.csv", names=col_names)
+	# data = read_csv("../constraint_solver/single_arm/trajectory/curve_pose_opt/curve_pose_opt_cs.csv", names=col_names)
 	curve_x=data['X'].tolist()
 	curve_y=data['Y'].tolist()
 	curve_z=data['Z'].tolist()
@@ -214,7 +215,9 @@ def main():
 	curve_normal=np.vstack((curve_direction_x, curve_direction_y, curve_direction_z)).T
 
 	col_names=['q1', 'q2', 'q3','q4', 'q5', 'q6'] 
-	data = read_csv("../data/from_ge/Curve_js.csv", names=col_names)
+	data = read_csv("../data/from_ge/Curve_js2.csv", names=col_names)
+	# data = read_csv("../constraint_solver/single_arm/trajectory/curve_pose_opt/curve_pose_opt_js.csv", names=col_names)
+	# data = read_csv("../constraint_solver/single_arm/trajectory/all_theta_opt/all_theta_opt_js.csv", names=col_names)
 	curve_q1=data['q1'].tolist()
 	curve_q2=data['q2'].tolist()
 	curve_q3=data['q3'].tolist()
@@ -235,7 +238,7 @@ def main():
 	# greedy_fit_obj.primitives={'movej_fit':greedy_fit_obj.movej_fit_greedy}
 	# greedy_fit_obj.primitives={'movec_fit':greedy_fit_obj.movec_fit_greedy}
 
-	breakpoints,primitives_choices,points=greedy_fit_obj.fit_under_error(0.05)
+	breakpoints,primitives_choices,points=greedy_fit_obj.fit_under_error(0.1)
 	# breakpoints,primitives_choices,points=greedy_fit_obj.smooth_slope(greedy_fit_obj.curve_fit,greedy_fit_obj.curve_fit_R,breakpoints,primitives_choices,points)
 
 	###plt
@@ -319,4 +322,4 @@ def rl_fit_data():
 
 
 if __name__ == "__main__":
-	rl_fit_data()
+	main()

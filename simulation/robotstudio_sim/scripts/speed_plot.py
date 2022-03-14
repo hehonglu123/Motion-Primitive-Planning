@@ -10,9 +10,9 @@ from robots_def import *
 from error_check import *
 from lambda_calc import *
 
-speed='v5000'
+speed='v1000'
 zone='z10'
-data_dir='fitting_output/slope_blend/'
+data_dir='fitting_output_new/threshold0.1/'
 ###read in curve_exe
 col_names=['timestamp', 'cmd_num', 'J1', 'J2','J3', 'J4', 'J5', 'J6'] 
 data = read_csv(data_dir+"curve_exe_"+speed+'_'+zone+".csv",names=col_names)
@@ -28,7 +28,7 @@ start_idx=np.where(cmd_num==3)[0][0]
 curve_exe_js=np.vstack((q1,q2,q3,q4,q5,q6)).T.astype(float)[start_idx:]
 
 
-robot=abb6640()
+robot=abb6640(d=50)
 act_speed=[]
 lam=[0]
 curve_exe=[]

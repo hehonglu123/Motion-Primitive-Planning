@@ -25,7 +25,7 @@ T=np.array([[-300.],[0.],[462.]])
 H=np.vstack((np.hstack((R,T)),np.array([0,0,0,1])))
 
 ###attach to tool frame
-curve_tool=curve+np.tile(T,(len(curve[0])))
+curve_tool=curve.T+np.tile(T,(len(curve)))
 curve_tool=np.dot(R,curve_tool).T
 curve_direction=np.dot(R,curve_direction).T
 

@@ -50,14 +50,15 @@ def parse_excel_sheet(file, sheet_name=0, threshold=1):
 
 def main():
 	col_names=['X', 'Y', 'Z','direction_x', 'direction_y', 'direction_z'] 
-	data = read_csv("../../../data/from_ge/Curve_in_base_frame.csv", names=col_names)
+	# data = read_csv("../../../data/from_ge/Curve_in_base_frame.csv", names=col_names)
+	data = read_csv("../../../constraint_solver/single_arm/trajectory/curve_pose_opt/curve_pose_opt_cs.csv", names=col_names)
 	curve_x=data['X'].tolist()
 	curve_y=data['Y'].tolist()
 	curve_z=data['Z'].tolist()
 	curve=np.vstack((curve_x, curve_y, curve_z)).T
 
-	data_dir="fitting_output_new/threshold0.01/"
-	speed="v5000"
+	data_dir="fitting_output_new/curve_pose_opt/"
+	speed="v1500"
 	zone="z10"
 	col_names=['X', 'Y', 'Z','direction_x', 'direction_y', 'direction_z'] 
 	data = read_csv(data_dir+"curve_fit.csv")
@@ -77,9 +78,9 @@ def main():
 	q6=data['J6'].tolist()[1:]
 
 	###read in error sheet
-	dfs,df_mds=parse_excel_sheet(data_dir+"comparison.xlsx")
-	j_min_idx=dfs[-1][speed][zone]
-	max_error_idx=dfs[1][speed][zone]
+	# dfs,df_mds=parse_excel_sheet(data_dir+"comparison.xlsx")
+	# j_min_idx=dfs[-1][speed][zone]
+	# max_error_idx=dfs[1][speed][zone]
 	
 	cmd_num=np.array(data['cmd_num'].tolist()[1:]).astype(float)
 	start_idx=np.where(cmd_num==3)[0][0]
@@ -122,8 +123,8 @@ def main():
 	plt.plot(curve_fit_2d_vis[:,0],curve_fit_2d_vis[:,1])
 	plt.scatter(curve_fit_2d_vis[breakpoints.astype(int),0],curve_fit_2d_vis[breakpoints.astype(int),1])
 
-	plt.scatter(curve_exe_2d_vis[max_error_idx,0],curve_exe_2d_vis[max_error_idx,1])
-	plt.scatter(curve_exe_2d_vis[j_min_idx,0],curve_exe_2d_vis[j_min_idx,1])
+	# plt.scatter(curve_exe_2d_vis[max_error_idx,0],curve_exe_2d_vis[max_error_idx,1])
+	# plt.scatter(curve_exe_2d_vis[j_min_idx,0],curve_exe_2d_vis[j_min_idx,1])
 	plt.plot(curve_exe_2d_vis[:,0],curve_exe_2d_vis[:,1])
 	plt.legend(['original curve','curve fit','breakpoints','max error1','max error2','j min','curve execution'])
 

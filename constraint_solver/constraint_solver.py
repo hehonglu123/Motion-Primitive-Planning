@@ -21,6 +21,7 @@ class lambda_opt(object):
 		self.base2_R=base2_R
 		self.base2_p=base2_p
 		self.joint_vel_limit=np.radians([110,90,90,150,120,235])
+		self.steps=steps
 
 		###decrease curve density to simplify computation
 		num_per_step=int(len(self.curve)/steps)	
@@ -74,6 +75,7 @@ class lambda_opt(object):
 		q_all=[q_init]
 		q_out=[q_init]
 		for i in range(len(curve)):
+			print(i)
 			try:
 				error_fb=999
 				error_fb_prev=999
@@ -111,7 +113,7 @@ class lambda_opt(object):
 					if abs(error_fb-error_fb_prev)<0.0001:
 						break
 					error_fb_prev=error_fb
-					
+
 					###line search
 					alpha=fminbound(self.error_calc,0,1,args=(q_all[-1],qdot,curve[i],curve_normal[i],))
 					
@@ -225,9 +227,9 @@ class lambda_opt(object):
 	def curve_pose_opt(self,x):
 		###optimize on curve pose for single arm
 		k=x[:3]/np.linalg.norm(x[:3])	###pose rotation axis
-		theta0=x[3]		###pose rotation angle
-		shift=x[4:-1]
-		theta1=x[-1]	###spray angle
+		theta0=x[3]						###pose rotation angle
+		shift=x[4:-1]					###pose position
+		theta1=x[-1]					###spray angle
 
 		R_curve=rot(k,theta0)
 		curve_new=np.dot(R_curve,self.curve.T).T+np.tile(shift,(len(self.curve),1))
@@ -243,7 +245,7 @@ class lambda_opt(object):
 			return 999
 
 		
-		dlam=calc_lamdot(q_out,self.lam,self.joint_vel_limit,1)
+		dlam=calc_lamdot(q_out,self.lam,self.robot1,1)
 		print(min(dlam))
 		return -min(dlam)
 
@@ -277,7 +279,7 @@ class lambda_opt(object):
 			return 999
 
 		
-		dlam=calc_lamdot(q_out,self.lam,self.joint_vel_limit,1)
+		dlam=calc_lamdot(q_out,self.lam,self.robot1,1)
 		print(min(dlam))
 		return -min(dlam)
 
@@ -308,7 +310,7 @@ class lambda_opt(object):
 					return 999
 
 
-		dlam=calc_lamdot(q_out,self.lam,self.joint_vel_limit,1)
+		dlam=calc_lamdot(q_out,self.lam,self.robot1,1)
 		print(min(dlam))
 		return -min(dlam)	
 
@@ -338,7 +340,8 @@ class lambda_opt(object):
 					return 999
 
 
-		return calc_lamdot(q_out,self.lam,self.joint_vel_limit,1)
+		return calc_lamdot(q_out,self.lam,self.robot_1,1)
+
 
 def main():
 	return 

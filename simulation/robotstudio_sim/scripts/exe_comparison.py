@@ -28,14 +28,14 @@ class MotionSend(object):
     def __init__(self) -> None:
         
         self.client = MotionProgramExecClient()
-        self.robot=abb6640()
-        quatR = R2q(rot([0,1,0],math.radians(30)))
-        self.tool = tooldata(True,pose([50,0,450],[quatR[0],quatR[1],quatR[2],quatR[3]]),loaddata(1,[0,0,0.001],[1,0,0,0],0,0,0))
+        # self.robot=abb6640()
+        # quatR = R2q(rot([0,1,0],math.radians(30)))
+        # self.tool = tooldata(True,pose([50,0,450],[quatR[0],quatR[1],quatR[2],quatR[3]]),loaddata(1,[0,0,0.001],[1,0,0,0],0,0,0))
 
         ###with fake link
-        # self.robot=abb6640(d=50)
-        # quatR = R2q(rot([0,1,0],math.radians(30)))
-        # self.tool = tooldata(True,pose([75,0,493.30127019],[quatR[0],quatR[1],quatR[2],quatR[3]]),loaddata(1,[0,0,0.001],[1,0,0,0],0,0,0))
+        self.robot=abb6640(d=50)
+        quatR = R2q(rot([0,1,0],math.radians(30)))
+        self.tool = tooldata(True,pose([75,0,493.30127019],[quatR[0],quatR[1],quatR[2],quatR[3]]),loaddata(1,[0,0,0.001],[1,0,0,0],0,0,0))
 
     def moveL_target(self,q,point):
         quat=R2q(self.robot.fwd(q).R)
@@ -142,15 +142,15 @@ def exe_from_file(ms,filename,filename_js,speed,zone):
 
 def main():
     ms = MotionSend()
-    data_dir="fitting_output/threshold1/"
+    data_dir="fitting_output_new/threshold0.1/"
     # speed={"v50":v50,"v500":v500,"v5000":v5000}
     # zone={"fine":fine,"z1":z1,"z10":z10}
-    speed={"v500":v500}
+    speed={"v1000":v1000}
     zone={"z10":z10}
 
     for s in speed:
         for z in zone: 
-            curve_exe_js=exe_from_file(ms,data_dir+"command_backproj.csv",data_dir+"curve_fit_js.csv",speed[s],zone[z])
+            curve_exe_js=exe_from_file(ms,data_dir+"command.csv",data_dir+"curve_fit_js.csv",speed[s],zone[z])
    
 
             f = open(data_dir+"curve_exe"+"_"+s+"_"+z+".csv", "w")

@@ -121,7 +121,7 @@ def main():
 
 	###output to csv
 	df=DataFrame({'q0':curve_js[:,0],'q1':curve_js[:,1],'q2':curve_js[:,2],'q3':curve_js[:,3],'q4':curve_js[:,4],'q5':curve_js[:,5]})
-	df.to_csv('from_ge/Curve_js.csv',header=False,index=False)
+	df.to_csv('from_ge/Curve_js2.csv',header=False,index=False)
 
 
 def main2():
