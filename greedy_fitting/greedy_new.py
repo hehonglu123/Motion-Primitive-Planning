@@ -215,9 +215,10 @@ def main():
 	curve_normal=np.vstack((curve_direction_x, curve_direction_y, curve_direction_z)).T
 
 	col_names=['q1', 'q2', 'q3','q4', 'q5', 'q6'] 
-	data = read_csv("../data/from_ge/Curve_js2.csv", names=col_names)
+	# data = read_csv("../data/from_ge/Curve_js2.csv", names=col_names)
 	# data = read_csv("../constraint_solver/single_arm/trajectory/curve_pose_opt/curve_pose_opt_js.csv", names=col_names)
-	# data = read_csv("../constraint_solver/single_arm/trajectory/all_theta_opt/all_theta_opt_js.csv", names=col_names)
+	data = read_csv("../constraint_solver/single_arm/trajectory/all_theta_opt/all_theta_opt_js.csv", names=col_names)
+	# data = read_csv("../constraint_solver/single_arm/trajectory/init_opt/init_opt_js.csv", names=col_names)
 	curve_q1=data['q1'].tolist()
 	curve_q2=data['q2'].tolist()
 	curve_q3=data['q3'].tolist()

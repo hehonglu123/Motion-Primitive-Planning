@@ -38,55 +38,116 @@ def orientation_interp(R_init,R_end,steps):
 
 threshold=0.1
 slope_threshold=np.radians(30)
-def movel_fit(curve,curve_js,prev_slope,next_slope):
-	curve_fit=np.linspace(curve[0],curve[-1],len(curve))
-	error=np.max(np.linalg.norm(curve_fit-curve,axis=1))
-	# curve_R_init=robot.fwd(curve_js[0]).R
-	# curve_R_end=robot.fwd(curve_js[-1]).R
-	# curve_R=orientation_interp(curve_R_init,curve_R_end,len(curve))
-	###check slope diff in js requires inv, 2slow
+def movel_fit(curve,curve_js,prev_slope,next_slope,js_prev=[]):
+	curve_R_end=robot.fwd(curve_js[-1]).R
 
+	if len(js_prev)==0:
+		start_p=curve[0]
+		start_R=robot.fwd(curve_js[0]).R
+		curve_fit=np.linspace(start_p,curve[-1],len(curve))
+		curve_fit_R=orientation_interp(start_R,curve_R_end,len(curve))
+	else:
+		pose=robot.fwd(js_prev)
+		start_p=pose.p
+		start_R=pose.R
+		curve_fit=np.linspace(start_p,curve[-1],len(curve)+1)[1:]
+		curve_fit_R=orientation_interp(start_R,curve_R_end,len(curve)+1)[1:]
+	
+	error=np.max(np.linalg.norm(curve_fit-curve,axis=1))
+
+	
+	
+	###check slope diff in js 
+	q1_all=robot.inv(curve_fit[0],curve_fit_R[0])
+	temp_q=q1_all-curve_js[0]
+	order=np.argsort(np.linalg.norm(temp_q,axis=1))
+	q1=q1_all[order[0]]
+
+	qlast_all=robot.inv(curve_fit[-1],curve_fit_R[-1])
+	temp_q=qlast_all-curve_js[-1]
+	order=np.argsort(np.linalg.norm(temp_q,axis=1))
+	qlast=qlast_all[order[0]]
+
+
+	angle1=0
+	angle2=0
 	if len(prev_slope)>0:
-		angle1=abs(get_angle(prev_slope,curve[-1]-curve[0],True))
-	else:
-		angle1=0
+		angle1=abs(get_angle(prev_slope,qlast-q1,True))
 	if len(next_slope)>0:
-		angle2=abs(get_angle(next_slope,curve[-1]-curve[0],True))
-	else:
-		angle2=0
+		angle2=abs(get_angle(next_slope,qlast-q1,True))
 
 	return error if max(angle1,angle2)<slope_threshold else 999
-def movej_fit(curve,curve_js,prev_slope,next_slope):
-	curve_fit_js=np.linspace(curve_js[0],curve_js[-1],len(curve_js))
+def movej_fit(curve,curve_js,prev_slope,next_slope,js_prev=[]):
+	if len(js_prev)==0:
+		start_q=curve_js[0]
+		curve_fit_js=np.linspace(start_q,curve_js[-1],len(curve_js))
+	else:
+		start_q=js_prev
+		curve_fit_js=np.linspace(start_q,curve_js[-1],len(curve_js)+1)[1:]
+
 	curve_fit=[]
 
 	for i in range(len(curve)):
 		curve_fit.append(robot.fwd(curve_fit_js[i]).p)
 	error=np.max(np.linalg.norm(curve_fit-curve,axis=1))
 
+	angle1=0
+	angle2=0
 	if len(prev_slope)>0:
 		angle1=abs(get_angle(prev_slope,curve_js[-1]-curve_js[0],True))
-	else:
-		angle1=0
 	if len(next_slope)>0:
 		angle2=abs(get_angle(prev_slope,curve_js[-1]-curve_js[0],True))
-	else:
-		angle2=0
 
 	return error if max(angle1,angle2)<slope_threshold else 999
 
-def movec_fit(curve,curve_js,prev_slope,next_slope):
-	curve_fit,circle=circle_fit(curve,curve[0],curve[-1])
+def movec_fit(curve,curve_js,prev_slope,next_slope,js_prev=[]):
+	curve_R_end=robot.fwd(curve_js[-1]).R
+
+	if len(js_prev)==0:
+		start_p=curve[0]
+		start_R=robot.fwd(curve_js[0]).R
+		curve_fit,circle=circle_fit(curve,start_p,curve[-1])
+		curve_fit_R=orientation_interp(start_R,curve_R_end,len(curve))
+	else:
+		pose=robot.fwd(js_prev)
+		start_p=pose.p
+		start_R=pose.R
+		curve_fit,circle=circle_fit(curve,start_p,curve[-1])
+		curve_fit_R=orientation_interp(start_R,curve_R_end,len(curve)+1)[1:]
+
+
+	
 	error=np.max(np.linalg.norm(curve_fit-curve,axis=1))
 
+	angle1=0
+	angle2=0
+	###find slope in joint space
 	if len(prev_slope)>0:
-		angle1=abs(get_angle(prev_slope,curve[1]-curve[0],True))
-	else:
-		angle1=0
+		q1_all=robot.inv(curve_fit[0],curve_fit_R[0])
+		temp_q=q1_all-curve_js[0]
+		order=np.argsort(np.linalg.norm(temp_q,axis=1))
+		q1=q1_all[order[0]]
+
+		q2_all=robot.inv(curve_fit[1],curve_fit_R[1])
+		temp_q=q2_all-curve_js[1]
+		order=np.argsort(np.linalg.norm(temp_q,axis=1))
+		q2=q2_all[order[0]]
+
+		angle1=abs(get_angle(prev_slope,q2-q1,True))
+
 	if len(next_slope)>0:
-		angle2=abs(get_angle(next_slope,curve[-1]-curve[-2],True))
-	else:
-		angle2=0
+		qlast1_all=robot.inv(curve_fit[-1],curve_fit_R[-1])
+		temp_q=qlast1_all-curve_js[-1]
+		order=np.argsort(np.linalg.norm(temp_q,axis=1))
+		qlast1=qlast1_all[order[0]]
+
+		qlast2_all=robot.inv(curve_fit[-2],curve_fit_R[-2])
+		temp_q=qlast2_all-curve_js[-2]
+		order=np.argsort(np.linalg.norm(temp_q,axis=1))
+		qlast2=qlast2_all[order[0]]
+
+		angle2=abs(get_angle(next_slope,qlast1-qlast2,True))
+
 
 	return error if max(angle1,angle2)<slope_threshold else 999
 
@@ -100,29 +161,19 @@ def bisec(curve,curve_js,primitive_fit):
 		prev_possible_point=2
 
 		###get slope
-		if primitive_fit==movej_fit:
-			if i==0:
-				prev_slope=[]
-			else:
-				prev_slope=curve_js[i-1]-curve_js[i-2]
+		if i==0:
+			prev_slope=[]
 		else:
-			if i==0:
-				prev_slope=[]
-			else:
-				prev_slope=curve[i-1]-curve[i-2]
+			prev_slope=curve_js[i-1]-curve_js[i-2]
+
 
 		while True:
 			# print(next_point)
-			if primitive_fit==movej_fit:
-				if i==len(curve_file_list)-1:
-					next_slope=[]
-				else:
-					next_slope=curve_js[i+1]-curve_js[i-2]
+			if i==len(curve_file_list)-1:
+				next_slope=[]
 			else:
-				if i==len(curve_file_list)-1:
-					next_slope=[]
-				else:
-					next_slope=curve[i+1]-curve[i-2]
+				next_slope=curve_js[i+1]-curve_js[i-2]
+	
 
 			if error>max_error_threshold:
 				#going forward
