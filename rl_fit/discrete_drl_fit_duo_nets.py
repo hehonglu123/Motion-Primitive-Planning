@@ -210,20 +210,29 @@ class RL_Agent(object):
         self.memory = ReplayMemory()
         self.batch_size = BATCH_SIZE
 
-        self.target_net = DQN(input_dim=self.input_dim, output_dim=self.output_dim)
-        self.policy_net = DQN(input_dim=self.input_dim, output_dim=self.output_dim)
-        self.target_net.load_state_dict(self.policy_net.state_dict())
-        self.optimizer = optim.RMSprop(self.policy_net.parameters(), lr=self.lr)
-        self.scheduler = optim.lr_scheduler.StepLR(self.optimizer, step_size=500, gamma=0.5)
+        self.target_net_L = DQN(input_dim=self.input_dim, output_dim=self.output_dim)
+        self.target_net_C = DQN(input_dim=self.input_dim, output_dim=self.output_dim)
+        self.policy_net_L = DQN(input_dim=self.input_dim, output_dim=self.output_dim)
+        self.policy_net_C = DQN(input_dim=self.input_dim, output_dim=self.output_dim)
+        self.target_net_L.load_state_dict(self.policy_net_L.state_dict())
+        self.target_net_C.load_state_dict(self.policy_net_C.state_dict())
+        self.optimizer_L = optim.RMSprop(self.policy_net_L.parameters(), lr=self.lr)
+        self.optimizer_C = optim.RMSprop(self.policy_net_C.parameters(), lr=self.lr)
+        self.scheduler_L = optim.lr_scheduler.StepLR(self.optimizer_L, step_size=500, gamma=0.5)
+        self.scheduler_C = optim.lr_scheduler.StepLR(self.optimizer_C, step_size=500, gamma=0.5)
 
         self.criterion = nn.SmoothL1Loss()
 
     def get_action(self, state: State, valid_types: dict = None, tau=0.01, epsilon=0.):
-        self.policy_net.eval()
+        self.policy_net_L.eval()
+        self.policy_net_C.eval()
         with torch.no_grad():
             type_code = primitive_type_code[state.longest_type]
+            policy_net = self.policy_net_C
+            if type_code == 0:
+                policy_net = self.policy_net_L
             curve_feature_tensor = torch.tensor(state.curve_features)
-            x_tensor = torch.hstack((curve_feature_tensor, torch.tensor(type_code)))
+            x_tensor = curve_feature_tensor
 
             # action_softmax = torch.softmax(output, dim=0)
 
@@ -235,7 +244,7 @@ class RL_Agent(object):
             if eps_sample < epsilon:
                 action_code = np.random.randint(0, self.output_dim)
             else:
-                output = self.policy_net(x_tensor.float())
+                output = policy_net(x_tensor.float())
                 action_code = torch.argmax(output).data.detach().numpy()
 
             primitive_type = 'C' if action_code >= self.n_action and valid_types['C'] else 'L'
@@ -393,8 +402,8 @@ def train_rl(agent: RL_Agent, curve_base_data, curve_js_data, n_episode=10000):
 
         tau = episode_tau(i_episode, n_episode)
         # epsilon = EPS_START - i_episode * (EPS_START - EPS_END) / n_episode
-        if (i_episode + 1) % EPS_DECAY == 0:
-            epsilon = epsilon * 0.995
+        if i_episode % EPS_DECAY == 0:
+            epsilon = epsilon * 0.999
 
         episode_reward = 0
 
