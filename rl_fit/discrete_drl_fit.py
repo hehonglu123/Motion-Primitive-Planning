@@ -291,6 +291,10 @@ class RL_Agent(object):
     def save_model(self, path):
         torch.save(self.policy_net.state_dict(), path + os.sep + 'DQN_policy_net.pth')
 
+    def load_model(self, path):
+        self.policy_net.load_state_dict(torch.load(path), path + os.sep + 'DQN_policy_net.pth')
+        self.target_net.load_state_dict(self.policy_net.state_dict())
+
 
 class RL_Env(object):
     def __init__(self, target_curve, target_curve_normal, target_curve_js, greedy_obj, feature_encoder,
@@ -453,6 +457,61 @@ def train_rl(agent: RL_Agent, curve_base_data, curve_js_data, n_episode=10000):
     return episode_rewards, episode_steps
 
 
+def evaluate_rl(agent: RL_Agent, curve_base_data, curve_js_data):
+    robot = abb6640()
+    print("Evaluation Start")
+
+    episode_steps = []
+    episode_target_curve = []
+
+    feature_encoder = load_encoder('cnn_model/cnn_model.pth')
+    feature_encoder.eval()
+
+    for i, (curve_base, curve_normal) in enumerate(curve_base_data):
+        episode_reward = 0
+        curve_js = curve_js_data[i]
+        timer = time.time_ns()
+
+        greedy_fit_obj = greedy_fit(robot, curve_base, curve_normal, curve_js, d=50)
+        greedy_fit_obj.primitives = {'movel_fit': greedy_fit_obj.movel_fit_greedy,
+                                     'movec_fit': greedy_fit_obj.movec_fit_greedy}
+
+        env = RL_Env(target_curve=curve_base, target_curve_normal=curve_normal, target_curve_js=curve_js,
+                     greedy_obj=greedy_fit_obj, n_feature=agent.n_curve_feature, feature_encoder=feature_encoder)
+
+        # print("Episode Start")
+
+        state, done, valid_actions = env.reset()
+
+        i_step = 0
+        while not done:
+            i_step += 1
+            # print("{}/{}".format(len(env.fit_curve), len(env.target_curve)))
+            # print("Action:", action, valid_actions)
+
+            action = agent.get_action(state, valid_types=valid_actions, epsilon=0)
+            # print(action)
+
+            next_state, reward, done, valid_actions = env.step(action, i_step)
+
+            agent.memory_save(state=state, action=action, reward=reward, next_state=next_state, done=done)
+            episode_reward += reward
+
+            state = next_state
+
+            if done:
+                break
+
+            # print("Step: {} END {}".format(i_step, reward))
+
+        print("Curve {} / {} --- {} Steps --- Reward: {:.3f} --- {:.3f}s "
+              .format(i, len(curve_base_data), i_step, episode_reward,
+                      (time.time_ns() - timer) / (10 ** 9)))
+
+        episode_steps.append(i_step)
+        episode_target_curve.append(i)
+
+
 def save_data(episode_rewards, episode_steps, episode_target_curve):
     df = pd.DataFrame({"episode_rewards": episode_rewards,
                        "episode_steps": episode_steps,
@@ -470,7 +529,13 @@ def rl_fit(curve_base_data, curve_js_data):
 def main():
     curve_base_data = read_base_data("data/base")
     curve_js_data = read_js_data("data/js")
-    rl_fit(curve_base_data, curve_js_data)
+    # rl_fit(curve_base_data, curve_js_data)
+
+    n_feature = 128
+    n_action = 10
+    agent = RL_Agent(n_feature, n_action)
+    agent.load_model('model')
+    evaluate_rl(agent, curve_base_data, curve_js_data)
 
 
 if __name__ == '__main__':
