@@ -292,7 +292,7 @@ class RL_Agent(object):
         torch.save(self.policy_net.state_dict(), path + os.sep + 'DQN_policy_net.pth')
 
     def load_model(self, path):
-        self.policy_net.load_state_dict(torch.load(path), path + os.sep + 'DQN_policy_net.pth')
+        self.policy_net.load_state_dict(torch.load(path + os.sep + 'DQN_policy_net.pth'))
         self.target_net.load_state_dict(self.policy_net.state_dict())
 
 
@@ -510,6 +510,7 @@ def evaluate_rl(agent: RL_Agent, curve_base_data, curve_js_data):
 
         episode_steps.append(i_step)
         episode_target_curve.append(i)
+        save_evaluation_data(episode_steps, episode_target_curve)
 
 
 def save_data(episode_rewards, episode_steps, episode_target_curve):
@@ -517,6 +518,12 @@ def save_data(episode_rewards, episode_steps, episode_target_curve):
                        "episode_steps": episode_steps,
                        "curve": episode_target_curve})
     df.to_csv("Training Curve Data.csv")
+
+
+def save_evaluation_data(episode_steps, episode_target_curve):
+    df = pd.DataFrame({"num_primitives": episode_steps,
+                       "curve": episode_target_curve})
+    df.to_csv("Evaluate Curve Data.csv")
 
 
 def rl_fit(curve_base_data, curve_js_data):
