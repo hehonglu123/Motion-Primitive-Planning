@@ -142,30 +142,33 @@ class ReplayMemory(object):
         self.memory = deque([], maxlen=capacity)
 
     def push(self, memory):
-        state = memory.state
-        type_encode = primitive_type_code[state.longest_type]
-        state_encode = np.hstack([state.curve_features, type_encode])
+        state = memory.state.curve_features.T
+        # type_encode = primitive_type_code[state.longest_type]
+        # state_encode = np.hstack([state.curve_features, type_encode])
 
         action = memory.action
         action_type_encode = action.Code
 
         next_state = memory.next_state
-        next_state_encode = np.zeros_like(state_encode)
+        # next_state_encode = np.zeros_like(state_encode)
         if next_state is not None:
-            next_type_encode = primitive_type_code[next_state.longest_type]
-            next_state_encode = np.hstack([next_state.curve_features, next_type_encode])
+            next_state = memory.next_state.curve_features.T
+        else:
+            next_state = np.zeros_like(state)
+        #     next_type_encode = primitive_type_code[next_state.longest_type]
+        #     next_state_encode = np.hstack([next_state.curve_features, next_type_encode])
 
-        new_memory = Memory(state=state_encode, action=action_type_encode, reward=memory.reward,
-                            next_state=next_state_encode, done=memory.done)
+        new_memory = Memory(state=state, action=action_type_encode, reward=memory.reward,
+                            next_state=next_state, done=memory.done)
 
         self.memory.append(new_memory)
 
     def sample(self, batch_size):
         sample_batch = random.sample(self.memory, batch_size)
-        state_batch = np.vstack([m.state for m in sample_batch])
+        state_batch = np.stack([m.state for m in sample_batch])
         action_batch = np.array([m.action for m in sample_batch])
         reward_batch = np.array([m.reward for m in sample_batch])
-        next_state_batch = np.vstack([m.next_state for m in sample_batch])
+        next_state_batch = np.stack([m.next_state for m in sample_batch])
         done_batch = np.array([m.done for m in sample_batch])
         return state_batch, action_batch, reward_batch, next_state_batch, done_batch
 
@@ -177,22 +180,20 @@ class DQN(nn.Module):
     def __init__(self, input_dim, output_dim):
         super(DQN, self).__init__()
 
-        self.input = nn.Linear(input_dim, 256)
-        self.hidden1 = nn.Linear(256, 256)
-        self.hidden2 = nn.Linear(256, 256)
-        # self.hidden3 = nn.Linear(128, 128)
-        # self.hidden4 = nn.Linear(128, 128)
+        self.conv1 = nn.Conv1d(in_channels=3, out_channels=8, kernel_size=200, stride=50)
+        self.linear1 = nn.Linear(136, 256)
+        self.linear2 = nn.Linear(256, 256)
+        self.linear3 = nn.Linear(256, 256)
         self.output = nn.Linear(256, output_dim)
 
-        self.drop_out = nn.Dropout(p=0.25)
         self.relu = nn.ReLU()
 
     def forward(self, x):
-        x = self.relu(self.input(x))
-        x = self.relu(self.hidden1(x))
-        x = self.relu(self.hidden2(x))
-        # x = self.relu(self.hidden3(x))
-        # x = self.relu(self.hidden4(x))
+        x = self.relu(self.conv1(x))
+        x = torch.flatten(x, 1)
+        x = self.relu(self.linear1(x))
+        x = self.relu(self.linear2(x))
+        x = self.relu(self.linear3(x))
         x = self.output(x)
         return x
 
@@ -214,7 +215,7 @@ class RL_Agent(object):
         self.policy_net = DQN(input_dim=self.input_dim, output_dim=self.output_dim)
         self.target_net.load_state_dict(self.policy_net.state_dict())
         self.optimizer = optim.RMSprop(self.policy_net.parameters(), lr=self.lr)
-        self.scheduler = optim.lr_scheduler.StepLR(self.optimizer, step_size=500, gamma=0.5)
+        self.scheduler = optim.lr_scheduler.StepLR(self.optimizer, step_size=500, gamma=0.5, last_epoch=2000)
 
         self.criterion = nn.SmoothL1Loss()
 
@@ -222,14 +223,12 @@ class RL_Agent(object):
         self.policy_net.eval()
         with torch.no_grad():
             type_code = primitive_type_code[state.longest_type]
+
             curve_feature_tensor = torch.tensor(state.curve_features)
-            x_tensor = torch.hstack((curve_feature_tensor, torch.tensor(type_code)))
-
-            # action_softmax = torch.softmax(output, dim=0)
-
-            # action_code = torch.argmax(action_softmax)
-            # action_softmax = F.gumbel_softmax(output, tau=tau, dim=0)
-            # action_code = np.random.choice(self.output_dim, p=action_softmax.detach().numpy())
+            # x_tensor = torch.hstack((curve_feature_tensor, torch.tensor(type_code)))
+            curve_feature_tensor = curve_feature_tensor.T
+            x_tensor = curve_feature_tensor.reshape(1, curve_feature_tensor.shape[0], curve_feature_tensor.shape[1])
+            # x_tensor = curve_feature_tensor.T
 
             eps_sample = np.random.rand()
             if eps_sample < epsilon:
@@ -331,15 +330,15 @@ class RL_Env(object):
         remaining_curve = self.target_curve[self.last_bp:, :]
         normalized_curve = PCA_normalization(remaining_curve)
         # curve_features, _ = fft_feature(normalized_curve, self.n_feature)
-        normalized_curve_tensor = torch.from_numpy(np.array([normalized_curve.T])).float()
-        curve_features = self.encoder(normalized_curve_tensor)
-        curve_features = curve_features.detach().numpy().flatten()
+        # normalized_curve_tensor = torch.from_numpy(np.array([normalized_curve.T])).float()
+        # curve_features = self.encoder(normalized_curve_tensor)
+        # curve_features = curve_features.detach().numpy().flatten()
 
         self.longest_primitives, longest_type = greedy_fit_primitive(last_bp=self.last_bp, curve=self.target_curve,
                                                                      p=self.fit_curve[-1])
         valid_types = {"L": self.longest_primitives['L'] is not None,
                        "C": self.longest_primitives['C'] is not None}
-        state = State(longest_type=longest_type, curve_features=curve_features)
+        state = State(longest_type=longest_type, curve_features=normalized_curve)
         done = False
         return state, done, valid_types
 
@@ -365,11 +364,11 @@ class RL_Env(object):
         remaining_curve = self.target_curve[self.last_bp:, :]
         normalized_curve = PCA_normalization(remaining_curve)
         # curve_features, _ = fft_feature(normalized_curve, self.n_feature)
-        normalized_curve_tensor = torch.from_numpy(np.array([normalized_curve.T])).float()
-        curve_features = self.encoder(normalized_curve_tensor)
-        curve_features = curve_features.detach().numpy().flatten()
+        # normalized_curve_tensor = torch.from_numpy(np.array([normalized_curve.T])).float()
+        # curve_features = self.encoder(normalized_curve_tensor)
+        # curve_features = curve_features.detach().numpy().flatten()
 
-        state = State(longest_type=longest_type, curve_features=curve_features)
+        state = State(longest_type=longest_type, curve_features=normalized_curve)
         # done = len(self.fit_curve) >= len(self.target_curve)
         # reward = reward_function(i_step, done)
 
@@ -538,13 +537,13 @@ def rl_fit(curve_base_data, curve_js_data, load_model=False):
 def main():
     curve_base_data = read_base_data("data/base")
     curve_js_data = read_js_data("data/js")
-    # rl_fit(curve_base_data, curve_js_data)
+    rl_fit(curve_base_data, curve_js_data, load_model=False)
 
-    n_feature = 128
-    n_action = 10
-    agent = RL_Agent(n_feature, n_action, load_model=True)
-    agent.load_model('model')
-    evaluate_rl(agent, curve_base_data, curve_js_data)
+    # n_feature = 128
+    # n_action = 10
+    # agent = RL_Agent(n_feature, n_action)
+    # agent.load_model('model')
+    # evaluate_rl(agent, curve_base_data, curve_js_data)
 
 
 if __name__ == '__main__':
