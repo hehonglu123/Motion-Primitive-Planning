@@ -14,8 +14,8 @@ class lambda_opt(object):
 	###robot1 hold paint gun for single arm
 	###robot1 hold paint gun, robot2 hold blade for dual arm
 	def __init__(self,curve,curve_normal,robot1=abb6640(),robot2=abb1200(),base2_R=np.eye(3),base2_p=np.zeros(3),steps=32):
-		self.curve=curve
-		self.curve_normal=curve_normal
+		self.curve_original=curve
+		self.curve_normal_original=curve_normal
 		self.robot1=robot1
 		self.robot2=robot2
 		self.base2_R=base2_R
@@ -24,16 +24,16 @@ class lambda_opt(object):
 		self.steps=steps
 
 		###decrease curve density to simplify computation
-		num_per_step=int(len(self.curve)/steps)	
-		self.curve=self.curve[0:-1:num_per_step]
-		self.curve_normal=self.curve_normal[0:-1:num_per_step]
+		self.num_per_step=int(len(curve)/steps)	
+		self.curve=curve[0:-1:self.num_per_step]
+		self.curve_normal=curve_normal[0:-1:self.num_per_step]
 
 
 		###find path length
-		self.lam=[0]
+		self.lam_original=[0]
 		for i in range(len(curve)-1):
-			self.lam.append(self.lam[-1]+np.linalg.norm(curve[i+1]-curve[i]))
-		self.lam=self.lam[0:-1:num_per_step]
+			self.lam_original.append(self.lam_original[-1]+np.linalg.norm(curve[i+1]-curve[i]))
+		self.lam=self.lam_original[0:-1:self.num_per_step]
 
 
 	def direction2R(self,v_norm,v_tang):
@@ -75,7 +75,7 @@ class lambda_opt(object):
 		q_all=[q_init]
 		q_out=[q_init]
 		for i in range(len(curve)):
-			print(i)
+			# print(i)
 			try:
 				error_fb=999
 				error_fb_prev=999
@@ -107,7 +107,7 @@ class lambda_opt(object):
 					s=np.sin(theta/2)*k         #eR2
 					wd=-np.dot(KR,s)
 					f=-np.dot(np.transpose(Jp),vd)-w*np.dot(np.transpose(JR),wd)
-					qdot=solve_qp(H,f)
+					qdot=solve_qp(H,f,lb=self.robot1.lowerer_limit-q_all[-1],ub=self.robot1.upper_limit-q_all[-1])
 
 					#avoid getting stuck
 					if abs(error_fb-error_fb_prev)<0.0001:
@@ -115,8 +115,9 @@ class lambda_opt(object):
 					error_fb_prev=error_fb
 
 					###line search
-					alpha=fminbound(self.error_calc,0,1,args=(q_all[-1],qdot,curve[i],curve_normal[i],))
-					
+					alpha=fminbound(self.error_calc,0,0.999999999999999999999,args=(q_all[-1],qdot,curve[i],curve_normal[i],))
+					if alpha<0.01:
+						break
 					q_all.append(q_all[-1]+alpha*qdot)
 					# print(q_all[-1])
 			except:
@@ -222,14 +223,60 @@ class lambda_opt(object):
 
 		q_out1=np.array(q_out1)
 		q_out2=np.array(q_out2)
-		return q_out1, q_out2
+		return q_out1, q_out2	
 
+	def orientation_interp(self,R_init,R_end,steps):
+		curve_fit_R=[]
+		###find axis angle first
+		R_diff=np.dot(R_init.T,R_end)
+		k,theta=R2rot(R_diff)
+		for i in range(steps):
+			###linearly interpolate angle
+			angle=theta*i/(steps-1)
+			R=rot(k,angle)
+			curve_fit_R.append(np.dot(R_init,R))
+		curve_fit_R=np.array(curve_fit_R)
+		return curve_fit_R
+
+	def restore_q_from_q(self,q):
+		R_interp=[]
+		for i in range(len(q)-1):
+			try:
+				R_init=self.robot1.fwd(q[i]).R
+				R_end=self.robot1.fwd(q[i+1]).R
+				if i==len(q)-2:
+					R_interp.extend(self.orientation_interp(R_init,R_end,self.num_per_step))
+				else:
+					R_interp.extend(self.orientation_interp(R_init,R_end,self.num_per_step+1)[:-1])
+			except:
+				print(q[i])
+		R_interp.extend(np.tile(R_interp[-1],(len(self.curve_original)-len(R_interp))))
+		return R_interp
+
+	def inv_all(self,curve,curve_R,q_init):
+		curve_js=[q_init]
+		for i in range(1,len(curve)):
+			try:
+				q_all=np.array(self.robot1.inv(curve[i],curve_R[i]))
+			except:
+				traceback.print_exc()
+				pass
+			###choose inv_kin closest to previous joints
+			try:
+				temp_q=q_all-curve_js[i-1]
+				order=np.argsort(np.linalg.norm(temp_q,axis=1))
+				curve_js.append(q_all[order[0]])
+
+			except:
+				traceback.print_exc()
+				return
+		return curve_js
 	def curve_pose_opt(self,x):
 		###optimize on curve pose for single arm
-		k=x[:3]/np.linalg.norm(x[:3])	###pose rotation axis
-		theta0=x[3]						###pose rotation angle
-		shift=x[4:-1]					###pose position
-		theta1=x[-1]					###spray angle
+		theta0=np.linalg.norm(x[:3])	###pose rotation angle
+		k=x[:3]/theta0					###pose rotation axis
+		shift=x[3:-1]					###pose translation
+		theta1=x[-1]					###initial spray angle (1DOF)
 
 		R_curve=rot(k,theta0)
 		curve_new=np.dot(R_curve,self.curve.T).T+np.tile(shift,(len(self.curve),1))
@@ -240,12 +287,19 @@ class lambda_opt(object):
 		try:
 			q_init=self.robot1.inv(curve_new[0],R)[0]
 			q_out=self.single_arm_stepwise_optimize(q_init,curve_new,curve_normal_new)
+			
 		except:
 			# traceback.print_exc()
 			return 999
 
+		# R_interp=self.restore_q_from_q(q_out)
+		# curve_js=self.inv_all(self.curve_original,R_interp,q_init)
+		# dlam=calc_lamdot(curve_js,self.lam_original,self.robot1,1)
+
 		
 		dlam=calc_lamdot(q_out,self.lam,self.robot1,1)
+
+		
 		print(min(dlam))
 		return -min(dlam)
 
@@ -308,6 +362,10 @@ class lambda_opt(object):
 				except:
 					# traceback.print_exc()
 					return 999
+
+		# R_interp=self.restore_q_from_q(q_out)
+		# curve_js=self.inv_all(self.curve_original,R_interp,q_out[0])
+		# dlam=calc_lamdot(curve_js,self.lam_original,self.robot1,1)
 
 
 		dlam=calc_lamdot(q_out,self.lam,self.robot1,1)

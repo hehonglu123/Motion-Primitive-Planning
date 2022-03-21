@@ -21,7 +21,7 @@ def main():
 
 	###path constraints, position constraint and curve normal constraint
 
-	lowerer_limit=np.array([-1,-1,-1,-np.pi,-3000,-3000,-3000,-np.pi])
+	lowerer_limit=np.array([-999,-999,-999,-3000,-3000,-3000,-np.pi])
 	upper_limit=-lowerer_limit
 	bnds=tuple(zip(lowerer_limit,upper_limit))
 
@@ -29,7 +29,7 @@ def main():
 	# res = minimize(opt.curve_pose_opt, [0.57735027, 0.57735027, 0.57735027,2.0943951023931957,2700,-800,500,0], method='SLSQP',tol=1e-10,bounds=bnds)
 
 	res = differential_evolution(opt.curve_pose_opt, bnds, args=None,workers=-1,
-									x0 = [0.57735027, 0.57735027, 0.57735027,2.0943951023931957,2700,-800,500,0],
+									x0 = [1.20919957785,1.20919957785,1.20919957785,2700,-800,500,0],
 									strategy='best1bin', maxiter=200,
 									popsize=15, tol=1e-10,
 									mutation=(0.5, 1), recombination=0.7,
@@ -40,11 +40,9 @@ def main():
 
 
 	print(res)
-	x=np.array([1.60626126e-02, -7.22431610e-01, -2.80047781e-01, -2.67246065e+00,-9.96959675e+01, -7.17980915e+02,  5.83590041e+02,  9.08683311e-01])
-
+	theta0=np.linalg.norm(res.x[:3])
 	k=res.x[:3]/np.linalg.norm(res.x[:3])
-	theta0=res.x[3]
-	shift=res.x[4:-1]
+	shift=res.x[3:-1]
 	theta1=res.x[-1]
 
 	R_curve=rot(k,theta0)

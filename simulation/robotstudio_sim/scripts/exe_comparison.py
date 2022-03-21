@@ -83,7 +83,6 @@ class MotionSend(object):
                 zone=fine
             motion = primitives[i]
             if motion == 'movel_fit':
-
                 robt = self.moveL_target(curve_js[breakpoints[i]],points[i])
                 mp.MoveL(robt,speed,zone)
 

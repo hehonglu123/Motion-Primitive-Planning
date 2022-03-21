@@ -66,6 +66,35 @@ def main():
 
 	dlam_out=calc_lamdot(q_out,opt.lam[:len(q_out)],opt.robot1,1)
 
+	###############################################restore 50,000 points#############################################
+	num_per_step=int(len(curve)/opt.steps)	
+
+	theta_all=[]
+	for i in range(len(res.x)-1):
+		theta_all=np.append(theta_all,np.linspace(res.x[i],res.x[i+1],num_per_step))
+	theta_all=np.append(theta_all,res.x[-1]*np.ones(len(curve)-len(theta_all)))
+
+	for i in range(len(theta_all)):
+		if i==0:
+			R_temp=opt.direction2R(curve_normal[i],-curve[i+1]+curve[i])
+			R=np.dot(R_temp,Rz(theta_all[i]))
+			q_out=[opt.robot1.inv(curve[i],R)[0]]
+
+		else:
+			R_temp=opt.direction2R(curve_normal[i],-curve[i]+curve[i-1])
+			R=np.dot(R_temp,Rz(theta_all[i]))
+			###get closet config to previous one
+			q_inv_all=opt.robot1.inv(curve[i],R)
+			temp_q=q_inv_all-q_out[-1]
+			order=np.argsort(np.linalg.norm(temp_q,axis=1))
+			q_out.append(q_inv_all[order[0]])
+
+	q_out=np.array(q_out)
+
+	###output to csv
+	df=DataFrame({'q0':q_out[:,0],'q1':q_out[:,1],'q2':q_out[:,2],'q3':q_out[:,3],'q4':q_out[:,4],'q5':q_out[:,5]})
+	df.to_csv('trajectory/all_theta_opt/all_theta_opt_js.csv',header=False,index=False)
+	####################################################################################################################
 
 	plt.plot(opt.lam[:len(q_out)-1],dlam_out,label="lambda_dot_max")
 	plt.xlabel("lambda")
@@ -74,6 +103,9 @@ def main():
 	plt.title("max lambda_dot vs lambda (path index)")
 	plt.savefig("trajectory/all_theta_opt/results.png")
 	plt.show()
+
+	
+
 
 if __name__ == "__main__":
 	main()
