@@ -93,6 +93,7 @@ class CNNEncoder(nn.Module):
         x = torch.flatten(x, 1)
 
         x = self.linear1(x)
+        x = x / torch.norm(x)
         return x
 
 
