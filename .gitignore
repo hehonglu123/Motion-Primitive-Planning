@@ -353,3 +353,6 @@ build/
 generated_src/
 generated_src
 {"mode":"full","isActive":false}
+
+# data generated
+simulation/traj_prediction/data/
