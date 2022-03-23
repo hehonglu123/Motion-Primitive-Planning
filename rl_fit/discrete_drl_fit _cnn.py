@@ -44,6 +44,7 @@ TAU_START = 10
 TAU_END = 0.01
 MAX_TAU_EPISODE = 0.6
 LEARNING_RATE = 0.001
+LEARNING_FREQ = 4
 GAMMA = 0.99
 BATCH_SIZE = 16
 
@@ -180,33 +181,37 @@ class DQN(nn.Module):
     def __init__(self, input_dim, output_dim):
         super(DQN, self).__init__()
 
-        self.conv1 = nn.Conv1d(in_channels=3, out_channels=8, kernel_size=200, stride=50)
-        self.linear1 = nn.Linear(136, 256)
+        self.conv1 = nn.Conv1d(in_channels=3, out_channels=16, kernel_size=100, stride=20)
+        self.conv2 = nn.COnv1d(in_channels=16, out_channels=32, kernel_size=10, stride=2)
+        self.linear1 = nn.Linear(608, 256)
         self.linear2 = nn.Linear(256, 256)
         self.linear3 = nn.Linear(256, 256)
+        self.linear4 = nn.Linear(256, 256)
         self.output = nn.Linear(256, output_dim)
 
         self.relu = nn.ReLU()
 
     def forward(self, x):
         x = self.relu(self.conv1(x))
+        x = self.relu(self.conv2(x))
         x = torch.flatten(x, 1)
         x = self.relu(self.linear1(x))
         x = self.relu(self.linear2(x))
         x = self.relu(self.linear3(x))
+        x = self.relu(self.linear4(x))
         x = self.output(x)
         return x
 
 
 class RL_Agent(object):
 
-    def __init__(self, n_curve_feature: int, n_action: int, lr: float = LEARNING_RATE):
+    def __init__(self, n_curve_feature: int, n_action: int):
         self.input_dim = n_curve_feature + 1
         # self.input_dim = n_curve_feature * 3 * 2 + 1
         self.output_dim = n_action * 2
         self.n_curve_feature = n_curve_feature
         self.n_action = n_action
-        self.lr = lr
+        self.lr = 0.001
         self.gamma = GAMMA
         self.memory = ReplayMemory()
         self.batch_size = BATCH_SIZE
@@ -214,8 +219,9 @@ class RL_Agent(object):
         self.target_net = DQN(input_dim=self.input_dim, output_dim=self.output_dim)
         self.policy_net = DQN(input_dim=self.input_dim, output_dim=self.output_dim)
         self.target_net.load_state_dict(self.policy_net.state_dict())
-        self.optimizer = optim.RMSprop(self.policy_net.parameters(), lr=self.lr)
-        self.scheduler = optim.lr_scheduler.StepLR(self.optimizer, step_size=1000, gamma=1)
+        self.optimizer = optim.Adam(self.policy_net.parameters(), lr=self.lr)
+        self.scheduler = optim.lr_scheduler.LinearLR(self.optimizer, start_factor=1., end_factor=0.1, total_iters=5000,
+                                                     verbose=True)
 
         self.criterion = nn.SmoothL1Loss()
 
@@ -396,8 +402,9 @@ def train_rl(agent: RL_Agent, curve_base_data, curve_js_data, n_episode=10000):
 
         tau = episode_tau(i_episode, n_episode)
         # epsilon = EPS_START - i_episode * (EPS_START - EPS_END) / n_episode
-        if (i_episode + 1) % EPS_DECAY == 0:
-            epsilon = epsilon * 0.995
+        # if (i_episode + 1) % EPS_DECAY == 0:
+        #     epsilon = epsilon * 0.995
+        epsilon = EPS_START - min(1., i_episode / 8000) * (EPS_START - EPS_END)
 
         episode_reward = 0
 
@@ -428,7 +435,8 @@ def train_rl(agent: RL_Agent, curve_base_data, curve_js_data, n_episode=10000):
             next_state, reward, done, valid_actions = env.step(action, i_step)
 
             agent.memory_save(state=state, action=action, reward=reward, next_state=next_state, done=done)
-            agent.learn()
+            if i_step % LEARNING_FREQ == 0:
+                agent.learn()
             episode_reward += reward
 
             state = next_state
@@ -441,6 +449,7 @@ def train_rl(agent: RL_Agent, curve_base_data, curve_js_data, n_episode=10000):
         print("Episode {} / {} --- {} Steps --- Reward: {:.3f} --- {:.3f}s Curve {}"
               .format(i_episode + 1, n_episode, i_step, episode_reward,
                       (time.time_ns() - timer) / (10 ** 9), random_curve_idx))
+        agent.learn()
         agent.update_target_nets()
         episode_rewards.append(episode_reward)
         episode_steps.append(i_step)
