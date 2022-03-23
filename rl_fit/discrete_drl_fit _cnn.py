@@ -215,7 +215,7 @@ class RL_Agent(object):
         self.policy_net = DQN(input_dim=self.input_dim, output_dim=self.output_dim)
         self.target_net.load_state_dict(self.policy_net.state_dict())
         self.optimizer = optim.RMSprop(self.policy_net.parameters(), lr=self.lr)
-        self.scheduler = optim.lr_scheduler.StepLR(self.optimizer, step_size=500, gamma=0.5, last_epoch=2000)
+        self.scheduler = optim.lr_scheduler.StepLR(self.optimizer, step_size=1000, gamma=1)
 
         self.criterion = nn.SmoothL1Loss()
 
