@@ -1,5 +1,3 @@
-import this
-from matplotlib.transforms import Transform
 import numpy as np
 from numpy.linalg import norm
 import general_robotics_toolbox as rox
