@@ -128,7 +128,7 @@ for ji in range(JN):
 models = []
 for i in range(JN):
     models.append(DynamicNN(h1_num,h2_num,Tf))
-    models[-1].load_weights('models/0096_j'+str(i+1)+'.ckpt')
+    models[-1].load_weights('models_lr0001/0032_j'+str(i+1)+'.ckpt')
 
 # loss object and optimizer
 loss_objects = []
@@ -146,7 +146,7 @@ def test_step(inputs, labels, jn_i):
     predictions = models[jn_i](inputs, training=False)
     # t_loss = loss_objects[jn_i](labels, predictions)
 
-    test_loss_all[jn_i](labels, predictions)
+    test_loss_all[jn_i](labels-inputs[:,Tf+1:], predictions)
 
     return predictions
 
@@ -169,10 +169,10 @@ for li in range(len(test_inputs_all[0])):
 
         this_data_draw = np.vstack((np.vstack((test_labels_all[ji][li].numpy(),\
                         test_inputs_all[ji][li].numpy()[Tf+1:])),
-                        tf.reshape(predictions,(Tf,)).numpy())).T
+                        tf.reshape(predictions,(Tf,)).numpy()+test_inputs_all[ji][li].numpy()[Tf+1:])).T
         the_drawing_list[ji].append(this_data_draw)
         input_q.append(test_inputs_all[ji][li].numpy()[Tf+1:])
-        predt_q.append(tf.reshape(predictions,(Tf,)).numpy())
+        predt_q.append(tf.reshape(predictions,(Tf,)).numpy()+test_inputs_all[ji][li].numpy()[Tf+1:])
         label_q.append(test_labels_all[ji][li].numpy())
     input_q = np.array(input_q).T
     predt_q = np.array(predt_q).T

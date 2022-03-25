@@ -146,21 +146,21 @@ def train_step(inputs, labels, jn_i):
         # training=True is only needed if there are layers with different
         # behavior during training versus inference (e.g. Dropout).
         predictions = models[jn_i](inputs, training=True)
-        loss = loss_objects[jn_i](labels, predictions)
+        loss = loss_objects[jn_i](labels-inputs[:,Tf+1:], predictions)
     gradients = tape.gradient(loss, models[jn_i].trainable_variables)
     optimizers[jn_i].apply_gradients(zip(gradients, models[jn_i].trainable_variables))
 
     # print(loss)
-    train_loss_all[jn_i](labels, predictions)
+    train_loss_all[jn_i](labels-inputs[:,Tf+1:], predictions)
 
 @tf.function
 def test_step(inputs, labels, jn_i):
     # training=False is only needed if there are layers with different
     # behavior during training versus inference (e.g. Dropout).
     predictions = models[jn_i](inputs, training=False)
-    t_loss = loss_objects[jn_i](labels, predictions)
+    t_loss = loss_objects[jn_i](labels-inputs[:,Tf+1:], predictions)
 
-    test_loss_all[jn_i](labels, predictions)
+    test_loss_all[jn_i](labels-inputs[:,Tf+1:], predictions)
 
 train_loss_save = []
 for i in range(JN):

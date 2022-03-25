@@ -4,9 +4,10 @@ import numpy as np
 import pickle
 import tensorflow as tf
 
-with open('train_loss_save.npy','rb') as f:
+folder = 'result_lr0001/'
+with open(folder+'train_loss_save.npy','rb') as f:
     train_loss_epoch = np.load(f)
-with open('test_loss_save.npy','rb') as f:
+with open(folder+'test_loss_save.npy','rb') as f:
     test_loss_epoch = np.load(f)
 
 # print(train_loss_epoch)

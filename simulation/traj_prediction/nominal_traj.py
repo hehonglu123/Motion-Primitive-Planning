@@ -229,7 +229,7 @@ def main():
                 'p3_x','p3_y','p3_z','p3_qw','p3_qx','p3_qy','p3_qz', \
                 'p3_cf1','p3_cf2','p3_cf3','p3_cf4',\
                 'vel','zone'] 
-    motions = read_csv("data/0_input.txt", names=col_names)
+    motions = read_csv("0_input.txt", names=col_names)
     p1 = np.array([motions['p1_x'].tolist(),motions['p1_y'].tolist(),motions['p1_z'].tolist()])
     R1 = rox.q2R(np.array([motions['p1_qw'].tolist(),motions['p1_qx'].tolist(),motions['p1_qy'].tolist(),motions['p1_qz'].tolist()]))
     T1 = rox.Transform(R1,p1)
@@ -246,7 +246,7 @@ def main():
 
     # load logged joints
     col_names=['timestamp','cmd_num','q1', 'q2', 'q3','q4', 'q5', 'q6'] 
-    data = read_csv("data/0_gt.csv", names=col_names,skiprows = 1)
+    data = read_csv("0_gt.csv", names=col_names,skiprows = 1)
     curve_q1=data['q1'].tolist()
     curve_q2=data['q2'].tolist()
     curve_q3=data['q3'].tolist()
@@ -266,7 +266,7 @@ def main():
         curve_z = np.append(curve_z,T.p[2])
         curve_T.append(T)
 
-    plt.figure()
+    # plt.figure()
     # ax = plt.axes(projection='3d')
     fig, ax = plt.subplots()
     ax= plt.axes(projection='3d')
