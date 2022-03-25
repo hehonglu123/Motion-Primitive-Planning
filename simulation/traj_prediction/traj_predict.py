@@ -38,22 +38,7 @@ for i in range(JN):
     models.append(DynamicNN(h1_num,h2_num,Tf))
 
 def load_data(path_list,train_num,test_num):
-    # number_samples = len(path_list)
-    # Images = []
-    # for each_path in path_list:
-    #     img = plt.imread(each_path)
-    #     # divided by 255.0
-    #     img = img.reshape(784, 1) / 255.0
-    #     '''
-    #     In some cases data need to be preprocessed by subtracting the mean value of the data and divided by the 
-    #     standard deviation to make the data follow the normal distribution.
-    #     In this assignment, there will be no penalty if you don't do the process above.
-    #     '''
-    #     # DONT add bias
-    #     # img = np.vstack((img, [1]))
-    #     Images.append(img)
-    # data = tf.convert_to_tensor(np.array(Images).reshape(number_samples, 784), dtype=tf.float32)
-    
+        
     total_train_data = 0
     total_test_data = 0
 
@@ -139,8 +124,6 @@ for ji in range(JN):
     train_ds_all.append(tf.data.Dataset.from_tensor_slices((train_inputs_all[ji], train_labels_all[ji])).shuffle(10000).batch(batch_size))
     test_ds_all.append(tf.data.Dataset.from_tensor_slices((test_inputs_all[ji], test_labels_all[ji])).shuffle(10000).batch(batch_size))
 
-print(train_ds_all[0])
-
 # loss object and optimizer
 loss_objects = []
 for i in range(JN):
@@ -186,7 +169,7 @@ test_loss_save = []
 for i in range(JN):
     test_loss_save.append([])
 
-checkpoint_path = "model/{epoch:04d}_j{joint:01d}.ckpt"
+checkpoint_path = "models/{epoch:04d}_j{joint:01d}.ckpt"
 save_weight_every = 4
 for epoch in range(EPOCHS):
 
