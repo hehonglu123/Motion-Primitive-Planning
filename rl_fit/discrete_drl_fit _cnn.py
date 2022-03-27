@@ -181,19 +181,23 @@ class DQN(nn.Module):
     def __init__(self, input_dim, output_dim):
         super(DQN, self).__init__()
 
-        self.conv1 = nn.Conv1d(in_channels=3, out_channels=16, kernel_size=100, stride=20)
-        self.conv2 = nn.COnv1d(in_channels=16, out_channels=32, kernel_size=10, stride=2)
-        self.linear1 = nn.Linear(608, 256)
-        self.linear2 = nn.Linear(256, 256)
-        self.linear3 = nn.Linear(256, 256)
-        self.linear4 = nn.Linear(256, 256)
-        self.output = nn.Linear(256, output_dim)
+        self.conv1 = nn.Conv1d(in_channels=3, out_channels=8, kernel_size=5, stride=2)
+        self.conv2 = nn.Conv1d(in_channels=8, out_channels=16, kernel_size=5, stride=2)
+        self.conv3 = nn.Conv1d(in_channels=16, out_channels=32, kernel_size=3, stride=1, dilation=3)
+        # self.conv4 = nn.Conv1d(in_channels=32, out_channels=64, kernel_size=3, stride=1, dilation=3)
+        self.linear1 = nn.Linear(7712, 512)
+        self.linear2 = nn.Linear(512, 256)
+        self.linear3 = nn.Linear(256, 128)
+        self.linear4 = nn.Linear(128, 128)
+        self.output = nn.Linear(128, output_dim)
 
         self.relu = nn.ReLU()
 
     def forward(self, x):
         x = self.relu(self.conv1(x))
         x = self.relu(self.conv2(x))
+        x = self.relu(self.conv3(x))
+        # x = self.relu(self.conv4(x))
         x = torch.flatten(x, 1)
         x = self.relu(self.linear1(x))
         x = self.relu(self.linear2(x))
@@ -219,9 +223,8 @@ class RL_Agent(object):
         self.target_net = DQN(input_dim=self.input_dim, output_dim=self.output_dim)
         self.policy_net = DQN(input_dim=self.input_dim, output_dim=self.output_dim)
         self.target_net.load_state_dict(self.policy_net.state_dict())
-        self.optimizer = optim.Adam(self.policy_net.parameters(), lr=self.lr)
-        self.scheduler = optim.lr_scheduler.LinearLR(self.optimizer, start_factor=1., end_factor=0.1, total_iters=5000,
-                                                     verbose=True)
+        self.optimizer = optim.RMSprop(self.policy_net.parameters(), lr=self.lr)
+        # self.scheduler = optim.lr_scheduler.StepLR(self.optimizer, step_size=4000, gamma=1)
 
         self.criterion = nn.SmoothL1Loss()
 
@@ -288,7 +291,7 @@ class RL_Agent(object):
         loss = self.criterion(td_est, td_tgt)
         loss.backward()
         self.optimizer.step()
-        self.scheduler.step()
+        # self.scheduler.step()
 
     def update_target_nets(self):
         self.target_net.load_state_dict(self.policy_net.state_dict())
@@ -435,8 +438,7 @@ def train_rl(agent: RL_Agent, curve_base_data, curve_js_data, n_episode=10000):
             next_state, reward, done, valid_actions = env.step(action, i_step)
 
             agent.memory_save(state=state, action=action, reward=reward, next_state=next_state, done=done)
-            if i_step % LEARNING_FREQ == 0:
-                agent.learn()
+            agent.learn()
             episode_reward += reward
 
             state = next_state
@@ -449,7 +451,7 @@ def train_rl(agent: RL_Agent, curve_base_data, curve_js_data, n_episode=10000):
         print("Episode {} / {} --- {} Steps --- Reward: {:.3f} --- {:.3f}s Curve {}"
               .format(i_episode + 1, n_episode, i_step, episode_reward,
                       (time.time_ns() - timer) / (10 ** 9), random_curve_idx))
-        agent.learn()
+
         agent.update_target_nets()
         episode_rewards.append(episode_reward)
         episode_steps.append(i_step)
