@@ -13,7 +13,8 @@ from lambda_calc import *
 class lambda_opt(object):
 	###robot1 hold paint gun for single arm
 	###robot1 hold paint gun, robot2 hold blade for dual arm
-	def __init__(self,curve,curve_normal,robot1=abb6640(),robot2=abb1200(),base2_R=np.eye(3),base2_p=np.zeros(3),steps=32):
+	def __init__(self,curve,curve_normal,robot1=abb6640(),robot2=abb1200(),base2_R=np.eye(3),base2_p=np.zeros(3),steps=32,idx=[]):
+
 		self.curve_original=curve
 		self.curve_normal_original=curve_normal
 		self.robot1=robot1
@@ -23,17 +24,23 @@ class lambda_opt(object):
 		self.joint_vel_limit=np.radians([110,90,90,150,120,235])
 		self.steps=steps
 
-		###decrease curve density to simplify computation
-		self.num_per_step=int(len(curve)/steps)	
-		self.curve=curve[0:-1:self.num_per_step]
-		self.curve_normal=curve_normal[0:-1:self.num_per_step]
-
+		if len(idx)>0:
+			self.curve=curve[idx]
+			self.curve_normal=curve_normal[idx]
+			self.idx=idx
+		else:
+			###decrease curve density to simplify computation
+			self.num_per_step=int(len(curve)/steps)	
+			self.curve=curve[0:-1:self.num_per_step]
+			self.curve_normal=curve_normal[0:-1:self.num_per_step]
+			self.idx=np.arange(0,len(curve_normal),self.num_per_step)
 
 		###find path length
 		self.lam_original=[0]
 		for i in range(len(curve)-1):
 			self.lam_original.append(self.lam_original[-1]+np.linalg.norm(curve[i+1]-curve[i]))
-		self.lam=self.lam_original[0:-1:self.num_per_step]
+		self.lam_original=np.array(self.lam_original)
+		self.lam=self.lam_original[self.idx]
 
 
 	def direction2R(self,v_norm,v_tang):
@@ -238,20 +245,6 @@ class lambda_opt(object):
 		curve_fit_R=np.array(curve_fit_R)
 		return curve_fit_R
 
-	def restore_q_from_q(self,q):
-		R_interp=[]
-		for i in range(len(q)-1):
-			try:
-				R_init=self.robot1.fwd(q[i]).R
-				R_end=self.robot1.fwd(q[i+1]).R
-				if i==len(q)-2:
-					R_interp.extend(self.orientation_interp(R_init,R_end,self.num_per_step))
-				else:
-					R_interp.extend(self.orientation_interp(R_init,R_end,self.num_per_step+1)[:-1])
-			except:
-				print(q[i])
-		R_interp.extend(np.tile(R_interp[-1],(len(self.curve_original)-len(R_interp))))
-		return R_interp
 
 	def inv_all(self,curve,curve_R,q_init):
 		curve_js=[q_init]
@@ -291,11 +284,6 @@ class lambda_opt(object):
 		except:
 			# traceback.print_exc()
 			return 999
-
-		# R_interp=self.restore_q_from_q(q_out)
-		# curve_js=self.inv_all(self.curve_original,R_interp,q_init)
-		# dlam=calc_lamdot(curve_js,self.lam_original,self.robot1,1)
-
 		
 		dlam=calc_lamdot(q_out,self.lam,self.robot1,1)
 
@@ -342,7 +330,10 @@ class lambda_opt(object):
 
 		for i in range(len(self.curve)):
 			if i==0:
-				R_temp=self.direction2R(self.curve_normal[i],-self.curve[i+1]+self.curve[i])
+
+				R_temp=self.direction2R(self.curve_normal[0],-self.curve_original[1]+self.curve[0])
+
+
 				R=np.dot(R_temp,Rz(theta[i]))
 				try:
 					q_out=[self.robot1.inv(self.curve[i],R)[0]]
@@ -351,7 +342,8 @@ class lambda_opt(object):
 					return 999
 
 			else:
-				R_temp=self.direction2R(self.curve_normal[i],-self.curve[i]+self.curve[i-1])
+				R_temp=self.direction2R(self.curve_normal[i],-self.curve[i]+self.curve_original[self.idx[i]-1])
+
 				R=np.dot(R_temp,Rz(theta[i]))
 				try:
 					###get closet config to previous one
@@ -362,11 +354,6 @@ class lambda_opt(object):
 				except:
 					# traceback.print_exc()
 					return 999
-
-		# R_interp=self.restore_q_from_q(q_out)
-		# curve_js=self.inv_all(self.curve_original,R_interp,q_out[0])
-		# dlam=calc_lamdot(curve_js,self.lam_original,self.robot1,1)
-
 
 		dlam=calc_lamdot(q_out,self.lam,self.robot1,1)
 		print(min(dlam))

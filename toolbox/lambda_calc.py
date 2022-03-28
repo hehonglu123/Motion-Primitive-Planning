@@ -5,12 +5,22 @@ from general_robotics_toolbox import *
 import matplotlib.pyplot as plt
 from robots_def import *
 
-def calc_lam(curve):
+def calc_lam_js(curve_js,robot):
+	lam=[0]
+	curve=[]
+	for i in range(len(curve_js)):
+	    robot_pose=robot.fwd(curve_js[i])
+	    curve.append(robot_pose.p)
+	    if i>0:
+	        lam.append(lam[-1]+np.linalg.norm(curve[i]-curve[i-1]))
+	return np.array(lam)
+
+def calc_lam_cs(curve):
 	###find path length
 	lam=[0]
 	for i in range(len(curve)-1):
 		lam.append(lam[-1]+np.linalg.norm(curve[i+1]-curve[i]))
-	###normalize lam, 
+
 	return np.array(lam)
 
 def calc_lamdot(curve_js,lam,robot,step):
@@ -39,7 +49,38 @@ def calc_lamdot(curve_js,lam,robot,step):
 
 	return dlam_max_act
 
+def est_lamdot_min(dqdlam_list,breakpoints,lam,spl_list,merged_idx,robot):
+	############estimated lambdadot from arbitray blending
+	###dqdlam_list: list of dqdlam in each segment
+	###lam: discrete lambda (path length), same shape as curve_js
+	###breakpoints: breakpoints
+	###spl_list: spline coefficient at each breakpoint
+	###merged_idx: merged breakpoitn idx when blending
+	###robot: robot definitions
 
+	dlam_max1=[]
+	dlam_max2=[]
+	for dqdlam_seg in dqdlam_list:
+		dlam_max1.append(np.min(np.divide(robot.joint_vel_limit,np.abs(dqdlam_seg))))
+
+	###loop all spline blending
+	for i in range(len(spl_list)):
+		###loop all merged blending breakpoint
+		if len(merged_idx[i])>1:
+			bp=int(np.average(merged_idx[i]))
+		else:
+			bp=merged_idx[i][0]
+		dq2dlam2=[]
+		###loop all joints
+		for j in range(len(robot.joint_vel_limit)):
+			dderivative=spl_list[i][j].derivative().derivative()
+			sampling=np.linspace(lam[bp]-5,lam[bp]+5)
+			dq2dlam2.append(np.max(dderivative(lam[bp])))
+
+		###calc lamdot_min at breakpoints
+		dlam_max2.append(np.sqrt(np.min(np.divide(robot.joint_acc_limit,np.abs(dq2dlam2)))))
+	print(dlam_max2)
+	return np.min(dlam_max2)
 
 def calc_lamdot2(curve_js,lam,robot,step):
 	############find maximum lambda dot vs lambda, with different downsampling strategy, require full dense curve

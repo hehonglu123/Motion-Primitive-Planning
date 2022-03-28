@@ -8,31 +8,31 @@ from abb_motion_program_exec_client import *
 from robots_def import *
 from lambda_calc import *
 
-data_dir='fitting_output_new/all_theta_opt/'
+data_dir='fitting_output_new/threshold0.1/'
 
-col_names=['J1', 'J2','J3', 'J4', 'J5', 'J6'] 
-data=read_csv(data_dir+'curve_fit_js.csv',names=col_names)
-q1=data['J1'].tolist()
-q2=data['J2'].tolist()
-q3=data['J3'].tolist()
-q4=data['J4'].tolist()
-q5=data['J5'].tolist()
-q6=data['J6'].tolist()
-curve_js=np.vstack((q1,q2,q3,q4,q5,q6)).T.astype(float)
+# col_names=['J1', 'J2','J3', 'J4', 'J5', 'J6'] 
+# data=read_csv(data_dir+'curve_fit_js.csv',names=col_names)
+# q1=data['J1'].tolist()
+# q2=data['J2'].tolist()
+# q3=data['J3'].tolist()
+# q4=data['J4'].tolist()
+# q5=data['J5'].tolist()
+# q6=data['J6'].tolist()
+# curve_js=np.vstack((q1,q2,q3,q4,q5,q6)).T.astype(float)
 
 
-# col_names=['timestamp', 'cmd_num', 'J1', 'J2','J3', 'J4', 'J5', 'J6'] 
-# data=read_csv(data_dir+'curve_exe_vmax_z10.csv',names=col_names)
-# q1=data['J1'].tolist()[1:]
-# q2=data['J2'].tolist()[1:]
-# q3=data['J3'].tolist()[1:]
-# q4=data['J4'].tolist()[1:]
-# q5=data['J5'].tolist()[1:]
-# q6=data['J6'].tolist()[1:]
-# timestamp=np.array(data['timestamp'].tolist()[1:]).astype(float)
-# cmd_num=np.array(data['cmd_num'].tolist()[1:]).astype(float)
-# start_idx=np.where(cmd_num==5)[0][0]
-# curve_js=np.radians(np.vstack((q1,q2,q3,q4,q5,q6)).T.astype(float)[start_idx:])
+col_names=['timestamp', 'cmd_num', 'J1', 'J2','J3', 'J4', 'J5', 'J6'] 
+data=read_csv(data_dir+'curve_exe_v1000_z10.csv',names=col_names)
+q1=data['J1'].tolist()[1:]
+q2=data['J2'].tolist()[1:]
+q3=data['J3'].tolist()[1:]
+q4=data['J4'].tolist()[1:]
+q5=data['J5'].tolist()[1:]
+q6=data['J6'].tolist()[1:]
+timestamp=np.array(data['timestamp'].tolist()[1:]).astype(float)
+cmd_num=np.array(data['cmd_num'].tolist()[1:]).astype(float)
+start_idx=np.where(cmd_num==5)[0][0]
+curve_js=np.radians(np.vstack((q1,q2,q3,q4,q5,q6)).T.astype(float)[start_idx:])
 
 robot=abb6640(d=50)
 lam=[0]

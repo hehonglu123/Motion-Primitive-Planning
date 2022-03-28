@@ -42,12 +42,12 @@ def main():
 
 	for i in range(len(opt.curve)):
 		if i==0:
-			R_temp=opt.direction2R(opt.curve_normal[i],-opt.curve[i+1]+opt.curve[i])
+			R_temp=opt.direction2R(opt.curve_normal[i],-opt.curve_original[i*opt.num_per_step+1]+opt.curve[i])
 			R=np.dot(R_temp,Rz(res.x[i]))
 			q_out=[opt.robot1.inv(opt.curve[i],R)[0]]
 
 		else:
-			R_temp=opt.direction2R(opt.curve_normal[i],-opt.curve[i]+opt.curve[i-1])
+			R_temp=opt.direction2R(opt.curve_normal[i],-opt.curve[i]+opt.curve_original[i*opt.num_per_step-1])
 			R=np.dot(R_temp,Rz(res.x[i]))
 			###get closet config to previous one
 			q_inv_all=opt.robot1.inv(opt.curve[i],R)
@@ -67,11 +67,9 @@ def main():
 	dlam_out=calc_lamdot(q_out,opt.lam[:len(q_out)],opt.robot1,1)
 
 	###############################################restore 50,000 points#############################################
-	num_per_step=int(len(curve)/opt.steps)	
-
 	theta_all=[]
 	for i in range(len(res.x)-1):
-		theta_all=np.append(theta_all,np.linspace(res.x[i],res.x[i+1],num_per_step))
+		theta_all=np.append(theta_all,np.linspace(res.x[i],res.x[i+1],(opt.idx[i+1]-opt.idx[i])))
 	theta_all=np.append(theta_all,res.x[-1]*np.ones(len(curve)-len(theta_all)))
 
 	for i in range(len(theta_all)):
@@ -96,7 +94,7 @@ def main():
 	df.to_csv('trajectory/all_theta_opt/all_theta_opt_js.csv',header=False,index=False)
 	####################################################################################################################
 
-	plt.plot(opt.lam[:len(q_out)-1],dlam_out,label="lambda_dot_max")
+	plt.plot(opt.lam[1:len(q_out)-1],dlam_out,label="lambda_dot_max")
 	plt.xlabel("lambda")
 	plt.ylabel("lambda_dot")
 	plt.ylim([500,2000])
