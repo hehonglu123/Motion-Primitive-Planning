@@ -79,7 +79,7 @@ def est_lamdot_min(dqdlam_list,breakpoints,lam,spl_list,merged_idx,robot):
 
 		###calc lamdot_min at breakpoints
 		dlam_max2.append(np.sqrt(np.min(np.divide(robot.joint_acc_limit,np.abs(dq2dlam2)))))
-	print(dlam_max2)
+	# print(dlam_max2)
 	return np.min(dlam_max2)
 
 def calc_lamdot2(curve_js,lam,robot,step):

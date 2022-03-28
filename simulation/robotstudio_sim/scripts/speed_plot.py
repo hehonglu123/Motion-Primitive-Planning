@@ -13,7 +13,7 @@ from scipy.interpolate import UnivariateSpline
 
 speed='vmax'
 zone='z10'
-data_dir='fitting_output_new/all_theta_opt/'
+data_dir='fitting_output_new/all_theta_opt_blended/'
 ###read in curve_exe
 col_names=['timestamp', 'cmd_num', 'J1', 'J2','J3', 'J4', 'J5', 'J6'] 
 data = read_csv(data_dir+"curve_exe_"+speed+'_'+zone+".csv",names=col_names)
@@ -24,7 +24,7 @@ q4=data['J4'].tolist()[1:]
 q5=data['J5'].tolist()[1:]
 q6=data['J6'].tolist()[1:]
 cmd_num=np.array(data['cmd_num'].tolist()[1:]).astype(float)
-start_idx=np.where(cmd_num==5)[0][0]
+start_idx=np.where(cmd_num==6)[0][0]
 curve_exe_js=np.radians(np.vstack((q1,q2,q3,q4,q5,q6)).T.astype(float)[start_idx:])
 timestamp=np.array(data['timestamp'].tolist()[start_idx:]).astype(float)
 

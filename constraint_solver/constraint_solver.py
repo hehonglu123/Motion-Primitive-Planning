@@ -9,11 +9,12 @@ from qpsolvers import solve_qp
 sys.path.append('../../toolbox')
 from robots_def import *
 from lambda_calc import *
+from arb_blending import *
 
 class lambda_opt(object):
 	###robot1 hold paint gun for single arm
 	###robot1 hold paint gun, robot2 hold blade for dual arm
-	def __init__(self,curve,curve_normal,robot1=abb6640(),robot2=abb1200(),base2_R=np.eye(3),base2_p=np.zeros(3),steps=32,idx=[]):
+	def __init__(self,curve,curve_normal,robot1=abb6640(),robot2=abb1200(),base2_R=np.eye(3),base2_p=np.zeros(3),steps=32,breakpoints=[]):
 
 		self.curve_original=curve
 		self.curve_normal_original=curve_normal
@@ -24,23 +25,26 @@ class lambda_opt(object):
 		self.joint_vel_limit=np.radians([110,90,90,150,120,235])
 		self.steps=steps
 
-		if len(idx)>0:
-			self.curve=curve[idx]
-			self.curve_normal=curve_normal[idx]
-			self.idx=idx
+		if len(breakpoints)>0:
+			self.act_breakpoints=breakpoints
+			self.act_breakpoints[1:]=self.act_breakpoints[1:]-1
+			self.curve=curve[self.act_breakpoints]
+			self.curve_normal=curve_normal[self.act_breakpoints]
+			self.breakpoints=breakpoints
 		else:
 			###decrease curve density to simplify computation
 			self.num_per_step=int(len(curve)/steps)	
 			self.curve=curve[0:-1:self.num_per_step]
 			self.curve_normal=curve_normal[0:-1:self.num_per_step]
-			self.idx=np.arange(0,len(curve_normal),self.num_per_step)
+			self.breakpoints=np.arange(0,len(curve_normal),self.num_per_step)
+			self.act_breakpoints=self.breakpoints
 
 		###find path length
 		self.lam_original=[0]
 		for i in range(len(curve)-1):
 			self.lam_original.append(self.lam_original[-1]+np.linalg.norm(curve[i+1]-curve[i]))
 		self.lam_original=np.array(self.lam_original)
-		self.lam=self.lam_original[self.idx]
+		self.lam=self.lam_original[self.breakpoints]
 
 
 	def direction2R(self,v_norm,v_tang):
@@ -342,7 +346,7 @@ class lambda_opt(object):
 					return 999
 
 			else:
-				R_temp=self.direction2R(self.curve_normal[i],-self.curve[i]+self.curve_original[self.idx[i]-1])
+				R_temp=self.direction2R(self.curve_normal[i],-self.curve[i]+self.curve_original[self.act_breakpoints[i]-1])
 
 				R=np.dot(R_temp,Rz(theta[i]))
 				try:
@@ -358,6 +362,44 @@ class lambda_opt(object):
 		dlam=calc_lamdot(q_out,self.lam,self.robot1,1)
 		print(min(dlam))
 		return -min(dlam)	
+
+	def single_arm_global_opt_blended(self,theta):
+
+
+		for i in range(len(self.curve)):
+			if i==0:
+
+				R_temp=self.direction2R(self.curve_normal[0],-self.curve_original[1]+self.curve[0])
+
+
+				R=np.dot(R_temp,Rz(theta[i]))
+				try:
+					q_out=[self.robot1.inv(self.curve[i],R)[0]]
+				except:
+					traceback.print_exc()
+					return 999
+
+			else:
+				R_temp=self.direction2R(self.curve_normal[i],-self.curve[i]+self.curve_original[self.act_breakpoints[i]-1])
+
+				R=np.dot(R_temp,Rz(theta[i]))
+				try:
+					###get closet config to previous one
+					q_inv_all=self.robot1.inv(self.curve[i],R)
+					temp_q=q_inv_all-q_out[-1]
+					order=np.argsort(np.linalg.norm(temp_q,axis=1))
+					q_out.append(q_inv_all[order[0]])
+				except:
+					# traceback.print_exc()
+					return 999
+
+		curve_blend_js,dqdlam_list,spl_list,merged_idx=blend_js2(q_out,self.breakpoints,self.lam_original)
+		lamdot_min=est_lamdot_min(dqdlam_list,self.breakpoints,self.lam_original,spl_list,merged_idx,self.robot1)
+
+		print(lamdot_min)
+		return -lamdot_min	
+
+
 
 	def calc_js_from_theta(self,theta,curve,curve_normal):
 		###solve inv given 6th dof constraint theta

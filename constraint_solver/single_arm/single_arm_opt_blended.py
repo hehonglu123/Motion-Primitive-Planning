@@ -8,23 +8,35 @@ sys.path.append('../')
 from constraint_solver import *
 
 def main():
-	data = read_csv("../../simulation/robotstudio_sim/scripts/fitting_output_new/threshold0.1/curve_fit.csv")
-	curve_x=data['x'].tolist()
-	curve_y=data['y'].tolist()
-	curve_z=data['z'].tolist()
-	curve_direction_x=data['R3'].tolist()
-	curve_direction_y=data['R6'].tolist()
-	curve_direction_z=data['R9'].tolist()
+	# data = read_csv("../../simulation/robotstudio_sim/scripts/fitting_output_new/threshold0.1/curve_fit.csv")
+	# curve_x=data['x'].tolist()
+	# curve_y=data['y'].tolist()
+	# curve_z=data['z'].tolist()
+	# curve_direction_x=data['R3'].tolist()
+	# curve_direction_y=data['R6'].tolist()
+	# curve_direction_z=data['R9'].tolist()
+	# curve=np.vstack((curve_x, curve_y, curve_z)).T
+	# curve_normal=np.vstack((curve_direction_x, curve_direction_y, curve_direction_z)).T
+
+	col_names=['X', 'Y', 'Z','direction_x', 'direction_y', 'direction_z'] 
+	data = read_csv("../../data/from_ge/Curve_in_base_frame2.csv", names=col_names)
+	curve_x=data['X'].tolist()
+	curve_y=data['Y'].tolist()
+	curve_z=data['Z'].tolist()
+	curve_direction_x=data['direction_x'].tolist()
+	curve_direction_y=data['direction_y'].tolist()
+	curve_direction_z=data['direction_z'].tolist()
 	curve=np.vstack((curve_x, curve_y, curve_z)).T
 	curve_normal=np.vstack((curve_direction_x, curve_direction_y, curve_direction_z)).T
 
+	curve=np.vstack((curve_x, curve_y, curve_z)).T
+
 	###get breakpoints
-	data = read_csv('../../simulation/robotstudio_sim/scripts/fitting_output_new/threshold0.1/command.csv')
-	breakpoints=np.array(data['breakpoints'].tolist())
-	breakpoints[1:]=breakpoints[1:]-1
+	# data = read_csv('../../simulation/robotstudio_sim/scripts/fitting_output_new/threshold0.1/command.csv')
+	# breakpoints=np.array(data['breakpoints'].tolist())
 
 
-	opt=lambda_opt(curve,curve_normal,robot1=abb6640(d=50),idx=breakpoints)
+	opt=lambda_opt(curve,curve_normal,robot1=abb6640(d=50))#,breakpoints=breakpoints)
 
 	###path constraints, position constraint and curve normal constraint
 	lowerer_limit=[-np.pi]
@@ -33,7 +45,7 @@ def main():
 
 
 	###diff evolution
-	res = differential_evolution(opt.single_arm_global_opt, bnds,workers=-1,
+	res = differential_evolution(opt.single_arm_global_opt_blended, bnds,workers=-1,
 									x0 = np.zeros(len(opt.curve)),
 									strategy='best1bin', maxiter=500,
 									popsize=15, tol=1e-2,
@@ -51,7 +63,7 @@ def main():
 			q_out=[opt.robot1.inv(opt.curve[i],R)[0]]
 
 		else:
-			R_temp=opt.direction2R(opt.curve_normal[i],-opt.curve[i]+opt.curve_original[opt.idx[i]-1])
+			R_temp=opt.direction2R(opt.curve_normal[i],-opt.curve[i]+opt.curve_original[opt.act_breakpoints[i]-1])
 			R=np.dot(R_temp,Rz(res.x[i]))
 			###get closet config to previous one
 			q_inv_all=opt.robot1.inv(opt.curve[i],R)
@@ -73,7 +85,7 @@ def main():
 	###############################################restore 50,000 points#############################################
 	theta_all=[]
 	for i in range(len(res.x)-1):
-		theta_all=np.append(theta_all,np.linspace(res.x[i],res.x[i+1],(opt.idx[i+1]-opt.idx[i])))
+		theta_all=np.append(theta_all,np.linspace(res.x[i],res.x[i+1],(opt.act_breakpoints[i+1]-opt.act_breakpoints[i])))
 	theta_all=np.append(theta_all,res.x[-1]*np.ones(len(curve)-len(theta_all)))
 
 	for i in range(len(theta_all)):

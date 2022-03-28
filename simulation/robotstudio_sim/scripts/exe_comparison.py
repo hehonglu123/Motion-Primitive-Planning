@@ -74,7 +74,6 @@ class MotionSend(object):
         curve_q6=data['q6'].tolist()
         curve_js=np.vstack((curve_q1, curve_q2, curve_q3,curve_q4,curve_q5,curve_q6)).T
 
-
         mp = MotionProgram(tool=self.tool)
         
         for i in range(len(primitives)):
