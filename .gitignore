@@ -357,4 +357,5 @@ generated_src
 # data generated
 simulation/traj_prediction/data/
 simulation/traj_prediction/data_param/
+simulation/traj_prediction/data_param_vertical/
 simulation/traj_prediction/data_param_zheight100/

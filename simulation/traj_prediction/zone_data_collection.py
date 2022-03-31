@@ -42,6 +42,8 @@ def send_to_pose(p1,q1,cf1):
 
 
 # configuration of the test
+# start_p = np.array([2300,1000,600])
+# end_p = np.array([1300,-1000,600])
 start_p = np.array([2300,1000,600])
 end_p = np.array([1300,-1000,600])
 all_Rq = rox.R2q(rox.rot([0,1,0],pi/2))
@@ -58,7 +60,7 @@ angels = [90,120,150]
 
 pcnt = 0 # starting index
 start_vi = 1
-start_xi = 10
+start_xi = 7
 start_yi = 4
 
 st = time.perf_counter()
@@ -83,15 +85,17 @@ for vi in range(start_vi,len(all_vel)):
             print(px,py)
             # different angel between moveLs
             for ang in angels:
-                move_start = [px-side_l*cos(radians(ang/2)),py+side_l*sin(radians(ang/2)),start_p[2]]
-                move_end = [px-side_l*cos(radians(ang/2)),py-side_l*sin(radians(ang/2)),start_p[2]]
+                # move_start = [px-side_l*cos(radians(ang/2)),py+side_l*sin(radians(ang/2)),start_p[2]]
+                # move_end = [px-side_l*cos(radians(ang/2)),py-side_l*sin(radians(ang/2)),start_p[2]]
+                move_start = [px,py+side_l*sin(radians(ang/2)),start_p[2]-side_l*cos(radians(ang/2))]
+                move_end = [px,py-side_l*sin(radians(ang/2)),start_p[2]-side_l*cos(radians(ang/2))]
                 move_mid = [px,py,start_p[2]]
                 print(move_start)
                 print(move_end)
                 # send_to_pose(move_start,all_Rq,conf)
                 log = send_movels(move_start,all_Rq,conf,move_mid,all_Rq,conf,move_end,all_Rq,conf,v_profile,z10)
 
-                with open("data_param/log_"+str(v_profile.v_tcp)+"_"+"{:02d}".format(xcnt)+"_"+"{:02d}".format(ycnt)+"_"+\
+                with open("data_param_vertical/log_"+str(v_profile.v_tcp)+"_"+"{:02d}".format(xcnt)+"_"+"{:02d}".format(ycnt)+"_"+\
                             str(ang)+".csv","wb") as f:
                     f.write(log)
 
@@ -102,40 +106,79 @@ for vi in range(start_vi,len(all_vel)):
             pcnt += 1
         xcnt += 1
 
-z_height = 100
-st = time.perf_counter()
-for vi in range(start_vi,len(all_vel)):
-    start_vi = 0
-    v_profile = all_vel[vi]
+# for vi in range(start_vi,len(all_vel)):
+#     start_vi = 0
+#     v_profile = all_vel[vi]
 
-    # from x start to end, and remeber to include the last x
-    xcnt = start_xi
-    for pxi in range(start_xi,x_divided):
-        start_xi = 0
-        px = start_p[0]+step_x*pxi
+#     # from x start to end, and remeber to include the last x
+
+#     xcnt = start_xi
+#     for pxi in range(start_xi,x_divided):
+#         start_xi = 0
+#         px = start_p[0]+step_x*pxi
+
+#         # from y start to end, and remeber to include the last x
+#         ycnt = start_yi
+#         for pyi in range(start_yi,y_divided):
+#             start_yi = 0
+#             py = start_p[1]+step_y*pyi
+#             print(xcnt,ycnt)
+#             print(px,py)
+#             # different angel between moveLs
+#             for ang in angels:
+#                 move_start = [px-side_l*cos(radians(ang/2)),py+side_l*sin(radians(ang/2)),start_p[2]]
+#                 move_end = [px-side_l*cos(radians(ang/2)),py-side_l*sin(radians(ang/2)),start_p[2]]
+#                 move_mid = [px,py,start_p[2]]
+#                 print(move_start)
+#                 print(move_end)
+#                 # send_to_pose(move_start,all_Rq,conf)
+#                 log = send_movels(move_start,all_Rq,conf,move_mid,all_Rq,conf,move_end,all_Rq,conf,v_profile,z10)
+
+#                 # with open("data_param/log_"+str(v_profile.v_tcp)+"_"+"{:02d}".format(xcnt)+"_"+"{:02d}".format(ycnt)+"_"+\
+#                 #             str(ang)+".csv","wb") as f:
+#                 #     f.write(log)
+
+#             ycnt +=1
+#             print("Height = 0,Progress:","{:.2f}".format((xcnt*y_divided+ycnt)/(x_divided*y_divided)*100/2),'%. Total Time:',time.strftime("%H:%M:%S", time.gmtime(time.perf_counter()-st)))
+#             print("=======================================")
+
+#             pcnt += 1
+#         xcnt += 1
+
+# z_height = 100
+# st = time.perf_counter()
+# for vi in range(start_vi,len(all_vel)):
+#     start_vi = 0
+#     v_profile = all_vel[vi]
+
+#     # from x start to end, and remeber to include the last x
+#     xcnt = start_xi
+#     for pxi in range(start_xi,x_divided):
+#         start_xi = 0
+#         px = start_p[0]+step_x*pxi
         
-        # from y start to end, and remeber to include the last x
-        ycnt = start_yi
-        for pyi in range(start_yi,y_divided):
-            start_yi = 0
-            py = start_p[1]+step_y*pyi
-            print(xcnt,ycnt)
-            print(px,py)
-            # different angel between moveLs
-            for ang in angels:
-                move_start = [px-side_l*cos(radians(ang/2)),py+side_l*sin(radians(ang/2)),start_p[2]]
-                move_end = [px-side_l*cos(radians(ang/2)),py-side_l*sin(radians(ang/2)),start_p[2]]
-                move_mid = [px,py,start_p[2]+z_height]
-                print(move_start)
-                print(move_end)
-                # send_to_pose(move_start,all_Rq,conf)
-                log = send_movels(move_start,all_Rq,conf,move_mid,all_Rq,conf,move_end,all_Rq,conf,v_profile,z10)
+#         # from y start to end, and remeber to include the last x
+#         ycnt = start_yi
+#         for pyi in range(start_yi,y_divided):
+#             start_yi = 0
+#             py = start_p[1]+step_y*pyi
+#             print(xcnt,ycnt)
+#             print(px,py)
+#             # different angel between moveLs
+#             for ang in angels:
+#                 move_start = [px-side_l*cos(radians(ang/2)),py+side_l*sin(radians(ang/2)),start_p[2]]
+#                 move_end = [px-side_l*cos(radians(ang/2)),py-side_l*sin(radians(ang/2)),start_p[2]]
+#                 move_mid = [px,py,start_p[2]+z_height]
+#                 print(move_start)
+#                 print(move_end)
+#                 # send_to_pose(move_start,all_Rq,conf)
+#                 log = send_movels(move_start,all_Rq,conf,move_mid,all_Rq,conf,move_end,all_Rq,conf,v_profile,z10)
 
-                with open("data_param_zheight100/log_"+str(v_profile.v_tcp)+"_"+"{:02d}".format(xcnt)+"_"+"{:02d}".format(ycnt)+"_"+\
-                            str(ang)+".csv","wb") as f:
-                    f.write(log)
+#                 with open("data_param_zheight100/log_"+str(v_profile.v_tcp)+"_"+"{:02d}".format(xcnt)+"_"+"{:02d}".format(ycnt)+"_"+\
+#                             str(ang)+".csv","wb") as f:
+#                     f.write(log)
             
-            ycnt +=1
-            print("Height = 100: Progress:","{:.2f}".format((xcnt*y_divided+ycnt)/(x_divided*y_divided)*100/2),'%. Total Time:',time.strftime("%H:%M:%S", time.gmtime(time.perf_counter()-st)))
-            print("=======================================")
-        xcnt += 1
+#             ycnt +=1
+#             print("Height = 100: Progress:","{:.2f}".format((xcnt*y_divided+ycnt)/(x_divided*y_divided)*100/2),'%. Total Time:',time.strftime("%H:%M:%S", time.gmtime(time.perf_counter()-st)))
+#             print("=======================================")
+#         xcnt += 1
