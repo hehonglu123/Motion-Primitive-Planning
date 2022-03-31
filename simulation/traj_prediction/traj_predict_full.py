@@ -15,7 +15,7 @@ Tf = 25
 
 # hyper parameters
 batch_size = 256
-lr = 0.001
+lr = 0.1
 EPOCHS = 1000
 
 # model class
@@ -61,6 +61,7 @@ def load_data(path_list,train_num,test_num):
                 curve_q=np.array(data['q'+str(ji+1)].tolist())
                 curve_q_labels=np.array(data_labels['q'+str(ji+1)].tolist())
                 this_input = np.append(this_input,curve_q)
+                # this_input = np.append(this_input,np.deg2rad(curve_q))
                 this_label = np.append(this_label,curve_q_labels-curve_q[Tf+1:])
                 # print(curve_q_labels-curve_q[Tf+1:])
             # this_label *= 100
@@ -87,6 +88,7 @@ def load_data(path_list,train_num,test_num):
                 curve_q=np.array(data['q'+str(ji+1)].tolist())
                 curve_q_labels=np.array(data_labels['q'+str(ji+1)].tolist())
                 this_input = np.append(this_input,curve_q)
+                # this_input = np.append(this_input,np.deg2rad(curve_q))
                 this_label = np.append(this_label,curve_q_labels-curve_q[Tf+1:])
                 # print(curve_q_labels-curve_q[Tf+1:])
             # this_label *= 100

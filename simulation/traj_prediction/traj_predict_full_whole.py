@@ -20,7 +20,7 @@ tf.config.run_functions_eagerly(True)
 robot = abb6640(R_tool=Ry(np.radians(90)),p_tool=np.array([0,0,0]))
 
 JN = 6
-h1_num = 3000
+h1_num = 100
 h2_num = 100
 Tf = 25
 
@@ -30,19 +30,19 @@ class DynamicNN(Model):
         super(DynamicNN,self).__init__()
         
         self.d1 = Dense(h1, activation='relu')
-        # self.d2 = Dense(h2, activation='relu')
+        self.d2 = Dense(h2, activation='relu')
         # self.d3 = Dense(100,activation='relu')
         self.out = Dense(y)
     
     def call(self,x):
         x = self.d1(x)
-        # x = self.d2(x)
+        x = self.d2(x)
         # x = self.d3(x)
         return self.out(x)
 
 
 model = DynamicNN(h1_num,h2_num,Tf*6)
-model.load_weights('models/0020.ckpt')
+model.load_weights('models/0400.ckpt')
 
 def load_data(path_list,train_num,test_num):
         
@@ -68,6 +68,7 @@ def load_data(path_list,train_num,test_num):
                 curve_q=np.array(data['q'+str(ji+1)].tolist())
                 curve_q_labels=np.array(data_labels['q'+str(ji+1)].tolist())
                 this_input = np.append(this_input,curve_q)
+                # this_input = np.append(this_input,np.deg2rad(curve_q))
                 this_label = np.append(this_label,curve_q_labels-curve_q[Tf+1:])
                 # print(curve_q_labels-curve_q[Tf+1:])
             test_inputs.append(this_input)
@@ -93,7 +94,7 @@ data_root = pathlib.Path(data_path)
 all_data_paths = list(data_root.glob('*'))
 all_data_paths = sorted([str(path) for path in all_data_paths])
 # print(all_data_paths)
-train_traj_num = 110
+train_traj_num = 121
 test_traj_num = 1
 test_inputs,test_labels = load_data(all_data_paths,train_traj_num,test_traj_num)
 
@@ -198,10 +199,10 @@ def animate(li):
 
 print(len(test_inputs))
 ani = FuncAnimation(fig, animate, frames=len(test_inputs), interval=100, repeat=False)
-plt.show()
+# plt.show()
 
-# writergif = animation.PillowWriter(fps=10) 
-# ani.save('result_2.gif', writer=writergif)
+writergif = animation.PillowWriter(fps=10) 
+ani.save('result_test.gif', writer=writergif)
 
 # for li in range(len(test_inputs_all[0])):
 
