@@ -9,7 +9,8 @@ from qpsolvers import solve_qp
 sys.path.append('../../toolbox')
 from robots_def import *
 from lambda_calc import *
-from arb_blending import *
+from blending import *
+from utils import *
 
 class lambda_opt(object):
 	###robot1 hold paint gun for single arm
@@ -45,29 +46,6 @@ class lambda_opt(object):
 			self.lam_original.append(self.lam_original[-1]+np.linalg.norm(curve[i+1]-curve[i]))
 		self.lam_original=np.array(self.lam_original)
 		self.lam=self.lam_original[self.breakpoints]
-
-
-	def direction2R(self,v_norm,v_tang):
-		v_norm=v_norm/np.linalg.norm(v_norm)
-		theta1 = np.arccos(np.dot(np.array([0,0,1]),v_norm))
-		###rotation to align z axis with curve normal
-		axis_temp=np.cross(np.array([0,0,1]),v_norm)
-		R1=rot(axis_temp/np.linalg.norm(axis_temp),theta1)
-
-		###find correct x direction
-		v_temp=v_tang-v_norm * np.dot(v_tang, v_norm) / np.linalg.norm(v_norm)
-
-		###get as ngle to rotate
-		theta2 = np.arccos(np.dot(R1[:,0],v_temp/np.linalg.norm(v_temp)))
-
-
-		axis_temp=np.cross(R1[:,0],v_temp)
-		axis_temp=axis_temp/np.linalg.norm(axis_temp)
-
-		###rotation about z axis to minimize x direction error
-		R2=rot(np.array([0,0,np.sign(np.dot(axis_temp,v_norm))]),theta2)
-
-		return np.dot(R1,R2)
 
 	def normalize_dq(self,q):
 		q=q/(np.linalg.norm(q)) 
@@ -279,7 +257,7 @@ class lambda_opt(object):
 		curve_new=np.dot(R_curve,self.curve.T).T+np.tile(shift,(len(self.curve),1))
 		curve_normal_new=np.dot(R_curve,self.curve_normal.T).T
 
-		R_temp=self.direction2R(curve_normal_new[0],-curve_new[1]+curve_new[0])
+		R_temp=direction2R(curve_normal_new[0],-curve_new[1]+curve_new[0])
 		R=np.dot(R_temp,Rz(theta1))
 		try:
 			q_init=self.robot1.inv(curve_new[0],R)[0]
@@ -300,7 +278,7 @@ class lambda_opt(object):
 
 		pose2_world_now=self.robot2.fwd(q_init2,self.base2_R,self.base2_p)
 
-		R_temp=self.direction2R(np.dot(pose2_world_now.R,self.curve_normal[0]),-self.curve[1]+self.curve[0])
+		R_temp=direction2R(np.dot(pose2_world_now.R,self.curve_normal[0]),-self.curve[1]+self.curve[0])
 		R=np.dot(R_temp,Rz(x[-1]))
 		try:
 			q_init1=self.robot1.inv(pose2_world_now.p,R)[0]
@@ -316,7 +294,7 @@ class lambda_opt(object):
 
 	def single_arm_theta0_opt(self,theta0):
 
-		R_temp=self.direction2R(self.curve_normal[0],-self.curve[1]+self.curve[0])
+		R_temp=direction2R(self.curve_normal[0],-self.curve[1]+self.curve[0])
 		R=np.dot(R_temp,Rz(theta0[0]))
 		try:
 			q_init=self.robot1.inv(self.curve[0],R)[0]
@@ -329,24 +307,26 @@ class lambda_opt(object):
 		print(min(dlam))
 		return -min(dlam)
 
-	def single_arm_global_opt(self,theta):
-
+	def single_arm_global_opt(self,x):
+		####x: [pose_choice, theta@breakpoints]
+		theta=x[1:]
+		pose_choice=int(np.floor(x[0]))
 
 		for i in range(len(self.curve)):
 			if i==0:
 
-				R_temp=self.direction2R(self.curve_normal[0],-self.curve_original[1]+self.curve[0])
+				R_temp=direction2R(self.curve_normal[0],-self.curve_original[1]+self.curve[0])
 
 
 				R=np.dot(R_temp,Rz(theta[i]))
 				try:
-					q_out=[self.robot1.inv(self.curve[i],R)[0]]
+					q_out=[self.robot1.inv(self.curve[i],R)[pose_choice]]
 				except:
 					traceback.print_exc()
 					return 999
 
 			else:
-				R_temp=self.direction2R(self.curve_normal[i],-self.curve[i]+self.curve_original[self.act_breakpoints[i]-1])
+				R_temp=direction2R(self.curve_normal[i],-self.curve[i]+self.curve_original[self.act_breakpoints[i]-1])
 
 				R=np.dot(R_temp,Rz(theta[i]))
 				try:
@@ -363,24 +343,26 @@ class lambda_opt(object):
 		print(min(dlam))
 		return -min(dlam)	
 
-	def single_arm_global_opt_blended(self,theta):
-
+	def single_arm_global_opt_blended(self,x):
+		####x: [pose_choice, theta@breakpoints]
+		theta=x[1:]
+		pose_choice=int(np.floor(x[0]))
 
 		for i in range(len(self.curve)):
 			if i==0:
 
-				R_temp=self.direction2R(self.curve_normal[0],-self.curve_original[1]+self.curve[0])
+				R_temp=direction2R(self.curve_normal[0],-self.curve_original[1]+self.curve[0])
 
 
 				R=np.dot(R_temp,Rz(theta[i]))
 				try:
-					q_out=[self.robot1.inv(self.curve[i],R)[0]]
+					q_out=[self.robot1.inv(self.curve[i],R)[pose_choice]]
 				except:
 					traceback.print_exc()
 					return 999
 
 			else:
-				R_temp=self.direction2R(self.curve_normal[i],-self.curve[i]+self.curve_original[self.act_breakpoints[i]-1])
+				R_temp=direction2R(self.curve_normal[i],-self.curve[i]+self.curve_original[self.act_breakpoints[i]-1])
 
 				R=np.dot(R_temp,Rz(theta[i]))
 				try:

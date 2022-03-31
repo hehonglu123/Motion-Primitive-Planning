@@ -5,27 +5,7 @@ from general_robotics_toolbox import *
 
 sys.path.append('../toolbox')
 from robot_def import *
-
-def cross(v):
-	return np.array([[0,-v[-1],v[1]],
-					[v[-1],0,-v[0]],
-					[-v[1],v[0],0]])
-def direction2R(v_norm,v_tang):
-	v_norm=v_norm/np.linalg.norm(v_norm)
-	theta1 = np.arccos(np.dot(v_norm,np.array([0,0,1])))
-	###rotation to align z axis with opposite of curve normal
-	axis_temp=np.cross(v_norm,np.array([0,0,1]))
-	R1=rot(axis_temp/np.linalg.norm(axis_temp),theta1)
-
-	###find correct x direction
-	v_temp=v_tang-np.dot(v_tang,np.array([0,0,1]))
-
-	theta2 = np.arccos(np.dot(v_temp/np.linalg.norm(v_temp),np.array([1,0,0])))
-	###rotation about z axis to minimize x direction error
-	R2=rot(np.sign(np.cross(v_temp/np.linalg.norm(v_temp),np.array([1,0,0]))),theta2)
-
-	return np.dot(R2,R1)
-
+from utils import *
 
 
 col_names=['X', 'Y', 'Z','direction_x','direction_y','direction_z'] 

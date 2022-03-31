@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 from robots_def import *
 
 def calc_lam_js(curve_js,robot):
+	#calculate lambda from joints
 	lam=[0]
 	curve=[]
 	for i in range(len(curve_js)):
@@ -49,7 +50,7 @@ def calc_lamdot(curve_js,lam,robot,step):
 
 	return dlam_max_act
 
-def est_lamdot_min(dqdlam_list,breakpoints,lam,spl_list,merged_idx,robot):
+def est_lamdot(dqdlam_list,breakpoints,lam,spl_list,merged_idx,robot):
 	############estimated lambdadot from arbitray blending
 	###dqdlam_list: list of dqdlam in each segment
 	###lam: discrete lambda (path length), same shape as curve_js
@@ -79,8 +80,11 @@ def est_lamdot_min(dqdlam_list,breakpoints,lam,spl_list,merged_idx,robot):
 
 		###calc lamdot_min at breakpoints
 		dlam_max2.append(np.sqrt(np.min(np.divide(robot.joint_acc_limit,np.abs(dq2dlam2)))))
+	return dlam_max1, dlam_max2
+def est_lamdot_min(dqdlam_list,breakpoints,lam,spl_list,merged_idx,robot):
+	dlam_max1,dlam_max2=est_lamdot(dqdlam_list,breakpoints,lam,spl_list,merged_idx,robot)
 	# print(dlam_max2)
-	return np.min(dlam_max2)
+	return min(np.min(dlam_max1),np.min(dlam_max2))
 
 def calc_lamdot2(curve_js,lam,robot,step):
 	############find maximum lambda dot vs lambda, with different downsampling strategy, require full dense curve

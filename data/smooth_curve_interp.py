@@ -4,24 +4,17 @@ import sys, traceback
 from general_robotics_toolbox import *
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
-sys.path.append('../toolbox')
-from robot_def import *
+from scipy.interpolate import UnivariateSpline
 
+sys.path.append('../toolbox')
+from robots_def import *
+from lambda_calc import *
 
 
 def main():
 
 	col_names=['X', 'Y', 'Z','direction_x','direction_y','direction_z'] 
-	data = read_csv("Curve_dense_new_mm.csv", names=col_names)
-	curve_x=data['X'].tolist()
-	curve_y=data['Y'].tolist()
-	curve_z=data['Z'].tolist()
-
-	curve_new=np.dot(np.dot(Rz(np.pi/2),Rx(np.pi/2)),np.vstack((curve_x, curve_y, curve_z))).T+np.array([2700,-800,500])
-	curve_direction_new=[]
-
-	col_names=['X', 'Y', 'Z','direction_x','direction_y','direction_z'] 
-	data = read_csv("original/Curve_in_base_frame.csv", names=col_names)
+	data = read_csv("from_ge/Curve_in_base_frame2.csv", names=col_names)
 	curve_x=data['X'].tolist()
 	curve_y=data['Y'].tolist()
 	curve_z=data['Z'].tolist()
@@ -32,33 +25,33 @@ def main():
 	curve=np.vstack((curve_x, curve_y, curve_z)).T
 	curve_direction=np.vstack((curve_direction_x,curve_direction_y,curve_direction_z)).T
 
-	###find point with corresponding curve normal
-	direction_idx=np.zeros(len(curve))
-	for i in range(len(curve)):
-		direction_idx[i]=np.argmin(np.linalg.norm(curve_new-curve[i],axis=1))
+	lam=calc_lam_cs(curve)
 
-	idx=0
-	###interpolate curve normal
-	for i in range(len(curve_new)):
-		if i in direction_idx:
-			curve_direction_new.append(curve_direction[idx])
-			if i==len(curve_new)-1:
-				break
-			idx+=1
-			axis=np.cross(curve_direction[idx-1],curve_direction[idx])
-			axis=axis/np.linalg.norm(axis)
-			angle=np.arctan2(np.linalg.norm(np.cross(curve_direction[idx-1],curve_direction[idx])), np.dot(curve_direction[idx-1],curve_direction[idx]))
-			
-			continue
+	# spl_x = UnivariateSpline(lam,curve_x,k=5)
+	# spl_y = UnivariateSpline(lam,curve_y,k=5)
+	# spl_z = UnivariateSpline(lam,curve_z,k=5)
 
-		angle_interp=angle*(i-direction_idx[idx-1])/(direction_idx[idx]-direction_idx[idx-1])
-		R_interp=rot(axis,angle_interp)
-		curve_direction_new.append(np.dot(R_interp,curve_direction[idx-1]))
+	# splined_x = spl_x(lam)
+	# splined_y = spl_y(lam)
+	# splined_z = spl_z(lam)
 
+	# curve_splined=np.vstack((splined_x, splined_y, splined_z)).T
 
-	curve_direction_new=np.array(curve_direction_new)
-	df=DataFrame({'x':curve_new[:,0],'y':curve_new[:,1], 'z':curve_new[:,2],'x_direction':curve_direction_new[:,0],'y_direction':curve_direction_new[:,1],'z_direction':curve_direction_new[:,2]})
-	df.to_csv("from_ge/Curve_in_base_frame.csv",header=False,index=False)
+	polyfit=np.polyfit(lam,curve,deg=47)
+	polyfit_x=np.poly1d(polyfit[:,0])(lam)
+	polyfit_y=np.poly1d(polyfit[:,1])(lam)
+	polyfit_z=np.poly1d(polyfit[:,2])(lam)
+	curve_polyfit=np.vstack((polyfit_x, polyfit_y, polyfit_z)).T
+
+	diff=np.linalg.norm(curve-curve_polyfit,axis=1)
+	print(polyfit)
+	print(np.max(diff),np.average(diff))
+
+	df=DataFrame({'x':lam})
+	df.to_csv("from_ge/lambda.csv",header=False,index=False)
+
+	df=DataFrame({'polyfit_x':polyfit[:,0],'polyfit_y':polyfit[:,1],'polyfit_z':polyfit[:,2]})
+	df.to_csv("from_ge/analytical_expression.csv",header=False,index=False)
 
 if __name__ == "__main__":
 	main()

@@ -32,21 +32,21 @@ def main():
 	curve=np.vstack((curve_x, curve_y, curve_z)).T
 
 	###get breakpoints
-	# data = read_csv('../../simulation/robotstudio_sim/scripts/fitting_output_new/threshold0.1/command.csv')
-	# breakpoints=np.array(data['breakpoints'].tolist())
+	data = read_csv('../../simulation/robotstudio_sim/scripts/fitting_output_new/threshold0.5/command.csv')
+	breakpoints=np.array(data['breakpoints'].tolist())
 
 
-	opt=lambda_opt(curve,curve_normal,robot1=abb6640(d=50))#,breakpoints=breakpoints)
+	opt=lambda_opt(curve,curve_normal,robot1=abb6640(d=50),breakpoints=breakpoints)
 
 	###path constraints, position constraint and curve normal constraint
 	lowerer_limit=[-np.pi]
 	upper_limit=[np.pi]
 	bnds=tuple(zip(lowerer_limit,upper_limit))*len(opt.curve)
-
+	bnds=tuple(zip([0],[2]))+bnds
 
 	###diff evolution
 	res = differential_evolution(opt.single_arm_global_opt_blended, bnds,workers=-1,
-									x0 = np.zeros(len(opt.curve)),
+									x0 = np.zeros(1+len(opt.curve)),
 									strategy='best1bin', maxiter=500,
 									popsize=15, tol=1e-2,
 									mutation=(0.5, 1), recombination=0.7,
@@ -55,16 +55,19 @@ def main():
 									atol=0.)
 
 	print(res)
+	pose_choice=int(np.floor(res.x[0]))
+	theta=res.x[1:]
 
 	for i in range(len(opt.curve)):
+		
 		if i==0:
-			R_temp=opt.direction2R(opt.curve_normal[0],-opt.curve_original[1]+opt.curve[0])
-			R=np.dot(R_temp,Rz(res.x[i]))
-			q_out=[opt.robot1.inv(opt.curve[i],R)[0]]
+			R_temp=direction2R(opt.curve_normal[0],-opt.curve_original[1]+opt.curve[0])
+			R=np.dot(R_temp,Rz(theta[i]))
+			q_out=[opt.robot1.inv(opt.curve[i],R)[pose_choice]]
 
 		else:
-			R_temp=opt.direction2R(opt.curve_normal[i],-opt.curve[i]+opt.curve_original[opt.act_breakpoints[i]-1])
-			R=np.dot(R_temp,Rz(res.x[i]))
+			R_temp=direction2R(opt.curve_normal[i],-opt.curve[i]+opt.curve_original[opt.act_breakpoints[i]-1])
+			R=np.dot(R_temp,Rz(theta[i]))
 			###get closet config to previous one
 			q_inv_all=opt.robot1.inv(opt.curve[i],R)
 			temp_q=q_inv_all-q_out[-1]
@@ -80,22 +83,26 @@ def main():
 	df.to_csv('trajectory/all_theta_opt_blended/arm1.csv',header=False,index=False)
 
 
-	dlam_out=calc_lamdot(q_out,opt.lam[:len(q_out)],opt.robot1,1)
+	curve_blend_js,dqdlam_list,spl_list,merged_idx=blend_js2(q_out,opt.breakpoints,opt.lam_original)
+	dlam_max1,dlam_max2=est_lamdot(dqdlam_list,opt.breakpoints,opt.lam_original,spl_list,merged_idx,opt.robot1)
+	lam_movej_seg_idx=(opt.lam_original[breakpoints[:-1]]+opt.lam_original[breakpoints[1:]])/2
+	lam_est=np.hstack((lam_movej_seg_idx,opt.lam_original[breakpoints[1:-1]]))
+	lam_est, lamdot_est = zip(*sorted(zip(lam_est, np.hstack((dlam_max1,dlam_max2)))))
 
 	###############################################restore 50,000 points#############################################
 	theta_all=[]
-	for i in range(len(res.x)-1):
-		theta_all=np.append(theta_all,np.linspace(res.x[i],res.x[i+1],(opt.act_breakpoints[i+1]-opt.act_breakpoints[i])))
-	theta_all=np.append(theta_all,res.x[-1]*np.ones(len(curve)-len(theta_all)))
+	for i in range(len(theta)-1):
+		theta_all=np.append(theta_all,np.linspace(theta[i],theta[i+1],(opt.act_breakpoints[i+1]-opt.act_breakpoints[i])))
+	theta_all=np.append(theta_all,theta[-1]*np.ones(len(curve)-len(theta_all)))
 
 	for i in range(len(theta_all)):
 		if i==0:
-			R_temp=opt.direction2R(curve_normal[i],-curve[i+1]+curve[i])
+			R_temp=direction2R(curve_normal[i],-curve[i+1]+curve[i])
 			R=np.dot(R_temp,Rz(theta_all[i]))
-			q_out=[opt.robot1.inv(curve[i],R)[0]]
+			q_out=[opt.robot1.inv(curve[i],R)[pose_choice]]
 
 		else:
-			R_temp=opt.direction2R(curve_normal[i],-curve[i]+curve[i-1])
+			R_temp=direction2R(curve_normal[i],-curve[i]+curve[i-1])
 			R=np.dot(R_temp,Rz(theta_all[i]))
 			###get closet config to previous one
 			q_inv_all=opt.robot1.inv(curve[i],R)
@@ -110,7 +117,7 @@ def main():
 	df.to_csv('trajectory/all_theta_opt_blended/all_theta_opt_js.csv',header=False,index=False)
 	####################################################################################################################
 
-	plt.plot(opt.lam[1:len(q_out)-1],dlam_out,label="lambda_dot_max")
+	plt.plot(lam_est,lamdot_est,label="lambda_dot_max")
 	plt.xlabel("lambda")
 	plt.ylabel("lambda_dot")
 	plt.ylim([500,2000])

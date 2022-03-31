@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 sys.path.append('../')
 from constraint_solver import *
 
+
 def main():
 	col_names=['X', 'Y', 'Z','direction_x','direction_y','direction_z'] 
 	data = read_csv("../../data/from_ge/Curve_in_base_frame2.csv", names=col_names)
@@ -42,12 +43,12 @@ def main():
 
 	for i in range(len(opt.curve)):
 		if i==0:
-			R_temp=opt.direction2R(opt.curve_normal[i],-opt.curve_original[i*opt.num_per_step+1]+opt.curve[i])
+			R_temp=direction2R(opt.curve_normal[i],-opt.curve_original[i*opt.num_per_step+1]+opt.curve[i])
 			R=np.dot(R_temp,Rz(res.x[i]))
 			q_out=[opt.robot1.inv(opt.curve[i],R)[0]]
 
 		else:
-			R_temp=opt.direction2R(opt.curve_normal[i],-opt.curve[i]+opt.curve_original[i*opt.num_per_step-1])
+			R_temp=direction2R(opt.curve_normal[i],-opt.curve[i]+opt.curve_original[i*opt.num_per_step-1])
 			R=np.dot(R_temp,Rz(res.x[i]))
 			###get closet config to previous one
 			q_inv_all=opt.robot1.inv(opt.curve[i],R)
@@ -74,12 +75,12 @@ def main():
 
 	for i in range(len(theta_all)):
 		if i==0:
-			R_temp=opt.direction2R(curve_normal[i],-curve[i+1]+curve[i])
+			R_temp=direction2R(curve_normal[i],-curve[i+1]+curve[i])
 			R=np.dot(R_temp,Rz(theta_all[i]))
 			q_out=[opt.robot1.inv(curve[i],R)[0]]
 
 		else:
-			R_temp=opt.direction2R(curve_normal[i],-curve[i]+curve[i-1])
+			R_temp=direction2R(curve_normal[i],-curve[i]+curve[i-1])
 			R=np.dot(R_temp,Rz(theta_all[i]))
 			###get closet config to previous one
 			q_inv_all=opt.robot1.inv(curve[i],R)

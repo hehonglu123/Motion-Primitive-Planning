@@ -8,28 +8,28 @@ from abb_motion_program_exec_client import *
 from robots_def import *
 from lambda_calc import *
 
-data_dir='fitting_output_new/all_theta_opt/'
+data_dir='fitting_output_new/threshold0.5/'
 robot=abb6640(d=50)
 
-col_names=['J1', 'J2','J3', 'J4', 'J5', 'J6'] 
-data=read_csv(data_dir+'arm1.csv',names=col_names)
-q1=data['J1'].tolist()
-q2=data['J2'].tolist()
-q3=data['J3'].tolist()
-q4=data['J4'].tolist()
-q5=data['J5'].tolist()
-q6=data['J6'].tolist()
-curve_js_opt=np.vstack((q1,q2,q3,q4,q5,q6)).T.astype(float)
+# col_names=['J1', 'J2','J3', 'J4', 'J5', 'J6'] 
+# data=read_csv(data_dir+'qbestcurve.csv',names=col_names)
+# q1=data['J1'].tolist()
+# q2=data['J2'].tolist()
+# q3=data['J3'].tolist()
+# q4=data['J4'].tolist()
+# q5=data['J5'].tolist()
+# q6=data['J6'].tolist()
+# curve_js_opt=np.vstack((q1,q2,q3,q4,q5,q6)).T.astype(float)
 
-lam_opt=[0]
-curve_opt=[]
-for i in range(len(curve_js_opt)):
-    robot_pose=robot.fwd(curve_js_opt[i])
-    curve_opt.append(robot_pose.p)
-    if i>0:
-        lam_opt.append(lam_opt[-1]+np.linalg.norm(curve_opt[i]-curve_opt[i-1]))
+# lam_opt=[0]
+# curve_opt=[]
+# for i in range(len(curve_js_opt)):
+#     robot_pose=robot.fwd(curve_js_opt[i])
+#     curve_opt.append(robot_pose.p)
+#     if i>0:
+#         lam_opt.append(lam_opt[-1]+np.linalg.norm(curve_opt[i]-curve_opt[i-1]))
 
-lamdot_opt=calc_lamdot(curve_js_opt,lam_opt,robot,1)
+# lamdot_opt=calc_lamdot(curve_js_opt,lam_opt,robot,1)
 
 
 col_names=['J1', 'J2','J3', 'J4', 'J5', 'J6'] 
@@ -114,7 +114,7 @@ for i in range(len(curve_exe_js)):
         pass
 
 
-plt.plot(lam_opt[1:],lamdot_opt, label='Optimization')
+# plt.plot(lam_opt[1:],lamdot_opt, label='Optimization')
 
 plt.plot(lam_fit[1:],lamdot_fit, label='Fitting')
 

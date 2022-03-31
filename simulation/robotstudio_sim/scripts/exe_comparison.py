@@ -98,6 +98,8 @@ class MotionSend(object):
                     mp.WaitTime(0.1)
                 else:
                     mp.MoveAbsJ(jointt,speed,zone)
+        ###add sleep at the end to wait for data transmission
+        mp.WaitTime(0.1)
         
         print(mp.get_program_rapid())
         log_results = self.client.execute_motion_program(mp)
@@ -141,9 +143,11 @@ def exe_from_file(ms,filename,filename_js,speed,zone):
 def main():
     ms = MotionSend()
     data_dir="fitting_output_new/all_theta_opt_blended/"
+    # data_dir="fitting_output_new/Jon/"
     # speed={"v50":v50,"v500":v500,"v5000":v5000}
     # zone={"fine":fine,"z1":z1,"z10":z10}
     vmax = speeddata(10000,9999999,9999999,999999)
+    v1600 = speeddata(1600,9999999,9999999,999999)
     speed={"vmax":vmax}
     zone={"z10":z10}
 
