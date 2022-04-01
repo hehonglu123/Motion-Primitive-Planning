@@ -11,8 +11,6 @@ from mpl_toolkits.mplot3d import Axes3D
 import general_robotics_toolbox as rox
 from general_robotics_toolbox import general_robotics_toolbox_invkin as roxinv
 
-from abb_motion_program_exec_client import *
-
 import sys
 sys.path.append('../../toolbox')
 from robots_def import *
@@ -250,14 +248,15 @@ def draw(start_p,mid_p,end_p,zone_fit,zone_x,zone_y,zone_z,save_folder):
     mid_p_t = np.matmul(T_fit.R,mid_p)+T_fit.p
     end_p_t = np.matmul(T_fit.R,end_p)+T_fit.p
 
-    '''
+    
     # 1. 3d pics
     fig = plt.figure()
     ax = fig.add_subplot(projection='3d')
     ax.plot3D([start_p[0],zone_start[0]], [start_p[1],zone_start[1]], [start_p[2],zone_start[2]], 'gray')
     ax.plot3D([end_p[0],zone_end[0]], [end_p[1],zone_end[1]], [end_p[2],zone_end[2]], 'gray')
     ax.plot3D(zone_x,zone_y,zone_z,'gray')
-    ax.scatter3D(traj_x,traj_y,traj_z,s=1,c='tab:pink')
+    ax.scatter3D(traj_x[:zone_start_i],traj_y[:zone_start_i],traj_z[:zone_start_i],s=1,c='tab:pink')
+    ax.scatter3D(traj_x[zone_end_i:],traj_y[zone_end_i:],traj_z[zone_end_i:],s=1,c='tab:pink')
     ax.scatter3D(traj_x_zone,traj_y_zone,traj_z_zone,s=1,c='tab:blue')
     ax.scatter3D(start_p[0],start_p[1],start_p[2],c='red')
     ax.scatter3D(mid_p[0],mid_p[1],mid_p[2],c='orange')
@@ -382,7 +381,7 @@ def draw(start_p,mid_p,end_p,zone_fit,zone_x,zone_y,zone_z,save_folder):
     # plt.show()
     plt.close(fig)
     plt.clf()
-    '''
+    
 
 def draw_L(start_p,mid_p,end_p,zone_fit,zone_x,zone_y,zone_z,save_folder):
 
@@ -527,6 +526,7 @@ def draw_joints(zone_fit,joint_angles,save_folder):
 def main():
     
     # folder to read
+    # data_folder = 'data_param/'
     data_folder = 'data_param_vertical/'
 
     # data info
@@ -629,23 +629,23 @@ def main():
                 param_cubi,loss_cubi,draw_x_cubi,draw_y_cubi,draw_z_cubi = zone_fit.cubic_fit()
                 save_folder=data_folder+'result/'+"log_"+str(vel)+"_"+"{:02d}".format(pxi)+"_"+"{:02d}".format(pyi)+"_"+\
                             str(ang)+"_cubi_"
-                # draw(move_start,move_mid,move_end,zone_fit,draw_x_cubi,draw_y_cubi,draw_z_cubi,save_folder)
+                draw(move_start,move_mid,move_end,zone_fit,draw_x_cubi,draw_y_cubi,draw_z_cubi,save_folder)
                 print("Quintic fit")
                 param_quin,loss_quin,draw_x_quin,draw_y_quin,draw_z_quin = zone_fit.quintic_fit()
                 save_folder=data_folder+'result/'+"log_"+str(vel)+"_"+"{:02d}".format(pxi)+"_"+"{:02d}".format(pyi)+"_"+\
                             str(ang)+"_quin_"
-                # draw(move_start,move_mid,move_end,zone_fit,draw_x_quin,draw_y_quin,draw_z_quin,save_folder)
+                draw(move_start,move_mid,move_end,zone_fit,draw_x_quin,draw_y_quin,draw_z_quin,save_folder)
                 
                 # draw compare
                 save_folder=data_folder+'result/'+"log_"+str(vel)+"_"+"{:02d}".format(pxi)+"_"+"{:02d}".format(pyi)+"_"+\
                             str(ang)+"_"
-                # draw_L(move_start,move_mid,move_end,zone_fit,draw_x_quin,draw_y_quin,draw_z_quin,save_folder)
-                # draw_all_curve(zone_fit,draw_x_para,draw_y_para,draw_z_para,\
-                #                         draw_x_cubi,draw_y_cubi,draw_z_cubi,\
-                #                         draw_x_quin,draw_y_quin,draw_z_quin,save_folder)
+                draw_L(move_start,move_mid,move_end,zone_fit,draw_x_quin,draw_y_quin,draw_z_quin,save_folder)
+                draw_all_curve(zone_fit,draw_x_para,draw_y_para,draw_z_para,\
+                                        draw_x_cubi,draw_y_cubi,draw_z_cubi,\
+                                        draw_x_quin,draw_y_quin,draw_z_quin,save_folder)
 
                 # draw joint position, velocity, acceleration
-                draw_joints(zone_fit,joint_angles,save_folder)
+                # draw_joints(zone_fit,joint_angles,save_folder)
 
                 
                 # transform all the data points
@@ -672,65 +672,65 @@ def main():
                     param_quintic[param_i][ang][pxi,pyi] = param_quin[param_i]
 
                 # for testing
-                break
+                # break
                 ############
             print("Progress:",(pxi*y_divided+pyi+1)/(x_divided*y_divided)*100,"%")
             # for testing
-            break
+            # break
             ############
         # for testing
-        break
+        # break
         ############
     
-    # for ang in angels:
-    #     plt.clf()
-    #     plt.imshow(y_loss_zone_cubic[ang], cmap='viridis')
-    #     plt.colorbar()
-    #     save_folder=data_folder+'result/y_loss_zone_cubic'+'_'+str(ang)+"_"
-    #     plt.savefig(save_folder+'.png')
-    #     plt.clf()
-    #     plt.imshow(y_loss_zone_quintic[ang], cmap='viridis')
-    #     plt.colorbar()
-    #     save_folder=data_folder+'result/y_loss_zone_quintic'+'_'+str(ang)+"_"
-    #     plt.savefig(save_folder+'.png')
-    #     plt.clf()
-    #     plt.imshow(z_height_diff_ave[ang], cmap='viridis')
-    #     plt.colorbar()
-    #     save_folder=data_folder+'result/z_height_diff_ave'+'_'+str(ang)+"_"
-    #     plt.savefig(save_folder+'.png')
-    #     plt.clf()
-    #     plt.imshow(z_height_diff_std[ang], cmap='viridis')
-    #     plt.colorbar()
-    #     save_folder=data_folder+'result/z_height_diff_std'+'_'+str(ang)+"_"
-    #     plt.savefig(save_folder+'.png')
-    #     plt.clf()
-    #     plt.imshow(zone_z_height_diff_ave[ang], cmap='viridis')
-    #     plt.colorbar()
-    #     save_folder=data_folder+'result/zone_z_height_diff_ave'+'_'+str(ang)+"_"
-    #     plt.savefig(save_folder+'.png')
-    #     plt.clf()
-    #     plt.imshow(zone_z_height_diff_std[ang], cmap='viridis')
-    #     plt.colorbar()
-    #     save_folder=data_folder+'result/zone_z_height_diff_std'+'_'+str(ang)+"_"
-    #     plt.savefig(save_folder+'.png')
-    #     plt.clf()
-    #     plt.imshow(moveL_1_diff_ave[ang], cmap='viridis')
-    #     plt.colorbar()
-    #     save_folder=data_folder+'result/moveL_1_diff_ave'+'_'+str(ang)+"_"
-    #     plt.savefig(save_folder+'.png')
-    #     plt.clf()
-    #     plt.imshow(moveL_2_diff_ave[ang], cmap='viridis')
-    #     plt.colorbar()
-    #     save_folder=data_folder+'result/moveL_2_diff_ave'+'_'+str(ang)+"_"
-    #     plt.savefig(save_folder+'.png')
-    #     plt.clf()
+    for ang in angels:
+        plt.clf()
+        plt.imshow(y_loss_zone_cubic[ang], cmap='viridis')
+        plt.colorbar()
+        save_folder=data_folder+'result/y_loss_zone_cubic'+'_'+str(ang)+"_"
+        plt.savefig(save_folder+'.png')
+        plt.clf()
+        plt.imshow(y_loss_zone_quintic[ang], cmap='viridis')
+        plt.colorbar()
+        save_folder=data_folder+'result/y_loss_zone_quintic'+'_'+str(ang)+"_"
+        plt.savefig(save_folder+'.png')
+        plt.clf()
+        plt.imshow(z_height_diff_ave[ang], cmap='viridis')
+        plt.colorbar()
+        save_folder=data_folder+'result/z_height_diff_ave'+'_'+str(ang)+"_"
+        plt.savefig(save_folder+'.png')
+        plt.clf()
+        plt.imshow(z_height_diff_std[ang], cmap='viridis')
+        plt.colorbar()
+        save_folder=data_folder+'result/z_height_diff_std'+'_'+str(ang)+"_"
+        plt.savefig(save_folder+'.png')
+        plt.clf()
+        plt.imshow(zone_z_height_diff_ave[ang], cmap='viridis')
+        plt.colorbar()
+        save_folder=data_folder+'result/zone_z_height_diff_ave'+'_'+str(ang)+"_"
+        plt.savefig(save_folder+'.png')
+        plt.clf()
+        plt.imshow(zone_z_height_diff_std[ang], cmap='viridis')
+        plt.colorbar()
+        save_folder=data_folder+'result/zone_z_height_diff_std'+'_'+str(ang)+"_"
+        plt.savefig(save_folder+'.png')
+        plt.clf()
+        plt.imshow(moveL_1_diff_ave[ang], cmap='viridis')
+        plt.colorbar()
+        save_folder=data_folder+'result/moveL_1_diff_ave'+'_'+str(ang)+"_"
+        plt.savefig(save_folder+'.png')
+        plt.clf()
+        plt.imshow(moveL_2_diff_ave[ang], cmap='viridis')
+        plt.colorbar()
+        save_folder=data_folder+'result/moveL_2_diff_ave'+'_'+str(ang)+"_"
+        plt.savefig(save_folder+'.png')
+        plt.clf()
 
-    #     for param_i in range(6):
-    #         plt.imshow(param_quintic[param_i][ang], cmap='viridis')
-    #         plt.colorbar()
-    #         save_folder=data_folder+'result/param_quintic_'+str(5-param_i)+'ord_'+str(ang)+"_"
-    #         plt.savefig(save_folder+'.png')
-    #         plt.clf()
+        for param_i in range(6):
+            plt.imshow(param_quintic[param_i][ang], cmap='viridis')
+            plt.colorbar()
+            save_folder=data_folder+'result/param_quintic_'+str(5-param_i)+'ord_'+str(ang)+"_"
+            plt.savefig(save_folder+'.png')
+            plt.clf()
 
         # plt.show()
 

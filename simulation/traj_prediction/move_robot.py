@@ -56,7 +56,7 @@ angels = [90,120,150]
 
 # send_to_pose(start_p,all_Rq,conf)
 # send_to_pose(end_p,all_Rq,conf)
-p = start_p
-p[0] = end_p[0]
-p[1] = start_p[1]+step_y*5
+p = end_p
+# p[0] = end_p[0]
+# p[1] = start_p[1]+step_y*5
 send_to_pose(p,all_Rq,conf)
