@@ -526,8 +526,8 @@ def draw_joints(zone_fit,joint_angles,save_folder):
 def main():
     
     # folder to read
-    # data_folder = 'data_param/'
-    data_folder = 'data_param_vertical/'
+    data_folder = 'data_param/'
+    # data_folder = 'data_param_vertical/'
 
     # data info
     start_p = np.array([2300,1000,600])
