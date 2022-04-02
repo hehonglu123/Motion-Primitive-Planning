@@ -70,14 +70,14 @@
       </geometry>
     </collision>
     <visual name="visual">
-      <origin rpi="0 0 0" xyz="0 0 -.78"/>
+      <origin rpy="0 0 0" xyz="0 0 -.78"/>
       <geometry>
         <mesh filename="package://rpi_abb_irb6640_180_255_support/meshes/irb6640_180_255/visual/Link1.stl"/>
       </geometry>
       <material name="orange"/>
     </visual>
     <visual name="visual2">
-      <origin rpi="0 0 0" xyz="0 0 -.78"/>
+      <origin rpy="0 0 0" xyz="0 0 -.78"/>
       <geometry>
         <mesh filename="package://rpi_abb_irb6640_180_255_support/meshes/irb6640_180_255/visual/LinkD1.stl"/>
       </geometry>
@@ -103,7 +103,7 @@
       </geometry>
     </collision>
     <visual name="visual">
-      <origin rpi="0 0 0" xyz="-.32 0 -.78"/>
+      <origin rpy="0 0 0" xyz="-.32 0 -.78"/>
       <geometry>
         <mesh filename="package://rpi_abb_irb6640_180_255_support/meshes/irb6640_180_255/visual/Link2.stl"/>
       </geometry>
@@ -159,7 +159,7 @@
       </geometry>
     </collision>
     <visual name="visual">
-      <origin rpi="0 0 0" xyz="-.32 0 -1.855"/>
+      <origin rpy="0 0 0" xyz="-.32 0 -1.855"/>
       <geometry>
         <mesh filename="package://rpi_abb_irb6640_180_255_support/meshes/irb6640_180_255/visual/Link3.stl"/>
       </geometry>
@@ -209,7 +209,7 @@
       </geometry>
     </collision>
     <visual name="visual">
-      <origin rpi="0 0 0" xyz="-.32 0 -2.055"/>
+      <origin rpy="0 0 0" xyz="-.32 0 -2.055"/>
       <geometry>
         <mesh filename="package://rpi_abb_irb6640_180_255_support/meshes/irb6640_180_255/visual/Link4.stl"/>
       </geometry>
@@ -229,7 +229,7 @@
       </geometry>
     </collision>
     <visual name="visual">
-      <origin rpi="0 0 0" xyz="-1.462 0 -2.055"/>
+      <origin rpy="0 0 0" xyz="-1.462 0 -2.055"/>
       <geometry>
         <mesh filename="package://rpi_abb_irb6640_180_255_support/meshes/irb6640_180_255/visual/Link5.stl"/>
       </geometry>
@@ -249,7 +249,7 @@
       </geometry>
     </collision>
     <visual name="visual">
-      <origin rpi="0 0 0" xyz="-1.662 0 -2.055"/>
+      <origin rpy="0 0 0" xyz="-1.662 0 -2.055"/>
       <geometry>
         <mesh filename="package://rpi_abb_irb6640_180_255_support/meshes/irb6640_180_255/visual/Link6.stl"/>
       </geometry>

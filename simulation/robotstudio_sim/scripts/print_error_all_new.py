@@ -7,7 +7,7 @@ from abb_motion_program_exec_client import *
 sys.path.append('../../../toolbox')
 from robots_def import *
 from error_check import *
-from j_analysis import *
+from utils import *
 
 
 

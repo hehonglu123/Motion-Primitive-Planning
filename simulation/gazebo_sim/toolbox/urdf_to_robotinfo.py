@@ -30,7 +30,7 @@ import numpy as np
 # from urdf_parser_py.urdf import URDF
 # import rospkg
 import general_robotics_toolbox as rox
-from general_robotics_toolbox.urdf import robot_from_xml_string
+from urdf import robot_from_xml_string
 import argparse
 import yaml
 

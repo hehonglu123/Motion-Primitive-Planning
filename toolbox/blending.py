@@ -1,6 +1,7 @@
 from pandas import read_csv, DataFrame
 import sys, copy
-sys.path.append('../../../toolbox')
+sys.path.append('../circular_Fit')
+from toolbox_circular_fit import *
 from abb_motion_program_exec_client import *
 from robots_def import *
 import matplotlib.pyplot as plt
@@ -13,15 +14,55 @@ def moving_average(a, n=3) :
     ret[n:] = ret[n:] - ret[:-n]
     return ret[n - 1:] / n
 
-def blend_cs(q,curve,breakpoints,lam,primitives):
+def blend_cs(q,curve,breakpoints,lam,primitives,robot):
 	###blending in cartesian space
 	#q:				joint configuration at each breakpoints
 	#curve:			cartesian coordinates of full curve 50,000
 	#breakpoints:	breakpoints
 	#lam: 			path length
 	#primitives:	primitive choices, L,C,J
+	#robot:			robot kin tool def
 	##return
-	#q_blended: 	blended trajectory, 10 points at each segments, 10 points within each blending
+	#q_blended: 	blended trajectory, N=10 points at each segments, 10 points within each blending
+
+	N=10
+	blending_radius=10
+	act_breakpoints=copy.deepcopy(breakpoints)
+	act_breakpoints[1:]=act_breakpoints[1:]-1
+	sampled_path=[]
+	sampled_path_ori=[]
+	for i in range(len(primitives)):
+		#get breakpiont pose
+		start_pose=robot.fwd(q[i])
+		end_pose=robot.fwd(q[i+1])
+		#sample N points in each segment
+		seg_length=lam[act_breakpoints[i+1]]-lam[act_breakpoints[i]]
+		if i==0:
+			lam_sampled_temp=np.linspace(lam[act_breakpoints[i]],lam[act_breakpoints[i+1]]-blending_radius,N)
+		elif i==len(primitives)-1:
+			lam_sampled_temp=np.linspace(lam[act_breakpoints[i]]+blending_radius,lam[act_breakpoints[i+1]],N)
+		else:
+			lam_sampled_temp=np.linspace(lam[act_breakpoints[i]]+blending_radius,lam[act_breakpoints[i+1]]-blending_radius,N)
+
+		###primitive trajectory 
+		if primitives[i]=='movel':
+			a1,b1,c1=lineFromPoints([lam[act_breakpoints[i]],start_pose.p[0]],[lam[act_breakpoints[i+1]],end_pose.p[0]])
+			a2,b2,c2=lineFromPoints([lam[act_breakpoints[i]],start_pose.p[1]],[lam[act_breakpoints[i+1]],end_pose.p[1]])
+			a3,b3,c3=lineFromPoints([lam[act_breakpoints[i]],start_pose.p[2]],[lam[act_breakpoints[i+1]],end_pose.p[2]])
+			seg_sample=np.vstack(((-a1*lam_sampled_temp-c1)/b1,(-a2*lam_sampled_temp-c2)/b2,(-a3*lam_sampled_temp-c3)/b3)).T
+
+			
+		elif primitives[i]=='movec':
+			arc=arc_from_3point(start_pose.p,end_pose.p,curve((breakpoints[i+1]-breakpoints[i])/2),1000)
+			idx=(lam_sampled_temp-lam[act_breakpoints[i]])/seg_length
+			seg_sample=arc[idx.astype(int)*len(arc)]
+
+		else:
+			print('movej not implemented')
+		sampled_path.extend(seg_sample)
+
+		###breakpoints blending
+		if i<len(primitives)-1:
 
 	return q_blended
 def blend_js(q,breakpoints,lam):

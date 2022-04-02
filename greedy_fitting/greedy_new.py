@@ -9,7 +9,6 @@ sys.path.append('../circular_fit')
 from toolbox_circular_fit import *
 sys.path.append('../toolbox')
 from robots_def import *
-from direction2R import *
 from general_robotics_toolbox import *
 from error_check import *
 # from robotstudio_send import MotionSend
@@ -216,9 +215,9 @@ def main():
 
 	col_names=['q1', 'q2', 'q3','q4', 'q5', 'q6'] 
 	# data = read_csv("../data/from_ge/Curve_js2.csv", names=col_names)
-	# data = read_csv("../data/from_Jon/qbestcurve.csv", names=col_names)
+	data = read_csv("../data/from_Jon/qbestcurve_new.csv", names=col_names)
 	# data = read_csv("../constraint_solver/single_arm/trajectory/curve_pose_opt/curve_pose_opt_js.csv", names=col_names)
-	data = read_csv("../constraint_solver/single_arm/trajectory/all_theta_opt_blended/all_theta_opt_js.csv", names=col_names)
+	# data = read_csv("../constraint_solver/single_arm/trajectory/all_theta_opt_blended/all_theta_opt_js.csv", names=col_names)
 	# data = read_csv("../constraint_solver/single_arm/trajectory/init_opt/init_opt_js.csv", names=col_names)
 	curve_q1=data['q1'].tolist()
 	curve_q2=data['q2'].tolist()

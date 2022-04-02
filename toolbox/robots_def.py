@@ -23,7 +23,7 @@ class abb6640(object):
 		p1=np.array([[0.32],[0],[0]])
 		p2=np.array([[0.],[0],[1.075]])
 		p3=np.array([[0],[0],[0.2]])   
-		p4=np.array([[1.142],[0],[0]])
+		p4=np.array([[1.1425],[0],[0]])
 		p5=np.array([[0.2],[0],[0]])
 		p6=np.array([[0.0],[0],[0.0]])
 
@@ -115,7 +115,7 @@ class abb1200(object):
 
 class arb_robot(object):
 	#R_tool make tool z pointing to +x at 0 config
-	def __init__(self, H,P,joint_type,upper_limit,lowerer_limit, joint_vel_limit,R_tool=Ry(np.radians(90)),p_tool=np.zeros(3)):
+	def __init__(self, H,P,joint_type,upper_limit,lowerer_limit, joint_vel_limit,R_tool=Ry(np.radians(90)),p_tool=np.zeros(3),d=0):
 		###All in mm
 		self.H=H
 		self.P=P

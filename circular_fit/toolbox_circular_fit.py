@@ -1,6 +1,33 @@
 import numpy as np
-import traceback
+import traceback, sys
 from scipy.optimize import minimize
+sys.path.append('../toolbox')
+from utils import *
+
+def circle_from_3point(p_start,p_end,p_mid):
+    v1=np.cross(p_mid-p_start,p_end-p_mid)
+    v2=np.cross(p_mid-p_start,v1)
+    v3=np.cross(p_end-p_mid,v1)
+    p4=(p_start+p_mid)/2
+    p5=(p_end+p_mid)/2
+    A=np.vstack((v2,v3)).T
+    b=p5-p4
+    res=np.linalg.lstsq(A,b)
+    center=p4+res.x[0]*v2
+
+    radius=np.linalg.norm(center-p_start)
+
+    return center, radius
+    
+def arc_from_3point(p_start,p_end,p_mid,N):
+    center, radius=circle_from_3point(p_start,p_end,p_mid)
+    u=p_start-center
+    v=p_end-center
+    theta = angle_between(u, v, v1)
+    l = np.linspace(0, theta, N)
+    return generate_circle_by_vectors(l, center, radius, v1, u)
+
+
 def generate_circle_by_vectors(t, C, r, n, u):
     n = n/np.linalg.norm(n)
     u = u/np.linalg.norm(u)

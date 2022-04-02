@@ -44,9 +44,19 @@ def get_angle(v1,v2,less90=False):
 	v1=v1/np.linalg.norm(v1)
 	v2=v2/np.linalg.norm(v2)
 	dot=np.dot(v1,v2)
-	if abs(dot)>0.99999999999:
+	if dot>0.99999999999:
 		return 0
+	elif dot<-0.99999999999:
+		return np.pi
 	angle=np.arccos(dot)
 	if less90 and angle>np.pi/2:
 		angle=np.pi-angle
 	return angle
+
+
+def lineFromPoints(P, Q):
+	#return coeff ax+by+c=0
+    a = Q[1] - P[1]
+    b = P[0] - Q[0]
+    c = -(a*(P[0]) + b*(P[1]))
+    return a,b,c

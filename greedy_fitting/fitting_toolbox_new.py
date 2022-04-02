@@ -2,8 +2,7 @@ import numpy as np
 import sys,copy
 sys.path.append('../circular_fit')
 from toolbox_circular_fit import *
-sys.path.append('../toolbox')
-from robot_def import *
+
 
 class fitting_toolbox(object):
 	def __init__(self,robot,curve,curve_normal,curve_js,d=50, orientation_weight=50):
