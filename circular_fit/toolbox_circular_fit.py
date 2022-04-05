@@ -12,20 +12,27 @@ def circle_from_3point(p_start,p_end,p_mid):
     p5=(p_end+p_mid)/2
     A=np.vstack((v2,v3)).T
     b=p5-p4
-    res=np.linalg.lstsq(A,b)
-    center=p4+res.x[0]*v2
+    res=np.linalg.lstsq(A,b)[0]
+    ###verify center aligned
+    # print(p4+res[0]*v2)
+    # print(p5-res[1]*v3)
+    center=p4+res[0]*v2
 
     radius=np.linalg.norm(center-p_start)
 
     return center, radius
     
 def arc_from_3point(p_start,p_end,p_mid,N):
+    v1=np.cross(p_mid-p_start,p_end-p_mid)
+    v1=v1/np.linalg.norm(v1)
     center, radius=circle_from_3point(p_start,p_end,p_mid)
     u=p_start-center
     v=p_end-center
     theta = angle_between(u, v, v1)
     l = np.linspace(0, theta, N)
-    return generate_circle_by_vectors(l, center, radius, v1, u)
+
+    arc=generate_circle_by_vectors(l, center, radius, v1, u)
+    return arc
 
 
 def generate_circle_by_vectors(t, C, r, n, u):

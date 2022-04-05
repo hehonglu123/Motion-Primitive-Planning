@@ -34,9 +34,9 @@ def main():
 	###get breakpoints
 	data = read_csv('../../simulation/robotstudio_sim/scripts/fitting_output_new/threshold0.5/command.csv')
 	breakpoints=np.array(data['breakpoints'].tolist())
+	primitives=data['primitives'].tolist()[1:]
 
-
-	opt=lambda_opt(curve,curve_normal,robot1=abb6640(d=50),breakpoints=breakpoints)
+	opt=lambda_opt(curve,curve_normal,robot1=abb6640(d=50),breakpoints=breakpoints,primitives=primitives)
 
 	###path constraints, position constraint and curve normal constraint
 	lowerer_limit=[-np.pi]
@@ -83,11 +83,14 @@ def main():
 	df.to_csv('trajectory/all_theta_opt_blended/arm1.csv',header=False,index=False)
 
 
-	curve_blend_js,dqdlam_list,spl_list,merged_idx=blend_js2(q_out,opt.breakpoints,opt.lam_original)
-	dlam_max1,dlam_max2=est_lamdot(dqdlam_list,opt.breakpoints,opt.lam_original,spl_list,merged_idx,opt.robot1)
-	lam_movej_seg_idx=(opt.lam_original[breakpoints[:-1]]+opt.lam_original[breakpoints[1:]])/2
-	lam_est=np.hstack((lam_movej_seg_idx,opt.lam_original[breakpoints[1:-1]]))
-	lam_est, lamdot_est = zip(*sorted(zip(lam_est, np.hstack((dlam_max1,dlam_max2)))))
+	# curve_blend_js,dqdlam_list,spl_list,merged_idx=blend_js2(q_out,opt.breakpoints,opt.lam_original)
+	# dlam_max1,dlam_max2=est_lamdot(dqdlam_list,opt.breakpoints,opt.lam_original,spl_list,merged_idx,opt.robot1)
+	# lam_movej_seg_idx=(opt.lam_original[breakpoints[:-1]]+opt.lam_original[breakpoints[1:]])/2
+	# lam_est=np.hstack((lam_movej_seg_idx,opt.lam_original[breakpoints[1:-1]]))
+	# lam_est, lamdot_est = zip(*sorted(zip(lam_est, np.hstack((dlam_max1,dlam_max2)))))
+
+	lam_blended,q_blended=blend_js_from_primitive(q_out,opt.curve_original,opt.breakpoints,opt.lam_original,opt.primitives,opt.robot1)
+	dlam=calc_lamdot(q_blended,lam_blended,opt.robot1,1)
 
 	###############################################restore 50,000 points#############################################
 	theta_all=[]
@@ -117,7 +120,7 @@ def main():
 	df.to_csv('trajectory/all_theta_opt_blended/all_theta_opt_js.csv',header=False,index=False)
 	####################################################################################################################
 
-	plt.plot(lam_est,lamdot_est,label="lambda_dot_max")
+	plt.plot(lam_blended[1:],dlam,label="lambda_dot_max")
 	plt.xlabel("lambda")
 	plt.ylabel("lambda_dot")
 	plt.ylim([500,2000])

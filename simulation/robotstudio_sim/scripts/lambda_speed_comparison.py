@@ -8,7 +8,8 @@ from abb_motion_program_exec_client import *
 from robots_def import *
 from lambda_calc import *
 
-data_dir='fitting_output_new/Jon/'
+# data_dir='fitting_output_new/Jon/'
+data_dir="fitting_output_new/all_theta_opt_blended/"
 robot=abb6640(d=50)
 
 # col_names=['J1', 'J2','J3', 'J4', 'J5', 'J6'] 

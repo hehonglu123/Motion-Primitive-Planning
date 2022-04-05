@@ -6,6 +6,8 @@ import matplotlib.pyplot as plt
 from scipy.optimize import differential_evolution, shgo, NonlinearConstraint, minimize, fminbound
 from qpsolvers import solve_qp
 
+sys.path.append('../../circular_Fit')
+
 sys.path.append('../../toolbox')
 from robots_def import *
 from lambda_calc import *
@@ -15,7 +17,7 @@ from utils import *
 class lambda_opt(object):
 	###robot1 hold paint gun for single arm
 	###robot1 hold paint gun, robot2 hold blade for dual arm
-	def __init__(self,curve,curve_normal,robot1=abb6640(),robot2=abb1200(),base2_R=np.eye(3),base2_p=np.zeros(3),steps=32,breakpoints=[]):
+	def __init__(self,curve,curve_normal,robot1=abb6640(),robot2=abb1200(),base2_R=np.eye(3),base2_p=np.zeros(3),steps=32,breakpoints=[],primitives=[]):
 
 		self.curve_original=curve
 		self.curve_normal_original=curve_normal
@@ -26,6 +28,8 @@ class lambda_opt(object):
 		self.joint_vel_limit=np.radians([110,90,90,150,120,235])
 		self.steps=steps
 
+		#prespecified primitives
+		self.primitives=primitives
 		if len(breakpoints)>0:
 			self.act_breakpoints=breakpoints
 			self.act_breakpoints[1:]=self.act_breakpoints[1:]-1
@@ -375,9 +379,11 @@ class lambda_opt(object):
 					# traceback.print_exc()
 					return 999
 
-		curve_blend_js,dqdlam_list,spl_list,merged_idx=blend_js2(q_out,self.breakpoints,self.lam_original)
-		lamdot_min=est_lamdot_min(dqdlam_list,self.breakpoints,self.lam_original,spl_list,merged_idx,self.robot1)
-
+		# curve_blend_js,dqdlam_list,spl_list,merged_idx=blend_js2(q_out,self.breakpoints,self.lam_original)
+		# lamdot_min=est_lamdot_min(dqdlam_list,self.breakpoints,self.lam_original,spl_list,merged_idx,self.robot1)
+		lam_blended,q_blended=blend_js_from_primitive(q_out,self.curve_original,self.breakpoints,self.lam_original,self.primitives,self.robot1)
+		dlam=calc_lamdot(q_blended,lam_blended,self.robot1,1)
+		lamdot_min=min(dlam)
 		print(lamdot_min)
 		return -lamdot_min	
 
