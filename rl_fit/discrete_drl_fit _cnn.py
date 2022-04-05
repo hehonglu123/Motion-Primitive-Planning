@@ -17,11 +17,11 @@ from trajectory_utils import Primitive, BreakPoint, read_base_data, read_js_data
 from curve_normalization import PCA_normalization, fft_feature
 from cnn_encoder import load_encoder
 
-sys.path.append('../greedy_fitting/')
-from greedy_simplified import greedy_fit
+# sys.path.append('../greedy_fitting/')
+# from greedy_simplified import greedy_fit
 
-sys.path.append('../toolbox')
-from robots_def import *
+# sys.path.append('../toolbox')
+# from robots_def import *
 
 Curve_Error = namedtuple("Curve_Error", ('primitive', 'max_error'))
 State = namedtuple("State", ("longest_type", "curve_features"))
@@ -75,8 +75,11 @@ def greedy_fit_primitive(last_bp, curve, p):
 
     search_left_c = search_left_l = last_bp
     search_right_c = search_right_l = len(curve)
-    search_point_c = search_right_c
-    search_point_l = search_right_l
+    search_point_c = min(search_left_c+2000, search_right_c)
+    search_point_l = min(search_left_l+2000, search_right_l)
+
+    stationary_c = False
+    stationary_l = False
 
     step_count = 0
     while step_count < MAX_GREEDY_STEP:
@@ -88,7 +91,7 @@ def greedy_fit_primitive(last_bp, curve, p):
         target_curve = curve[last_bp:max(last_bp+1, int(search_point_c) + 1)]
         # print(len(target_curve), last_bp, search_point_c)
 
-        if len(target_curve) >= 2:
+        if len(target_curve) >= 2 and not stationary_c:
             primitive_c = Primitive(start=left_bp, end=right_bp, move_type='C')
             # print("---", len(target_curve), last_bp, search_point_c, step_count)
             curve_fit, max_error = primitive_c.curve_fit(target_curve, p=p)
@@ -103,21 +106,22 @@ def greedy_fit_primitive(last_bp, curve, p):
                 search_point_c = np.floor(np.mean([search_left_c, search_point_c]))
 
         # moveL
-        left_bp = BreakPoint(idx=last_bp)
-        right_bp = BreakPoint(idx=search_point_l)
-        target_curve = curve[last_bp:max(last_bp+1, int(search_point_l) + 1)]
+        if not stationary_l:
+            left_bp = BreakPoint(idx=last_bp)
+            right_bp = BreakPoint(idx=search_point_l)
+            target_curve = curve[last_bp:max(last_bp+1, int(search_point_l) + 1)]
 
-        primitive_l = Primitive(start=left_bp, end=right_bp, move_type='L')
-        curve_fit, max_error = primitive_l.curve_fit(target_curve)
-        if max_error <= ERROR_THRESHOLD:
-            if longest_fits['L'] is None or primitive_l > longest_fits['L'].primitive:
-                longest_fits['L'] = Curve_Error(primitive_l, max_error)
+            primitive_l = Primitive(start=left_bp, end=right_bp, move_type='L')
+            curve_fit, max_error = primitive_l.curve_fit(target_curve)
+            if max_error <= ERROR_THRESHOLD:
+                if longest_fits['L'] is None or primitive_l > longest_fits['L'].primitive:
+                    longest_fits['L'] = Curve_Error(primitive_l, max_error)
 
-            search_left_l = search_point_l
-            search_point_l = np.floor(np.mean([search_point_l, search_right_l]))
-        else:
-            search_right_l = search_point_l
-            search_point_l = np.floor(np.mean([search_left_l, search_point_l]))
+                search_left_l = search_point_l
+                search_point_l = np.floor(np.mean([search_point_l, search_right_l]))
+            else:
+                search_right_l = search_point_l
+                search_point_l = np.floor(np.mean([search_left_l, search_point_l]))
 
     longest_type = 'L'
     if longest_fits['L'] is None or (longest_fits['C'] is not None and
@@ -305,8 +309,8 @@ class RL_Agent(object):
 
 
 class RL_Env(object):
-    def __init__(self, target_curve, target_curve_normal, target_curve_js, greedy_obj, feature_encoder,
-                 n_feature=10, n_action=10):
+    def __init__(self, target_curve, target_curve_normal, target_curve_js, feature_encoder,
+                 n_feature=10, n_action=10, greedy_obj=None):
         self.target_curve = target_curve
         self.target_curve_normal = target_curve_normal
         self.target_curve_js = target_curve_js
@@ -388,7 +392,7 @@ class RL_Env(object):
 
 
 def train_rl(agent: RL_Agent, curve_base_data, curve_js_data, n_episode=10000):
-    robot = abb6640()
+    # robot = abb6640()
     print("Train Start")
 
     episode_rewards = []
@@ -415,12 +419,14 @@ def train_rl(agent: RL_Agent, curve_base_data, curve_js_data, n_episode=10000):
         curve_base, curve_normal = curve_base_data[random_curve_idx]
         curve_js = curve_js_data[random_curve_idx]
 
-        greedy_fit_obj = greedy_fit(robot, curve_base, curve_normal, curve_js, d=50)
-        greedy_fit_obj.primitives = {'movel_fit': greedy_fit_obj.movel_fit_greedy,
-                                     'movec_fit': greedy_fit_obj.movec_fit_greedy}
+        # greedy_fit_obj = greedy_fit(robot, curve_base, curve_normal, curve_js, d=50)
+        # greedy_fit_obj.primitives = {'movel_fit': greedy_fit_obj.movel_fit_greedy,
+        #                              'movec_fit': greedy_fit_obj.movec_fit_greedy}
 
+        # env = RL_Env(target_curve=curve_base, target_curve_normal=curve_normal, target_curve_js=curve_js,
+        #              greedy_obj=greedy_fit_obj, n_feature=agent.n_curve_feature, feature_encoder=feature_encoder)
         env = RL_Env(target_curve=curve_base, target_curve_normal=curve_normal, target_curve_js=curve_js,
-                     greedy_obj=greedy_fit_obj, n_feature=agent.n_curve_feature, feature_encoder=feature_encoder)
+                     n_feature=agent.n_curve_feature, feature_encoder=feature_encoder)
 
         # print("Episode Start")
 
@@ -468,7 +474,7 @@ def train_rl(agent: RL_Agent, curve_base_data, curve_js_data, n_episode=10000):
 
 
 def evaluate_rl(agent: RL_Agent, curve_base_data, curve_js_data):
-    robot = abb6640()
+    # robot = abb6640()
     print("Evaluation Start")
 
     episode_steps = []
@@ -482,12 +488,14 @@ def evaluate_rl(agent: RL_Agent, curve_base_data, curve_js_data):
         curve_js = curve_js_data[i]
         timer = time.time_ns()
 
-        greedy_fit_obj = greedy_fit(robot, curve_base, curve_normal, curve_js, d=50)
-        greedy_fit_obj.primitives = {'movel_fit': greedy_fit_obj.movel_fit_greedy,
-                                     'movec_fit': greedy_fit_obj.movec_fit_greedy}
+        # greedy_fit_obj = greedy_fit(robot, curve_base, curve_normal, curve_js, d=50)
+        # greedy_fit_obj.primitives = {'movel_fit': greedy_fit_obj.movel_fit_greedy,
+        #                              'movec_fit': greedy_fit_obj.movec_fit_greedy}
 
+        # env = RL_Env(target_curve=curve_base, target_curve_normal=curve_normal, target_curve_js=curve_js,
+        #              greedy_obj=greedy_fit_obj, n_feature=agent.n_curve_feature, feature_encoder=feature_encoder)
         env = RL_Env(target_curve=curve_base, target_curve_normal=curve_normal, target_curve_js=curve_js,
-                     greedy_obj=greedy_fit_obj, n_feature=agent.n_curve_feature, feature_encoder=feature_encoder)
+                     n_feature=agent.n_curve_feature, feature_encoder=feature_encoder)
 
         # print("Episode Start")
 

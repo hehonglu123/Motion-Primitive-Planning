@@ -259,17 +259,17 @@ def circle_fit_w_2slope(curve, p, p2, slope1, slope2):
     return curve_fitarc, curve_fitcircle
 
 
-def circle_fit(curve, p=[], p2=[]):
+def circle_fit(curve, p=None, p2=None):
     ###curve: 3D point data
     ###p:   constraint point of the arc
     ########################################
     ###return curve_fit: 3D point data
 
-    if len(p) == 0:  # no constraint
+    if p is None:  # no constraint
         ###fit on a plane first
         curve_mean = curve.mean(axis=0)
         curve_centered = curve - curve_mean
-        U, s, V = np.linalg.svd(curve_centered)
+        U, s, V = torch.svd(curve_centered)
         # Normal vector of fitting plane is given by 3rd column in V
         # Note linalg.svd returns V^T, so we need to select 3rd row from V^T
         normal = V[2, :]
@@ -278,18 +278,18 @@ def circle_fit(curve, p=[], p2=[]):
         xc, yc, r = fit_circle_2d(curve_xy[:, 0], curve_xy[:, 1])
 
         ###convert to 3D coordinates
-        C = rodrigues_rot(np.array([xc, yc, 0]), [0, 0, 1], normal) + curve_mean
+        C = rodrigues_rot(torch.as_tensor([xc, yc, 0]), [0, 0, 1], normal) + curve_mean
         C = C.flatten()
         ###get 3D circular arc
         u = curve[0] - C
         v = curve[-1] - C
 
         theta = angle_between(u, v, normal).data
-        l = np.linspace(0, theta, len(curve))
+        l = torch.linspace(0, theta, len(curve), device=device)
         curve_fitarc = generate_circle_by_vectors(l, C, r, normal, u)
 
 
-    elif len(p2) == 0:  # single point constraint
+    elif p2 is None:  # single point constraint
         ###fit on a plane first
         curve_mean = curve.mean(dim=0)
         curve_centered = curve - curve_mean
@@ -299,14 +299,14 @@ def circle_fit(curve, p=[], p2=[]):
         ###rewrite lstsq to fit point p on plane
         A = torch.as_tensor([curve_centered[:, 0] - p_centered[0] * curve_centered[:, 2] / p_centered[2],
                       curve_centered[:, 1] - p_centered[1] * curve_centered[:, 2] / p_centered[2]]).T
-        b = torch.ones(len(curve)) - curve_centered[:, 2] / p_centered[2]
-        c = torch.lstsq(A, b, rcond=None)[0]
+        b = torch.ones(len(curve), device=device) - curve_centered[:, 2] / p_centered[2]
+        c = torch.lstsq(A, b).solution
         normal = torch.as_tensor([c[0], c[1], (1 - c[0] * p_centered[0] - c[1] * p_centered[1]) / p_centered[2]])
 
         ###make sure constraint point is on plane
         # print(np.dot(normal,p_centered))
         ###normalize plane normal
-        normal = normal / np.linalg.norm(normal)
+        normal = normal / torch.norm(normal)
 
         curve_xy = rodrigues_rot(curve_centered, normal, [0, 0, 1])
         p_temp = rodrigues_rot(p_centered, normal, [0, 0, 1])
@@ -315,7 +315,7 @@ def circle_fit(curve, p=[], p2=[]):
         xc, yc, r = fit_circle_2d(curve_xy[:, 0], curve_xy[:, 1], p_temp)
 
         ###convert to 3D coordinates
-        C = rodrigues_rot(np.array([xc, yc, 0]), [0, 0, 1], normal) + curve_mean
+        C = rodrigues_rot(torch.as_tensor([xc, yc, 0]), [0, 0, 1], normal) + curve_mean
         C = C.flatten()
         ###get 3D circular arc
         ###always start from constraint p
@@ -342,7 +342,7 @@ def circle_fit(curve, p=[], p2=[]):
                     p2_centered[0] - p_centered[0] * p2_centered[2] / p_centered[2]) * (
                                   curve_centered[:, 1] - p_centered[1] * curve_centered[:, 2] / p_centered[2]) / (
                                   p2_centered[1] - p_centered[1] * p2_centered[2] / p_centered[2])]).T
-        b = torch.ones(len(curve)) - curve_centered[:, 2] / p_centered[2] - (1 - p2_centered[2] / p_centered[2]) * (
+        b = torch.ones(len(curve), device=device) - curve_centered[:, 2] / p_centered[2] - (1 - p2_centered[2] / p_centered[2]) * (
                     curve_centered[:, 1] - p_centered[1] * curve_centered[:, 2] / p_centered[2]) / (
                         p2_centered[1] - p_centered[1] * p2_centered[2] / p_centered[2])
 
