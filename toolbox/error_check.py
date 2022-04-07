@@ -53,10 +53,15 @@ def calc_max_error_js(robot,fit_js,curve_js):
 	return max_error, max_error_idx
 
 def calc_avg_error(fit,curve):
-	error=0
+	error=calc_all_error(fit,curve)
+	return sum(error)/len(error)
+
+def calc_all_error(fit,curve):
+	error=[]
 	for p in fit:
-		error+=calc_error(p,curve)
-	return error/len(fit)
+		error_temp,idx=calc_error(p,curve)
+		error.append(error_temp)
+	return error
 
 def complete_points_check(fit,curve,R_fit,R_curve):
 	error=[]

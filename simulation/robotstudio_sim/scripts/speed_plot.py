@@ -11,9 +11,9 @@ from error_check import *
 from lambda_calc import *
 from scipy.interpolate import UnivariateSpline
 
-speed='v1600'
+speed='vmax'
 zone='z10'
-data_dir='fitting_output_new/Jon/'
+data_dir='fitting_output_new/all_theta_opt_blended/'
 ###read in curve_exe
 col_names=['timestamp', 'cmd_num', 'J1', 'J2','J3', 'J4', 'J5', 'J6'] 
 data = read_csv(data_dir+"curve_exe_"+speed+'_'+zone+".csv",names=col_names)
@@ -51,6 +51,7 @@ for i in range(len(curve_exe_js)):
 # spl = UnivariateSpline(timestamp[1:], lam, k=1, s=0)
 # act_speed=spl.derivative()(timestamp[1:])
 
+print(act_speed)
 plt.plot(lam[1:],act_speed)
 plt.title("Speed: "+data_dir+speed+'_'+zone)
 # plt.ylim([0,1600])

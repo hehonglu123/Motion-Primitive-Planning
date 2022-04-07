@@ -210,8 +210,13 @@ class fitting_toolbox(object):
 		p_error=np.linalg.norm(curve-curve_fit,axis=1)
 		o_error=self.orientation_weight*np.linalg.norm(curve_w-curve_fit_w,axis=1)
 		error=p_error+o_error
+
+		curve_fit_R=np.array(curve_fit_R)
+		ori_error=[]
+		for i in range(len(curve)):
+			ori_error.append(get_angle(curve_R[:,-1],curve_fit_R[:,-1]))
 		
-		return curve_fit,curve_fit_R,[],np.max(error)
+		return curve_fit,curve_fit_R,[],np.max(error), np.max(ori_error)
 		
 
 
@@ -238,8 +243,13 @@ class fitting_toolbox(object):
 		p_error=np.linalg.norm(curve-curve_fit,axis=1)
 		o_error=self.orientation_weight*np.linalg.norm(curve_w-curve_fit_w,axis=1)
 		error=p_error+o_error
+
+		curve_fit_R=np.array(curve_fit_R)
+		ori_error=[]
+		for i in range(len(curve)):
+			ori_error.append(get_angle(curve_R[:,-1],curve_fit_R[:,-1]))
 		
-		return curve_fit,curve_fit_R,curve_fit_js,np.max(error)
+		return curve_fit,curve_fit_R,curve_fit_js,np.max(error), np.max(ori_error)
 
 
 	def movec_fit(self,curve,curve_js,curve_R,p_constraint=[],R_constraint=[],slope_constraint=[]):
@@ -254,7 +264,12 @@ class fitting_toolbox(object):
 		o_error=self.orientation_weight*np.linalg.norm(curve_w-curve_fit_w,axis=1)
 		error=p_error+o_error
 
-		return curve_fit,curve_fit_R,[],np.max(error)
+		curve_fit_R=np.array(curve_fit_R)
+		ori_error=[]
+		for i in range(len(curve)):
+			ori_error.append(get_angle(curve_R[:,-1],curve_fit_R[:,-1]))
+
+		return curve_fit,curve_fit_R,[],np.max(error), np.max(ori_error)
 
 	def get_slope(self,curve_fit,curve_fit_R,breakpoints):
 		slope_diff=[]
