@@ -48,7 +48,7 @@ def main():
 	###diff evolution
 	res = differential_evolution(opt.single_arm_global_opt_blended, bnds,workers=-1,
 									x0 = np.zeros(1+len(opt.curve)),
-									strategy='best1bin', maxiter=1,
+									strategy='best1bin', maxiter=500,
 									popsize=15, tol=1e-2,
 									mutation=(0.5, 1), recombination=0.7,
 									seed=None, callback=None, disp=False,

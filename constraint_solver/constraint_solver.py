@@ -381,7 +381,7 @@ class lambda_opt(object):
 
 		# curve_blend_js,dqdlam_list,spl_list,merged_idx=blend_js2(q_out,self.breakpoints,self.lam_original)
 		# lamdot_min=est_lamdot_min(dqdlam_list,self.breakpoints,self.lam_original,spl_list,merged_idx,self.robot1)
-		lam_blended,q_blended=blend_js_from_primitive(q_out,self.curve_original,self.breakpoints,self.lam_original,self.primitives,self.robot1)
+		lam_blended,q_blended=blend_cs(q_out,self.curve_original,self.breakpoints,self.lam_original,self.primitives,self.robot1)
 		dlam=calc_lamdot(q_blended,lam_blended,self.robot1,1)
 		lamdot_min=min(dlam)
 		print(lamdot_min)

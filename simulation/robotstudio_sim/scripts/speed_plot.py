@@ -51,7 +51,6 @@ for i in range(len(curve_exe_js)):
 # spl = UnivariateSpline(timestamp[1:], lam, k=1, s=0)
 # act_speed=spl.derivative()(timestamp[1:])
 
-print(act_speed)
 plt.plot(lam[1:],act_speed)
 plt.title("Speed: "+data_dir+speed+'_'+zone)
 # plt.ylim([0,1600])

@@ -14,7 +14,7 @@ def moving_average(a, n=3) :
     ret[n:] = ret[n:] - ret[:-n]
     return ret[n - 1:] / n
 
-def blend_cs(q,curve,breakpoints,lam,primitives,robot):
+def blend_cs(q,curve,breakpoints,lam,primitives,robot,N=10):
 ###blending in cartesian space with known primitives
 	#q:				joint configuration at each breakpoints
 	#curve:			cartesian coordinates of full curve 50,000
@@ -22,10 +22,11 @@ def blend_cs(q,curve,breakpoints,lam,primitives,robot):
 	#lam: 			path length
 	#primitives:	primitive choices, L,C,J
 	#robot:			robot kin tool def
+	#N:				number of sample points
 	##return
 	#lam_blended:	lambda at returned points
 	#q_blended: 	blended trajectory, N=10 points at each segments, 10 points within each blending
-	N=10
+	
 	blending_radius=10
 	act_breakpoints=copy.deepcopy(breakpoints)
 	act_breakpoints[1:]=act_breakpoints[1:]-1
@@ -60,7 +61,7 @@ def blend_cs(q,curve,breakpoints,lam,primitives,robot):
 			seg_sample=np.vstack(((-a1*lam_sampled_temp-c1)/b1,(-a2*lam_sampled_temp-c2)/b2,(-a3*lam_sampled_temp-c3)/b3)).T
 	
 		elif 'movec' in primitives[i]:
-			arc=arc_from_3point(start_pose.p,end_pose.p,curve[int((breakpoints[i+1]-breakpoints[i])/2)],1000)
+			arc=arc_from_3point(start_pose.p,end_pose.p,curve[int((breakpoints[i+1]+breakpoints[i])/2)],1000)
 			idx=len(arc)*(lam_sampled_temp-lam[act_breakpoints[i]])/seg_length
 			if idx[-1]==len(arc):
 				idx[-1]=len(arc)-1
@@ -104,7 +105,7 @@ def blend_cs(q,curve,breakpoints,lam,primitives,robot):
 		sampled_lam_blended.append(lam_sampled_temp_blended)
 		for j in range(3):
 			#cartesian xyz blending
-			spl = UnivariateSpline(np.hstack((sampled_lam[i][-2:],sampled_lam[i+1][:2])),np.hstack((sampled_path[i][-2:,j],sampled_path[i+1][:2,j])),k=3)
+			spl = UnivariateSpline(np.hstack((sampled_lam[i][-2:],sampled_lam[i+1][:3])),np.hstack((sampled_path[i][-2:,j],sampled_path[i+1][:3,j])),k=4)
 			sampled_path_car_blended[i,:,j]=spl(lam_sampled_temp_blended)
 		#cartesian ori blending
 		start_R=sampled_path_R[i][-2]
@@ -153,10 +154,10 @@ def blend_cs(q,curve,breakpoints,lam,primitives,robot):
 	q_blended=np.array(q_blended)
 	lam_blended=np.array(lam_blended)
 
-	print(q_blended.shape,lam_blended.shape)
+	# print(q_blended.shape,lam_blended.shape)
 	return lam_blended,q_blended
 
-def blend_js_from_primitive(q,curve,breakpoints,lam,primitives,robot):
+def blend_js_from_primitive(q,curve,breakpoints,lam,primitives,robot,N=10):
 	###blending in joint space with known primitives
 	#q:				joint configuration at each breakpoints
 	#curve:			cartesian coordinates of full curve 50,000
@@ -164,10 +165,11 @@ def blend_js_from_primitive(q,curve,breakpoints,lam,primitives,robot):
 	#lam: 			path length
 	#primitives:	primitive choices, L,C,J
 	#robot:			robot kin tool def
+	#N:				number of sample points
 	##return
 	#lam_blended:	lambda at returned points
 	#q_blended: 	blended trajectory, N=10 points at each segments, 10 points within each blending
-	N=10
+	
 	blending_radius=10
 	act_breakpoints=copy.deepcopy(breakpoints)
 	act_breakpoints[1:]=act_breakpoints[1:]-1
@@ -202,7 +204,7 @@ def blend_js_from_primitive(q,curve,breakpoints,lam,primitives,robot):
 			seg_sample=np.vstack(((-a1*lam_sampled_temp-c1)/b1,(-a2*lam_sampled_temp-c2)/b2,(-a3*lam_sampled_temp-c3)/b3)).T
 	
 		elif 'movec' in primitives[i]:
-			arc=arc_from_3point(start_pose.p,end_pose.p,curve[int((breakpoints[i+1]-breakpoints[i])/2)],1000)
+			arc=arc_from_3point(start_pose.p,end_pose.p,curve[int((breakpoints[i+1]+breakpoints[i])/2)],1000)
 			idx=len(arc)*(lam_sampled_temp-lam[act_breakpoints[i]])/seg_length
 			if idx[-1]==len(arc):
 				idx[-1]=len(arc)-1
@@ -260,9 +262,9 @@ def blend_js_from_primitive(q,curve,breakpoints,lam,primitives,robot):
 		lam_sampled_temp_blended=np.linspace(sampled_lam[i][-1],sampled_lam[i+1][0],N+2)[1:-1]
 		sampled_lam_blended.append(lam_sampled_temp_blended)
 		for j in range(len(q[0])):
-			spl = UnivariateSpline(np.hstack((sampled_lam[i][-2:],sampled_lam[i+1][:2])),np.hstack((sampled_path_q[i][-2:,j],sampled_path_q[i+1][:2,j])),k=3)
+			spl = UnivariateSpline(np.hstack((sampled_lam[i][-2:],sampled_lam[i+1][:3])),np.hstack((sampled_path_q[i][-2:,j],sampled_path_q[i+1][:3,j])),k=4)
 			sampled_path_q_blended[i,:,j]=spl(lam_sampled_temp_blended)
-			# poly = np.polyfit(np.hstack((sampled_lam[i][-2:],sampled_lam[i+1][:2])),np.hstack((sampled_path_q[i][-2:,j],sampled_path_q[i+1][:2,j])),deg=10)
+			# poly = np.polyfit(np.hstack((sampled_lam[i][-4:],sampled_lam[i+1][:4])),np.hstack((sampled_path_q[i][-4:,j],sampled_path_q[i+1][:4,j])),deg=30)
 			# sampled_path_q_blended[i,:,j]=np.poly1d(poly)(lam_sampled_temp_blended)
 
 
@@ -525,7 +527,7 @@ def test_blending_with_primitives():
 	primitives=data['primitives'].tolist()[1:]
 
 	col_names=['J1', 'J2','J3', 'J4', 'J5', 'J6'] 
-	data=read_csv(data_dir+'curve_fit_js.csv',names=col_names)
+	data=read_csv(data_dir+'all_theta_opt_js.csv',names=col_names)
 	q1=data['J1'].tolist()
 	q2=data['J2'].tolist()
 	q3=data['J3'].tolist()
@@ -580,7 +582,7 @@ def test_blending_with_primitives():
 
 	act_breakpoints=breakpoints
 	act_breakpoints[1:]=act_breakpoints[1:]-1
-	lam_blended,q_blended=blend_cs(curve_js[act_breakpoints],curve,breakpoints,lam,primitives,robot)
+	lam_blended,q_blended=blend_js_from_primitive(curve_js[act_breakpoints],curve,breakpoints,lam,primitives,robot)
 	lamdot_blended=calc_lamdot(q_blended,lam_blended,robot,1)
 	lamdot_act=calc_lamdot(curve_js_act,lam_act,robot,1)
 

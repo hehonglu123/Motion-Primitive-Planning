@@ -90,7 +90,7 @@ class MotionSend(object):
                 mp.MoveC(robt1,robt2,speed,zone)
 
             else: # movej_fit
-                jointt = self.moveJ_target(points[i])
+                jointt = self.moveJ_target(breakpoints_js[i])
                 if i==0:
                     mp.MoveAbsJ(jointt,v500,fine)
                     mp.WaitTime(1)

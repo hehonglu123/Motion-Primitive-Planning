@@ -8,7 +8,7 @@ from abb_motion_program_exec_client import *
 from robots_def import *
 from lambda_calc import *
 
-data_dir='fitting_output_new/threshold0.1/'
+data_dir='fitting_output_new/all_theta_opt_blended/'
 
 # col_names=['J1', 'J2','J3', 'J4', 'J5', 'J6'] 
 # data=read_csv(data_dir+'curve_fit_js.csv',names=col_names)
@@ -22,7 +22,7 @@ data_dir='fitting_output_new/threshold0.1/'
 
 
 col_names=['timestamp', 'cmd_num', 'J1', 'J2','J3', 'J4', 'J5', 'J6'] 
-data=read_csv(data_dir+'curve_exe_v1000_z10.csv',names=col_names)
+data=read_csv(data_dir+'curve_exe_vmax_z10.csv',names=col_names)
 q1=data['J1'].tolist()[1:]
 q2=data['J2'].tolist()[1:]
 q3=data['J3'].tolist()[1:]

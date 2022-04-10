@@ -188,8 +188,8 @@ def main():
 	# print(curve)
 
 	col_names=['q1', 'q2', 'q3','q4', 'q5', 'q6'] 
-	# data = read_csv("../data/from_ge/Curve_js2.csv", names=col_names)
-	data = read_csv("../constraint_solver/single_arm/trajectory/all_theta_opt/all_theta_opt_js.csv", names=col_names)
+	data = read_csv("../data/from_ge/Curve_js2.csv", names=col_names)
+	# data = read_csv("../constraint_solver/single_arm/trajectory/all_theta_opt/all_theta_opt_js.csv", names=col_names)
 	curve_q1=data['q1'].tolist()
 	curve_q2=data['q2'].tolist()
 	curve_q3=data['q3'].tolist()
@@ -197,7 +197,7 @@ def main():
 	curve_q5=data['q5'].tolist()
 	curve_q6=data['q6'].tolist()
 	curve_js=np.vstack((curve_q1, curve_q2, curve_q3,curve_q4,curve_q5,curve_q6)).T
-	lam=calc_lam(curve)
+	lam=calc_lam_cs(curve)
 	robot=abb6640(d=50)
 	step=1000
 	lam_dot=calc_lamdot(curve_js,lam,robot,step)
