@@ -22,7 +22,7 @@ def unit_vector(a,b):
     return (b-a)/norm(b-a)
 
 class ZoneFit(object):
-    def __init__(self,joint_angles,move_start,move_mid,move_end,zone) -> None:
+    def __init__(self,joint_angles,move_start,move_mid,move_end,zone,vel,stamps) -> None:
         
         # define traj
         self.joint_angles = joint_angles
@@ -48,9 +48,13 @@ class ZoneFit(object):
 
             if np.linalg.norm(T.p-move_mid) <= zone and (self.zone_start_i is None):
                 self.zone_start_i = i
+                self.zone_start_t = stamps[i-1]+(np.linalg.norm(self.traj_T[i-1].p-move_mid)-zone)/vel
             if np.linalg.norm(T.p-move_mid) > zone and (self.zone_start_i is not None) and (self.zone_end_i is None):
                 self.zone_end_i = i
+                self.zone_end_t = stamps[i]-(np.linalg.norm(self.traj_T[i].p-move_mid)-zone)/vel
         
+        
+
         # transformation for fitting curves
         x_axis = unit_vector(self.zone_start_p,self.zone_end_p)
         z_axis = np.cross(x_axis,unit_vector(self.zone_start_p,self.move_mid))
@@ -204,14 +208,16 @@ class ZoneFit(object):
         # find the quintic (there's 2 DoF in finding the quintic)
         # use qp
         A=np.array([[0,0,0,0,0,1],[x_zed_t**5,x_zed_t**4,x_zed_t**3,x_zed_t**2,x_zed_t,1],\
-                    [0,0,0,0,1,0],[5*x_zed_t**4,4*x_zed_t**3,3*x_zed_t**2,2*x_zed_t,1,0]])
-        b=np.array([0,y_zed_t,y_md_t/x_md_t,(y_zed_t-y_md_t)/(x_zed_t-x_md_t)])
-        P = np.array([traj_x_zone_t**5,traj_x_zone_t**4,traj_x_zone_t**3,traj_x_zone_t**2,\
-            traj_x_zone_t**1,np.ones(len(traj_x_zone_t))])
-        q = -np.matmul(traj_y_zone_t,P.T)
-        P = np.matmul(P,P.T)
-        param = solve_qp(P,q,None,None,A,b)
+                    [0,0,0,0,1,0],[5*x_zed_t**4,4*x_zed_t**3,3*x_zed_t**2,2*x_zed_t,1,0],\
+                    [0,0,0,1,0,0],[20*x_zed_t**3,12*x_zed_t**2,6*x_zed_t,2,0,0]])
+        b=np.array([0,y_zed_t,y_md_t/x_md_t,(y_zed_t-y_md_t)/(x_zed_t-x_md_t),0,0])
+        # P = np.array([traj_x_zone_t**5,traj_x_zone_t**4,traj_x_zone_t**3,traj_x_zone_t**2,\
+        #     traj_x_zone_t**1,np.ones(len(traj_x_zone_t))])
+        # q = -np.matmul(traj_y_zone_t,P.T)
+        # P = np.matmul(P,P.T)
+        # param = solve_qp(P,q,None,None,A,b)
         # print(param)
+        param = np.matmul(np.linalg.pinv(A),b)
 
         # calculate y least square loss (fitting loss)
         y_loss = np.sqrt(np.average((np.polyval(param,traj_x_zone_t)-traj_y_zone_t)**2))
@@ -586,6 +592,10 @@ def main():
         param_quintic_[angels[2]] = np.zeros((x_divided,y_divided))
         param_quintic.append(param_quintic_)
 
+    # time
+    zone_duration_90 = []
+    zone_duration_120 = []
+    zone_duration_150 = []
 
     # where to start
     start_xi = 0
@@ -607,29 +617,37 @@ def main():
                 curve_q5=data['q5'].tolist()
                 curve_q6=data['q6'].tolist()
                 joint_angles=np.deg2rad(np.vstack((curve_q1, curve_q2, curve_q3,curve_q4,curve_q5,curve_q6)).T)
+                stamps = data['timestamp'].tolist()
 
                 px = start_p[0]+step_x*pxi
                 py = start_p[1]+step_y*pyi
-                # move_start = [px-side_l*cos(radians(ang/2)),py+side_l*sin(radians(ang/2)),start_p[2]]
-                # move_end = [px-side_l*cos(radians(ang/2)),py-side_l*sin(radians(ang/2)),start_p[2]]
-                move_start = [px,py+side_l*sin(radians(ang/2)),start_p[2]-side_l*cos(radians(ang/2))]
-                move_end = [px,py-side_l*sin(radians(ang/2)),start_p[2]-side_l*cos(radians(ang/2))]
+                move_start = [px-side_l*cos(radians(ang/2)),py+side_l*sin(radians(ang/2)),start_p[2]]
+                move_end = [px-side_l*cos(radians(ang/2)),py-side_l*sin(radians(ang/2)),start_p[2]]
+                # move_start = [px,py+side_l*sin(radians(ang/2)),start_p[2]-side_l*cos(radians(ang/2))]
+                # move_end = [px,py-side_l*sin(radians(ang/2)),start_p[2]-side_l*cos(radians(ang/2))]
                 move_mid = [px,py,start_p[2]]
 
-                zone_fit = ZoneFit(joint_angles,move_start,move_mid,move_end,zone)
+                zone_fit = ZoneFit(joint_angles,move_start,move_mid,move_end,zone,vel,stamps)
+
+                if ang==90:
+                    zone_duration_90.append(zone_fit.zone_end_t-zone_fit.zone_start_t)
+                elif ang==120:
+                    zone_duration_120.append(zone_fit.zone_end_t-zone_fit.zone_start_t)
+                if ang==150:
+                    zone_duration_150.append(zone_fit.zone_end_t-zone_fit.zone_start_t)
 
                 print("Line fit")
                 d1_3d,d1_2d,d2_3d,d2_2d = zone_fit.L_fit_loss()
-                print("Parabola fit")
+                # print("Parabola fit")
                 param_para,loss_para,draw_x_para,draw_y_para,draw_z_para = zone_fit.parabola_fit()
-                save_folder=data_folder+'result/'+"log_"+str(vel)+"_"+"{:02d}".format(pxi)+"_"+"{:02d}".format(pyi)+"_"+\
-                            str(ang)+"_para_"
+                # save_folder=data_folder+'result/'+"log_"+str(vel)+"_"+"{:02d}".format(pxi)+"_"+"{:02d}".format(pyi)+"_"+\
+                #             str(ang)+"_para_"
                 # draw(move_start,move_mid,move_end,zone_fit,draw_x_para,draw_y_para,draw_z_para,save_folder)
                 print("Cubic fit")
                 param_cubi,loss_cubi,draw_x_cubi,draw_y_cubi,draw_z_cubi = zone_fit.cubic_fit()
                 save_folder=data_folder+'result/'+"log_"+str(vel)+"_"+"{:02d}".format(pxi)+"_"+"{:02d}".format(pyi)+"_"+\
                             str(ang)+"_cubi_"
-                draw(move_start,move_mid,move_end,zone_fit,draw_x_cubi,draw_y_cubi,draw_z_cubi,save_folder)
+                # draw(move_start,move_mid,move_end,zone_fit,draw_x_cubi,draw_y_cubi,draw_z_cubi,save_folder)
                 print("Quintic fit")
                 param_quin,loss_quin,draw_x_quin,draw_y_quin,draw_z_quin = zone_fit.quintic_fit()
                 save_folder=data_folder+'result/'+"log_"+str(vel)+"_"+"{:02d}".format(pxi)+"_"+"{:02d}".format(pyi)+"_"+\
@@ -639,7 +657,7 @@ def main():
                 # draw compare
                 save_folder=data_folder+'result/'+"log_"+str(vel)+"_"+"{:02d}".format(pxi)+"_"+"{:02d}".format(pyi)+"_"+\
                             str(ang)+"_"
-                draw_L(move_start,move_mid,move_end,zone_fit,draw_x_quin,draw_y_quin,draw_z_quin,save_folder)
+                # draw_L(move_start,move_mid,move_end,zone_fit,draw_x_quin,draw_y_quin,draw_z_quin,save_folder)
                 draw_all_curve(zone_fit,draw_x_para,draw_y_para,draw_z_para,\
                                         draw_x_cubi,draw_y_cubi,draw_z_cubi,\
                                         draw_x_quin,draw_y_quin,draw_z_quin,save_folder)
@@ -733,6 +751,13 @@ def main():
             plt.clf()
 
         # plt.show()
+    
+    with open('zone_duration_90.npy','wb') as f:
+        np.save(f,np.array(zone_duration_90))
+    with open('zone_duration_120.npy','wb') as f:
+        np.save(f,np.array(zone_duration_120))
+    with open('zone_duration_150.npy','wb') as f:
+        np.save(f,np.array(zone_duration_150))
 
 if __name__ == '__main__':
     main()
