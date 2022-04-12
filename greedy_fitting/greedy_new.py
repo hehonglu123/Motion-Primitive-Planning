@@ -38,7 +38,7 @@ class greedy_fit(fitting_toolbox):
 	def movec_fit_greedy(self,curve,curve_js,curve_R):
 		return self.movec_fit(curve,curve_js,curve_R,self.curve_fit[-1] if len(self.curve_fit)>0 else [],self.curve_fit_R[-1] if len(self.curve_fit_R)>0 else [])
 
-	def fit_under_error(self,max_error_threshold,max_ori_threshold=np.radians(5)):
+	def fit_under_error(self,max_error_threshold,max_ori_threshold=np.radians(3)):
 
 		###initialize
 		self.breakpoints=[0]
@@ -78,7 +78,7 @@ class greedy_fit(fitting_toolbox):
 
 			###bisection search self.breakpoints
 			while True:
-				print('index: ',self.breakpoints[-1]+next_point,'max_error: ',max_errors[min(max_errors, key=max_errors.get)])
+				print('index: ',self.breakpoints[-1]+next_point,'max error: ',max_errors[min(max_errors, key=max_errors.get)],'max ori error (deg): ',np.degrees(max_ori_errors[min(max_ori_errors, key=max_ori_errors.get)]))
 				###bp going backward to meet threshold
 				if min(list(max_errors.values()))>max_error_threshold or min(list(max_ori_errors.values()))>max_ori_threshold:
 					prev_point_temp=next_point

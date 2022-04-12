@@ -5,15 +5,14 @@ from toolbox_circular_fit import *
 
 
 class fitting_toolbox(object):
-	def __init__(self,robot,curve,curve_normal,curve_js,d=50, orientation_weight=50):
+	def __init__(self,robot,curve,curve_js,orientation_weight=50):
 		###robot: robot class
 		###curve: xyz position points
 		###curve_js: points in joint space
 		###d: standoff distance
 		self.curve=curve
-		self.curve_normal=curve_normal
 		self.curve_js=curve_js
-		self.d=d
+
 
 		self.orientation_weight=orientation_weight
 
@@ -23,6 +22,8 @@ class fitting_toolbox(object):
 		self.curve_R=[]
 		for i in range(len(curve_js)):
 			self.curve_R.append(self.robot.fwd(curve_js[i]).R)
+
+		self.curve_R=np.array(self.curve_R)
 
 		###seed initial js for inv
 		self.q_prev=curve_js[0]
@@ -214,7 +215,7 @@ class fitting_toolbox(object):
 		curve_fit_R=np.array(curve_fit_R)
 		ori_error=[]
 		for i in range(len(curve)):
-			ori_error.append(get_angle(curve_R[:,-1],curve_fit_R[:,-1]))
+			ori_error.append(get_angle(curve_R[i,:,-1],curve_fit_R[i,:,-1]))
 		
 		return curve_fit,curve_fit_R,[],np.max(error), np.max(ori_error)
 		
@@ -247,7 +248,7 @@ class fitting_toolbox(object):
 		curve_fit_R=np.array(curve_fit_R)
 		ori_error=[]
 		for i in range(len(curve)):
-			ori_error.append(get_angle(curve_R[:,-1],curve_fit_R[:,-1]))
+			ori_error.append(get_angle(curve_R[i,:,-1],curve_fit_R[i,:,-1]))
 		
 		return curve_fit,curve_fit_R,curve_fit_js,np.max(error), np.max(ori_error)
 
@@ -267,7 +268,7 @@ class fitting_toolbox(object):
 		curve_fit_R=np.array(curve_fit_R)
 		ori_error=[]
 		for i in range(len(curve)):
-			ori_error.append(get_angle(curve_R[:,-1],curve_fit_R[:,-1]))
+			ori_error.append(get_angle(curve_R[i,:,-1],curve_fit_R[i,:,-1]))
 
 		return curve_fit,curve_fit_R,[],np.max(error), np.max(ori_error)
 
