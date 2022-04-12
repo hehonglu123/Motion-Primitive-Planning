@@ -45,7 +45,7 @@ EPS_DECAY = 10
 TAU_START = 10
 TAU_END = 0.01
 MAX_TAU_EPISODE = 0.6
-LEARNING_RATE = 0.001
+LEARNING_RATE = 0.01
 LEARNING_FREQ = 4
 GAMMA = 0.99
 BATCH_SIZE = 16
@@ -196,27 +196,16 @@ class DQN(nn.Module):
     def __init__(self, input_dim, output_dim):
         super(DQN, self).__init__()
 
-        self.conv1 = nn.Conv1d(in_channels=3, out_channels=8, kernel_size=5, stride=2)
-        self.conv2 = nn.Conv1d(in_channels=8, out_channels=16, kernel_size=5, stride=2)
-        self.conv3 = nn.Conv1d(in_channels=16, out_channels=32, kernel_size=3, stride=1, dilation=3)
-        # self.conv4 = nn.Conv1d(in_channels=32, out_channels=64, kernel_size=3, stride=1, dilation=3)
-        self.linear1 = nn.Linear(864, 512)
+        self.linear1 = nn.Linear(3000, 512)
         self.linear2 = nn.Linear(512, 256)
         self.linear3 = nn.Linear(256, 128)
-        self.linear4 = nn.Linear(128, 128)
-        self.output = nn.Linear(128, output_dim)
+        self.linear4 = nn.Linear(128, 64)
+        self.output = nn.Linear(64, output_dim)
 
         self.relu = nn.ReLU()
-        self.pooling = nn.MaxPool1d(2, 2)
 
     def forward(self, x):
-        x = self.relu(self.conv1(x))
-        x = self.pooling(x)
-        x = self.relu(self.conv2(x))
-        x = self.pooling(x)
-        x = self.relu(self.conv3(x))
-        x = self.pooling(x)
-        # x = self.relu(self.conv4(x))
+
         x = torch.flatten(x, 1)
         x = self.relu(self.linear1(x))
         x = self.relu(self.linear2(x))
@@ -234,7 +223,7 @@ class RL_Agent(object):
         self.output_dim = n_action * 2
         self.n_curve_feature = n_curve_feature
         self.n_action = n_action
-        self.lr = 0.001
+        self.lr = LEARNING_RATE
         self.gamma = GAMMA
         self.memory = ReplayMemory()
         self.batch_size = BATCH_SIZE
