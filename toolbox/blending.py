@@ -441,10 +441,11 @@ def main():
 
 def main2():
 
-	data_dir='../simulation/robotstudio_sim/scripts/fitting_output_new/all_theta_opt_blended/'
+	data_dir='../simulation/robotstudio_sim/scripts/fitting_output_new/threshold0.5/'
 
 	data = read_csv(data_dir+'command.csv')
 	breakpoints=np.array(data['breakpoints'].tolist())
+	primitives=data['primitives'].tolist()[1:]
 
 	col_names=['J1', 'J2','J3', 'J4', 'J5', 'J6'] 
 	data=read_csv(data_dir+'curve_fit_js.csv',names=col_names)
@@ -455,6 +456,12 @@ def main2():
 	q5=data['J5'].tolist()
 	q6=data['J6'].tolist()
 	curve_js=np.vstack((q1,q2,q3,q4,q5,q6)).T.astype(float)
+
+	data = read_csv(data_dir+'curve_fit.csv')
+	curve_x=data['x'].tolist()
+	curve_y=data['y'].tolist()
+	curve_z=data['z'].tolist()
+	curve=np.vstack((curve_x, curve_y, curve_z)).T
 
 	col_names=['timestamp', 'cmd_num', 'J1', 'J2','J3', 'J4', 'J5', 'J6'] 
 	data=read_csv(data_dir+'curve_exe_vmax_z10.csv',names=col_names)
@@ -496,22 +503,15 @@ def main2():
 
 	act_breakpoints=breakpoints
 	act_breakpoints[1:]=act_breakpoints[1:]-1
-	curve_blend_js,dqdlam_list,spl_list,merged_idx=blend_js2(curve_js[act_breakpoints],breakpoints,lam)
-
-
-	lamdot_blended=calc_lamdot(curve_blend_js,lam,robot,1)
+	lam_blended,q_blended=blend_js_from_primitive(curve_js[act_breakpoints],curve,breakpoints,lam,primitives,robot)
+	lamdot_blended=calc_lamdot(q_blended,lam_blended,robot,1)
 	lamdot_act=calc_lamdot(curve_js_act,lam_act,robot,1)
-	dlam_max1,dlam_max2=est_lamdot(dqdlam_list,breakpoints,lam,spl_list,merged_idx,robot)
-	lam_movej_seg_idx=(lam[breakpoints[:-1]]+lam[breakpoints[1:]])/2
-	lam_est=np.hstack((lam_movej_seg_idx,lam[breakpoints[1:-1]]))
 
-	lam_est, lamdot_est = zip(*sorted(zip(lam_est, np.hstack((dlam_max1,dlam_max2)))))
 
-	plt.plot(lam[1:],lamdot_fit, label='Fitting')
-	# plt.plot(lam[1:],lamdot_blended, label='Blended Estimated')
-	plt.plot(lam_est,lamdot_est, label='Blended Estimated')
+	plt.plot(lam,lamdot_fit, label='Fitting')
+	plt.plot(lam_blended,lamdot_blended, label='Blended')
 	plt.plot(lam_act[1:],act_speed, label='Actual Speed')
-	plt.ylim(0,2100)
+	# plt.ylim(0,2100)
 	plt.title("speed vs lambda")
 	plt.ylabel('speed (mm/s)')
 	plt.xlabel('lambda (mm)')
@@ -587,8 +587,8 @@ def test_blending_with_primitives():
 	lamdot_act=calc_lamdot(curve_js_act,lam_act,robot,1)
 
 
-	plt.plot(lam[1:],lamdot_fit, label='Fitting')
-	plt.plot(lam_blended[1:],lamdot_blended, label='Blended')
+	plt.plot(lam,lamdot_fit, label='Fitting')
+	plt.plot(lam_blended,lamdot_blended, label='Blended')
 	plt.plot(lam_act[1:],act_speed, label='Actual Speed')
 	# plt.ylim(0,2100)
 	plt.title("speed vs lambda")
@@ -598,4 +598,4 @@ def test_blending_with_primitives():
 	plt.show()
 
 if __name__ == '__main__':
-	test_blending_with_primitives()
+	main2()

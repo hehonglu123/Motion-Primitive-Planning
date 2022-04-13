@@ -16,8 +16,8 @@ from error_check import *
 #####################3d curve-fitting with MoveL, MoveJ, MoveC; stepwise incremental bi-section searched self.breakpoints###############################
 
 class greedy_fit(fitting_toolbox):
-	def __init__(self,robot,curve,curve_normal,curve_js,d=50, orientation_weight=50):
-		super().__init__(robot,curve,curve_normal,curve_js,d,orientation_weight)
+	def __init__(self,robot,curve_js, orientation_weight=50):
+		super().__init__(robot,curve_js,orientation_weight)
 		self.slope_constraint=np.radians(180)
 		self.break_early=False
 		###initial primitive candidates
@@ -205,23 +205,12 @@ class greedy_fit(fitting_toolbox):
 
 def main():
 	###read in points
-	col_names=['X', 'Y', 'Z','direction_x', 'direction_y', 'direction_z'] 
-	data = read_csv("../data/from_ge/Curve_in_base_frame2.csv", names=col_names)
-	# data = read_csv("../constraint_solver/single_arm/trajectory/curve_pose_opt/curve_pose_opt_cs.csv", names=col_names)
-	curve_x=data['X'].tolist()
-	curve_y=data['Y'].tolist()
-	curve_z=data['Z'].tolist()
-	curve_direction_x=data['direction_x'].tolist()
-	curve_direction_y=data['direction_y'].tolist()
-	curve_direction_z=data['direction_z'].tolist()
-	curve=np.vstack((curve_x, curve_y, curve_z)).T
-	curve_normal=np.vstack((curve_direction_x, curve_direction_y, curve_direction_z)).T
-
 	col_names=['q1', 'q2', 'q3','q4', 'q5', 'q6'] 
 	# data = read_csv("../data/from_ge/Curve_js2.csv", names=col_names)
+	data = read_csv("../data/from_ge/q50000.csv", names=col_names)
 	# data = read_csv("../data/from_Jon/qbestcurve_new.csv", names=col_names)
 	# data = read_csv("../constraint_solver/single_arm/trajectory/curve_pose_opt/curve_pose_opt_js.csv", names=col_names)
-	data = read_csv("../constraint_solver/single_arm/trajectory/all_theta_opt_blended/all_theta_opt_js.csv", names=col_names)
+	# data = read_csv("../constraint_solver/single_arm/trajectory/all_theta_opt_blended/all_theta_opt_js.csv", names=col_names)
 	# data = read_csv("../constraint_solver/single_arm/trajectory/init_opt/init_opt_js.csv", names=col_names)
 	curve_q1=data['q1'].tolist()
 	curve_q2=data['q2'].tolist()
@@ -233,17 +222,17 @@ def main():
 
 	robot=abb6640(d=50)
 
-	greedy_fit_obj=greedy_fit(robot,curve,curve_normal,curve_js,d=50,orientation_weight=1)
+	greedy_fit_obj=greedy_fit(robot,curve_js,orientation_weight=1)
 
 
 	###set primitive choices, defaults are all 3
 	# greedy_fit_obj.primitives={'movel_fit':greedy_fit_obj.movel_fit_greedy,'movec_fit':greedy_fit_obj.movec_fit_greedy}
 
 	# greedy_fit_obj.primitives={'movel_fit':greedy_fit_obj.movel_fit_greedy}
-	# greedy_fit_obj.primitives={'movej_fit':greedy_fit_obj.movej_fit_greedy}
+	greedy_fit_obj.primitives={'movej_fit':greedy_fit_obj.movej_fit_greedy}
 	# greedy_fit_obj.primitives={'movec_fit':greedy_fit_obj.movec_fit_greedy}
 
-	breakpoints,primitives_choices,points=greedy_fit_obj.fit_under_error(0.5)
+	breakpoints,primitives_choices,points=greedy_fit_obj.fit_under_error(0.1)
 	# breakpoints,primitives_choices,points=greedy_fit_obj.smooth_slope(greedy_fit_obj.curve_fit,greedy_fit_obj.curve_fit_R,breakpoints,primitives_choices,points)
 
 	###plt

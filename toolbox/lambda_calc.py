@@ -18,11 +18,11 @@ def calc_lam_js(curve_js,robot):
 
 def calc_lam_cs(curve):
 	###find path length
-	lam=[0]
-	for i in range(len(curve)-1):
-		lam.append(lam[-1]+np.linalg.norm(curve[i+1]-curve[i]))
+	temp=np.diff(curve,axis=0)
+	temp=np.linalg.norm(temp,axis=1)
+	lam=np.insert(np.cumsum(temp),0,0)
 
-	return np.array(lam)
+	return lam
 
 def calc_lamdot(curve_js,lam,robot,step):
 	############find maximum lambda dot vs lambda
@@ -31,22 +31,35 @@ def calc_lamdot(curve_js,lam,robot,step):
 	###robot: joint velocity & acc limit 
 	###step: step size used for dense curve
 
-	dlam_max1=[]
-	dlam_max2=[]
+	# dlam_max1=[]
+	# dlam_max2=[]
 
-	dqdlam=[]
-	d2qdlam2=[]
+	# dqdlam=[]
+	# d2qdlam2=[]
 
-	for i in range(0,len(lam)-step,step):
-		dq=curve_js[i+step]-curve_js[i]
-		dqdlam.append(dq/(lam[i+step]-lam[i]))
+	# for i in range(0,len(lam)-step,step):
+	# 	dq=curve_js[i+step]-curve_js[i]
+	# 	dqdlam.append(dq/(lam[i+step]-lam[i]))
 
-		dlam_max1.append(np.min(np.divide(robot.joint_vel_limit,np.abs(dqdlam[-1]))))
-		if i>0:
-			d2qdlam2.append(2*(dqdlam[-1]-dqdlam[-2])/(lam[i+step]-lam[i-step]))
-			dlam_max2.append(np.sqrt(np.min(np.divide(robot.joint_acc_limit,np.abs(d2qdlam2[-1])))))
+	# 	dlam_max1.append(np.min(np.divide(robot.joint_vel_limit,np.abs(dqdlam[-1]))))
+	# 	if i>0:
+	# 		d2qdlam2.append(2*(dqdlam[-1]-dqdlam[-2])/(lam[i+step]-lam[i-step]))
+	# 		dlam_max2.append(np.sqrt(np.min(np.divide(robot.joint_acc_limit,np.abs(d2qdlam2[-1])))))
 
-	dlam_max_act=np.minimum(np.array(dlam_max1),np.insert(dlam_max2,0,99999))
+	# dlam_max_act=np.minimum(np.array(dlam_max1),np.insert(dlam_max2,0,99999))
+
+	curve_js=curve_js[::step]
+	lam=lam[::step]
+	dq=np.gradient(curve_js,axis=0)
+	dlam=np.gradient(lam)
+	dqdlam=np.divide(dq.T,dlam).T
+
+	d2qdlam2=np.divide(np.gradient(dqdlam,axis=0).T,dlam).T
+
+	dlam_max1=np.min(np.divide(robot.joint_vel_limit,np.abs(dqdlam)),axis=1)
+	dlam_max2=np.sqrt(np.min(np.divide(robot.joint_acc_limit,np.abs(d2qdlam2)),axis=1))
+
+	dlam_max_act=np.minimum(dlam_max1,dlam_max2)
 
 	return dlam_max_act
 
@@ -201,7 +214,7 @@ def main():
 	robot=abb6640(d=50)
 	step=1000
 	lam_dot=calc_lamdot(curve_js,lam,robot,step)
-	plt.plot(lam[::step][1:],lam_dot)
+	plt.plot(lam[::step],lam_dot)
 	plt.xlabel('path length (mm)')
 	plt.ylabel('max lambda_dot')
 	plt.title('lambda_dot vs lambda')

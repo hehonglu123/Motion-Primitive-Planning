@@ -9,7 +9,7 @@ from robots_def import *
 from lambda_calc import *
 
 # data_dir='fitting_output_new/Jon/'
-data_dir="fitting_output_new/all_theta_opt_blended/"
+data_dir="fitting_output_new/matlab/"
 robot=abb6640(d=50)
 
 # col_names=['J1', 'J2','J3', 'J4', 'J5', 'J6'] 
@@ -117,9 +117,9 @@ for i in range(len(curve_exe_js)):
 
 # plt.plot(lam_opt[1:],lamdot_opt, label='Optimization')
 
-plt.plot(lam_fit[1:],lamdot_fit, label='Fitting')
+plt.plot(lam_fit,lamdot_fit, label='Fitting')
 
-plt.plot(lam_act[1:],lamdot_act, label='Actual Joints')
+plt.plot(lam_act,lamdot_act, label='Recorded Joints')
 plt.plot(lam_speed[1:],act_speed, label='Actual speed')
 
 plt.title("speed vs lambda")

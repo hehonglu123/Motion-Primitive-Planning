@@ -5,12 +5,11 @@ from toolbox_circular_fit import *
 
 
 class fitting_toolbox(object):
-	def __init__(self,robot,curve,curve_js,orientation_weight=50):
+	def __init__(self,robot,curve_js,orientation_weight=50):
 		###robot: robot class
 		###curve: xyz position points
 		###curve_js: points in joint space
 		###d: standoff distance
-		self.curve=curve
 		self.curve_js=curve_js
 
 
@@ -20,10 +19,14 @@ class fitting_toolbox(object):
 
 		###get full orientation list
 		self.curve_R=[]
+		self.curve=[]
 		for i in range(len(curve_js)):
-			self.curve_R.append(self.robot.fwd(curve_js[i]).R)
+			pose_temp=self.robot.fwd(curve_js[i])
+			self.curve_R.append(pose_temp.R)
+			self.curve.append(pose_temp.p)
 
 		self.curve_R=np.array(self.curve_R)
+		self.curve=np.array(self.curve)
 
 		###seed initial js for inv
 		self.q_prev=curve_js[0]
@@ -33,12 +36,6 @@ class fitting_toolbox(object):
 		self.curve_fit_js=[]
 		self.cartesian_slope_prev=None
 		self.js_slope_prev=None
-		
-	
-		###find path length
-		self.lam=[0]
-		for i in range(len(curve)-1):
-			self.lam.append(self.lam[-1]+np.linalg.norm(curve[i+1]-curve[i]))
 
 	def R2w(self, curve_R,R_constraint=[]):
 		if len(R_constraint)==0:

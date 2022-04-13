@@ -43,7 +43,7 @@ def main():
 	lowerer_limit=[-np.pi]
 	upper_limit=[np.pi]
 	bnds=tuple(zip(lowerer_limit,upper_limit))*len(opt.curve)
-	bnds=tuple(zip([0],[2]))+bnds
+	bnds=tuple(zip([0],[8]))+bnds
 
 	###diff evolution
 	res = differential_evolution(opt.single_arm_global_opt_blended, bnds,workers=-1,
@@ -121,10 +121,10 @@ def main():
 	df.to_csv('trajectory/all_theta_opt_blended/all_theta_opt_js.csv',header=False,index=False)
 	####################################################################################################################
 
-	plt.plot(lam_blended[1:],dlam,label="lambda_dot_max")
+	plt.plot(lam_blended,dlam,label="lambda_dot_max")
 	plt.xlabel("lambda")
 	plt.ylabel("lambda_dot")
-	plt.ylim([500,2000])
+	plt.ylim([0,2000])
 	plt.title("max lambda_dot vs lambda (path index)")
 	plt.savefig("trajectory/all_theta_opt_blended/results.png")
 	plt.show()
