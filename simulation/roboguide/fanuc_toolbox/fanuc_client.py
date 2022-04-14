@@ -207,6 +207,7 @@ def main():
     tp.moveJ(jt1,100,'%',-1)
     tp.moveL(pt2,50,'mmsec',100)
     tp.moveC(pt3,pt1,50,'mmsec',-1)
+    tp.moveL(pt2,50,'mmsec',-1)
 
     client = FANUCClient()
     res = client.execute_motion_program(tp)
@@ -215,6 +216,12 @@ def main():
         f.write(res)
     
     print(res.decode('utf-8'))
+
+    tp = TPMotionProgram()
+    tp.moveL(pt1,50,'mmsec',100)
+    tp.moveL(pt2,50,'mmsec',-1)
+    client = FANUCClient()
+    res = client.execute_motion_program(tp)
 
 if __name__ == "__main__":
     main()
