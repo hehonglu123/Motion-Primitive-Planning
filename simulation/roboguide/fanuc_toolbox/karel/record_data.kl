@@ -63,7 +63,7 @@ BEGIN -- execute the program
     GET_TIME(timeInt)
     CNV_TIME_STR(timeInt, timeStr)
 
-    filename = 'UD1:'+'log'+'.csv'
+    filename = 'UD1:'+'log'+'.txt'
     
     entry = 0
     status = 0
