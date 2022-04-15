@@ -8,26 +8,26 @@ sys.path.append('../')
 from constraint_solver import *
 
 def main():
-	data = read_csv("../../simulation/robotstudio_sim/scripts/fitting_output_new/threshold0.5/curve_fit.csv")
-	curve_x=data['x'].tolist()
-	curve_y=data['y'].tolist()
-	curve_z=data['z'].tolist()
-	curve_direction_x=data['R3'].tolist()
-	curve_direction_y=data['R6'].tolist()
-	curve_direction_z=data['R9'].tolist()
-	curve=np.vstack((curve_x, curve_y, curve_z)).T
-	curve_normal=np.vstack((curve_direction_x, curve_direction_y, curve_direction_z)).T
-
-	# col_names=['X', 'Y', 'Z','direction_x', 'direction_y', 'direction_z'] 
-	# data = read_csv("../../data/from_ge/Curve_in_base_frame2.csv", names=col_names)
-	# curve_x=data['X'].tolist()
-	# curve_y=data['Y'].tolist()
-	# curve_z=data['Z'].tolist()
-	# curve_direction_x=data['direction_x'].tolist()
-	# curve_direction_y=data['direction_y'].tolist()
-	# curve_direction_z=data['direction_z'].tolist()
+	# data = read_csv("../../simulation/robotstudio_sim/scripts/fitting_output_new/threshold0.5/curve_fit.csv")
+	# curve_x=data['x'].tolist()
+	# curve_y=data['y'].tolist()
+	# curve_z=data['z'].tolist()
+	# curve_direction_x=data['R3'].tolist()
+	# curve_direction_y=data['R6'].tolist()
+	# curve_direction_z=data['R9'].tolist()
 	# curve=np.vstack((curve_x, curve_y, curve_z)).T
 	# curve_normal=np.vstack((curve_direction_x, curve_direction_y, curve_direction_z)).T
+
+	col_names=['X', 'Y', 'Z','direction_x', 'direction_y', 'direction_z'] 
+	data = read_csv("../../data/from_ge/Curve_in_base_frame2.csv", names=col_names)
+	curve_x=data['X'].tolist()
+	curve_y=data['Y'].tolist()
+	curve_z=data['Z'].tolist()
+	curve_direction_x=data['direction_x'].tolist()
+	curve_direction_y=data['direction_y'].tolist()
+	curve_direction_z=data['direction_z'].tolist()
+	curve=np.vstack((curve_x, curve_y, curve_z)).T
+	curve_normal=np.vstack((curve_direction_x, curve_direction_y, curve_direction_z)).T
 
 	curve=np.vstack((curve_x, curve_y, curve_z)).T
 

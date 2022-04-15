@@ -1,7 +1,7 @@
 import numpy as np
 import copy
 from general_robotics_toolbox import *
-
+from utils import *
 ###calculate distance between point to line
 def get_distance(p1,p2,p3):
 	return np.linalg.norm(np.cross(p2-p1, p1-p3))/np.linalg.norm(p2-p1)
@@ -30,6 +30,23 @@ def calc_max_error(fit,curve):
 		idx+=1
 
 	return max_error, max_error_idx
+
+def calc_max_error_w_normal(fit,curve,fit_normal,curve_normal):
+	max_error=0
+	max_error_angle=0
+	idx=0
+	max_error_idx=0
+	for i in range(len(fit)):
+		error,idx2=calc_error(fit[i],curve)
+		normal_angle=get_angle(fit_normal[i],curve_normal[idx2])
+		if error>max_error:
+			max_error_idx=idx
+			max_error=copy.deepcopy(error)
+		if normal_angle>max_error_angle:
+			max_error_angle=copy.deepcopy(normal_angle)
+		idx+=1
+
+	return max_error,max_error_angle, max_error_idx
 
 def calc_max_error_js(robot,fit_js,curve_js):
 	fit=[]

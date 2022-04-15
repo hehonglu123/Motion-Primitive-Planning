@@ -388,6 +388,58 @@ class lambda_opt(object):
 		return -lamdot_min	
 
 
+	def curve_pose_opt_blended(self,x):
+		###optimize on curve pose for single arm
+		####x: [pose_choice,blade k*theta, blade position, theta@breakpoints]
+		pose_choice=int(np.floor(x[0]))
+		blade_theta=np.linalg.norm(x[1:4])	###pose rotation angle
+		k=x[1:4]/blade_theta					###pose rotation axis
+		shift=x[4:7]					###pose translation
+		theta=x[7:]					###remaining DOF @breakpoints
+
+		R_curve=rot(k,blade_theta)
+		curve_new=np.dot(R_curve,self.curve.T).T+np.tile(shift,(len(self.curve),1))
+		curve_normal_new=np.dot(R_curve,self.curve_normal.T).T
+		curve_originial_new=np.dot(R_curve,self.curve_original.T).T+np.tile(shift,(len(self.curve_original),1))
+
+
+		for i in range(len(self.curve)):
+			if i==0:
+				R_temp=direction2R(curve_normal_new[0],-curve_originial_new[1]+curve_new[0])
+
+				R=np.dot(R_temp,Rz(theta[i]))
+				try:
+					q_out=[self.robot1.inv(curve_new[i],R)[pose_choice]]
+				except:
+					# traceback.print_exc()
+					return 999
+
+			else:
+				R_temp=direction2R(curve_normal_new[i],-curve_new[i]+curve_originial_new[self.act_breakpoints[i]-1])
+
+				R=np.dot(R_temp,Rz(theta[i]))
+				try:
+					###get closet config to previous one
+					q_inv_all=self.robot1.inv(curve_new[i],R)
+					temp_q=q_inv_all-q_out[-1]
+					order=np.argsort(np.linalg.norm(temp_q,axis=1))
+					q_out.append(q_inv_all[order[0]])
+				except:
+					# traceback.print_exc()
+					return 999
+
+		# curve_blend_js,dqdlam_list,spl_list,merged_idx=blend_js2(q_out,self.breakpoints,self.lam_original)
+		# lamdot_min=est_lamdot_min(dqdlam_list,self.breakpoints,self.lam_original,spl_list,merged_idx,self.robot1)
+		# lam_blended,q_blended=blend_cs(q_out,curve_originial_new,self.breakpoints,self.lam_original,self.primitives,self.robot1)
+		try:
+			lam_blended,q_blended=blend_js_from_primitive(q_out,curve_originial_new,self.breakpoints,self.lam_original,self.primitives,self.robot1)
+		except:
+			return 999
+		dlam=calc_lamdot(q_blended,lam_blended,self.robot1,1)
+		lamdot_min=min(dlam)
+		print(lamdot_min)
+		return -lamdot_min	
+
 
 	def calc_js_from_theta(self,theta,curve,curve_normal):
 		###solve inv given 6th dof constraint theta

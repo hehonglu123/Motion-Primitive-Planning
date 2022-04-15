@@ -142,11 +142,11 @@ def exe_from_file(ms,filename,breakpoints_js_filename,speed,zone):
 
 def main():
     ms = MotionSend()
-    data_dir="fitting_output_new/all_theta_opt_blended/"
+    data_dir="fitting_output_new/curve_pose_opt_blended/"
 
     vmax = speeddata(10000,9999999,9999999,999999)
-    v559 = speeddata(559,9999999,9999999,999999)
-    speed={"vmax":vmax}
+    v680 = speeddata(680,9999999,9999999,999999)
+    speed={"v680":v680}
     zone={"z10":z10}
 
     for s in speed:

@@ -60,3 +60,14 @@ def lineFromPoints(P, Q):
     b = P[0] - Q[0]
     c = -(a*(P[0]) + b*(P[1]))
     return a,b,c
+
+def extract_points(primitive_type,points):
+    if primitive_type=='movec_fit':
+        endpoints=points[8:-3].split('array')
+        endpoint1=endpoints[0][:-4].split(',')
+        endpoint2=endpoints[1][2:].split(',')
+
+        return list(map(float, endpoint1)),list(map(float, endpoint2))
+    else:
+        endpoint=points[8:-3].split(',')
+        return list(map(float, endpoint))
