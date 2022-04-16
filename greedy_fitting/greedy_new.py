@@ -207,7 +207,7 @@ def main():
 	###read in points
 	col_names=['q1', 'q2', 'q3','q4', 'q5', 'q6'] 
 	# data = read_csv("../data/from_ge/Curve_js2.csv", names=col_names)
-	data = read_csv("../data/from_ge/q50000.csv", names=col_names)
+	data = read_csv("../data/from_ge/qsol.csv", names=col_names)
 	# data = read_csv("../data/from_Jon/qbestcurve_new.csv", names=col_names)
 	# data = read_csv("../constraint_solver/single_arm/trajectory/curve_pose_opt/curve_pose_opt_js.csv", names=col_names)
 	# data = read_csv("../constraint_solver/single_arm/trajectory/all_theta_opt_blended/all_theta_opt_js.csv", names=col_names)
@@ -229,10 +229,10 @@ def main():
 	# greedy_fit_obj.primitives={'movel_fit':greedy_fit_obj.movel_fit_greedy,'movec_fit':greedy_fit_obj.movec_fit_greedy}
 
 	# greedy_fit_obj.primitives={'movel_fit':greedy_fit_obj.movel_fit_greedy}
-	greedy_fit_obj.primitives={'movej_fit':greedy_fit_obj.movej_fit_greedy}
+	# greedy_fit_obj.primitives={'movej_fit':greedy_fit_obj.movej_fit_greedy}
 	# greedy_fit_obj.primitives={'movec_fit':greedy_fit_obj.movec_fit_greedy}
 
-	breakpoints,primitives_choices,points=greedy_fit_obj.fit_under_error(0.1)
+	breakpoints,primitives_choices,points=greedy_fit_obj.fit_under_error(0.5)
 	# breakpoints,primitives_choices,points=greedy_fit_obj.smooth_slope(greedy_fit_obj.curve_fit,greedy_fit_obj.curve_fit_R,breakpoints,primitives_choices,points)
 
 	###plt

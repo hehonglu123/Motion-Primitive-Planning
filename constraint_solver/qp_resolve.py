@@ -16,7 +16,7 @@ def single_arm_stepwise_optimize(robot,q_init,lam,lamdot_des,curve,curve_normal)
 		lam_out=[0]
 		curve_out=[curve[0]]
 		curve_normal_out=[curve_normal[0]]
-		ts=0.1
+		ts=0.08
 		total_time=lam[-1]/lamdot_des
 		total_timestep=int(total_time/ts)
 		idx=0
@@ -132,7 +132,7 @@ def main():
 
 	lam=calc_lam_cs(curve)
 
-	lamdot_des=1000
+	lamdot_des=800
 
 	q_all,lam_out,curve_out,curve_normal_out,act_speed=single_arm_stepwise_optimize(robot,curve_js[0],lam,lamdot_des,curve,curve_normal)
 

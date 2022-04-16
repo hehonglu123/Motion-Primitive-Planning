@@ -18,7 +18,11 @@ data = read_csv("../../../data/from_ge/Curve_in_base_frame2.csv", names=col_name
 curve_x=data['X'].tolist()
 curve_y=data['Y'].tolist()
 curve_z=data['Z'].tolist()
+curve_normal_x=data['direction_x'].tolist()
+curve_normal_y=data['direction_y'].tolist()
+curve_normal_z=data['direction_z'].tolist()
 curve=np.vstack((curve_x, curve_y, curve_z)).T
+curve_normal=np.vstack((curve_normal_x,curve_normal_y,curve_normal_z)).T
 
 robot=abb6640(d=50)
 d=50
@@ -27,11 +31,12 @@ d=50
 # data_dir="fitting_output/threshold0.1/"
 # speed={"v50":v50,"v500":v500,"v5000":v5000}
 # zone={"fine":fine,"z1":z1,"z10":z10}
-data_dir="fitting_output_new/all_theta_opt_blended/"
-speed={"v600":v600}
-zone={"z10":z10}
+data_dir="fitting_output_new/matlab_qp/"
+speed=['vmax']
+zone=['z10']
 max_error={}
 max_error_idx={}
+max_ori_error={}
 jacobian_min_sing={}
 jacobian_min_sing_idx={}
 
@@ -70,7 +75,8 @@ for s in speed:
 				pass
 
 		curve_exe_R=np.array(curve_exe_R)
-		max_error[z,s],max_error_idx[z,s]=calc_max_error(curve_exe,curve)
+		max_error[z,s],max_ori_error[z,s],max_error_idx[z,s]=calc_max_error_w_normal(curve_exe,curve,curve_exe_R[:,:,-1],curve_normal)
+
 
 		jacobian_min_sing[z,s],jacobian_min_sing_idx[z,s]=find_j_min(robot,curve_exe_js)
 
@@ -79,7 +85,7 @@ for s in speed:
 		min_speed[z,s]=np.min(act_speed[np.nonzero(act_speed)])
 		max_speed[z,s]=np.max(act_speed)
 
-table_names={"max_error":max_error,"max_error_idx":max_error_idx,"total_time":total_time,"max_speed":max_speed,"min_speed":min_speed,\
+table_names={"max_error":max_error,"max_error_idx":max_error_idx,"max_ori_error":max_ori_error,"total_time":total_time,"max_speed":max_speed,"min_speed":min_speed,\
 			"jacobian_min_sing":jacobian_min_sing,"jacobian_min_sing_idx":jacobian_min_sing_idx}
 
 data_all=[]

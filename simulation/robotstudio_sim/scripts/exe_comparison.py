@@ -142,13 +142,13 @@ def exe_from_file(ms,filename,filename_js,speed,zone):
 
 def main():
     ms = MotionSend()
-    data_dir="fitting_output_new/threshold0.5/"
+    data_dir="fitting_output_new/matlab_qp/"
     # data_dir="fitting_output_new/Jon/"
     # speed={"v50":v50,"v500":v500,"v5000":v5000}
     # zone={"fine":fine,"z1":z1,"z10":z10}
     vmax = speeddata(10000,9999999,9999999,999999)
     v559 = speeddata(559,9999999,9999999,999999)
-    speed={"vmax":vmax,"v500":v500,"v300":v300,"v100":v100}
+    speed={"vmax":vmax}#,"v500":v500,"v300":v300,"v100":v100}
     zone={"z10":z10}
 
     for s in speed:
