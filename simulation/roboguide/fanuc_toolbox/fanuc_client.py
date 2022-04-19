@@ -7,7 +7,8 @@ import numpy as np
 from typing import NamedTuple
 import itertools
 from ftplib import FTP
-from urllib.request import urlopen    
+from urllib.request import urlopen   
+import os
 
 class pose(NamedTuple):
     trans: np.ndarray # [x,y,z]
@@ -149,7 +150,7 @@ class TPMotionProgram(object):
                 mo+='P['+str(t_num+1)+']{\n'
                 mo+='   GP'+str(target.group)+':\n'
                 mo+='   UF : '+str(target.uframe)+', UT : '+str(target.utool)+',\n'
-                mo+='   J1 = '+format(round(target.robax[0],3),'.3f')+' deg,  J2 = '+format(round(target.robax[1],3),'.3f')+' deg,  J3 = '+format(round(target.robax[2],3),'.3f')+' deg,\n'
+                mo+='   J1 = '+format(round(target.robax[0],3),'.3f')+' deg,  J2 = '+format(round(target.robax[1],3),'.3f')+' deg,  J3 = '+format(round(target.robax[2],3)-round(target.robax[1],3),'.3f')+' deg,\n'
                 mo+='   J4 = '+format(round(target.robax[3],3),'.3f')+' deg,  J5 = '+format(round(target.robax[4],3),'.3f')+' deg,  J6 = '+format(round(target.robax[5],3),'.3f')+' deg\n'
                 mo+='};\n'
             if type(target) == robtarget:
@@ -190,6 +191,11 @@ class FANUCClient(object):
 
         file_url='http://'+self.robot_ip+'/ud1/log.txt'
         res = urlopen(file_url)
+
+        if os.path.exists("TMP.LS"):
+            os.remove("TMP.LS")
+        else:
+            print("TMP.LS is deleted.")
 
         return res.read()
 
