@@ -31,9 +31,10 @@ Action = namedtuple("Action", ("Type", "Length", "Code"))
 Memory = namedtuple('Memory', ('state', 'action', 'reward', 'next_state', 'done'))
 primitive_type_code = {"L": 0, "C": 1, "J": 2}
 
-torch.manual_seed(1234)
-np.random.seed(1234)
-random.seed(1234)
+random_seed = 1234
+torch.manual_seed(random_seed)
+np.random.seed(random_seed)
+random.seed(random_seed)
 
 ERROR_THRESHOLD = 1.0
 MAX_GREEDY_STEP = 10
@@ -45,7 +46,7 @@ EPS_DECAY = 10
 TAU_START = 10
 TAU_END = 0.01
 MAX_TAU_EPISODE = 0.6
-LEARNING_RATE = 0.01
+LEARNING_RATE = 0.001
 LEARNING_FREQ = 4
 GAMMA = 0.99
 BATCH_SIZE = 16
@@ -102,19 +103,25 @@ def greedy_fit_primitive(last_bp, curve, p):
         target_curve = curve[last_bp:max(last_bp+1, int(search_point_c) + 1)]
         # print(len(target_curve), last_bp, search_point_c)
 
-        if len(target_curve) >= 3 and not stationary_c and pca_circular_check(target_curve):
-            primitive_c = Primitive(start=left_bp, end=right_bp, move_type='C')
-            # print("---", len(target_curve), last_bp, search_point_c, step_count)
-            curve_fit, max_error = primitive_c.curve_fit(target_curve, p=p)
-            if max_error <= ERROR_THRESHOLD:
-                if longest_fits['C'] is None or primitive_c > longest_fits['C'].primitive:
-                    longest_fits['C'] = Curve_Error(primitive_c, max_error)
-
-                search_left_c = search_point_c
-                search_point_c = np.floor(np.mean([search_point_c, search_right_c]))
-            else:
+        if len(target_curve) >= 3 and not stationary_c:
+            if not pca_circular_check(target_curve):
                 search_right_c = search_point_c
-                search_point_c = np.floor(np.mean([search_left_c, search_point_c]))
+                new_search_point_c = np.floor(np.mean([search_left_c, search_point_c]))
+            else:
+                primitive_c = Primitive(start=left_bp, end=right_bp, move_type='C')
+                # print("---", len(target_curve), last_bp, search_point_c, step_count)
+                curve_fit, max_error = primitive_c.curve_fit(target_curve, p=p)
+                if max_error <= ERROR_THRESHOLD:
+                    if longest_fits['C'] is None or primitive_c > longest_fits['C'].primitive:
+                        longest_fits['C'] = Curve_Error(primitive_c, max_error)
+
+                    search_left_c = search_point_c
+                    new_search_point_c = np.floor(np.mean([search_point_c, search_right_c]))
+                else:
+                    search_right_c = search_point_c
+                    new_search_point_c = np.floor(np.mean([search_left_c, search_point_c]))
+            stationary_c = new_search_point_c == search_point_c
+            search_point_c = new_search_point_c
 
         # moveL
         if not stationary_l:
@@ -129,10 +136,12 @@ def greedy_fit_primitive(last_bp, curve, p):
                     longest_fits['L'] = Curve_Error(primitive_l, max_error)
 
                 search_left_l = search_point_l
-                search_point_l = np.floor(np.mean([search_point_l, search_right_l]))
+                new_search_point_l = np.floor(np.mean([search_point_l, search_right_l]))
             else:
                 search_right_l = search_point_l
-                search_point_l = np.floor(np.mean([search_left_l, search_point_l]))
+                new_search_point_l = np.floor(np.mean([search_left_l, search_point_l]))
+            stationary_l = new_search_point_l == search_point_l
+            search_point_l = new_search_point_l
 
     longest_type = 'L'
     if longest_fits['L'] is None or (longest_fits['C'] is not None and
@@ -367,7 +376,7 @@ class RL_Env(object):
         primitive_end_index = int(np.ceil(len(next_primitive) * primitive_length))
         new_curve = next_primitive[0:primitive_end_index]
 
-        self.fit_curve = np.concatenate([self.fit_curve, new_curve[1:, :]], axis=0)
+        self.fit_curve = np.concatenate([self.fit_curve, new_curve], axis=0)
         self.last_bp = len(self.fit_curve)-1
         done = len(self.fit_curve) >= len(self.target_curve)
         reward = reward_function(i_step, done)
@@ -432,7 +441,7 @@ def train_rl(agent: RL_Agent, curve_base_data, curve_js_data, n_episode=10000):
         env = RL_Env(target_curve=curve_base, target_curve_normal=curve_normal, target_curve_js=curve_js,
                      n_feature=agent.n_curve_feature, feature_encoder=feature_encoder)
 
-        # print("Episode Start")
+        episode_memory = []
 
         state, done, valid_actions = env.reset()
 
@@ -447,8 +456,9 @@ def train_rl(agent: RL_Agent, curve_base_data, curve_js_data, n_episode=10000):
 
             next_state, reward, done, valid_actions = env.step(action, i_step)
 
-            agent.memory_save(state=state, action=action, reward=reward, next_state=next_state, done=done)
-            agent.learn()
+            # agent.memory_save(state=state, action=action, reward=reward, next_state=next_state, done=done)
+            episode_memory.append((state, action, reward, next_state, done))
+            # agent.learn()
             episode_reward += reward
 
             state = next_state
@@ -456,11 +466,16 @@ def train_rl(agent: RL_Agent, curve_base_data, curve_js_data, n_episode=10000):
             if done:
                 break
 
-            # print("Step: {} END {}".format(i_step, reward))
-
-        print("Episode {} / {} --- {} Steps --- Reward: {:.3f} --- {:.3f}s Curve {}"
-              .format(i_episode + 1, n_episode, i_step, episode_reward,
+        print("Episode {} / {} Epsilon: {:.3f} --- {} Steps --- Reward: {:.3f} --- {:.3f}s Curve {}"
+              .format(i_episode + 1, n_episode, epsilon, i_step, episode_reward,
                       (time.time_ns() - timer) / (10 ** 9), random_curve_idx))
+
+        for i, (state, action, reward, next_state, done) in enumerate(episode_memory):
+            new_reward = reward + REWARD_DECAY_FACTOR ** (i_step - i) * episode_reward
+            agent.memory_save(state=state, action=action, reward=new_reward, next_state=next_state, done=done)
+
+        for i in range(10):
+            agent.learn()
 
         agent.update_target_nets()
         episode_rewards.append(episode_reward)
