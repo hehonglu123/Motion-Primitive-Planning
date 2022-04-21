@@ -7,12 +7,12 @@ from matplotlib import pyplot as plt
 def moving_average(x, w):
     return np.convolve(x, np.ones(w), 'valid') / w
 
-client = FANUCClient()
+client = FANUCClient(robot_ip='127.0.0.6')
 
 qddot_nominal = [500,800,800,1000,1000,1000]
 q_target = [45,60,60,180,90,180]
 
-for ji in range(6):
+for ji in range(0,2):
     jt1 = jointtarget(1,0,1,np.zeros(6),[0]*6)
     joint_target = np.zeros(6)
     joint_target[ji] = q_target[ji]
@@ -21,6 +21,9 @@ for ji in range(6):
     tp = TPMotionProgram()
     tp.moveJ(jt2,100,'%',-1)
     tp.moveJ(jt1,100,'%',-1)
+
+    # print(tp.get_tp())
+
     res = client.execute_motion_program(tp)
 
     res_string = res.decode('utf-8')
