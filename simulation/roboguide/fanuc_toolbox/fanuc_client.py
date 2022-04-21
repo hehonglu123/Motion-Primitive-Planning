@@ -335,12 +335,12 @@ def multi_robot():
     pt23 = robtarget(2,1,1,[1166.0,0,1430.0],[180.0,0,0],confdata('N','U','T',0,0,0),[0]*6)
 
     tp1.moveJ(jt11,100,'%',-1)
-    tp1.moveL(pt12,50,'mmsec',100)
-    tp1.moveL(pt13,50,'mmsec',-1)
+    tp1.moveL(pt12,500,'mmsec',100)
+    tp1.moveL(pt13,500,'mmsec',-1)
 
     tp2.moveJ(jt21,100,'%',-1)
-    tp2.moveL(pt22,50,'mmsec',100)
-    tp2.moveL(pt23,50,'mmsec',-1)
+    tp2.moveL(pt22,500,'mmsec',100)
+    tp2.moveL(pt23,500,'mmsec',-1)
 
     client = FANUCClient()
     res = client.execute_motion_program_multi(tp1,tp2)
