@@ -18,7 +18,7 @@ curve_y=data['Y'].tolist()
 curve_z=data['Z'].tolist()
 curve=np.vstack((curve_x, curve_y, curve_z)).T
 
-speed='v629'
+speed='v160'
 zone='z10'
 data_dir='fitting_output_new/Jon/'
 ###read in curve_exe
@@ -65,7 +65,7 @@ fig, ax1 = plt.subplots()
 ax2 = ax1.twinx()
 ax1.plot(lam[1:],act_speed, 'g-', label='Speed')
 ax2.plot(lam, error, 'b-',label='Error')
-ax1.plot(lam[3:],lamdot_act[2:], 'r-',label='Lamdot Constraint')
+ax1.plot(lam[2:],lamdot_act[2:], 'r-',label='Lamdot Constraint')
 
 ax1.set_xlabel('lambda (mm)')
 ax1.set_ylabel('Speed/lamdot (mm/s)', color='g')

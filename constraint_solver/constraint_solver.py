@@ -1,6 +1,6 @@
 import numpy as np
 from pandas import *
-import sys, traceback, time
+import sys, traceback, time, copy
 from general_robotics_toolbox import *
 import matplotlib.pyplot as plt
 from scipy.optimize import differential_evolution, shgo, NonlinearConstraint, minimize, fminbound
@@ -39,17 +39,15 @@ class lambda_opt(object):
 		else:
 			###decrease curve density to simplify computation
 			self.num_per_step=int(len(curve)/steps)	
-			self.curve=curve[0:-1:self.num_per_step]
-			self.curve_normal=curve_normal[0:-1:self.num_per_step]
-			self.breakpoints=np.arange(0,len(curve_normal),self.num_per_step)
-			self.act_breakpoints=self.breakpoints
+			self.breakpoints=np.linspace(0,len(curve_normal),steps).astype(int)
+			self.act_breakpoints=copy.deepcopy(self.breakpoints)
+			self.act_breakpoints[1:]=self.breakpoints[1:]-1
+			self.curve=curve[self.act_breakpoints]
+			self.curve_normal=curve_normal[self.act_breakpoints]
 
 		###find path length
-		self.lam_original=[0]
-		for i in range(len(curve)-1):
-			self.lam_original.append(self.lam_original[-1]+np.linalg.norm(curve[i+1]-curve[i]))
-		self.lam_original=np.array(self.lam_original)
-		self.lam=self.lam_original[self.breakpoints]
+		self.lam_original=calc_lam_cs(curve)
+		self.lam=self.lam_original[self.act_breakpoints]
 
 	def normalize_dq(self,q):
 		q=q/(np.linalg.norm(q)) 
@@ -138,11 +136,12 @@ class lambda_opt(object):
 					pose1_now=self.robot1.fwd(q_all1[-1])
 					pose2_now=self.robot2.fwd(q_all2[-1])
 
-					pose2_world_now=self.robot2.fwd(q_all2[-1],self.base2_R,self.base2_p)					
-					continue
+					pose2_world_now=self.robot2.fwd(q_all2[-1],self.base2_R,self.base2_p)	
+					### if assuming perfect initial alignment				
+					# continue
 
 
-				while error_fb>0.1:
+				while error_fb>0.2:
 					pose1_now=self.robot1.fwd(q_all1[-1])
 					pose2_now=self.robot2.fwd(q_all2[-1])
 
@@ -214,8 +213,8 @@ class lambda_opt(object):
 			q_out1.append(q_all1[-1])
 			q_out2.append(q_all2[-1])
 
-		q_out1=np.array(q_out1)
-		q_out2=np.array(q_out2)
+		q_out1=np.array(q_out1)[1:]
+		q_out2=np.array(q_out2)[1:]
 		return q_out1, q_out2	
 
 	def orientation_interp(self,R_init,R_end,steps):
@@ -291,8 +290,8 @@ class lambda_opt(object):
 			# traceback.print_exc()
 			return 999
 
-		
-		dlam=calc_lamdot(np.hstack((q_out1,q_out2)),self.lam[:len(q_out2)],np.tile(self.joint_vel_limit,2),1)
+		dlam=calc_lamdot_2arm(np.hstack((q_out1,q_out2)),self.lam,robot1,self.robot2,step=1)
+
 		print(min(dlam))
 		return -min(dlam)
 
@@ -351,6 +350,7 @@ class lambda_opt(object):
 		####x: [pose_choice, theta@breakpoints]
 		theta=x[1:]
 		pose_choice=int(np.floor(x[0]))
+
 
 		for i in range(len(self.curve)):
 			if i==0:

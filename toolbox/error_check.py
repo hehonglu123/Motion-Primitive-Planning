@@ -80,6 +80,20 @@ def calc_all_error(fit,curve):
 		error.append(error_temp)
 	return error
 
+def calc_all_error_ex_blending(fit,curve,zone,lam,breakpoints_lam):
+	for breakpoint_lam in breakpoints_lam:
+		temp=np.abs(lam-breakpoint_lam)
+		idx=np.where(temp<zone)
+		lam=np.delete(lam,idx)
+		fit=np.delete(fit,idx,axis=0)
+	error=[]
+
+	for p in fit:
+		error_temp,idx=calc_error(p,curve)
+		error.append(error_temp)
+	return error,lam
+
+
 def complete_points_check(fit,curve,R_fit,R_curve):
 	error=[]
 	

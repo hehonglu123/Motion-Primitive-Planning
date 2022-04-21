@@ -11,9 +11,9 @@ from error_check import *
 from lambda_calc import *
 from scipy.interpolate import UnivariateSpline
 
-speed='vmax'
+speed='v100'
 zone='z10'
-data_dir='fitting_output_new/matlab_qp/'
+data_dir='fitting_output_new/threshold0.5/'
 ###read in curve_exe
 col_names=['timestamp', 'cmd_num', 'J1', 'J2','J3', 'J4', 'J5', 'J6'] 
 data = read_csv(data_dir+"curve_exe_"+speed+'_'+zone+".csv",names=col_names)

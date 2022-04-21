@@ -10,7 +10,7 @@ from robots_def import *
 def main():
     ###read actual curve
     col_names=['q1', 'q2', 'q3','q4', 'q5', 'q6'] 
-    data = read_csv("trajectory/single_arm/all_theta_opt/arm1.csv", names=col_names)
+    data = read_csv("trajectory/single_arm/all_theta_opt/qp_arm2.csv", names=col_names)
     curve_q1=data['q1'].tolist()
     curve_q2=data['q2'].tolist()
     curve_q3=data['q3'].tolist()
@@ -19,7 +19,10 @@ def main():
     curve_q6=data['q6'].tolist()
     curve_js1=np.vstack((curve_q1, curve_q2, curve_q3,curve_q4,curve_q5,curve_q6)).T
 
-    robot=abb6640()
+    total_step=32
+    idx=np.linspace(0,len(curve_js1)-1,total_step).astype(int)
+
+    robot=abb6640(d=50)
     p_prev=robot.fwd(curve_js1[0]).p
     ###find path length
     lam=[0]
@@ -64,10 +67,10 @@ def main():
 
 
 
-    for i in range(len(curve_js1)):
+    for i in idx:
         wp = JointTrajectoryWaypoint()
         wp.joint_position = curve_js1[i]
-        wp.time_from_start = 3*lam[i]
+        wp.time_from_start = 8*lam[i]
         waypoints.append(wp)
 
 

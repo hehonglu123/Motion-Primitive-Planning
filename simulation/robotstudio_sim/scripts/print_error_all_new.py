@@ -31,8 +31,8 @@ d=50
 # data_dir="fitting_output/threshold0.1/"
 # speed={"v50":v50,"v500":v500,"v5000":v5000}
 # zone={"fine":fine,"z1":z1,"z10":z10}
-data_dir="fitting_output_new/matlab_qp/"
-speed=['vmax']
+data_dir="fitting_output_new/matlab_qp_movel/"
+speed=['v170']
 zone=['z10']
 max_error={}
 max_error_idx={}
@@ -96,7 +96,7 @@ for table_name in table_names:
 		for z in zone: 
 			data[s].append(table_names[table_name][z,s])
 
-	df = DataFrame(data, index=list(zone.keys()))
+	df = DataFrame(data, index=zone)
 	df.name=table_name
 	print(table_name)
 	print(df)

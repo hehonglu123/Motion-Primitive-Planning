@@ -62,6 +62,27 @@ def calc_lamdot(curve_js,lam,robot,step):
 	dlam_max_act=np.minimum(dlam_max1,dlam_max2)
 
 	return dlam_max_act
+def calc_lamdot_2arm(curve_js,lam,robot1,robot2,step):
+	############find maximum lambda dot vs lambda
+	###curve_js: curve expressed in joint space in radians
+	###lam: discrete lambda (path length), same shape as curve_js, from 0 to 1
+	###robot: joint velocity & acc limit 
+	###step: step size used for dense curve
+
+	curve_js=curve_js[::step]
+	lam=lam[::step]
+	dq=np.gradient(curve_js,axis=0)
+	dlam=np.gradient(lam)
+	dqdlam=np.divide(dq.T,dlam).T
+
+	d2qdlam2=np.divide(np.gradient(dqdlam,axis=0).T,dlam).T
+
+	dlam_max1=np.min(np.divide(np.hstack((robot1.joint_vel_limit,robot2.joint_vel_limit)),np.abs(dqdlam)),axis=1)
+	dlam_max2=np.sqrt(np.min(np.divide(np.hstack((robot1.joint_acc_limit,robot2.joint_acc_limit)),np.abs(d2qdlam2)),axis=1))
+
+	dlam_max_act=np.minimum(dlam_max1,dlam_max2)
+
+	return dlam_max_act
 
 def est_lamdot(dqdlam_list,breakpoints,lam,spl_list,merged_idx,robot):
 	############estimated lambdadot from arbitray blending
@@ -190,6 +211,8 @@ def calc_lamdot_dual(curve_js1,curve_js2,lam,joint_vel_limit1,joint_vel_limit2,s
 
 
 def main():
+	robot=abb6640(d=50)
+
 	# col_names=['x', 'y', 'z','R1','R2','R3','R4','R5','R6','R7','R8','R9'] 
 	# data = read_csv("../greedy_fitting/curve_fit_backproj.csv")
 	col_names=['X', 'Y', 'Z','direction_x', 'direction_y', 'direction_z'] 
@@ -202,6 +225,7 @@ def main():
 
 	col_names=['q1', 'q2', 'q3','q4', 'q5', 'q6'] 
 	data = read_csv("../data/from_ge/Curve_js2.csv", names=col_names)
+	# data = read_csv("qsol.csv", names=col_names)
 	# data = read_csv("../constraint_solver/single_arm/trajectory/all_theta_opt/all_theta_opt_js.csv", names=col_names)
 	curve_q1=data['q1'].tolist()
 	curve_q2=data['q2'].tolist()
@@ -210,8 +234,9 @@ def main():
 	curve_q5=data['q5'].tolist()
 	curve_q6=data['q6'].tolist()
 	curve_js=np.vstack((curve_q1, curve_q2, curve_q3,curve_q4,curve_q5,curve_q6)).T
-	lam=calc_lam_cs(curve)
-	robot=abb6640(d=50)
+	# lam=calc_lam_cs(curve)
+	lam=calc_lam_js(curve_js,robot)
+	
 	step=1000
 	lam_dot=calc_lamdot(curve_js,lam,robot,step)
 	plt.plot(lam[::step],lam_dot)

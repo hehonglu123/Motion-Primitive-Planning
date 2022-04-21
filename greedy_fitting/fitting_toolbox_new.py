@@ -5,7 +5,7 @@ from toolbox_circular_fit import *
 
 
 class fitting_toolbox(object):
-	def __init__(self,robot,curve_js,orientation_weight=50):
+	def __init__(self,robot,curve_js,orientation_weight=50,curve=[]):
 		###robot: robot class
 		###curve: xyz position points
 		###curve_js: points in joint space
@@ -18,12 +18,19 @@ class fitting_toolbox(object):
 		self.robot=robot
 
 		###get full orientation list
-		self.curve_R=[]
-		self.curve=[]
-		for i in range(len(curve_js)):
-			pose_temp=self.robot.fwd(curve_js[i])
-			self.curve_R.append(pose_temp.R)
-			self.curve.append(pose_temp.p)
+		if len(curve)>0:
+			self.curve_R=[]
+			self.curve=curve
+			for i in range(len(curve_js)):
+				pose_temp=self.robot.fwd(curve_js[i])
+				self.curve_R.append(pose_temp.R)
+		else:
+			self.curve_R=[]
+			self.curve=[]
+			for i in range(len(curve_js)):
+				pose_temp=self.robot.fwd(curve_js[i])
+				self.curve_R.append(pose_temp.R)
+				self.curve.append(pose_temp.p)
 
 		self.curve_R=np.array(self.curve_R)
 		self.curve=np.array(self.curve)

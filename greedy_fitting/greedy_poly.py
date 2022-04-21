@@ -39,7 +39,7 @@ class greedy_fit(fitting_toolbox):
 		curve=np.vstack((self.curve_poly[0](self.lam),self.curve_poly[1](self.lam),self.curve_poly[2](self.lam))).T
 		curve_js=np.vstack((self.curve_js_poly[0](self.lam),self.curve_js_poly[1](self.lam),self.curve_js_poly[2](self.lam),self.curve_js_poly[3](self.lam),self.curve_js_poly[4](self.lam),self.curve_js_poly[5](self.lam))).T
 
-		super().__init__(robot,curve,curve_js,orientation_weight)
+		super().__init__(robot,curve_js,orientation_weight,curve)
 		self.slope_constraint=np.radians(180)
 		self.break_early=False
 		###initial primitive candidates
@@ -248,7 +248,7 @@ def main():
 
 	robot=abb6640(d=50)
 
-	greedy_fit_obj=greedy_fit(robot,curve_poly_coeff,curve_js_poly_coeff, num_points=1000, orientation_weight=1)
+	greedy_fit_obj=greedy_fit(robot,curve_poly_coeff,curve_js_poly_coeff, num_points=5000, orientation_weight=1)
 
 
 	###set primitive choices, defaults are all 3
@@ -290,7 +290,21 @@ def main():
 	# df=DataFrame({'j1':greedy_fit_obj.curve_fit_js[:,0],'j2':greedy_fit_obj.curve_fit_js[:,1],'j3':greedy_fit_obj.curve_fit_js[:,2],'j4':greedy_fit_obj.curve_fit_js[:,3],'j5':greedy_fit_obj.curve_fit_js[:,4],'j6':greedy_fit_obj.curve_fit_js[:,5]})
 	# df.to_csv('curve_fit_js.csv',header=False,index=False)
 
+	###check error agains original curve
+	col_names=['X', 'Y', 'Z','direction_x', 'direction_y', 'direction_z'] 
+	data = read_csv("../data/from_ge/Curve_in_base_frame2.csv", names=col_names)
+	curve_x=data['X'].tolist()
+	curve_y=data['Y'].tolist()
+	curve_z=data['Z'].tolist()
+	curve_normal_x=data['direction_x'].tolist()
+	curve_normal_y=data['direction_y'].tolist()
+	curve_normal_z=data['direction_z'].tolist()
+	curve=np.vstack((curve_x, curve_y, curve_z)).T
+	curve_normal=np.vstack((curve_normal_x, curve_normal_y, curve_normal_z)).T
 
+	# error_max=calc_max_error(greedy_fit_obj.curve_fit,curve)
+	max_error,max_error_angle, max_error_idx=calc_max_error_w_normal(greedy_fit_obj.curve_fit,curve,greedy_fit_obj.curve_fit_R[:,:,-1],curve_normal)
+	print(max_error,np.degrees(max_error_angle))
 
 
 if __name__ == "__main__":

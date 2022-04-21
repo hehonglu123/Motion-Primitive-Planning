@@ -9,13 +9,14 @@ from robots_def import *
 def main():
     robot1="abb1200"
     robot2="abb6640"
-    robot1_tool=abb1200()
+    robot1_tool=abb1200(d=50)
     robot2_tool=abb6640()
     url={robot1:'rr+tcp://localhost:23333?service=robot',robot2:'rr+tcp://localhost:12222?service=robot'}
-    filename={robot1:'arm1.csv',robot2:'arm2.csv'}
+    filename={robot1:'qp_arm1.csv',robot2:'qp_arm2.csv'}
 
+    #########################################modify robot2 base HERE!!!!!!##########################################
     base2_R=np.array([[-1,0,0],[0,-1,0],[0,0,1]])
-    base2_p=np.array([3000,0,0])
+    base2_p=np.array([3000,1000,0])
     ###read actual curve
     col_names=['q1', 'q2', 'q3','q4', 'q5', 'q6'] 
     data = read_csv("trajectory/dual_arm/"+filename[robot1], names=col_names)
@@ -36,6 +37,9 @@ def main():
     curve_q5=data['q5'].tolist()
     curve_q6=data['q6'].tolist()
     curve_js2=np.vstack((curve_q1, curve_q2, curve_q3,curve_q4,curve_q5,curve_q6)).T
+
+    total_step=32
+    idx=np.linspace(0,len(curve_js1)-1,total_step).astype(int)
 
     p_prev=np.zeros(3)
     ###find path length to sync motion in trajectory mode
@@ -79,8 +83,7 @@ def main():
     waypoints = []
 
 
-
-    for i in range(len(curve_js1)):
+    for i in idx:
         wp = JointTrajectoryWaypoint()
         wp.joint_position = curve_js1[i]
         wp.time_from_start = 5*lam[i]
@@ -129,7 +132,7 @@ def main():
 
 
 
-    for i in range(len(curve_js2)):
+    for i in idx:
         wp = JointTrajectoryWaypoint()
         wp.joint_position = curve_js2[i]
         wp.time_from_start = 5*lam[i]
@@ -148,6 +151,7 @@ def main():
     while (True):
         t = time.time()
         try:
+            print(state_w1.InValue.joint_position)
             res = traj1_gen.AsyncNext(None,None)
             res = traj2_gen.AsyncNext(None,None)
             print(res)
