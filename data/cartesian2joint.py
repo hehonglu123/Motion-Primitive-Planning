@@ -6,34 +6,7 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 sys.path.append('../toolbox')
 from robots_def import *
-
-def cross(v):
-	return np.array([[0,-v[-1],v[1]],
-					[v[-1],0,-v[0]],
-					[-v[1],v[0],0]])
-def direction2R(v_norm,v_tang):
-	v_norm=v_norm/np.linalg.norm(v_norm)
-	theta1 = np.arccos(np.dot(np.array([0,0,1]),v_norm))
-	###rotation to align z axis with curve normal
-	axis_temp=np.cross(np.array([0,0,1]),v_norm)
-	R1=rot(axis_temp/np.linalg.norm(axis_temp),theta1)
-
-	###find correct x direction
-	v_temp=v_tang-v_norm * np.dot(v_tang, v_norm) / np.linalg.norm(v_norm)
-
-	###get as ngle to rotate
-	theta2 = np.arccos(np.dot(R1[:,0],v_temp/np.linalg.norm(v_temp)))
-
-
-	axis_temp=np.cross(R1[:,0],v_temp)
-	axis_temp=axis_temp/np.linalg.norm(axis_temp)
-
-	###rotation about z axis to minimize x direction error
-	R2=rot(np.array([0,0,np.sign(np.dot(axis_temp,v_norm))]),theta2)
-
-
-	return np.dot(R1,R2)
-
+from utils import *
 
 def main():
 
@@ -51,15 +24,6 @@ def main():
 
 
 	abb6640_obj=abb6640(d=50)
-
-	###back projection
-	d=0			###offset
-	# plt.figure()
-	# ax = plt.axes(projection='3d')
-	# ax.plot3D(curve[:,0], curve[:,1],curve[:,2], 'gray')
-	# plt.show()
-
-	# curve=curve-d*curve_direction
 
 	curve_R=[]
 
@@ -121,7 +85,7 @@ def main():
 
 	###output to csv
 	df=DataFrame({'q0':curve_js[:,0],'q1':curve_js[:,1],'q2':curve_js[:,2],'q3':curve_js[:,3],'q4':curve_js[:,4],'q5':curve_js[:,5]})
-	df.to_csv('from_ge/Curve_js.csv',header=False,index=False)
+	df.to_csv('from_ge/Curve_js2.csv',header=False,index=False)
 
 
 def main2():

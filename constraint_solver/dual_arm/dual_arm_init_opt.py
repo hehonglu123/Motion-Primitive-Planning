@@ -10,7 +10,7 @@ def main():
 	q_init2=[0.181847959,	0.435384629,	0.465584225,	0.677493313,	-1.070550513,	-0.266374094]
 
 	col_names=['X', 'Y', 'Z','direction_x','direction_y','direction_z'] 
-	data = read_csv("curve_poses/relative_path_tool_frame.csv", names=col_names)
+	data = read_csv("../../data/from_ge/relative_path_tool_frame.csv", names=col_names)
 	curve_x=data['X'].tolist()
 	curve_y=data['Y'].tolist()
 	curve_z=data['Z'].tolist()
@@ -20,10 +20,9 @@ def main():
 	relative_path=np.vstack((curve_x, curve_y, curve_z)).T
 	relative_path_direction=np.vstack((curve_direction_x, curve_direction_y, curve_direction_z)).T
 
-	robot1=abb1200()
+	robot1=abb1200(d=50)
 	robot2=abb6640()
 	opt=lambda_opt(relative_path,relative_path_direction,robot1=robot1,robot2=robot2,base2_R=np.array([[-1,0,0],[0,-1,0],[0,0,1]]),	base2_p=np.array([3000,0,0]))
-
 
 	###########################################diff evo opt############################################
 	lowerer_limit=np.append(robot2.lowerer_limit,[-np.pi])
@@ -39,10 +38,12 @@ def main():
 									atol=0.)
 	print(res)
 
+	# x=[-0.09376803,  0.86301891,  0.55703144, -0.47267726, -1.66004072,1.85797113, -2.49958766]
+
 	q_init2=res.x[:-1]
 	pose2_world_now=robot2.fwd(q_init2,opt.base2_R,opt.base2_p)
 
-	R_temp=opt.direction2R(np.dot(pose2_world_now.R,opt.curve_normal[0]),-opt.curve[1]+opt.curve[0])
+	R_temp=direction2R(np.dot(pose2_world_now.R,opt.curve_normal[0]),-opt.curve[1]+opt.curve[0])
 	R=np.dot(R_temp,Rz(res.x[-1]))
 
 	q_init1=robot1.inv(pose2_world_now.p,R)[0]
@@ -63,7 +64,7 @@ def main():
 	plt.xlabel("lambda")
 	plt.ylabel("lambda_dot")
 	plt.title("DUALARM max lambda_dot vs lambda (path index)")
-	plt.ylim([0.5,3.5])
+	plt.ylim([1000,4000])
 	plt.savefig("trajectory/results.png")
 	plt.show()
 

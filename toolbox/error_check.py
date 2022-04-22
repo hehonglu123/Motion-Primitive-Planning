@@ -1,7 +1,7 @@
 import numpy as np
 import copy
 from general_robotics_toolbox import *
-
+from utils import *
 ###calculate distance between point to line
 def get_distance(p1,p2,p3):
 	return np.linalg.norm(np.cross(p2-p1, p1-p3))/np.linalg.norm(p2-p1)
@@ -31,6 +31,23 @@ def calc_max_error(fit,curve):
 
 	return max_error, max_error_idx
 
+def calc_max_error_w_normal(fit,curve,fit_normal,curve_normal):
+	max_error=0
+	max_error_angle=0
+	idx=0
+	max_error_idx=0
+	for i in range(len(fit)):
+		error,idx2=calc_error(fit[i],curve)
+		normal_angle=get_angle(fit_normal[i],curve_normal[idx2])
+		if error>max_error:
+			max_error_idx=idx
+			max_error=copy.deepcopy(error)
+		if normal_angle>max_error_angle:
+			max_error_angle=copy.deepcopy(normal_angle)
+		idx+=1
+
+	return max_error,max_error_angle, max_error_idx
+
 def calc_max_error_js(robot,fit_js,curve_js):
 	fit=[]
 	for i in range(len(fit_js)):
@@ -53,10 +70,29 @@ def calc_max_error_js(robot,fit_js,curve_js):
 	return max_error, max_error_idx
 
 def calc_avg_error(fit,curve):
-	error=0
+	error=calc_all_error(fit,curve)
+	return sum(error)/len(error)
+
+def calc_all_error(fit,curve):
+	error=[]
 	for p in fit:
-		error+=calc_error(p,curve)
-	return error/len(fit)
+		error_temp,idx=calc_error(p,curve)
+		error.append(error_temp)
+	return error
+
+def calc_all_error_ex_blending(fit,curve,zone,lam,breakpoints_lam):
+	for breakpoint_lam in breakpoints_lam:
+		temp=np.abs(lam-breakpoint_lam)
+		idx=np.where(temp<zone)
+		lam=np.delete(lam,idx)
+		fit=np.delete(fit,idx,axis=0)
+	error=[]
+
+	for p in fit:
+		error_temp,idx=calc_error(p,curve)
+		error.append(error_temp)
+	return error,lam
+
 
 def complete_points_check(fit,curve,R_fit,R_curve):
 	error=[]

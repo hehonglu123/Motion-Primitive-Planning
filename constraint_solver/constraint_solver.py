@@ -1,63 +1,53 @@
 import numpy as np
 from pandas import *
-import sys, traceback, time
+import sys, traceback, time, copy
 from general_robotics_toolbox import *
 import matplotlib.pyplot as plt
 from scipy.optimize import differential_evolution, shgo, NonlinearConstraint, minimize, fminbound
 from qpsolvers import solve_qp
 
+sys.path.append('../../circular_Fit')
+
 sys.path.append('../../toolbox')
 from robots_def import *
 from lambda_calc import *
+from blending import *
+from utils import *
 
 class lambda_opt(object):
 	###robot1 hold paint gun for single arm
 	###robot1 hold paint gun, robot2 hold blade for dual arm
-	def __init__(self,curve,curve_normal,robot1=abb6640(),robot2=abb1200(),base2_R=np.eye(3),base2_p=np.zeros(3),steps=32):
-		self.curve=curve
-		self.curve_normal=curve_normal
+	def __init__(self,curve,curve_normal,robot1=abb6640(),robot2=abb1200(),base2_R=np.eye(3),base2_p=np.zeros(3),steps=32,breakpoints=[],primitives=[]):
+
+		self.curve_original=curve
+		self.curve_normal_original=curve_normal
 		self.robot1=robot1
 		self.robot2=robot2
 		self.base2_R=base2_R
 		self.base2_p=base2_p
 		self.joint_vel_limit=np.radians([110,90,90,150,120,235])
+		self.steps=steps
 
-		###decrease curve density to simplify computation
-		num_per_step=int(len(self.curve)/steps)	
-		self.curve=self.curve[0:-1:num_per_step]
-		self.curve_normal=self.curve_normal[0:-1:num_per_step]
-
+		#prespecified primitives
+		self.primitives=primitives
+		if len(breakpoints)>0:
+			self.act_breakpoints=breakpoints
+			self.act_breakpoints[1:]=self.act_breakpoints[1:]-1
+			self.curve=curve[self.act_breakpoints]
+			self.curve_normal=curve_normal[self.act_breakpoints]
+			self.breakpoints=breakpoints
+		else:
+			###decrease curve density to simplify computation
+			self.num_per_step=int(len(curve)/steps)	
+			self.breakpoints=np.linspace(0,len(curve_normal),steps).astype(int)
+			self.act_breakpoints=copy.deepcopy(self.breakpoints)
+			self.act_breakpoints[1:]=self.breakpoints[1:]-1
+			self.curve=curve[self.act_breakpoints]
+			self.curve_normal=curve_normal[self.act_breakpoints]
 
 		###find path length
-		self.lam=[0]
-		for i in range(len(curve)-1):
-			self.lam.append(self.lam[-1]+np.linalg.norm(curve[i+1]-curve[i]))
-		###normalize lam, 
-		self.lam=np.array(self.lam)/self.lam[-1]
-		self.lam=self.lam[0:-1:num_per_step]
-
-
-	def direction2R(self,v_norm,v_tang):
-		v_norm=v_norm/np.linalg.norm(v_norm)
-		theta1 = np.arccos(np.dot(np.array([0,0,1]),v_norm))
-		###rotation to align z axis with curve normal
-		axis_temp=np.cross(np.array([0,0,1]),v_norm)
-		R1=rot(axis_temp/np.linalg.norm(axis_temp),theta1)
-
-		###find correct x direction
-		v_temp=v_tang-v_norm * np.dot(v_tang, v_norm) / np.linalg.norm(v_norm)
-
-		###get as ngle to rotate
-		theta2 = np.arccos(np.dot(R1[:,0],v_temp/np.linalg.norm(v_temp)))
-
-
-		axis_temp=np.cross(R1[:,0],v_temp)
-		axis_temp=axis_temp/np.linalg.norm(axis_temp)
-
-		###rotation about z axis to minimize x direction error
-		R2=rot(np.array([0,0,np.sign(np.dot(axis_temp,v_norm))]),theta2)
-
-		return np.dot(R1,R2)
+		self.lam_original=calc_lam_cs(curve)
+		self.lam=self.lam_original[self.act_breakpoints]
 
 	def normalize_dq(self,q):
 		q=q/(np.linalg.norm(q)) 
@@ -76,6 +66,7 @@ class lambda_opt(object):
 		q_all=[q_init]
 		q_out=[q_init]
 		for i in range(len(curve)):
+			# print(i)
 			try:
 				error_fb=999
 				error_fb_prev=999
@@ -107,16 +98,17 @@ class lambda_opt(object):
 					s=np.sin(theta/2)*k         #eR2
 					wd=-np.dot(KR,s)
 					f=-np.dot(np.transpose(Jp),vd)-w*np.dot(np.transpose(JR),wd)
-					qdot=solve_qp(H,f)
+					qdot=solve_qp(H,f,lb=self.robot1.lowerer_limit-q_all[-1],ub=self.robot1.upper_limit-q_all[-1])
 
 					#avoid getting stuck
 					if abs(error_fb-error_fb_prev)<0.0001:
 						break
 					error_fb_prev=error_fb
-					
+
 					###line search
-					alpha=fminbound(self.error_calc,0,1,args=(q_all[-1],qdot,curve[i],curve_normal[i],))
-					
+					alpha=fminbound(self.error_calc,0,0.999999999999999999999,args=(q_all[-1],qdot,curve[i],curve_normal[i],))
+					if alpha<0.01:
+						break
 					q_all.append(q_all[-1]+alpha*qdot)
 					# print(q_all[-1])
 			except:
@@ -144,11 +136,12 @@ class lambda_opt(object):
 					pose1_now=self.robot1.fwd(q_all1[-1])
 					pose2_now=self.robot2.fwd(q_all2[-1])
 
-					pose2_world_now=self.robot2.fwd(q_all2[-1],self.base2_R,self.base2_p)					
-					continue
+					pose2_world_now=self.robot2.fwd(q_all2[-1],self.base2_R,self.base2_p)	
+					### if assuming perfect initial alignment				
+					# continue
 
 
-				while error_fb>0.1:
+				while error_fb>0.2:
 					pose1_now=self.robot1.fwd(q_all1[-1])
 					pose2_now=self.robot2.fwd(q_all2[-1])
 
@@ -220,32 +213,66 @@ class lambda_opt(object):
 			q_out1.append(q_all1[-1])
 			q_out2.append(q_all2[-1])
 
-		q_out1=np.array(q_out1)
-		q_out2=np.array(q_out2)
-		return q_out1, q_out2
+		q_out1=np.array(q_out1)[1:]
+		q_out2=np.array(q_out2)[1:]
+		return q_out1, q_out2	
 
+	def orientation_interp(self,R_init,R_end,steps):
+		curve_fit_R=[]
+		###find axis angle first
+		R_diff=np.dot(R_init.T,R_end)
+		k,theta=R2rot(R_diff)
+		for i in range(steps):
+			###linearly interpolate angle
+			angle=theta*i/(steps-1)
+			R=rot(k,angle)
+			curve_fit_R.append(np.dot(R_init,R))
+		curve_fit_R=np.array(curve_fit_R)
+		return curve_fit_R
+
+
+	def inv_all(self,curve,curve_R,q_init):
+		curve_js=[q_init]
+		for i in range(1,len(curve)):
+			try:
+				q_all=np.array(self.robot1.inv(curve[i],curve_R[i]))
+			except:
+				traceback.print_exc()
+				pass
+			###choose inv_kin closest to previous joints
+			try:
+				temp_q=q_all-curve_js[i-1]
+				order=np.argsort(np.linalg.norm(temp_q,axis=1))
+				curve_js.append(q_all[order[0]])
+
+			except:
+				traceback.print_exc()
+				return
+		return curve_js
 	def curve_pose_opt(self,x):
 		###optimize on curve pose for single arm
-		k=x[:3]/np.linalg.norm(x[:3])	###pose rotation axis
-		theta0=x[3]		###pose rotation angle
-		shift=x[4:-1]
-		theta1=x[-1]	###spray angle
+		theta0=np.linalg.norm(x[:3])	###pose rotation angle
+		k=x[:3]/theta0					###pose rotation axis
+		shift=x[3:-1]					###pose translation
+		theta1=x[-1]					###initial spray angle (1DOF)
 
 		R_curve=rot(k,theta0)
 		curve_new=np.dot(R_curve,self.curve.T).T+np.tile(shift,(len(self.curve),1))
 		curve_normal_new=np.dot(R_curve,self.curve_normal.T).T
 
-		R_temp=self.direction2R(curve_normal_new[0],-curve_new[1]+curve_new[0])
+		R_temp=direction2R(curve_normal_new[0],-curve_new[1]+curve_new[0])
 		R=np.dot(R_temp,Rz(theta1))
 		try:
 			q_init=self.robot1.inv(curve_new[0],R)[0]
 			q_out=self.single_arm_stepwise_optimize(q_init,curve_new,curve_normal_new)
+			
 		except:
 			# traceback.print_exc()
 			return 999
+		
+		dlam=calc_lamdot(q_out,self.lam,self.robot1,1)
 
 		
-		dlam=calc_lamdot(q_out,self.lam,self.joint_vel_limit,1)
 		print(min(dlam))
 		return -min(dlam)
 
@@ -254,7 +281,7 @@ class lambda_opt(object):
 
 		pose2_world_now=self.robot2.fwd(q_init2,self.base2_R,self.base2_p)
 
-		R_temp=self.direction2R(np.dot(pose2_world_now.R,self.curve_normal[0]),-self.curve[1]+self.curve[0])
+		R_temp=direction2R(np.dot(pose2_world_now.R,self.curve_normal[0]),-self.curve[1]+self.curve[0])
 		R=np.dot(R_temp,Rz(x[-1]))
 		try:
 			q_init1=self.robot1.inv(pose2_world_now.p,R)[0]
@@ -263,14 +290,14 @@ class lambda_opt(object):
 			# traceback.print_exc()
 			return 999
 
-		
-		dlam=calc_lamdot(np.hstack((q_out1,q_out2)),self.lam[:len(q_out2)],np.tile(self.joint_vel_limit,2),1)
+		dlam=calc_lamdot_2arm(np.hstack((q_out1,q_out2)),self.lam,robot1,self.robot2,step=1)
+
 		print(min(dlam))
 		return -min(dlam)
 
 	def single_arm_theta0_opt(self,theta0):
 
-		R_temp=self.direction2R(self.curve_normal[0],-self.curve[1]+self.curve[0])
+		R_temp=direction2R(self.curve_normal[0],-self.curve[1]+self.curve[0])
 		R=np.dot(R_temp,Rz(theta0[0]))
 		try:
 			q_init=self.robot1.inv(self.curve[0],R)[0]
@@ -279,25 +306,31 @@ class lambda_opt(object):
 			return 999
 
 		
-		dlam=calc_lamdot(q_out,self.lam,self.joint_vel_limit,1)
+		dlam=calc_lamdot(q_out,self.lam,self.robot1,1)
 		print(min(dlam))
 		return -min(dlam)
 
-	def single_arm_global_opt(self,theta):
-
+	def single_arm_global_opt(self,x):
+		####x: [pose_choice, theta@breakpoints]
+		theta=x[1:]
+		pose_choice=int(np.floor(x[0]))
 
 		for i in range(len(self.curve)):
 			if i==0:
-				R_temp=self.direction2R(self.curve_normal[i],-self.curve[i+1]+self.curve[i])
+
+				R_temp=direction2R(self.curve_normal[0],-self.curve_original[1]+self.curve[0])
+
+
 				R=np.dot(R_temp,Rz(theta[i]))
 				try:
-					q_out=[self.robot1.inv(self.curve[i],R)[0]]
+					q_out=[self.robot1.inv(self.curve[i],R)[pose_choice]]
 				except:
 					traceback.print_exc()
 					return 999
 
 			else:
-				R_temp=self.direction2R(self.curve_normal[i],-self.curve[i]+self.curve[i-1])
+				R_temp=direction2R(self.curve_normal[i],-self.curve[i]+self.curve_original[self.act_breakpoints[i]-1])
+
 				R=np.dot(R_temp,Rz(theta[i]))
 				try:
 					###get closet config to previous one
@@ -309,10 +342,104 @@ class lambda_opt(object):
 					# traceback.print_exc()
 					return 999
 
-
-		dlam=calc_lamdot(q_out,self.lam,self.joint_vel_limit,1)
+		dlam=calc_lamdot(q_out,self.lam,self.robot1,1)
 		print(min(dlam))
 		return -min(dlam)	
+
+	def single_arm_global_opt_blended(self,x):
+		####x: [pose_choice, theta@breakpoints]
+		theta=x[1:]
+		pose_choice=int(np.floor(x[0]))
+
+
+		for i in range(len(self.curve)):
+			if i==0:
+
+				R_temp=direction2R(self.curve_normal[0],-self.curve_original[1]+self.curve[0])
+
+
+				R=np.dot(R_temp,Rz(theta[i]))
+				try:
+					q_out=[self.robot1.inv(self.curve[i],R)[pose_choice]]
+				except:
+					traceback.print_exc()
+					return 999
+
+			else:
+				R_temp=direction2R(self.curve_normal[i],-self.curve[i]+self.curve_original[self.act_breakpoints[i]-1])
+
+				R=np.dot(R_temp,Rz(theta[i]))
+				try:
+					###get closet config to previous one
+					q_inv_all=self.robot1.inv(self.curve[i],R)
+					temp_q=q_inv_all-q_out[-1]
+					order=np.argsort(np.linalg.norm(temp_q,axis=1))
+					q_out.append(q_inv_all[order[0]])
+				except:
+					# traceback.print_exc()
+					return 999
+
+		# curve_blend_js,dqdlam_list,spl_list,merged_idx=blend_js2(q_out,self.breakpoints,self.lam_original)
+		# lamdot_min=est_lamdot_min(dqdlam_list,self.breakpoints,self.lam_original,spl_list,merged_idx,self.robot1)
+		lam_blended,q_blended=blend_cs(q_out,self.curve_original,self.breakpoints,self.lam_original,self.primitives,self.robot1)
+		dlam=calc_lamdot(q_blended,lam_blended,self.robot1,1)
+		lamdot_min=min(dlam)
+		print(lamdot_min)
+		return -lamdot_min	
+
+
+	def curve_pose_opt_blended(self,x):
+		###optimize on curve pose for single arm
+		####x: [pose_choice,blade k*theta, blade position, theta@breakpoints]
+		pose_choice=int(np.floor(x[0]))
+		blade_theta=np.linalg.norm(x[1:4])	###pose rotation angle
+		k=x[1:4]/blade_theta					###pose rotation axis
+		shift=x[4:7]					###pose translation
+		theta=x[7:]					###remaining DOF @breakpoints
+
+		R_curve=rot(k,blade_theta)
+		curve_new=np.dot(R_curve,self.curve.T).T+np.tile(shift,(len(self.curve),1))
+		curve_normal_new=np.dot(R_curve,self.curve_normal.T).T
+		curve_originial_new=np.dot(R_curve,self.curve_original.T).T+np.tile(shift,(len(self.curve_original),1))
+
+
+		for i in range(len(self.curve)):
+			if i==0:
+				R_temp=direction2R(curve_normal_new[0],-curve_originial_new[1]+curve_new[0])
+
+				R=np.dot(R_temp,Rz(theta[i]))
+				try:
+					q_out=[self.robot1.inv(curve_new[i],R)[pose_choice]]
+				except:
+					# traceback.print_exc()
+					return 999
+
+			else:
+				R_temp=direction2R(curve_normal_new[i],-curve_new[i]+curve_originial_new[self.act_breakpoints[i]-1])
+
+				R=np.dot(R_temp,Rz(theta[i]))
+				try:
+					###get closet config to previous one
+					q_inv_all=self.robot1.inv(curve_new[i],R)
+					temp_q=q_inv_all-q_out[-1]
+					order=np.argsort(np.linalg.norm(temp_q,axis=1))
+					q_out.append(q_inv_all[order[0]])
+				except:
+					# traceback.print_exc()
+					return 999
+
+		# curve_blend_js,dqdlam_list,spl_list,merged_idx=blend_js2(q_out,self.breakpoints,self.lam_original)
+		# lamdot_min=est_lamdot_min(dqdlam_list,self.breakpoints,self.lam_original,spl_list,merged_idx,self.robot1)
+		# lam_blended,q_blended=blend_cs(q_out,curve_originial_new,self.breakpoints,self.lam_original,self.primitives,self.robot1)
+		try:
+			lam_blended,q_blended=blend_js_from_primitive(q_out,curve_originial_new,self.breakpoints,self.lam_original,self.primitives,self.robot1)
+		except:
+			return 999
+		dlam=calc_lamdot(q_blended,lam_blended,self.robot1,1)
+		lamdot_min=min(dlam)
+		print(lamdot_min)
+		return -lamdot_min	
+
 
 	def calc_js_from_theta(self,theta,curve,curve_normal):
 		###solve inv given 6th dof constraint theta
@@ -340,7 +467,8 @@ class lambda_opt(object):
 					return 999
 
 
-		return calc_lamdot(q_out,self.lam,self.joint_vel_limit,1)
+		return calc_lamdot(q_out,self.lam,self.robot_1,1)
+
 
 def main():
 	return 

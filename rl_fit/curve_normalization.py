@@ -1,5 +1,6 @@
 import numpy as np
 from scipy.fft import fft
+from scipy.interpolate import interp1d
 
 from sklearn.decomposition import PCA
 from trajectory_utils import read_base_curve
@@ -49,20 +50,48 @@ def expand_interpolate(curve, n_points):
     return new_curve
 
 
-def normalize_points(curve, n_points=1000):
+def curve_interpolation(curve, n_points=1000):
     if len(curve) == n_points:
         return curve
-    if len(curve) > n_points:
-        return reduce_interpolate(curve, n_points)
-    if len(curve) < n_points:
-        return expand_interpolate(curve, n_points)
+    # if len(curve) > n_points:
+    #     return reduce_interpolate(curve, n_points)
+    # if len(curve) < n_points:
+    #     return expand_interpolate(curve, n_points)
+    n = curve.shape[0]
+    x = curve[:, 0]
+    y = curve[:, 1]
+    z = curve[:, 2]
+    x_points = np.linspace(np.min(x), np.max(x), n, endpoint=True)
+    y_points = np.linspace(np.min(y), np.max(y), n, endpoint=True)
+    z_points = np.linspace(np.min(z), np.max(z), n, endpoint=True)
+    fx = interp1d(x_points, x, kind='linear')
+    fy = interp1d(y_points, y, kind='linear')
+    fz = interp1d(z_points, z, kind='linear')
+    new_x = np.linspace(np.min(x), np.max(x), n_points, endpoint=True)
+    new_y = np.linspace(np.min(y), np.max(y), n_points, endpoint=True)
+    new_z = np.linspace(np.min(z), np.max(z), n_points, endpoint=True)
+    x_interpolate = fx(new_x)
+    y_interpolate = fy(new_y)
+    z_interpolate = fz(new_z)
+
+    curve_interpolate = np.vstack([x_interpolate, y_interpolate, z_interpolate])
+    return curve_interpolate.T
 
 
 def PCA_normalization(curve):
-    curve = normalize_points(curve)
+    curve = curve_interpolation(curve)
     pca = PCA(n_components=3)
     curve_pca = pca.fit_transform(curve)
-    curve_center = curve_pca - curve_pca[0, :]
+    mass_center = np.mean(curve_pca, axis=0)
+    curve_center = curve_pca - mass_center
+    if np.abs(np.min(curve_center[:, 0])) > np.abs(np.max(curve_center[:, 0])):
+        curve_center[:, 0] = -curve_center[:, 0]
+    if np.abs(np.min(curve_center[:, 1])) > np.abs(np.max(curve_center[:, 1])):
+        curve_center[:, 1] = -curve_center[:, 1]
+    if np.abs(np.min(curve_center[:, 2])) > np.abs(np.max(curve_center[:, 2])):
+        curve_center[:, 2] = -curve_center[:, 2]
+
+    curve_center = curve_pca - curve_center[0, :]
     diagonal = curve_center[-1, :]
     rescale_factor = 1 / np.linalg.norm(diagonal)
     curve_rescale = curve_center * rescale_factor

@@ -6,14 +6,13 @@ import sys
 from abb_motion_program_exec_client import *
 sys.path.append('../../../toolbox')
 from robots_def import *
-from error_check import *
-from j_analysis import *
+from utils import *
 
-data_dirs=['threshold1/','threshold0.05/','threshold0.01/']
+data_dirs=['matlab_movej_0.1/','matlab_movej_0.5/','matlab_movej_1/']
 
 ms = MotionSend()
-speed={"v50":v50,"v500":v500,"v5000":v5000}
-zone={"fine":fine,"z1":z1,"z10":z10}
+speed={"v300":v300,"v500":v500,"vmax":vmax}
+zone={"z10":z10}
 
 
 col_names=['X', 'Y', 'Z','direction_x', 'direction_y', 'direction_z'] 
@@ -24,7 +23,6 @@ curve_z=data['Z'].tolist()
 curve=np.vstack((curve_x, curve_y, curve_z)).T
 
 robot=abb6640(d=50)
-d=50
 
 
 

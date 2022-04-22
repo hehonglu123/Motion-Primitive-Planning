@@ -2,28 +2,38 @@ import numpy as np
 import sys,copy
 sys.path.append('../circular_fit')
 from toolbox_circular_fit import *
-sys.path.append('../toolbox')
-from robot_def import *
+
 
 class fitting_toolbox(object):
-	def __init__(self,robot,curve,curve_normal,curve_js,d=50, orientation_weight=50):
+	def __init__(self,robot,curve_js,orientation_weight=50,curve=[]):
 		###robot: robot class
 		###curve: xyz position points
 		###curve_js: points in joint space
 		###d: standoff distance
-		self.curve=curve
-		self.curve_normal=curve_normal
 		self.curve_js=curve_js
-		self.d=d
+
 
 		self.orientation_weight=orientation_weight
 
 		self.robot=robot
 
 		###get full orientation list
-		self.curve_R=[]
-		for i in range(len(curve_js)):
-			self.curve_R.append(self.robot.fwd(curve_js[i]).R)
+		if len(curve)>0:
+			self.curve_R=[]
+			self.curve=curve
+			for i in range(len(curve_js)):
+				pose_temp=self.robot.fwd(curve_js[i])
+				self.curve_R.append(pose_temp.R)
+		else:
+			self.curve_R=[]
+			self.curve=[]
+			for i in range(len(curve_js)):
+				pose_temp=self.robot.fwd(curve_js[i])
+				self.curve_R.append(pose_temp.R)
+				self.curve.append(pose_temp.p)
+
+		self.curve_R=np.array(self.curve_R)
+		self.curve=np.array(self.curve)
 
 		###seed initial js for inv
 		self.q_prev=curve_js[0]
@@ -33,12 +43,6 @@ class fitting_toolbox(object):
 		self.curve_fit_js=[]
 		self.cartesian_slope_prev=None
 		self.js_slope_prev=None
-		
-	
-		###find path length
-		self.lam=[0]
-		for i in range(len(curve)-1):
-			self.lam.append(self.lam[-1]+np.linalg.norm(curve[i+1]-curve[i]))
 
 	def R2w(self, curve_R,R_constraint=[]):
 		if len(R_constraint)==0:
@@ -211,8 +215,13 @@ class fitting_toolbox(object):
 		p_error=np.linalg.norm(curve-curve_fit,axis=1)
 		o_error=self.orientation_weight*np.linalg.norm(curve_w-curve_fit_w,axis=1)
 		error=p_error+o_error
+
+		curve_fit_R=np.array(curve_fit_R)
+		ori_error=[]
+		for i in range(len(curve)):
+			ori_error.append(get_angle(curve_R[i,:,-1],curve_fit_R[i,:,-1]))
 		
-		return curve_fit,curve_fit_R,[],np.max(error)
+		return curve_fit,curve_fit_R,[],np.max(error), np.max(ori_error)
 		
 
 
@@ -239,8 +248,13 @@ class fitting_toolbox(object):
 		p_error=np.linalg.norm(curve-curve_fit,axis=1)
 		o_error=self.orientation_weight*np.linalg.norm(curve_w-curve_fit_w,axis=1)
 		error=p_error+o_error
+
+		curve_fit_R=np.array(curve_fit_R)
+		ori_error=[]
+		for i in range(len(curve)):
+			ori_error.append(get_angle(curve_R[i,:,-1],curve_fit_R[i,:,-1]))
 		
-		return curve_fit,curve_fit_R,curve_fit_js,np.max(error)
+		return curve_fit,curve_fit_R,curve_fit_js,np.max(error), np.max(ori_error)
 
 
 	def movec_fit(self,curve,curve_js,curve_R,p_constraint=[],R_constraint=[],slope_constraint=[]):
@@ -255,7 +269,12 @@ class fitting_toolbox(object):
 		o_error=self.orientation_weight*np.linalg.norm(curve_w-curve_fit_w,axis=1)
 		error=p_error+o_error
 
-		return curve_fit,curve_fit_R,[],np.max(error)
+		curve_fit_R=np.array(curve_fit_R)
+		ori_error=[]
+		for i in range(len(curve)):
+			ori_error.append(get_angle(curve_R[i,:,-1],curve_fit_R[i,:,-1]))
+
+		return curve_fit,curve_fit_R,[],np.max(error), np.max(ori_error)
 
 	def get_slope(self,curve_fit,curve_fit_R,breakpoints):
 		slope_diff=[]

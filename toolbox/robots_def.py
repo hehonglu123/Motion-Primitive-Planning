@@ -23,8 +23,6 @@ class abb6640(object):
 		p1=np.array([[0.32],[0],[0]])
 		p2=np.array([[0.],[0],[1.075]])
 		p3=np.array([[0],[0],[0.2]])   
-		# p4=np.array([[1.142],[0],[0]])
-		print("p4 is 1.1425")
 		p4=np.array([[1.1425],[0],[0]])
 		p5=np.array([[0.2],[0],[0]])
 		p6=np.array([[0.0],[0],[0.0]])
@@ -38,10 +36,10 @@ class abb6640(object):
 		
 		###updated range&vel limit
 		self.upper_limit=np.radians([170.,85.,70.,300.,120.,360.])
-		self.lowerer_limit=np.radians([-170.,-65.,-180.,-300.,-120.,-360.])
+		self.lower_limit=np.radians([-170.,-65.,-180.,-300.,-120.,-360.])
 		self.joint_vel_limit=np.radians([100,90,90,190,140,190])
-		self.joint_acc_limit=10*self.joint_vel_limit
-		self.robot_def=Robot(self.H,self.P,self.joint_type,joint_lower_limit = self.lowerer_limit, joint_upper_limit = self.upper_limit, joint_vel_limit=self.joint_vel_limit, R_tool=R_tool,p_tool=tcp_new)
+		self.joint_acc_limit=np.radians([312,292,418,2407,1547,3400])
+		self.robot_def=Robot(self.H,self.P,self.joint_type,joint_lower_limit = self.lower_limit, joint_upper_limit = self.upper_limit, joint_vel_limit=self.joint_vel_limit, R_tool=R_tool,p_tool=tcp_new)
 
 	def jacobian(self,q):
 		return robotjacobian(self.robot_def,q)
@@ -87,10 +85,10 @@ class abb1200(object):
 		self.P=np.concatenate((p0,p1,p2,p3,p4,p5,p6),axis=1)*1000.
 		self.joint_type=np.zeros(6)
 		self.upper_limit=np.radians([170.,130.,70.,270.,130.,360.])
-		self.lowerer_limit=np.radians([-170.,-100.,-200.,-270.,-130.,-360.])
+		self.lower_limit=np.radians([-170.,-100.,-200.,-270.,-130.,-360.])
 		self.joint_vel_limit=np.radians([288,240,297,400,405,600])
 		self.joint_acc_limit=10*self.joint_vel_limit
-		self.robot_def=Robot(self.H,self.P,self.joint_type,joint_lower_limit = self.lowerer_limit, joint_upper_limit = self.upper_limit, joint_vel_limit=self.joint_vel_limit, R_tool=R_tool,p_tool=tcp_new)
+		self.robot_def=Robot(self.H,self.P,self.joint_type,joint_lower_limit = self.lower_limit, joint_upper_limit = self.upper_limit, joint_vel_limit=self.joint_vel_limit, R_tool=R_tool,p_tool=tcp_new)
 
 	def jacobian(self,q):
 		return robotjacobian(self.robot_def,q)
@@ -117,7 +115,7 @@ class abb1200(object):
 
 class arb_robot(object):
 	#R_tool make tool z pointing to +x at 0 config
-	def __init__(self, H,P,joint_type,upper_limit,lowerer_limit, joint_vel_limit,R_tool=Ry(np.radians(90)),p_tool=np.zeros(3)):
+	def __init__(self, H,P,joint_type,upper_limit,lower_limit, joint_vel_limit,R_tool=Ry(np.radians(90)),p_tool=np.zeros(3),d=0):
 		###All in mm
 		self.H=H
 		self.P=P
@@ -128,10 +126,10 @@ class arb_robot(object):
 		###updated range&vel limit
 		self.joint_type=joint_type
 		self.upper_limit=upper_limit
-		self.lowerer_limit=lowerer_limit
+		self.lower_limit=lower_limit
 		self.joint_vel_limit=joint_vel_limit
 		self.joint_acc_limit=10*self.joint_vel_limit
-		self.robot_def=Robot(self.H,self.P,self.joint_type,joint_lower_limit = self.lowerer_limit, joint_upper_limit = self.upper_limit, joint_vel_limit=self.joint_vel_limit, R_tool=R_tool,p_tool=tcp_new)
+		self.robot_def=Robot(self.H,self.P,self.joint_type,joint_lower_limit = self.lower_limit, joint_upper_limit = self.upper_limit, joint_vel_limit=self.joint_vel_limit, R_tool=R_tool,p_tool=tcp_new)
 
 	def jacobian(self,q):
 		return robotjacobian(self.robot_def,q)
@@ -176,12 +174,12 @@ def yml2robdef(file):
 	###joint info
 	joint_type=[]	
 	upper_limit=[]
-	lowerer_limit=[]
+	lower_limit=[]
 	joint_vel_limit=[]
 	for i in range(len(joint_info)):
 		joint_type.append(0 if joint_info[i]['joint_type']=='revolute' else 1)
 		upper_limit.append(joint_info[i]['joint_limits']['upper'])
-		lowerer_limit.append(joint_info[i]['joint_limits']['lower'])
+		lower_limit.append(joint_info[i]['joint_limits']['lower'])
 		joint_vel_limit.append(joint_info[i]['joint_limits']['velocity'])
 
 	###tool pose
@@ -189,7 +187,7 @@ def yml2robdef(file):
 	p_tool=np.array(list(tool_pose['position'].values()))*1000
 
 	###create a robot
-	robot=arb_robot(H,P,joint_type,upper_limit,lowerer_limit, joint_vel_limit,R_tool=R_tool,p_tool=p_tool)
+	robot=arb_robot(H,P,joint_type,upper_limit,lower_limit, joint_vel_limit,R_tool=R_tool,p_tool=p_tool)
 
 	return robot
 class Transform_all(object):

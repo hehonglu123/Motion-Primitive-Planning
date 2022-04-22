@@ -5,34 +5,149 @@ from general_robotics_toolbox import *
 import matplotlib.pyplot as plt
 from robots_def import *
 
-def calc_lam(curve):
-	###find path length
+def calc_lam_js(curve_js,robot):
+	#calculate lambda from joints
 	lam=[0]
-	for i in range(len(curve)-1):
-		lam.append(lam[-1]+np.linalg.norm(curve[i+1]-curve[i]))
-	###normalize lam, 
+	curve=[]
+	for i in range(len(curve_js)):
+	    robot_pose=robot.fwd(curve_js[i])
+	    curve.append(robot_pose.p)
+	    if i>0:
+	        lam.append(lam[-1]+np.linalg.norm(curve[i]-curve[i-1]))
 	return np.array(lam)
 
-def calc_lamdot(curve_js,lam,joint_vel_limit,step):
+def calc_lam_cs(curve):
+	###find path length
+	temp=np.diff(curve,axis=0)
+	temp=np.linalg.norm(temp,axis=1)
+	lam=np.insert(np.cumsum(temp),0,0)
+
+	return lam
+
+def calc_lamdot(curve_js,lam,robot,step):
 	############find maximum lambda dot vs lambda
 	###curve_js: curve expressed in joint space in radians
 	###lam: discrete lambda (path length), same shape as curve_js, from 0 to 1
-	###joint_vel_limit: joint velocity limit in radians
+	###robot: joint velocity & acc limit 
 	###step: step size used for dense curve
 
-	dlam_max=[]
+	# dlam_max1=[]
+	# dlam_max2=[]
 
-	for i in range(0,len(lam)-step,step):
-		dq=np.abs(curve_js[i+step]-curve_js[i])
-		dqdlam=dq/(lam[i+step]-lam[i])
-		t=np.max(np.divide(dq,joint_vel_limit))
+	# dqdlam=[]
+	# d2qdlam2=[]
 
-		qdot_max=dq/t 		###approximated max qdot
-		dlam_max.append(qdot_max[0]/dqdlam[0])
+	# for i in range(0,len(lam)-step,step):
+	# 	dq=curve_js[i+step]-curve_js[i]
+	# 	dqdlam.append(dq/(lam[i+step]-lam[i]))
+
+	# 	dlam_max1.append(np.min(np.divide(robot.joint_vel_limit,np.abs(dqdlam[-1]))))
+	# 	if i>0:
+	# 		d2qdlam2.append(2*(dqdlam[-1]-dqdlam[-2])/(lam[i+step]-lam[i-step]))
+	# 		dlam_max2.append(np.sqrt(np.min(np.divide(robot.joint_acc_limit,np.abs(d2qdlam2[-1])))))
+
+	# dlam_max_act=np.minimum(np.array(dlam_max1),np.insert(dlam_max2,0,99999))
+
+	curve_js=curve_js[::step]
+	lam=lam[::step]
+	dq=np.gradient(curve_js,axis=0)
+	dlam=np.gradient(lam)
+	dqdlam=np.divide(dq.T,dlam).T
+
+	d2qdlam2=np.divide(np.gradient(dqdlam,axis=0).T,dlam).T
+
+	dlam_max1=np.min(np.divide(robot.joint_vel_limit,np.abs(dqdlam)),axis=1)
+	dlam_max2=np.sqrt(np.min(np.divide(robot.joint_acc_limit,np.abs(d2qdlam2)),axis=1))
+
+	dlam_max_act=np.minimum(dlam_max1,dlam_max2)
+
+	return dlam_max_act
+def calc_lamdot_2arm(curve_js,lam,robot1,robot2,step):
+	############find maximum lambda dot vs lambda
+	###curve_js: curve expressed in joint space in radians
+	###lam: discrete lambda (path length), same shape as curve_js, from 0 to 1
+	###robot: joint velocity & acc limit 
+	###step: step size used for dense curve
+
+	curve_js=curve_js[::step]
+	lam=lam[::step]
+	dq=np.gradient(curve_js,axis=0)
+	dlam=np.gradient(lam)
+	dqdlam=np.divide(dq.T,dlam).T
+
+	d2qdlam2=np.divide(np.gradient(dqdlam,axis=0).T,dlam).T
+
+	dlam_max1=np.min(np.divide(np.hstack((robot1.joint_vel_limit,robot2.joint_vel_limit)),np.abs(dqdlam)),axis=1)
+	dlam_max2=np.sqrt(np.min(np.divide(np.hstack((robot1.joint_acc_limit,robot2.joint_acc_limit)),np.abs(d2qdlam2)),axis=1))
+
+	dlam_max_act=np.minimum(dlam_max1,dlam_max2)
+
+	return dlam_max_act
+
+def est_lamdot(dqdlam_list,breakpoints,lam,spl_list,merged_idx,robot):
+	############estimated lambdadot from arbitray blending
+	###dqdlam_list: list of dqdlam in each segment
+	###lam: discrete lambda (path length), same shape as curve_js
+	###breakpoints: breakpoints
+	###spl_list: spline coefficient at each breakpoint
+	###merged_idx: merged breakpoitn idx when blending
+	###robot: robot definitions
+
+	dlam_max1=[]
+	dlam_max2=[]
+	for dqdlam_seg in dqdlam_list:
+		dlam_max1.append(np.min(np.divide(robot.joint_vel_limit,np.abs(dqdlam_seg))))
+
+	###loop all spline blending
+	for i in range(len(spl_list)):
+		###loop all merged blending breakpoint
+		if len(merged_idx[i])>1:
+			bp=int(np.average(merged_idx[i]))
+		else:
+			bp=merged_idx[i][0]
+		dq2dlam2=[]
+		###loop all joints
+		for j in range(len(robot.joint_vel_limit)):
+			dderivative=spl_list[i][j].derivative().derivative()
+			sampling=np.linspace(lam[bp]-5,lam[bp]+5)
+			dq2dlam2.append(np.max(dderivative(lam[bp])))
+
+		###calc lamdot_min at breakpoints
+		dlam_max2.append(np.sqrt(np.min(np.divide(robot.joint_acc_limit,np.abs(dq2dlam2)))))
+	return dlam_max1, dlam_max2
+def est_lamdot_min(dqdlam_list,breakpoints,lam,spl_list,merged_idx,robot):
+	dlam_max1,dlam_max2=est_lamdot(dqdlam_list,breakpoints,lam,spl_list,merged_idx,robot)
+	# print(dlam_max2)
+	return min(np.min(dlam_max1),np.min(dlam_max2))
+
+def calc_lamdot2(curve_js,lam,robot,step):
+	############find maximum lambda dot vs lambda, with different downsampling strategy, require full dense curve
+	###curve_js: curve expressed in joint space in radians
+	###lam: discrete lambda (path length), same shape as curve_js, from 0 to 1
+	###robot: joint velocity & acc limit 
+	###step: step size used for dense curve
+
+	dlam_max1=[]
+	dlam_max2=[]
+
+	dqdlam=[]
+	d2qdlam2=[]
+
+	for i in range(1,len(lam)-step,step):
+		dq=curve_js[i+1]-curve_js[i]
+		dqdlam=dq/(lam[i+1]-lam[i])
+		dlam_max1.append(np.min(np.divide(robot.joint_vel_limit,np.abs(dqdlam[-1]))))
+
+		d2qdlam2.append(2*(dqdlam[-1]-dqdlam[-2])/(lam[i+1]-lam[i-1]))
+
+		dlam_max2.append(np.sqrt(np.min(np.divide(robot.joint_acc_limit,np.abs(d2qdlam2[-1])))))
 
 
 
-	return dlam_max
+	dlam_max_act=np.minimum(np.array(dlam_max1),np.array(dlam_max2))
+
+
+	return dlam_max1,dlam_max2
 
 def calc_lamdot_acc_constraints(curve_js,lam,joint_vel_limit,joint_acc_limit,breakpoints,step):
 	############find maximum lambda dot vs lambda
@@ -96,16 +211,22 @@ def calc_lamdot_dual(curve_js1,curve_js2,lam,joint_vel_limit1,joint_vel_limit2,s
 
 
 def main():
-	col_names=['x', 'y', 'z','R1','R2','R3','R4','R5','R6','R7','R8','R9'] 
-	data = read_csv("../greedy_fitting/curve_fit_backproj.csv")
-	curve_x=data['x'].tolist()
-	curve_y=data['y'].tolist()
-	curve_z=data['z'].tolist()
+	robot=abb6640(d=50)
+
+	# col_names=['x', 'y', 'z','R1','R2','R3','R4','R5','R6','R7','R8','R9'] 
+	# data = read_csv("../greedy_fitting/curve_fit_backproj.csv")
+	col_names=['X', 'Y', 'Z','direction_x', 'direction_y', 'direction_z'] 
+	data = read_csv("../data/from_ge/Curve_in_base_frame2.csv", names=col_names)
+	curve_x=data['X'].tolist()
+	curve_y=data['Y'].tolist()
+	curve_z=data['Z'].tolist()
 	curve=np.vstack((curve_x, curve_y, curve_z)).T
-	print(curve)
+	# print(curve)
 
 	col_names=['q1', 'q2', 'q3','q4', 'q5', 'q6'] 
-	data = read_csv("../greedy_fitting/curve_fit_js.csv", names=col_names)
+	data = read_csv("../data/from_ge/Curve_js2.csv", names=col_names)
+	# data = read_csv("qsol.csv", names=col_names)
+	# data = read_csv("../constraint_solver/single_arm/trajectory/all_theta_opt/all_theta_opt_js.csv", names=col_names)
 	curve_q1=data['q1'].tolist()
 	curve_q2=data['q2'].tolist()
 	curve_q3=data['q3'].tolist()
@@ -113,11 +234,12 @@ def main():
 	curve_q5=data['q5'].tolist()
 	curve_q6=data['q6'].tolist()
 	curve_js=np.vstack((curve_q1, curve_q2, curve_q3,curve_q4,curve_q5,curve_q6)).T
-	lam=calc_lam(curve)
-	robot=abb6640()
-	step=1
-	lam_dot=calc_lamdot(curve_js,lam,robot.joint_vel_limit,step)
-	plt.plot(lam[::step][1:],lam_dot)
+	# lam=calc_lam_cs(curve)
+	lam=calc_lam_js(curve_js,robot)
+	
+	step=1000
+	lam_dot=calc_lamdot(curve_js,lam,robot,step)
+	plt.plot(lam[::step],lam_dot)
 	plt.xlabel('path length (mm)')
 	plt.ylabel('max lambda_dot')
 	plt.title('lambda_dot vs lambda')

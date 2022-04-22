@@ -28,14 +28,14 @@ class MotionSend(object):
     def __init__(self) -> None:
         
         self.client = MotionProgramExecClient()
-        self.robot=abb6640()
-        quatR = R2q(rot([0,1,0],math.radians(30)))
-        self.tool = tooldata(True,pose([50,0,450],[quatR[0],quatR[1],quatR[2],quatR[3]]),loaddata(1,[0,0,0.001],[1,0,0,0],0,0,0))
+        # self.robot=abb6640()
+        # quatR = R2q(rot([0,1,0],math.radians(30)))
+        # self.tool = tooldata(True,pose([50,0,450],[quatR[0],quatR[1],quatR[2],quatR[3]]),loaddata(1,[0,0,0.001],[1,0,0,0],0,0,0))
 
         ###with fake link
-        # self.robot=abb6640(d=50)
-        # quatR = R2q(rot([0,1,0],math.radians(30)))
-        # self.tool = tooldata(True,pose([75,0,493.30127019],[quatR[0],quatR[1],quatR[2],quatR[3]]),loaddata(1,[0,0,0.001],[1,0,0,0],0,0,0))
+        self.robot=abb6640(d=50)
+        quatR = R2q(rot([0,1,0],math.radians(30)))
+        self.tool = tooldata(True,pose([75,0,493.30127019],[quatR[0],quatR[1],quatR[2],quatR[3]]),loaddata(1,[0,0,0.001],[1,0,0,0],0,0,0))
 
     def moveL_target(self,q,point):
         quat=R2q(self.robot.fwd(q).R)
@@ -74,7 +74,6 @@ class MotionSend(object):
         curve_q6=data['q6'].tolist()
         curve_js=np.vstack((curve_q1, curve_q2, curve_q3,curve_q4,curve_q5,curve_q6)).T
 
-
         mp = MotionProgram(tool=self.tool)
         
         for i in range(len(primitives)):
@@ -83,7 +82,6 @@ class MotionSend(object):
                 zone=fine
             motion = primitives[i]
             if motion == 'movel_fit':
-
                 robt = self.moveL_target(curve_js[breakpoints[i]],points[i])
                 mp.MoveL(robt,speed,zone)
 
@@ -100,6 +98,8 @@ class MotionSend(object):
                     mp.WaitTime(0.1)
                 else:
                     mp.MoveAbsJ(jointt,speed,zone)
+        ###add sleep at the end to wait for data transmission
+        mp.WaitTime(0.1)
         
         print(mp.get_program_rapid())
         log_results = self.client.execute_motion_program(mp)
@@ -142,15 +142,18 @@ def exe_from_file(ms,filename,filename_js,speed,zone):
 
 def main():
     ms = MotionSend()
-    data_dir="fitting_output/threshold1/"
+    data_dir="fitting_output_new/matlab_qp/"
+    # data_dir="fitting_output_new/Jon/"
     # speed={"v50":v50,"v500":v500,"v5000":v5000}
     # zone={"fine":fine,"z1":z1,"z10":z10}
-    speed={"v500":v500}
+    vmax = speeddata(10000,9999999,9999999,999999)
+    v559 = speeddata(559,9999999,9999999,999999)
+    speed={"v50":v50}#,"v500":v500,"v300":v300,"v100":v100}
     zone={"z10":z10}
 
     for s in speed:
         for z in zone: 
-            curve_exe_js=exe_from_file(ms,data_dir+"command_backproj.csv",data_dir+"curve_fit_js.csv",speed[s],zone[z])
+            curve_exe_js=exe_from_file(ms,data_dir+"command.csv",data_dir+"curve_fit_js.csv",speed[s],zone[z])
    
 
             f = open(data_dir+"curve_exe"+"_"+s+"_"+z+".csv", "w")

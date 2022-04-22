@@ -38,14 +38,14 @@ MAX_GREEDY_STEP = 10
 
 EPS_START = 0.5
 EPS_END = 0.01
-MAX_EPS_EPISODE = 0.6
+EPS_DECAY = 10
 
 TAU_START = 10
 TAU_END = 0.01
 MAX_TAU_EPISODE = 0.6
-LEARNING_RATE = 0.0001
+LEARNING_RATE = 0.001
 GAMMA = 0.99
-BATCH_SIZE = 4
+BATCH_SIZE = 16
 
 REWARD_FINISH = 2000  # -------------------------------------- HERE
 REWARD_DECAY_FACTOR = 0.9
@@ -200,8 +200,8 @@ class DQN(nn.Module):
 class RL_Agent(object):
 
     def __init__(self, n_curve_feature: int, n_action: int, lr: float = LEARNING_RATE):
-        # self.input_dim = n_curve_feature + 1
-        self.input_dim = n_curve_feature * 3 * 2 + 1
+        self.input_dim = n_curve_feature + 1
+        # self.input_dim = n_curve_feature * 3 * 2 + 1
         self.output_dim = n_action * 2
         self.n_curve_feature = n_curve_feature
         self.n_action = n_action
@@ -214,6 +214,7 @@ class RL_Agent(object):
         self.policy_net = DQN(input_dim=self.input_dim, output_dim=self.output_dim)
         self.target_net.load_state_dict(self.policy_net.state_dict())
         self.optimizer = optim.RMSprop(self.policy_net.parameters(), lr=self.lr)
+        self.scheduler = optim.lr_scheduler.StepLR(self.optimizer, step_size=500, gamma=0.5)
 
         self.criterion = nn.SmoothL1Loss()
 
@@ -282,12 +283,17 @@ class RL_Agent(object):
         loss = self.criterion(td_est, td_tgt)
         loss.backward()
         self.optimizer.step()
+        self.scheduler.step()
 
     def update_target_nets(self):
         self.target_net.load_state_dict(self.policy_net.state_dict())
 
     def save_model(self, path):
         torch.save(self.policy_net.state_dict(), path + os.sep + 'DQN_policy_net.pth')
+
+    def load_model(self, path):
+        self.policy_net.load_state_dict(torch.load(path + os.sep + 'DQN_policy_net.pth'))
+        self.target_net.load_state_dict(self.policy_net.state_dict())
 
 
 class RL_Env(object):
@@ -324,10 +330,10 @@ class RL_Env(object):
 
         remaining_curve = self.target_curve[self.last_bp:, :]
         normalized_curve = PCA_normalization(remaining_curve)
-        curve_features, _ = fft_feature(normalized_curve, self.n_feature)
-        # normalized_curve_tensor = torch.from_numpy(np.array([normalized_curve.T])).float()
-        # curve_features = self.encoder(normalized_curve_tensor)
-        # curve_features = curve_features.detach().numpy().flatten()
+        # curve_features, _ = fft_feature(normalized_curve, self.n_feature)
+        normalized_curve_tensor = torch.from_numpy(np.array([normalized_curve.T])).float()
+        curve_features = self.encoder(normalized_curve_tensor)
+        curve_features = curve_features.detach().numpy().flatten()
 
         self.longest_primitives, longest_type = greedy_fit_primitive(last_bp=self.last_bp, curve=self.target_curve,
                                                                      p=self.fit_curve[-1])
@@ -358,10 +364,10 @@ class RL_Env(object):
                        "C": self.longest_primitives['C'] is not None}
         remaining_curve = self.target_curve[self.last_bp:, :]
         normalized_curve = PCA_normalization(remaining_curve)
-        curve_features, _ = fft_feature(normalized_curve, self.n_feature)
-        # normalized_curve_tensor = torch.from_numpy(np.array([normalized_curve.T])).float()
-        # curve_features = self.encoder(normalized_curve_tensor)
-        # curve_features = curve_features.detach().numpy().flatten()
+        # curve_features, _ = fft_feature(normalized_curve, self.n_feature)
+        normalized_curve_tensor = torch.from_numpy(np.array([normalized_curve.T])).float()
+        curve_features = self.encoder(normalized_curve_tensor)
+        curve_features = curve_features.detach().numpy().flatten()
 
         state = State(longest_type=longest_type, curve_features=curve_features)
         # done = len(self.fit_curve) >= len(self.target_curve)
@@ -373,7 +379,7 @@ class RL_Env(object):
         pass
 
 
-def train_rl(agent: RL_Agent, curve_base_data, curve_js_data, n_episode=1000):
+def train_rl(agent: RL_Agent, curve_base_data, curve_js_data, n_episode=10000):
     robot = abb6640()
     print("Train Start")
 
@@ -384,11 +390,15 @@ def train_rl(agent: RL_Agent, curve_base_data, curve_js_data, n_episode=1000):
     feature_encoder = load_encoder('cnn_model/cnn_model.pth')
     feature_encoder.eval()
 
+    epsilon = EPS_START
+
     for i_episode in range(n_episode):
         timer = time.time_ns()
 
         tau = episode_tau(i_episode, n_episode)
-        epsilon = EPS_START - i_episode * (EPS_START - EPS_END) / n_episode
+        # epsilon = EPS_START - i_episode * (EPS_START - EPS_END) / n_episode
+        if (i_episode + 1) % EPS_DECAY == 0:
+            epsilon = epsilon * 0.995
 
         episode_reward = 0
 
@@ -447,6 +457,62 @@ def train_rl(agent: RL_Agent, curve_base_data, curve_js_data, n_episode=1000):
     return episode_rewards, episode_steps
 
 
+def evaluate_rl(agent: RL_Agent, curve_base_data, curve_js_data):
+    robot = abb6640()
+    print("Evaluation Start")
+
+    episode_steps = []
+    episode_target_curve = []
+
+    feature_encoder = load_encoder('cnn_model/cnn_model.pth')
+    feature_encoder.eval()
+
+    for i, (curve_base, curve_normal) in enumerate(curve_base_data):
+        episode_reward = 0
+        curve_js = curve_js_data[i]
+        timer = time.time_ns()
+
+        greedy_fit_obj = greedy_fit(robot, curve_base, curve_normal, curve_js, d=50)
+        greedy_fit_obj.primitives = {'movel_fit': greedy_fit_obj.movel_fit_greedy,
+                                     'movec_fit': greedy_fit_obj.movec_fit_greedy}
+
+        env = RL_Env(target_curve=curve_base, target_curve_normal=curve_normal, target_curve_js=curve_js,
+                     greedy_obj=greedy_fit_obj, n_feature=agent.n_curve_feature, feature_encoder=feature_encoder)
+
+        # print("Episode Start")
+
+        state, done, valid_actions = env.reset()
+
+        i_step = 0
+        while not done:
+            i_step += 1
+            # print("{}/{}".format(len(env.fit_curve), len(env.target_curve)))
+            # print("Action:", action, valid_actions)
+
+            action = agent.get_action(state, valid_types=valid_actions, epsilon=0)
+            # print(action)
+
+            next_state, reward, done, valid_actions = env.step(action, i_step)
+
+            agent.memory_save(state=state, action=action, reward=reward, next_state=next_state, done=done)
+            episode_reward += reward
+
+            state = next_state
+
+            if done:
+                break
+
+            # print("Step: {} END {}".format(i_step, reward))
+
+        print("Curve {} / {} --- {} Steps --- Reward: {:.3f} --- {:.3f}s "
+              .format(i, len(curve_base_data), i_step, episode_reward,
+                      (time.time_ns() - timer) / (10 ** 9)))
+
+        episode_steps.append(i_step)
+        episode_target_curve.append(i)
+        save_evaluation_data(episode_steps, episode_target_curve)
+
+
 def save_data(episode_rewards, episode_steps, episode_target_curve):
     df = pd.DataFrame({"episode_rewards": episode_rewards,
                        "episode_steps": episode_steps,
@@ -454,17 +520,31 @@ def save_data(episode_rewards, episode_steps, episode_target_curve):
     df.to_csv("Training Curve Data.csv")
 
 
-def rl_fit(curve_base_data, curve_js_data):
-    n_feature = 20
+def save_evaluation_data(episode_steps, episode_target_curve):
+    df = pd.DataFrame({"num_primitives": episode_steps,
+                       "curve": episode_target_curve})
+    df.to_csv("Evaluate Curve Data.csv")
+
+
+def rl_fit(curve_base_data, curve_js_data, load_model=False):
+    n_feature = 128
     n_action = 10
     agent = RL_Agent(n_feature, n_action)
+    if load_model:
+        agent.load_model('model')
     train_rl(agent, curve_base_data, curve_js_data)
 
 
 def main():
     curve_base_data = read_base_data("data/base")
     curve_js_data = read_js_data("data/js")
-    rl_fit(curve_base_data, curve_js_data)
+    # rl_fit(curve_base_data, curve_js_data)
+
+    n_feature = 128
+    n_action = 10
+    agent = RL_Agent(n_feature, n_action, load_model=True)
+    agent.load_model('model')
+    evaluate_rl(agent, curve_base_data, curve_js_data)
 
 
 if __name__ == '__main__':

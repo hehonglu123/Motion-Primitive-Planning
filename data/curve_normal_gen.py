@@ -4,17 +4,17 @@ from pandas import *
 import sys, traceback
 import numpy as np
 sys.path.append('../toolbox')
-from projection import VectorPlaneProjection
+from utils import *
 ##################################generate equaly divided cartesian path for moveJ and moveL
 def gen_curve_normal(seed_vec,curve):
 	curve_normal=[]
 	error=[]
 	for i in range(len(curve)-1):
-
 		moving_direction=curve[i+1]-curve[i]
 		moving_direction=moving_direction/np.linalg.norm(moving_direction)
+		curve_normal_temp=VectorPlaneProjection(seed_vec,moving_direction)
 
-		curve_normal.append(VectorPlaneProjection(seed_vec,moving_direction))
+		curve_normal.append(curve_normal_temp/np.linalg.norm(curve_normal_temp))
 		error.append(np.dot(moving_direction,curve_normal[-1]))
 
 	curve_normal.append(curve_normal[-1])
@@ -99,4 +99,4 @@ def rl_traj_gen():
 
 
 if __name__ == "__main__":
-	rl_traj_gen()
+	main()
