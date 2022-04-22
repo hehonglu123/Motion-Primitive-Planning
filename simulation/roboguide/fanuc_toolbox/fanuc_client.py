@@ -41,6 +41,11 @@ class jointtarget(NamedTuple):
     robax: np.ndarray # shape=(6,)
     extax: np.ndarray # shape=(6,)
 
+def joint2robtarget(q,robot,group,uframe,utool):
+    
+    
+    
+    return 
 
 class TPMotionProgram(object):
     def __init__(self) -> None:
