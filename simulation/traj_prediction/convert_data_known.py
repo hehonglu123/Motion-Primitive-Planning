@@ -4,7 +4,7 @@ import numpy as np
 from numpy.linalg import norm
 import general_robotics_toolbox as rox
 from general_robotics_toolbox import general_robotics_toolbox_invkin as roxinv
-from math import ceil,cos, sin
+from math import ceil,cos, sin, radians,pi
 from pandas import *
 import time
 import os
@@ -19,8 +19,14 @@ from nominal_traj import AnalyticalPredictor
 dt = 0.004
 robot = abb6640(R_tool=Ry(np.radians(90)),p_tool=np.array([0,0,0]))
 
-src_folder = '/media/eric/Transcend/Motion-Primitive-Planning/simulation/traj_prediction/data/data_L_z10/'
-des_folder = '/media/eric/Transcend/Motion-Primitive-Planning/simulation/traj_prediction/data/data_L_z10_split/'
+VERTICAL = False
+
+if VERTICAL:
+    src_folder = '/media/eric/Transcend/Motion-Primitive-Planning/simulation/traj_prediction/data_param_vertical/'
+    des_folder = '/media/eric/Transcend/Motion-Primitive-Planning/simulation/traj_prediction/data_param_vertical/data_split/'
+else:
+    src_folder = '/media/eric/Transcend/Motion-Primitive-Planning/simulation/traj_prediction/data_param/'
+    des_folder = '/media/eric/Transcend/Motion-Primitive-Planning/simulation/traj_prediction/data_param/data_split/'
 
 # data_cnt = 0
 # data_ptr = -1
@@ -30,6 +36,101 @@ max_data = 3000
 
 Tf = 25
 ap = AnalyticalPredictor(1,Tf)
+
+# data info
+start_p = np.array([2300,1000,600])
+end_p = np.array([1300,-1000,600])
+all_Rq = rox.R2q(rox.rot([0,1,0],pi/2))
+side_l = 200
+zone = 10
+
+x_divided = 11
+step_x = (end_p[0]-start_p[0])/(x_divided-1)
+y_divided = 11
+step_y = (end_p[1]-start_p[1])/(y_divided-1)
+angels = [90,120,150]
+
+vel=50
+
+# where to start
+start_xi = 0
+start_yi = 0
+
+for pxi in range(start_xi,x_divided):
+    start_xi = 0
+    for pyi in range(start_yi,y_divided):
+        start_yi = 0
+        for ang in angels:
+            # load logged joints
+            col_names=['timestamp','cmd_num','q1', 'q2', 'q3','q4', 'q5', 'q6'] 
+            data = read_csv(src_folder+"log_"+str(vel)+"_"+"{:02d}".format(pxi)+"_"+"{:02d}".format(pyi)+"_"+\
+                        str(ang)+".csv", names=col_names,skiprows = 1)
+            curve_q1=data['q1'].tolist()
+            curve_q2=data['q2'].tolist()
+            curve_q3=data['q3'].tolist()
+            curve_q4=data['q4'].tolist()
+            curve_q5=data['q5'].tolist()
+            curve_q6=data['q6'].tolist()
+            joint_angles=np.deg2rad(np.vstack((curve_q1, curve_q2, curve_q3,curve_q4,curve_q5,curve_q6)).T)
+
+            px = start_p[0]+step_x*pxi
+            py = start_p[1]+step_y*pyi
+
+            if VERTICAL:
+                p1 = [px,py+side_l*sin(radians(ang/2)),start_p[2]-side_l*cos(radians(ang/2))]
+                p3 = [px,py-side_l*sin(radians(ang/2)),start_p[2]-side_l*cos(radians(ang/2))]
+            else:
+                p1 = [px-side_l*cos(radians(ang/2)),py+side_l*sin(radians(ang/2)),start_p[2]]
+                p3 = [px-side_l*cos(radians(ang/2)),py-side_l*sin(radians(ang/2)),start_p[2]]
+                
+            p2 = [px,py,start_p[2]]
+            # the rotation is the same in this dataset
+            R1,R2,R3 = rox.q2R(all_Rq),rox.q2R(all_Rq),rox.q2R(all_Rq)
+
+            vel_profile = 50
+            zone_profile = 10
+
+            if zone_profile == 10:
+                z_tcp = 10
+                z_ori = 15
+            elif zone_profile == 1:
+                z_tcp = 1
+                z_ori = 1
+
+            # data name
+            data_name = "log_"+str(vel)+"_"+"{:02d}".format(pxi)+"_"+"{:02d}".format(pyi)+"_"+str(ang)
+
+            # load logged joints
+            col_names=['timestamp','cmd_num','q1', 'q2', 'q3','q4', 'q5', 'q6'] 
+            data = read_csv(src_folder+data_name+".csv", names=col_names,skiprows = 1)
+            curve_q1=data['q1'].tolist()
+            curve_q2=data['q2'].tolist()
+            curve_q3=data['q3'].tolist()
+            curve_q4=data['q4'].tolist()
+            curve_q5=data['q5'].tolist()
+            curve_q6=data['q6'].tolist()
+            joint_angles=np.deg2rad(np.vstack((curve_q1, curve_q2, curve_q3,curve_q4,curve_q5,curve_q6)).T)
+            curve_x=np.array([])
+            curve_y=np.array([])
+            curve_z=np.array([])
+            for i in range(len(joint_angles)):
+                T = robot.fwd(joint_angles[i])
+                curve_x = np.append(curve_x,T.p[0])
+                curve_y = np.append(curve_y,T.p[1])
+                curve_z = np.append(curve_z,T.p[2])
+            
+            # create the split data folder
+            try: 
+                save_folder_input = des_folder+data_name
+                os.mkdir(save_folder_input)
+                save_folder_input = des_folder+data_name+'/input'
+                os.mkdir(save_folder_input)
+                save_folder_label = des_folder+data_name+'/label'
+                os.mkdir(save_folder_label)
+            except OSError as error: 
+                print(error) 
+
+
 
 while data_cnt < max_data:
     data_ptr += 1
