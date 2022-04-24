@@ -47,18 +47,6 @@ def gen_curve_normal2(seed_vec,curve):
 	curve_normal.append(curve_normal[-1])
 	return np.array(curve_normal)
 
-def visualize(curve,curve_normal):
-	curve=curve[::500]
-	curve_normal=curve_normal[::500]
-	X, Y, Z = zip(*curve)
-	U, V, W = zip(*curve_normal*50)
-	fig = plt.figure()
-	ax = fig.add_subplot(111, projection='3d')
-	ax.quiver(X, Y, Z, U, V, W)
-	ax.set_box_aspect((np.ptp(X), np.ptp(Y), np.ptp(Z)))
-
-	plt.show()
-
 def main():
 	col_names=['X', 'Y', 'Z','direction_x','direction_y','direction_z']
 	data = read_csv("from_ge/Curve_in_base_frame.csv", names=col_names)

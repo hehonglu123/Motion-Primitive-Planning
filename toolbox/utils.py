@@ -1,5 +1,6 @@
 from general_robotics_toolbox import *
 import numpy as np
+import matplotlib.pyplot as plt
 
 
 def cross(v):
@@ -71,3 +72,16 @@ def extract_points(primitive_type,points):
     else:
         endpoint=points[8:-3].split(',')
         return list(map(float, endpoint))
+
+
+def visualize_curve(curve,curve_normal,stepsize=500):
+	curve=curve[::stepsize]
+	curve_normal=curve_normal[::stepsize]
+	X, Y, Z = zip(*curve)
+	U, V, W = zip(*curve_normal*50)
+	fig = plt.figure()
+	ax = fig.add_subplot(111, projection='3d')
+	ax.quiver(X, Y, Z, U, V, W)
+	ax.set_box_aspect((np.ptp(X), np.ptp(Y), np.ptp(Z)))
+
+	plt.show()
