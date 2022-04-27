@@ -5,6 +5,7 @@ from pandas import *
 
 sys.path.append('../../toolbox')
 from robots_def import *
+from lambda_calc import *
 
 def main():
     robot1="abb1200"
@@ -12,7 +13,7 @@ def main():
     robot1_tool=abb1200(d=50)
     robot2_tool=abb6640()
     url={robot1:'rr+tcp://localhost:23333?service=robot',robot2:'rr+tcp://localhost:12222?service=robot'}
-    filename={robot1:'qp_arm1.csv',robot2:'qp_arm2.csv'}
+    filename={robot1:'arm1.csv',robot2:'arm2.csv'}
 
     #########################################modify robot2 base HERE!!!!!!##########################################
     base2_R=np.array([[-1,0,0],[0,-1,0],[0,0,1]])
@@ -40,16 +41,12 @@ def main():
 
     total_step=32
     idx=np.linspace(0,len(curve_js1)-1,total_step).astype(int)
-
-    p_prev=np.zeros(3)
+    
     ###find path length to sync motion in trajectory mode
-    lam=[0]
-    for i in range(len(curve_js1)-1):
-        p_new=robot1_tool.fwd(curve_js1[i+1]).p-robot2_tool.fwd(curve_js2[i+1],base2_R,base2_p).p
-        lam.append(lam[-1]+np.linalg.norm(p_new-p_prev))
-        p_prev=p_new
-    ###normalize lam, 
+    lam=calc_lam_js_2arm(curve_js1[idx],curve_js2[idx],robot1_tool,robot2_tool,base2_R,base2_p)
+    ###normalize lam,
     lam=np.array(lam)/lam[-1]
+
 
     robot1_obj = RRN.ConnectService(url[robot1])
 
@@ -83,9 +80,9 @@ def main():
     waypoints = []
 
 
-    for i in idx:
+    for i in range(len(idx)):
         wp = JointTrajectoryWaypoint()
-        wp.joint_position = curve_js1[i]
+        wp.joint_position = curve_js1[idx[i]]
         wp.time_from_start = 5*lam[i]
         waypoints.append(wp)
 
@@ -132,11 +129,13 @@ def main():
 
 
 
-    for i in idx:
+    for i in range(len(idx)):
         wp = JointTrajectoryWaypoint()
-        wp.joint_position = curve_js2[i]
+        wp.joint_position = curve_js2[idx[i]]
         wp.time_from_start = 5*lam[i]
+        
         waypoints.append(wp)
+
 
 
     traj2 = JointTrajectory()
@@ -151,10 +150,10 @@ def main():
     while (True):
         t = time.time()
         try:
-            print(state_w1.InValue.joint_position)
+            # print(state_w1.InValue.joint_position)
             res = traj1_gen.AsyncNext(None,None)
             res = traj2_gen.AsyncNext(None,None)
-            print(res)
+            # print(res)
         except RR.StopIterationException:
             break
 
