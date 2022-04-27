@@ -5,7 +5,7 @@ import pandas as pd
 from trajectory_utils import running_reward
 
 
-def plot_running_reward(episode_rewards, n=100, show=True, save=True):
+def plot_running_reward(episode_rewards, n=200, show=True, save=True):
     rewards = running_reward(episode_rewards, n)
     fig = plt.figure()
     x = np.linspace(1, len(rewards), len(rewards))
@@ -70,7 +70,7 @@ if __name__ == '__main__':
     episode_rewards = rl_df['episode_rewards']
     plot_running_reward(episode_rewards, save=False, show=True)
 
-    greedy_data = 'data/new_greedy_data.csv'
+    greedy_data = 'data/poly_greedy_data.csv'
     greedy_df = pd.read_csv(greedy_data)
     greedy_steps_data = greedy_df['n_primitives']
     rl_steps_data = rl_df['episode_steps']

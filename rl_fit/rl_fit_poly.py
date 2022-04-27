@@ -34,10 +34,10 @@ Memory = namedtuple('Memory', ('state', 'action', 'reward', 'next_state', 'done'
 
 
 # Hyper-parameters
-# random_seed = 1234
-# torch.manual_seed(random_seed)
-# np.random.seed(random_seed)
-# random.seed(random_seed)
+random_seed = 1234
+torch.manual_seed(random_seed)
+np.random.seed(random_seed)
+random.seed(random_seed)
 
 
 def read_data():
@@ -97,13 +97,13 @@ MAX_TAU_EPISODE = 0.6
 LEARNING_RATE = 0.001
 LEARNING_FREQ = 4
 GAMMA = 0.99
-BATCH_SIZE = 16
+BATCH_SIZE = 256
 
 REWARD_FINISH = 2000  # -------------------------------------- HERE
 REWARD_DECAY_FACTOR = 0.9
 REWARD_STEP = -10
 
-SAVE_MODEL = 10
+SAVE_MODEL = 100
 
 
 def reward_function(i_step, done):
@@ -166,7 +166,7 @@ class DQN(nn.Module):
 class Agent(object):
     def __init__(self, n_action: int):
         self.n_action = n_action
-        self.output_dim = n_action * 3
+        self.output_dim = n_action * 2
         self.lr = LEARNING_RATE
         self.gamma = GAMMA
         self.memory = MemoryReplayer()
@@ -179,6 +179,10 @@ class Agent(object):
         self.loss_function = nn.SmoothL1Loss()
 
         self.action_types = ['movel_fit'] * n_action + ['movec_fit'] * n_action + ['movej_fit'] * n_action
+
+        self.best_reward = -9999
+        self.roll_back_counter = 0
+        self.best_policy = None
 
     def get_action(self, state, epsilon=0.):
         self.policy_net.eval()
@@ -236,6 +240,25 @@ class Agent(object):
         loss = self.loss_function(td_est, td_tgt)
         loss.backward()
         self.optimizer.step()
+
+    def roll_back(self, episode_rewards):
+        if len(episode_rewards) < 2000:
+            return
+
+        running_reward = np.mean(episode_rewards[-200:])
+        if running_reward >= self.best_reward:
+            self.best_reward = running_reward
+            self.roll_back_counter = 0
+            self.best_policy = self.policy_net.state_dict().copy()
+            return
+        else:
+            self.roll_back_counter += 1
+
+        if self.roll_back_counter > 1000:
+            print("*** [Rollback] Episode {}; Best Reward {:2f}".format(len(episode_rewards), self.best_reward))
+            self.policy_net.load_state_dict(self.best_policy.copy())
+            self.target_net.load_state_dict(self.best_policy.copy())
+            self.roll_back_counter = 0
 
     def update_target_nets(self):
         self.target_net.load_state_dict(self.policy_net.state_dict())
@@ -302,6 +325,7 @@ class TrajEnv(greedy_fit):
                     list(max_ori_errors.values())) > max_ori_threshold:
                 prev_point_temp = next_point
                 next_point -= int(np.abs(next_point - prev_point) / 2)
+                next_point = max(2, next_point)
                 prev_point = prev_point_temp
 
                 for key in primitives:
@@ -318,6 +342,7 @@ class TrajEnv(greedy_fit):
                 prev_point_temp = next_point
                 next_point = min(next_point + int(np.abs(next_point - prev_point)),
                                  len(self.curve) - self.breakpoints[-1])
+                next_point = max(2, next_point)
                 prev_point = prev_point_temp
 
                 for key in primitives:
@@ -399,6 +424,10 @@ class TrajEnv(greedy_fit):
 
         # print(self.breakpoints)
         # print(primitives_choices)
+        curve_fit = curve_fit[:len(curve_fit) - (next_point-idx)]
+        curve_fit_R = curve_fit_R[:len(curve_fit) - (next_point-idx)]
+        if primitives_choices[-1] == 'movej_fit':
+            curve_fit_js = curve_fit_js[:len(curve_fit) - (next_point - idx)]
 
         return (self.breakpoints[-1], next_break_point), primitives_choices, (curve_fit, curve_fit_R, curve_fit_js)
 
@@ -417,6 +446,7 @@ class TrajEnv(greedy_fit):
     def reset(self):
         state = PCA_normalization(self.curve)
         done = False
+        self.get_greedy_primitives()
 
         return state, done
 
@@ -433,6 +463,7 @@ class TrajEnv(greedy_fit):
         new_primitive_length = new_breakpoint - greedy_primitive.Start
 
         # ============== Add the fitting curve ============ Greedy Part
+        self.fit_primitives.append(greedy_primitive)
         self.breakpoints.append(new_breakpoint)
         self.curve_fit.extend(curve_fit[:new_primitive_length])
         self.curve_fit_R.extend(curve_fit_R[:new_primitive_length])
@@ -469,6 +500,7 @@ class TrajEnv(greedy_fit):
             remaining_curve = self.curve[last_breakpoint:, :]
             normalized_curve = PCA_normalization(remaining_curve)
             state = normalized_curve
+            self.get_greedy_primitives()
         else:
             self.curve_fit = np.array(self.curve_fit)
             self.curve_fit_R = np.array(self.curve_fit_R)
@@ -477,15 +509,18 @@ class TrajEnv(greedy_fit):
 
         return state, reward, done
 
-    def plot_curve(self):
+    def plot_curve(self, curve_idx):
         plt.figure()
         ax = plt.axes(projection='3d')
-        ax.plot3D(self.curve[:, 0], self.curve[:, 1], self.curve[:, 2], 'gray')
-        ax.scatter3D(self.curve_fit[:, 0], self.curve_fit[:, 1], self.curve_fit[:, 2], cmap='Greens')
-        plt.show()
+        ax.plot3D(self.curve[:, 0], self.curve[:, 1], self.curve[:, 2], 'red', linewidth=10)
+        ax.scatter3D(self.curve_fit[:, 0], self.curve_fit[:, 1], self.curve_fit[:, 2], c=self.curve_fit[:,2], cmap='Greens')
+        plt.title("#BP {}; #Primitive {}; Length {}".format(len(self.breakpoints), len(self.fit_primitives), len(self.curve_fit)))
+        plt.savefig("plots/poly_rl/{}.jpg".format(curve_idx))
+        plt.close()
+        # plt.show()
 
 
-def train(agent: Agent, base_data, js_data, lam_data, max_episode=10000):
+def train(agent: Agent, base_data, js_data, lam_data, max_episode=20000):
     robot = abb6640(d=50)
 
     print("RL Training Start")
@@ -494,9 +529,12 @@ def train(agent: Agent, base_data, js_data, lam_data, max_episode=10000):
     episode_steps = []
     episode_target_curves = []
 
+    start_learn = 200
+
     for i_episode in range(max_episode):
         timer = time.time()
-        epsilon = EPS_START - min(1., i_episode / (max_episode * 0.8)) * (EPS_START - EPS_END)
+        epsilon = EPS_START - min(1., max(0, i_episode - start_learn) / (max_episode * 0.8)) * (EPS_START - EPS_END)
+        epsilon = 1. if i_episode < start_learn else epsilon
         episode_reward = 0
         target_curve_idx = np.random.randint(0, len(base_data))
         curve_poly_coeff = base_data[target_curve_idx]
@@ -518,21 +556,23 @@ def train(agent: Agent, base_data, js_data, lam_data, max_episode=10000):
                 break
             state = next_state
 
-        print("Episode {} / {} Epsilon: {:.3f} --- {} Steps --- Reward: {:.3f} --- {:.3f}s Curve {}"
-              .format(i_episode + 1, max_episode, epsilon, i_step, episode_reward,
-                      (time.time_ns() - timer) / (10 ** 9), target_curve_idx))
-
         for i, (state, action, reward, next_state, done) in enumerate(episode_memory):
             new_reward = reward + REWARD_DECAY_FACTOR ** (i_step - i) * episode_reward
             agent.memory_save(state=state, action=action, reward=new_reward, next_state=next_state, done=done)
 
-        for i in range(10):
-            agent.learn()
+        if i_episode > start_learn:
+            for i in range(10):
+                agent.learn()
+            agent.update_target_nets()
 
-        agent.update_target_nets()
         episode_rewards.append(episode_reward)
-        episode_steps.append(i_step)
+        episode_steps.append(len(env.fit_primitives))
         episode_target_curves.append(target_curve_idx)
+
+        print("Episode {} / {} Epsilon: {:.3f} --- {} Steps --- Reward: {:.3f} --- {:.3f}s Curve {}"
+              .format(i_episode + 1, max_episode, epsilon, i_step, episode_reward,
+                      time.time() - timer, target_curve_idx))
+        agent.roll_back(episode_rewards)
 
         if (i_episode + 1) % SAVE_MODEL == 0:
             print("=== Saving Model ===")
@@ -540,6 +580,8 @@ def train(agent: Agent, base_data, js_data, lam_data, max_episode=10000):
             agent.save_model('model')
             print("DQNs saved at '{}'".format('model/'))
             print("======")
+
+        env.plot_curve(target_curve_idx)
 
 
 def main():
