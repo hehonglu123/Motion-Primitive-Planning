@@ -28,6 +28,8 @@ class lambda_opt(object):
 		self.joint_vel_limit=np.radians([110,90,90,150,120,235])
 		self.steps=steps
 
+		self.lim_factor=0.0000001###avoid fwd error on joint limit
+
 		#prespecified primitives
 		self.primitives=primitives
 		if len(breakpoints)>0:
@@ -65,8 +67,9 @@ class lambda_opt(object):
 			curve_normal=self.curve_normal
 		q_all=[q_init]
 		q_out=[q_init]
+		Kw=1
 		for i in range(len(curve)):
-			# print(i)
+			print(i)
 			try:
 				error_fb=999
 				error_fb_prev=999
@@ -76,29 +79,24 @@ class lambda_opt(object):
 				while error_fb>0.01:
 
 					pose_now=self.robot1.fwd(q_all[-1])
-					error_fb=np.linalg.norm(pose_now.p-curve[i])+np.linalg.norm(pose_now.R[:,-1]-curve_normal[i])
+					error_fb=np.linalg.norm(pose_now.p-curve[i])+Kw*np.linalg.norm(pose_now.R[:,-1]-curve_normal[i])
 					
-					w=0.2
 					Kq=.01*np.eye(6)    #small value to make sure positive definite
 					KR=np.eye(3)        #gains for position and orientation error
 
 					J=self.robot1.jacobian(q_all[-1])        #calculate current Jacobian
 					Jp=J[3:,:]
-					JR=J[:3,:] 
-					H=np.dot(np.transpose(Jp),Jp)+Kq+w*np.dot(np.transpose(JR),JR)
+					JR=J[:3,:]
+					JR_mod=-np.dot(hat(pose_now.R[:,-1]),JR)
+
+					H=np.dot(np.transpose(Jp),Jp)+Kq+Kw*np.dot(np.transpose(JR_mod),JR_mod)
 					H=(H+np.transpose(H))/2
 
 					vd=curve[i]-pose_now.p
-					k=np.cross(pose_now.R[:,-1],curve_normal[i])
+					ezdotd=(curve_normal[i]-pose_now.R[:,-1])
 
-					k=k/np.linalg.norm(k)
-					theta=-np.arctan2(np.linalg.norm(np.cross(pose_now.R[:,-1],curve_normal[i])), np.dot(pose_now.R[:,-1],curve_normal[i]))
-
-					k=np.array(k)
-					s=np.sin(theta/2)*k         #eR2
-					wd=-np.dot(KR,s)
-					f=-np.dot(np.transpose(Jp),vd)-w*np.dot(np.transpose(JR),wd)
-					qdot=solve_qp(H,f,lb=self.robot1.lowerer_limit-q_all[-1],ub=self.robot1.upper_limit-q_all[-1])
+					f=-np.dot(np.transpose(Jp),vd)-Kw*np.dot(np.transpose(JR_mod),ezdotd)
+					qdot=solve_qp(H,f,lb=self.robot1.lower_limit-q_all[-1]+self.lim_factor*np.ones(6),ub=self.robot1.upper_limit-q_all[-1]-self.lim_factor*np.ones(6))
 
 					#avoid getting stuck
 					if abs(error_fb-error_fb_prev)<0.0001:
@@ -121,26 +119,49 @@ class lambda_opt(object):
 
 		q_out=np.array(q_out)
 		return q_out
+	def error_calc2(self,alpha,q1,qdot1,pose2_world_now,curve,curve_normal):
+		q1_next=q1+alpha*qdot1
+		pose1_next=self.robot1.fwd(q1_next)
+		return np.linalg.norm(np.dot(pose2_world_now.R.T,pose1_next.p-pose2_world_now.p)-curve)+np.linalg.norm(np.dot(pose2_world_now.R.T,pose1_next.R[:,-1])-curve_normal)	
+
+	def error_calc3(self,alpha,q2,qdot2,pose1_now,curve,curve_normal):
+		q2_next=q2+alpha*qdot2
+		pose2_world_next=self.robot2.fwd(q2_next,self.base2_R,self.base2_p)	
+		return np.linalg.norm(np.dot(pose2_world_next.R.T,pose1_now.p-pose2_world_next.p)-curve)+np.linalg.norm(np.dot(pose2_world_next.R.T,pose1_now.R[:,-1])-curve_normal)	
+	def error_calc4(self,alpha,q1,q2,qdot,curve,curve_normal):
+		q1_next=q1+alpha*qdot[:6]
+		q2_next=q2+alpha*qdot[6:]
+		pose1_next=self.robot1.fwd(q1_next)
+		pose2_world_next=self.robot2.fwd(q2_next,self.base2_R,self.base2_p)	
+		return np.linalg.norm(np.dot(pose2_world_next.R.T,pose1_next.p-pose2_world_next.p)-curve)+np.linalg.norm(np.dot(pose2_world_next.R.T,pose1_next.R[:,-1])-curve_normal)	
 
 	def dual_arm_stepwise_optimize(self,q_init1,q_init2):
 		#curve_normal: expressed in second robot tool frame
+		###all (jacobian) in robot2 tool frame
 		q_all1=[q_init1]
 		q_out1=[q_init1]
 		q_all2=[q_init2]
 		q_out2=[q_init2]
 
+		#####weights
+		Kw=0.1
+		Kq=.01*np.eye(12)    #small value to make sure positive definite
+		KR=np.eye(3)        #gains for position and orientation error
+
+		###concatenated bounds
+		joint_vel_limit=np.hstack((self.robot1.joint_vel_limit,self.robot2.joint_vel_limit))
+		upper_limit=np.hstack((self.robot1.upper_limit,self.robot2.upper_limit))
+		lower_limit=np.hstack((self.robot1.lower_limit,self.robot2.lower_limit))
+		joint_acc_limit=np.hstack((self.robot1.joint_acc_limit,self.robot2.joint_acc_limit))
+
+		###moving weights, p1 p2,r1 r2
+		weight_distro=np.array([[1,1],
+								[1,1]])
+
 		for i in range(len(self.curve)):
+			print(i)
 			try:
 				error_fb=999
-				if i==0:
-					pose1_now=self.robot1.fwd(q_all1[-1])
-					pose2_now=self.robot2.fwd(q_all2[-1])
-
-					pose2_world_now=self.robot2.fwd(q_all2[-1],self.base2_R,self.base2_p)	
-					### if assuming perfect initial alignment				
-					# continue
-
-
 				while error_fb>0.2:
 					pose1_now=self.robot1.fwd(q_all1[-1])
 					pose2_now=self.robot2.fwd(q_all2[-1])
@@ -152,59 +173,39 @@ class lambda_opt(object):
 					# print(i)
 					# print(np.dot(pose2_world_now.R.T,pose1_now.p-pose2_world_now.p)-self.curve[i])
 					# print(np.dot(pose2_world_now.R.T,pose1_now.R[:,-1])-self.curve_normal[i])
-					########################################################first robot###########################################
-					w=0.2
-					Kq=.01*np.eye(6)    #small value to make sure positive definite
-					KR=np.eye(3)        #gains for position and orientation error
-					Kp=0.1				#gains for vd
-
-					J1=self.robot1.jacobian(q_all1[-1])        #calculate current Jacobian
-					J1p=J1[3:,:]
-					J1R=J1[:3,:] 
-					H=np.dot(np.transpose(J1p),J1p)+Kq+w*np.dot(np.transpose(J1R),J1R)
-					H=(H+np.transpose(H))/2
+					########################################################QP formation###########################################
 					
-					vd=Kp*np.dot(pose2_world_now.R,self.curve[i]-np.dot(pose2_world_now.R.T,pose1_now.p-pose2_world_now.p))  ###R^2_0*(curve-R^0_2*(p1-p2))
-					k=np.dot(pose2_world_now.R,np.cross(np.dot(pose2_world_now.R.T,pose1_now.R[:,-1]),self.curve_normal[i]))	###R^2_0*(R^0_2*R1[z] x curve_normal)
+					J1=self.robot1.jacobian(q_all1[-1])        #calculate current Jacobian
+					J1p=np.dot(pose2_world_now.R.T,J1[3:,:])
+					J1R=np.dot(pose2_world_now.R.T,J1[:3,:])
+					J1R_mod=-np.dot(hat(np.dot(pose2_world_now.R.T,pose1_now.R[:,-1])),J1R)
 
-					k=k/np.linalg.norm(k)
+					J2=self.robot2.jacobian(q_all2[-1])        #calculate current Jacobian, mapped to robot2 tool frame
+					J2p=np.dot(pose2_now.R.T,J2[3:,:])
+					J2R=np.dot(pose2_now.R.T,J2[:3,:])
+					J2R_mod=-np.dot(hat(np.dot(pose2_world_now.R.T,pose1_now.R[:,-1])),J2R)
 
-					vec1=np.dot(pose2_world_now.R.T,pose1_now.R[:,-1])
-					theta=-np.arctan2(np.linalg.norm(np.cross(vec1,self.curve_normal[i])),np.dot(vec1,self.curve_normal[i]))
-
-					k=np.array(k)
-					s=np.sin(theta/2)*k         #eR2
-					wd=-np.dot(KR,s)
-					f=-np.dot(np.transpose(J1p),vd)-w*np.dot(np.transpose(J1R),wd)
-					qdot=solve_qp(H,f)
-
-					###TODO:
-					#cap to joint limits
-					q_all1.append(q_all1[-1]+qdot)
-
-					########################################################Second robot###########################################
-					J2=self.robot2.jacobian(q_all2[-1])        #calculate current Jacobian, mapped to robot1 base frame
-					J2p=np.dot(self.base2_R,J2[3:,:])
-					J2R=np.dot(self.base2_R,J2[:3,:] )
-					H=np.dot(np.transpose(J2p),J2p)+Kq+w*np.dot(np.transpose(J2R),J2R)
+					#form 6x12 jacobian with weight distribution
+					J_all_p=np.hstack((weight_distro[0,0]*J1p,-weight_distro[0,1]*J2p))
+					J_all_R=np.hstack((weight_distro[1,0]*J1R_mod,-weight_distro[1,1]*J2R_mod))
+					
+					H=np.dot(np.transpose(J_all_p),J_all_p)+Kq+Kw*np.dot(np.transpose(J_all_R),J_all_R)
 					H=(H+np.transpose(H))/2
 
-					vd=-vd
-					theta=-theta
+					vd=self.curve[i]-np.dot(pose2_world_now.R.T,pose1_now.p-pose2_world_now.p)  
+					ezdotd=self.curve_normal[i]-np.dot(pose2_world_now.R.T,pose1_now.R[:,-1])
 
-					k=np.array(k)
-					s=np.sin(theta/2)*k         #eR2
-					wd=-np.dot(KR,s)
-					f=-np.dot(np.transpose(J2p),vd)-w*np.dot(np.transpose(J2R),wd)
-					qdot=solve_qp(H,f)
+					f=-np.dot(np.transpose(J_all_p),vd)-Kw*np.dot(np.transpose(J_all_R),ezdotd)
+					qdot=solve_qp(H,f,lb=lower_limit-np.hstack((q_all1[-1],q_all2[-1]))+self.lim_factor*np.ones(12),ub=upper_limit-np.hstack((q_all1[-1],q_all2[-1]))-self.lim_factor*np.ones(12))
 
-					###TODO:
-					#cap to joint limits
-					q_all2.append(q_all2[-1]+qdot)
+					# alpha=fminbound(self.error_calc4,0,0.999999999999999999999,args=(q_all1[-1],q_all2[-1],qdot,self.curve[i],self.curve_normal[i],))
+					# print(alpha)
+					alpha=1
+					q_all1.append(q_all1[-1]+alpha*qdot[:6])
+					q_all2.append(q_all2[-1]+alpha*qdot[6:])
 
 			except:
 				traceback.print_exc()
-				# print(q_all1[-1],q_all2[-1])
 				q_out1.append(q_all1[-1])
 				q_out2.append(q_all2[-1])			
 				raise AssertionError
@@ -215,7 +216,8 @@ class lambda_opt(object):
 
 		q_out1=np.array(q_out1)[1:]
 		q_out2=np.array(q_out2)[1:]
-		return q_out1, q_out2	
+		return q_out1, q_out2
+
 
 	def orientation_interp(self,R_init,R_end,steps):
 		curve_fit_R=[]

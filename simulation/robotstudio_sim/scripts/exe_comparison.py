@@ -51,7 +51,6 @@ class MotionSend(object):
         cf1=quadrant(q1)
         quat2=R2q(self.robot.fwd(q2).R)
         cf2=quadrant(q2)
-
         robt1 = robtarget([point1[0], point1[1], point1[2]], [ quat1[0], quat1[1], quat1[2], quat1[3]], confdata(cf1[0],cf1[1],cf1[2],cf1[3]),[0]*6)
         robt2 = robtarget([point2[0], point2[1], point2[2]], [ quat2[0], quat2[1], quat2[2], quat2[3]], confdata(cf2[0],cf2[1],cf2[2],cf2[3]),[0]*6)
         return robt1, robt2
@@ -60,6 +59,7 @@ class MotionSend(object):
 
         q = np.rad2deg(q)
         jointt = jointtarget([q[0],q[1],q[2],q[3],q[4],q[5]],[0]*6)
+        print(jointt)
         return jointt
 
     def exec_motions(self,primitives,breakpoints,points,curve_backproj_js_filename,speed,zone):
@@ -142,7 +142,7 @@ def exe_from_file(ms,filename,filename_js,speed,zone):
 
 def main():
     ms = MotionSend()
-    data_dir="fitting_output_new/matlab_qp/"
+    data_dir="fitting_output_new/threshold0.5/"
     # data_dir="fitting_output_new/Jon/"
     # speed={"v50":v50,"v500":v500,"v5000":v5000}
     # zone={"fine":fine,"z1":z1,"z10":z10}
