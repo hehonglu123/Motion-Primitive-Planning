@@ -13,11 +13,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 
-from trajectory_utils import read_base_data, read_js_data
 from curve_normalization import PCA_normalization, fft_feature
-from cnn_encoder import load_encoder
-
-from sklearn.decomposition import PCA
 
 from general_robotics_toolbox import *
 
@@ -26,6 +22,9 @@ from greedy_poly import greedy_fit
 
 sys.path.append('../toolbox')
 from robots_def import *
+
+import warnings
+warnings.filterwarnings("ignore")
 
 
 # Util Class
@@ -39,6 +38,51 @@ Memory = namedtuple('Memory', ('state', 'action', 'reward', 'next_state', 'done'
 # torch.manual_seed(random_seed)
 # np.random.seed(random_seed)
 # random.seed(random_seed)
+
+
+def read_data():
+    all_base = []
+    all_js = []
+    all_lam = []
+
+    for i in range(201):
+        lambda_file = "data/poly/lambda/lambda_{}.csv".format(i)
+        base_file = "data/poly/base/curve_base_poly_{}.csv".format(i)
+        js_file = "data/poly/js/curve_js_poly_{}.csv".format(i)
+
+        lambda_data = pd.read_csv(lambda_file, header=None)
+        lam = lambda_data.values[-1][0]
+
+        col_names = ['poly_x', 'poly_y', 'poly_z', 'poly_direction_x', 'poly_direction_y', 'poly_direction_z']
+        data = pd.read_csv(base_file, names=col_names)
+        poly_x = data['poly_x'].tolist()
+        poly_y = data['poly_y'].tolist()
+        poly_z = data['poly_z'].tolist()
+        curve_poly_coeff = np.vstack((poly_x, poly_y, poly_z))
+
+        col_names = ['poly_q1', 'poly_q2', 'poly_q3', 'poly_q4', 'poly_q5', 'poly_q6']
+        data = pd.read_csv(js_file, names=col_names)
+        poly_q1 = data['poly_q1'].tolist()
+        poly_q2 = data['poly_q2'].tolist()
+        poly_q3 = data['poly_q3'].tolist()
+        poly_q4 = data['poly_q4'].tolist()
+        poly_q5 = data['poly_q5'].tolist()
+        poly_q6 = data['poly_q6'].tolist()
+        curve_js_poly_coeff = np.vstack((poly_q1, poly_q2, poly_q3, poly_q4, poly_q5, poly_q6))
+
+        all_base.append(curve_poly_coeff)
+        all_js.append(curve_js_poly_coeff)
+        all_lam.append(lam)
+
+    return all_base, all_js, all_lam
+
+
+def save_data(episode_rewards, episode_steps, episode_target_curve):
+    df = pd.DataFrame({"episode_rewards": episode_rewards,
+                       "episode_steps": episode_steps,
+                       "curve": episode_target_curve})
+    df.to_csv("Training Curve Data.csv")
+
 
 ERROR_THRESHOLD = 1.0
 MAX_GREEDY_STEP = 10
@@ -363,8 +407,8 @@ class TrajEnv(greedy_fit):
         for key in self.primitives:
             breakpoints, primitive_type, fits = self.fit_primitive(0.5, primitives=[key])
             start_point, end_point = breakpoints
-            assert (key == primitive_type[0])
-            primitive_type = key
+            # assert (key == primitive_type[0])
+            primitive_type = primitive_type[0]
             primitive = Primitive(start_point, end_point, primitive_type, fits)
             self.greedy_primitives[key] = primitive
 
@@ -406,23 +450,23 @@ class TrajEnv(greedy_fit):
             self.slope_diff.append(self.get_angle(self.cartesian_slope_prev, curve_fit[1] - curve_fit[0]))
             self.slope_diff_ori.append(self.get_angle(self.rotation_axis_prev, k))
 
-        self.rotation_axis_prev = k
-        self.cartesian_slope_prev = (self.curve_fit[-1] - self.curve_fit[-2]) / np.linalg.norm(
-            self.curve_fit[-1] - self.curve_fit[-2])
-        self.js_slope_prev = (self.curve_fit_js[-1] - self.curve_fit_js[-2]) / np.linalg.norm(
-            self.curve_fit_js[-1] - self.curve_fit_js[-2])
-        self.q_prev = self.curve_fit_js[-1]
+        if len(self.curve_fit) > 1:
+            self.rotation_axis_prev = k
+            self.cartesian_slope_prev = (self.curve_fit[-1] - self.curve_fit[-2]) / np.linalg.norm(
+                self.curve_fit[-1] - self.curve_fit[-2])
+            self.js_slope_prev = (self.curve_fit_js[-1] - self.curve_fit_js[-2]) / np.linalg.norm(
+                self.curve_fit_js[-1] - self.curve_fit_js[-2])
+            self.q_prev = self.curve_fit_js[-1]
 
         # =======================
 
         # ============ RL Part ===============
-        done = self.breakpoints[-1] >= len(self.curve)
+        done = self.breakpoints[-1] >= len(self.curve) - 1
         reward = reward_function(i_step, done)
         state = None
         if not done:
             last_breakpoint = self.breakpoints[-1]
             remaining_curve = self.curve[last_breakpoint:, :]
-            print(len(remaining_curve))
             normalized_curve = PCA_normalization(remaining_curve)
             state = normalized_curve
         else:
@@ -441,52 +485,67 @@ class TrajEnv(greedy_fit):
         plt.show()
 
 
-def train(agent: Agent, curve_base_data, curve_js_data, max_episode=10000):
+def train(agent: Agent, base_data, js_data, lam_data, max_episode=10000):
     robot = abb6640(d=50)
 
     print("RL Training Start")
 
+    episode_rewards = []
+    episode_steps = []
+    episode_target_curves = []
+
+    for i_episode in range(max_episode):
+        timer = time.time()
+        epsilon = EPS_START - min(1., i_episode / (max_episode * 0.8)) * (EPS_START - EPS_END)
+        episode_reward = 0
+        target_curve_idx = np.random.randint(0, len(base_data))
+        curve_poly_coeff = base_data[target_curve_idx]
+        curve_js_coeff = js_data[target_curve_idx]
+        lam = lam_data[target_curve_idx]
+
+        env = TrajEnv(robot, curve_poly_coeff, curve_js_coeff, lam_f=lam, num_points=500)
+        episode_memory = []
+        state, done = env.reset()
+
+        i_step = 0
+        while not done:
+            i_step += 1
+            action = agent.get_action(state, epsilon)
+            next_state, reward, done = env.step(action, i_step)
+            episode_memory.append((state, action, reward, next_state, done))
+            episode_reward += reward
+            if done:
+                break
+            state = next_state
+
+        print("Episode {} / {} Epsilon: {:.3f} --- {} Steps --- Reward: {:.3f} --- {:.3f}s Curve {}"
+              .format(i_episode + 1, max_episode, epsilon, i_step, episode_reward,
+                      (time.time_ns() - timer) / (10 ** 9), target_curve_idx))
+
+        for i, (state, action, reward, next_state, done) in enumerate(episode_memory):
+            new_reward = reward + REWARD_DECAY_FACTOR ** (i_step - i) * episode_reward
+            agent.memory_save(state=state, action=action, reward=new_reward, next_state=next_state, done=done)
+
+        for i in range(10):
+            agent.learn()
+
+        agent.update_target_nets()
+        episode_rewards.append(episode_reward)
+        episode_steps.append(i_step)
+        episode_target_curves.append(target_curve_idx)
+
+        if (i_episode + 1) % SAVE_MODEL == 0:
+            print("=== Saving Model ===")
+            save_data(episode_rewards, episode_steps, episode_target_curves)
+            agent.save_model('model')
+            print("DQNs saved at '{}'".format('model/'))
+            print("======")
+
 
 def main():
-    col_names = ['poly_x', 'poly_y', 'poly_z', 'poly_direction_x', 'poly_direction_y', 'poly_direction_z']
-    data = pd.read_csv("data/Curve_in_base_frame_poly.csv", names=col_names)
-    poly_x = data['poly_x'].tolist()
-    poly_y = data['poly_y'].tolist()
-    poly_z = data['poly_z'].tolist()
-    curve_poly_coeff = np.vstack((poly_x, poly_y, poly_z))
-
-    col_names = ['poly_q1', 'poly_q2', 'poly_q3', 'poly_q4', 'poly_q5', 'poly_q6']
-    data = pd.read_csv("data/Curve_js_poly.csv", names=col_names)
-    poly_q1 = data['poly_q1'].tolist()
-    poly_q2 = data['poly_q2'].tolist()
-    poly_q3 = data['poly_q3'].tolist()
-    poly_q4 = data['poly_q4'].tolist()
-    poly_q5 = data['poly_q5'].tolist()
-    poly_q6 = data['poly_q6'].tolist()
-    curve_js_poly_coeff = np.vstack((poly_q1, poly_q2, poly_q3, poly_q4, poly_q5, poly_q6))
-
-    robot = abb6640(d=50)
-
-    timer = time.time()
-
-    env = TrajEnv(robot, curve_poly_coeff, curve_js_poly_coeff, num_points=500, orientation_weight=1)
+    base_data, js_data, lam_data = read_data()
     agent = Agent(n_action=10)
-
-    state, done = env.reset()
-    i_step = 0
-    while True:
-        i_step += 1
-        action = agent.get_action(state, epsilon=0.9)
-        env.get_greedy_primitives()
-        state, reward, done = env.step(action, i_step=i_step)
-        print(i_step, reward, action.Code, env.breakpoints)
-        if done:
-            break
-
-    print(time.time() - timer)
-
-    env.plot_curve()
-
+    train(agent, base_data, js_data, lam_data)
 
 
 if __name__ == '__main__':
