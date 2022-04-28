@@ -5,9 +5,11 @@ import matplotlib.pyplot as plt
 from pandas import *
 from fitting_toolbox_new import *
 import sys
-sys.path.append('../circular_fit')
+# sys.path.append('../circular_fit')
+sys.path.append('../../../circular_fit')
 from toolbox_circular_fit import *
-sys.path.append('../toolbox')
+# sys.path.append('../toolbox')
+sys.path.append('../../../toolbox')
 from robots_def import *
 from general_robotics_toolbox import *
 from error_check import *
@@ -94,8 +96,13 @@ class greedy_fit(fitting_toolbox):
 			max_errors={'movel_fit':999,'movej_fit':999,'movec_fit':999}
 			max_ori_errors={'movel_fit':999,'movej_fit':999,'movec_fit':999}
 			###initial error map update:
-			for key in self.primitives: 
-				curve_fit,curve_fit_R,curve_fit_js,max_error,max_ori_error=self.primitives[key](self.curve[self.breakpoints[-1]:self.breakpoints[-1]+next_point],self.curve_js[self.breakpoints[-1]:self.breakpoints[-1]+next_point],self.curve_R[self.breakpoints[-1]:self.breakpoints[-1]+next_point])
+			for key in self.primitives:
+				try: 
+					curve_fit,curve_fit_R,curve_fit_js,max_error,max_ori_error=self.primitives[key](self.curve[self.breakpoints[-1]:self.breakpoints[-1]+next_point],self.curve_js[self.breakpoints[-1]:self.breakpoints[-1]+next_point],self.curve_R[self.breakpoints[-1]:self.breakpoints[-1]+next_point])
+				except AssertionError as e:
+					print(e)
+					max_error=999
+					max_ori_error=999
 				max_errors[key]=max_error
 				max_ori_errors[key]=max_ori_error
 
@@ -108,8 +115,13 @@ class greedy_fit(fitting_toolbox):
 					next_point-=int(np.abs(next_point-prev_point)/2)
 					prev_point=prev_point_temp
 					
-					for key in self.primitives: 
-						curve_fit,curve_fit_R,curve_fit_js,max_error,max_ori_error=self.primitives[key](self.curve[self.breakpoints[-1]:self.breakpoints[-1]+next_point],self.curve_js[self.breakpoints[-1]:self.breakpoints[-1]+next_point],self.curve_R[self.breakpoints[-1]:self.breakpoints[-1]+next_point])
+					for key in self.primitives:
+						try:  
+							curve_fit,curve_fit_R,curve_fit_js,max_error,max_ori_error=self.primitives[key](self.curve[self.breakpoints[-1]:self.breakpoints[-1]+next_point],self.curve_js[self.breakpoints[-1]:self.breakpoints[-1]+next_point],self.curve_R[self.breakpoints[-1]:self.breakpoints[-1]+next_point])
+						except AssertionError as e:
+							print(e)
+							max_error=999
+							max_ori_error=999
 						max_errors[key]=max_error
 						max_ori_errors[key]=max_ori_error
 
@@ -123,8 +135,13 @@ class greedy_fit(fitting_toolbox):
 					prev_point=prev_point_temp
 					
 
-					for key in self.primitives: 
-						curve_fit,curve_fit_R,curve_fit_js,max_error,max_ori_error=self.primitives[key](self.curve[self.breakpoints[-1]:self.breakpoints[-1]+next_point],self.curve_js[self.breakpoints[-1]:self.breakpoints[-1]+next_point],self.curve_R[self.breakpoints[-1]:self.breakpoints[-1]+next_point])
+					for key in self.primitives:
+						try: 
+							curve_fit,curve_fit_R,curve_fit_js,max_error,max_ori_error=self.primitives[key](self.curve[self.breakpoints[-1]:self.breakpoints[-1]+next_point],self.curve_js[self.breakpoints[-1]:self.breakpoints[-1]+next_point],self.curve_R[self.breakpoints[-1]:self.breakpoints[-1]+next_point])
+						except AssertionError as e:
+							print(e)
+							max_error=999
+							max_ori_error=999
 						max_errors[key]=max_error
 						max_ori_errors[key]=max_ori_error
 
@@ -137,7 +154,12 @@ class greedy_fit(fitting_toolbox):
 
 					primitives_added=False
 					for key in self.primitives: 
-						curve_fit,curve_fit_R,curve_fit_js,max_error,max_ori_error=self.primitives[key](self.curve[self.breakpoints[-1]:self.breakpoints[-1]+next_point],self.curve_js[self.breakpoints[-1]:self.breakpoints[-1]+next_point],self.curve_R[self.breakpoints[-1]:self.breakpoints[-1]+next_point])
+						try:
+							curve_fit,curve_fit_R,curve_fit_js,max_error,max_ori_error=self.primitives[key](self.curve[self.breakpoints[-1]:self.breakpoints[-1]+next_point],self.curve_js[self.breakpoints[-1]:self.breakpoints[-1]+next_point],self.curve_R[self.breakpoints[-1]:self.breakpoints[-1]+next_point])
+						except AssertionError as e:
+							print(e)
+							max_error=999
+							max_ori_error=999
 						if max_error<max_error_threshold:
 							primitives_added=True
 							primitives_choices.append(key)
@@ -159,8 +181,13 @@ class greedy_fit(fitting_toolbox):
 				###find the closest but under max_threshold
 				if min(list(max_errors.values()))<=max_error_threshold and min(list(max_ori_errors.values()))<=max_ori_threshold and np.abs(next_point-prev_point)<10:
 					primitives_added=False
-					for key in self.primitives: 
-						curve_fit,curve_fit_R,curve_fit_js,max_error,max_ori_error=self.primitives[key](self.curve[self.breakpoints[-1]:self.breakpoints[-1]+next_point],self.curve_js[self.breakpoints[-1]:self.breakpoints[-1]+next_point],self.curve_R[self.breakpoints[-1]:self.breakpoints[-1]+next_point])
+					for key in self.primitives:
+						try: 
+							curve_fit,curve_fit_R,curve_fit_js,max_error,max_ori_error=self.primitives[key](self.curve[self.breakpoints[-1]:self.breakpoints[-1]+next_point],self.curve_js[self.breakpoints[-1]:self.breakpoints[-1]+next_point],self.curve_R[self.breakpoints[-1]:self.breakpoints[-1]+next_point])
+						except AssertionError as e:
+							print(e)
+							max_error=999
+							max_ori_error=999
 						if max_error<max_error_threshold:
 							primitives_added=True
 							primitives_choices.append(key)

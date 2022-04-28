@@ -116,8 +116,8 @@ class abb1200(object):
 class m900ia(object):
 	#default tool paintgun
 	def __init__(self,R_tool=Ry(np.radians(120)),p_tool=np.array([0.45,0,-0.05])*1000.,d=0):
-		###ABB IRB 6640 180/2.55 Robot Definition
-		self.H=np.concatenate((ez,ey,ey,ex,ey,ex),axis=1)
+		###FANUC m900iA 350 Robot Definition
+		self.H=np.concatenate((ez,ey,-ey,-ex,-ey,-ex),axis=1)
 		p0=np.array([[0],[0],[0.95]])
 		p1=np.array([[0.37],[0],[0]])
 		p2=np.array([[0.],[0],[1.050]])
@@ -146,6 +146,20 @@ class m900ia(object):
 		pose_temp.p=np.dot(base_R,pose_temp.p)+base_p
 		pose_temp.R=np.dot(base_R,pose_temp.R)
 		return pose_temp
+	
+	def fwd_j456(self,q):
+		if (self.robot_def.joint_lower_limit is not None and self.robot_def.joint_upper_limit is not None):
+			assert np.greater_equal(q, self.robot_def.joint_lower_limit).all(), "Specified joints out of range"
+			assert np.less_equal(q, self.robot_def.joint_upper_limit).all(), "Specified joints out of range"
+
+		p = self.robot_def.P[:,[1]]
+		R = np.identity(3)
+		for i in xrange(1,len(self.robot_def.joint_type)-1):
+			R = R.dot(rot(self.robot_def.H[:,[i]],q[i]))
+			p = p + R.dot(self.robot_def.P[:,[i+1]])
+		p=np.reshape(p,(3,))
+
+		return Transform(R, p)
 
 	def fwd_all(self,q_all,base_R=np.eye(3),base_p=np.array([0,0,0])):
 		pose_p_all=[]

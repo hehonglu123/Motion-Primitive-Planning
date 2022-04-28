@@ -16,7 +16,7 @@ VAR
     timeStr    : STRING[18] -- formated
     
     IntANGa1,IntANGa2,IntANGa3,IntANGa4,IntANGa5,IntANGa6    : REAL
-    IntANGa1Str, IntANGa2Str, IntANGa3Str,IntANGa4Str, IntANGa5Str, IntANGa6Str: STRING[8]
+    IntANGa1Str, IntANGa2Str, IntANGa3Str,IntANGa4Str, IntANGa5Str, IntANGa6Str: STRING[9]
  
     entry      : INTEGER
     status     : INTEGER
@@ -57,7 +57,7 @@ BEGIN -- execute the program
     -- begin the clock time count
     CONNECT TIMER TO clock_var
     
-    period = 2 -- ms
+    period = 8 -- ms
 
     -- get actual time and convert it into string
     GET_TIME(timeInt)
@@ -89,12 +89,12 @@ BEGIN -- execute the program
       -- test = clocky+period
       GET_INT_ANG(TRUE) -- call internal angle routine
       
-      CNV_REAL_STR(IntANGa1, 8, 4, IntANGa1Str)
-      CNV_REAL_STR(IntANGa2, 8, 4, IntANGa2Str)
-      CNV_REAL_STR(IntANGa3, 8, 4, IntANGa3Str)
-      CNV_REAL_STR(IntANGa4, 8, 4, IntANGa4Str)
-      CNV_REAL_STR(IntANGa5, 8, 4, IntANGa5Str)
-      CNV_REAL_STR(IntANGa6, 8, 4, IntANGa6Str)
+      CNV_REAL_STR(IntANGa1, 9, 4, IntANGa1Str)
+      CNV_REAL_STR(IntANGa2, 9, 4, IntANGa2Str)
+      CNV_REAL_STR(IntANGa3, 9, 4, IntANGa3Str)
+      CNV_REAL_STR(IntANGa4, 9, 4, IntANGa4Str)
+      CNV_REAL_STR(IntANGa5, 9, 4, IntANGa5Str)
+      CNV_REAL_STR(IntANGa6, 9, 4, IntANGa6Str)
       WRITE logFile(clock_var)
       WRITE logFile(',')
       WRITE logFile(IntANGa1Str)

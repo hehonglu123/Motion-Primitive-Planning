@@ -1,6 +1,7 @@
 import numpy as np
 import sys,copy
 sys.path.append('../circular_fit')
+sys.path.append('../../../circular_fit')
 from toolbox_circular_fit import *
 
 
@@ -236,6 +237,7 @@ class fitting_toolbox(object):
 		curve_fit=[]
 		curve_fit_R=[]
 		for i in range(len(curve_fit_js)):
+			# print(curve_fit_js[i])
 			pose_temp=self.robot.fwd(curve_fit_js[i])
 			curve_fit.append(pose_temp.p)
 			curve_fit_R.append(pose_temp.R)

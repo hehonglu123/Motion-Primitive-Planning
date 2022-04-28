@@ -14,7 +14,8 @@ from lambda_calc import *
 def main():
 
 	col_names=['q1', 'q2', 'q3','q4', 'q5', 'q6'] 
-	data = read_csv("from_ge/Curve_js2.csv", names=col_names)
+	# data = read_csv("from_ge/Curve_js2.csv", names=col_names)
+	data = read_csv("fanuc/m900ia_curve_js_sol4.csv", names=col_names)
 	curve_q1=data['q1'].tolist()
 	curve_q2=data['q2'].tolist()
 	curve_q3=data['q3'].tolist()
@@ -23,7 +24,8 @@ def main():
 	curve_q6=data['q6'].tolist()
 	curve_js=np.vstack((curve_q1, curve_q2, curve_q3,curve_q4,curve_q5,curve_q6)).T
 
-	robot=abb6640(d=50)
+	# robot=abb6640(d=50)
+	robot=m900ia(d=50)
 	lam=calc_lam_js(curve_js,robot)
 
 	polyfit=np.polyfit(lam,curve_js,deg=47)
@@ -41,7 +43,8 @@ def main():
 
 
 	df=DataFrame({'polyfit_q1':polyfit[:,0],'polyfit_q2':polyfit[:,1],'polyfit_q3':polyfit[:,2],'polyfit_q4':polyfit[:,3],'polyfit_q5':polyfit[:,4],'polyfit_q6':polyfit[:,5]})
-	df.to_csv("from_ge/Curve_js_poly.csv",header=False,index=False)
+	# df.to_csv("from_ge/Curve_js_poly.csv",header=False,index=False)
+	df.to_csv("fanuc/m900ia_curve_js_sol4_poly.csv",header=False,index=False)
 
 if __name__ == "__main__":
 	main()

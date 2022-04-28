@@ -5,6 +5,7 @@
 
 from fileinput import filename
 import time
+from tkinter import N
 import numpy as np
 from typing import NamedTuple
 import itertools
@@ -12,6 +13,8 @@ from ftplib import FTP
 from urllib.request import urlopen   
 import urllib
 import os
+import general_robotics_toolbox as rox
+import math
 
 class pose(NamedTuple):
     trans: np.ndarray # [x,y,z]
@@ -41,11 +44,55 @@ class jointtarget(NamedTuple):
     robax: np.ndarray # shape=(6,)
     extax: np.ndarray # shape=(6,)
 
+def R2wpr(R):
+    q=rox.R2q(R)
+    r=math.degrees(math.atan2(2*(q[0]*q[3]+q[1]*q[2]),1.-2*(q[2]**2+q[3]**2)))
+    p=math.degrees(math.asin(2*(q[0]*q[2]-q[3]*q[1])))
+    w=math.degrees(math.atan2(2*(q[0]*q[1]+q[2]*q[3]),1.-2*(q[1]**2+q[2]**2)))
+    return [w,p,r]
+
 def joint2robtarget(q,robot,group,uframe,utool):
     
+    pose_tar = robot.fwd(q)
+
+    # joint 5
+    if q[4] <= 0:
+        FN='N'
+    else:
+        FN='F'
+    # joint 3
+    if q[2] >= np.deg2rad(90) or q[2] <= np.deg2rad(-90):
+        UD='D'
+    else:
+        UD='U'
+    # joint 1
+    pose_j1_j456 = robot.fwd_j456(q)
+    if pose_j1_j456.p[0] <= 0:
+        BF='B'
+    else:
+        BF='T' 
     
-    
-    return 
+    if q[0]>=180:
+        tn1 = 1
+    elif q[0]<=-180:
+        tn1 = -1
+    else:
+        tn1 = 0
+    if q[3]>=180:
+        tn2 = 1
+    elif q[3]<=-180:
+        tn2 = -1
+    else:
+        tn2 = 0
+    if q[5]>=180:
+        tn3 = 1
+    elif q[5]<=-180:
+        tn3 = -1
+    else:
+        tn3 = 0
+
+    return robtarget(group,uframe,utool,pose_tar.p,R2wpr(pose_tar.R),\
+                    confdata(FN,UD,BF,tn1,tn2,tn3),[0]*6)
 
 class TPMotionProgram(object):
     def __init__(self) -> None:
@@ -179,7 +226,7 @@ class TPMotionProgram(object):
         
         # program name, attribute, motion
         mo = '/PROG  '+filename+'\n/ATTR\n/MN\n'
-        mo += '   1:  UFRAME_NUM=0 ;\n   2:  UTOOL_NUM=1 ;\n   3:  DO[101]=ON ;\n   4:  RUN DATARECORDER ;\n'
+        mo += '   1:  UFRAME_NUM=1 ;\n   2:  UTOOL_NUM=2 ;\n   3:  DO[101]=ON ;\n   4:  RUN DATARECORDER ;\n'
         line_num=5
         for prog in self.progs:
             mo += '   '+str(line_num)+':'
@@ -223,7 +270,7 @@ class TPMotionProgram(object):
 
         # program name, attribute, motion
         mo = '/PROG  '+filename+'\n/ATTR\nDEFAULT_GROUP	= '+dg+';\n/MN\n'
-        mo += '   1:  UFRAME_NUM=1 ;\n   2:  UTOOL_NUM=1 ;\n'
+        mo += '   1:  UFRAME_NUM=1 ;\n   2:  UTOOL_NUM=2 ;\n'
         line_num=3
         for prog in self.progs:
             mo += '   '+str(line_num)+':'
@@ -278,11 +325,19 @@ class FANUCClient(object):
         with open('TMP.LS','rb') as the_prog:
             self.robot_ftp.storlines('STOR TMP.LS',the_prog)
 
-        motion_url='http://'+self.robot_ip+'/karel/remote'
-        res = urlopen(motion_url,timeout=30)
+        try:
+            motion_url='http://'+self.robot_ip+'/karel/remote'
+            res = urlopen(motion_url)
+        except urllib.error.HTTPError:
+            pass
 
-        file_url='http://'+self.robot_ip+'/ud1/log.txt'
-        res = urlopen(file_url)
+        while True:
+            try:
+                file_url='http://'+self.robot_ip+'/ud1/log.txt'
+                res = urlopen(file_url)
+                break
+            except urllib.error.HTTPError:
+                time.sleep(1)
 
         if os.path.exists("TMP.LS"):
             os.remove("TMP.LS")

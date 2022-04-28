@@ -5,9 +5,11 @@ import matplotlib.pyplot as plt
 from pandas import *
 from fitting_toolbox_new import *
 import sys
-sys.path.append('../circular_fit')
+# sys.path.append('../circular_fit')
+sys.path.append('../../../circular_fit')
 from toolbox_circular_fit import *
-sys.path.append('../toolbox')
+# sys.path.append('../toolbox')
+sys.path.append('../../../toolbox')
 from robots_def import *
 from general_robotics_toolbox import *
 from error_check import *

@@ -21,7 +21,8 @@ def single_arm_stepwise_optimize(robot,q_init,lam,lamdot_des,curve,curve_normal)
 		total_timestep=int(total_time/ts)
 		idx=0
 		lam_qp=0
-		K_trak=100
+		K_trak_p=100
+		K_trak_R=100
 		qdot_prev=[]
 		act_speed=[]
 		# for i in range(1,total_timestep):
@@ -45,9 +46,9 @@ def single_arm_stepwise_optimize(robot,q_init,lam,lamdot_des,curve,curve_normal)
 			H=(H+np.transpose(H))/2
 			#####vd = - v_des - K ( x - x_des)
 			v_des=(curve[idx]-curve[prev_idx])/ts
-			vd=v_des+K_trak*(curve[prev_idx]-pose_now.p)
+			vd=v_des+K_trak_p*(curve[prev_idx]-pose_now.p)
 			ezdot_des=(curve_normal[idx]-curve_normal[prev_idx])/ts
-			ezdotd=ezdot_des+K_trak*(curve_normal[prev_idx]-pose_now.R[:,-1])
+			ezdotd=ezdot_des+K_trak_R*(curve_normal[prev_idx]-pose_now.R[:,-1])
 
 			#####vd = K ( x_des_next - x_cur)
 			# vd=(curve[idx]-pose_now.p)/ts
