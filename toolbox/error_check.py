@@ -80,6 +80,16 @@ def calc_all_error(fit,curve):
 		error.append(error_temp)
 	return error
 
+def calc_all_error_w_normal(fit,curve,fit_normal,curve_normal):
+	error=[]
+	angle_error=[]
+	for i in range(len(fit)):
+		error_temp,idx=calc_error(fit[i],curve)
+		normal_angle=get_angle(fit_normal[i],curve_normal[idx])
+		error.append(error_temp)
+		angle_error.append(normal_angle)
+	return error, angle_error
+
 def calc_all_error_ex_blending(fit,curve,zone,lam,breakpoints_lam):
 	for breakpoint_lam in breakpoints_lam:
 		temp=np.abs(lam-breakpoint_lam)

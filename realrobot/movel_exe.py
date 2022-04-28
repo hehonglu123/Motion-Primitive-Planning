@@ -40,7 +40,7 @@ def main():
 	step=int(len(curve_js)/50)
 
 	v700 = speeddata(700,500,5000,1000)
-	speed={'v800':v800}
+	speed={'v50':v50,'v100':v100,'v200':v200,'v400':v400,'v800':v800}
 	zone={'z10':z10}
 	for s in speed:
 		for z in zone:
