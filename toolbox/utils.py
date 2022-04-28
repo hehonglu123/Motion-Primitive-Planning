@@ -74,7 +74,7 @@ def extract_points(primitive_type,points):
         return list(map(float, endpoint))
 
 
-def visualize_curve(curve,curve_normal,stepsize=500):
+def visualize_curve_w_normal(curve,curve_normal,stepsize=500):
 	curve=curve[::stepsize]
 	curve_normal=curve_normal[::stepsize]
 	X, Y, Z = zip(*curve)
@@ -83,5 +83,13 @@ def visualize_curve(curve,curve_normal,stepsize=500):
 	ax = fig.add_subplot(111, projection='3d')
 	ax.quiver(X, Y, Z, U, V, W)
 	ax.set_box_aspect((np.ptp(X), np.ptp(Y), np.ptp(Z)))
+
+	plt.show()
+
+def visualize_curve(curve,stepsize=10):
+	curve=curve[::stepsize]
+	plt.figure()
+	ax = plt.axes(projection='3d')
+	ax.plot3D(curve[:,0], curve[:,1],curve[:,2], 'gray')
 
 	plt.show()
