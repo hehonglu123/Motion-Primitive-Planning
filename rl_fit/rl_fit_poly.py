@@ -34,7 +34,7 @@ Memory = namedtuple('Memory', ('state', 'action', 'reward', 'next_state', 'done'
 
 
 # Hyper-parameters
-random_seed = 1234
+random_seed = 42
 torch.manual_seed(random_seed)
 np.random.seed(random_seed)
 random.seed(random_seed)
@@ -88,16 +88,12 @@ ERROR_THRESHOLD = 1.0
 MAX_GREEDY_STEP = 10
 
 EPS_START = 0.5
-EPS_END = 0.01
+EPS_END = 0.0001
 EPS_DECAY = 10
 
-TAU_START = 10
-TAU_END = 0.01
-MAX_TAU_EPISODE = 0.6
-LEARNING_RATE = 0.001
-LEARNING_FREQ = 4
+LEARNING_RATE = 1e-4
 GAMMA = 0.99
-BATCH_SIZE = 256
+BATCH_SIZE = 16
 
 REWARD_FINISH = 2000  # -------------------------------------- HERE
 REWARD_DECAY_FACTOR = 0.9
@@ -520,20 +516,31 @@ class TrajEnv(greedy_fit):
         # plt.show()
 
 
-def train(agent: Agent, base_data, js_data, lam_data, max_episode=20000):
+def train(agent: Agent, base_data, js_data, lam_data, max_episode=10000):
     robot = abb6640(d=50)
 
     print("RL Training Start")
 
+    # ==== Load Previous Training Record ====
+    # training_data = pd.read_csv("Training Curve Data.csv")
+    # episode_rewards = [x for x in training_data["episode_rewards"].values]
+    # episode_steps = [x for x in training_data["episode_steps"].values]
+    # episode_target_curves = [x for x in training_data["curve"].values]
+    # episode_start = len(episode_rewards)
+    # =======================================
+
+    # ==== Start from scratch ====
     episode_rewards = []
     episode_steps = []
     episode_target_curves = []
+    episode_start = 0
+    # ============================
 
     start_learn = 200
 
-    for i_episode in range(max_episode):
+    for i_episode in range(episode_start, max_episode):
         timer = time.time()
-        epsilon = EPS_START - min(1., max(0, i_episode - start_learn) / (max_episode * 0.8)) * (EPS_START - EPS_END)
+        epsilon = EPS_START - min(1., max(0, i_episode - start_learn) / (max_episode * 1.0)) * (EPS_START - EPS_END)
         epsilon = 1. if i_episode < start_learn else epsilon
         episode_reward = 0
         target_curve_idx = np.random.randint(0, len(base_data))
@@ -569,24 +576,39 @@ def train(agent: Agent, base_data, js_data, lam_data, max_episode=20000):
         episode_steps.append(len(env.fit_primitives))
         episode_target_curves.append(target_curve_idx)
 
-        print("Episode {} / {} Epsilon: {:.3f} --- {} Steps --- Reward: {:.3f} --- {:.3f}s Curve {}"
+        print("Episode {} / {} Epsilon: {:.3f} --- {} Steps --- Reward: {:.3f} --- MemCap: {:.4f} --- {:.3f}s Curve {}"
               .format(i_episode + 1, max_episode, epsilon, i_step, episode_reward,
-                      time.time() - timer, target_curve_idx))
-        agent.roll_back(episode_rewards)
+                      time.time() - timer, len(agent.memory), target_curve_idx))
+        # agent.roll_back(episode_rewards)
 
-        if (i_episode + 1) % SAVE_MODEL == 0:
+        if (i_episode + 1) % SAVE_MODEL == 0 and i_episode > start_learn:
             print("=== Saving Model ===")
             save_data(episode_rewards, episode_steps, episode_target_curves)
             agent.save_model('model')
             print("DQNs saved at '{}'".format('model/'))
             print("======")
 
-        env.plot_curve(target_curve_idx)
+        # env.plot_curve(target_curve_idx)
 
+
+def evaluate(agent: Agent, base_data, js_data, lam_data):
+    robot = abb6640(d=50)
+
+    print("RL Evaluation Start")
+
+    for i in range(len(base_data)):
+        timer = time.time()
+
+        episode_reward = 0
+        target_curve_idx = np.random.randint(0, len(base_data))
+        curve_poly_coeff = base_data[target_curve_idx]
+        curve_js_coeff = js_data[target_curve_idx]
+        lam = lam_data[target_curve_idx]
 
 def main():
     base_data, js_data, lam_data = read_data()
     agent = Agent(n_action=10)
+    # agent.load_model('model')
     train(agent, base_data, js_data, lam_data)
 
 

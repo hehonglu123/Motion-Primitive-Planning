@@ -11,6 +11,8 @@ def plot_running_reward(episode_rewards, n=200, show=True, save=True):
     x = np.linspace(1, len(rewards), len(rewards))
     plt.plot(x, rewards)
     plt.grid()
+    plt.xlabel("Episode")
+    plt.ylabel("Reward")
     plt.title('Training Rewards')
     if save:
         plt.savefig('plots/running_reward.jpg')
@@ -39,6 +41,8 @@ def plot_rl_greedy_ratio(rl_steps, rl_curve_idx, greedy_steps, show=True, save=T
     plt.plot(x, median_ratios, color='green', label='median_100')
     plt.legend()
     plt.grid()
+    plt.xlabel("Episode")
+    plt.ylabel("Ratio")
     plt.title('Greedy/RL Ratio')
     if save:
         plt.savefig('plots/rl_greedy_ratio_train.jpg')

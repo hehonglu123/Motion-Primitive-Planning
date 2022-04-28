@@ -43,7 +43,9 @@ class greedy_fit(fitting_toolbox):
 		self.slope_constraint=np.radians(180)
 		self.break_early=False
 		###initial primitive candidates
-		self.primitives={'movel_fit':self.movel_fit_greedy,'movej_fit':self.movej_fit_greedy,'movec_fit':self.movec_fit_greedy}
+		self.primitives = {'movel_fit': self.movel_fit_greedy, 'movec_fit': self.movec_fit_greedy}
+		# self.primitives = {'movel_fit': self.movel_fit_greedy, 'movej_fit': self.movej_fit_greedy,
+		# 				   'movec_fit': self.movec_fit_greedy}
 
 	def movel_fit_greedy(self,curve,curve_js,curve_R):	###unit vector slope
 		
@@ -327,7 +329,7 @@ def main():
 		# print(max_error,np.degrees(max_error_angle))
 
 	df = DataFrame({"id": curve_idx, "n_primitives": n_primitives})
-	df.to_csv("data/poly_greedy_data.csv", index=False)
+	df.to_csv("data/new_poly_greedy_data.csv", index=False)
 
 if __name__ == "__main__":
 	main()
