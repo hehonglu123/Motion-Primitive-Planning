@@ -248,14 +248,15 @@ def main():
 
 	robot=abb6640(d=50)
 
-	greedy_fit_obj=greedy_fit(robot,curve_poly_coeff,curve_js_poly_coeff, num_points=5000, orientation_weight=1)
+	greedy_fit_obj=greedy_fit(robot,curve_poly_coeff,curve_js_poly_coeff, num_points=500, orientation_weight=1)
 
 
 	###set primitive choices, defaults are all 3
 	# greedy_fit_obj.primitives={'movel_fit':greedy_fit_obj.movel_fit_greedy,'movec_fit':greedy_fit_obj.movec_fit_greedy}
+	greedy_fit_obj.primitives={'movej_fit':greedy_fit_obj.movej_fit_greedy}
 
 	now=time.time()
-	breakpoints,primitives_choices,points=greedy_fit_obj.fit_under_error(0.5)
+	breakpoints,primitives_choices,points=greedy_fit_obj.fit_under_error(1)
 	print('Greedy Search Time: ',time.time()-now)
 
 	###plt
