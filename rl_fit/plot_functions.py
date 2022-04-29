@@ -1,8 +1,38 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
+import seaborn as sns
 
 from trajectory_utils import running_reward
+
+
+def plot_evaluation(eval_data_file, greedy_steps, show=True, save=True):
+
+    df = pd.read_csv(eval_data_file)
+    curve_idx = df["id"].values
+    n_primitive = df['n_primitive'].values
+
+    ratios = []
+    for i in range(len(curve_idx)):
+        ratios.append(greedy_steps[curve_idx[i]] / n_primitive[i])
+
+    df['ratio'] = ratios
+
+    fig1 = sns.boxplot(x='episode', y='reward', data=df, color='royalblue')
+    plt.title("Evaluation - Reward")
+    # plt.grid()
+    if save:
+        plt.savefig("plots/Evaluation_Reward.jpg", dpi=300)
+    if show:
+        plt.show()
+
+    fig2 = sns.boxplot(x='episode', y='ratio', data=df, color='orangered')
+    plt.title("Evaluation - Greedy/RL Ratio")
+    # plt.grid()
+    if save:
+        plt.savefig("plots/Evaluation_Ratio.jpg", dpi=300)
+    if show:
+        plt.show()
 
 
 def plot_running_reward(episode_rewards, n=200, show=True, save=True):
@@ -15,7 +45,7 @@ def plot_running_reward(episode_rewards, n=200, show=True, save=True):
     plt.ylabel("Reward")
     plt.title('Training Rewards')
     if save:
-        plt.savefig('plots/running_reward.jpg')
+        plt.savefig('plots/running_reward.jpg', dpi=300)
     if show:
         plt.show()
 
@@ -36,7 +66,7 @@ def plot_rl_greedy_ratio(rl_steps, rl_curve_idx, greedy_steps, show=True, save=T
 
     fig = plt.figure()
     x = np.linspace(1, len(rl_steps), len(rl_steps))
-    plt.plot(x, ratios, color='blue', label='ratio')
+    plt.plot(x, ratios, color='royalblue', label='ratio')
     plt.plot(x, mean_ratios, color='red', label='mean_100')
     plt.plot(x, median_ratios, color='green', label='median_100')
     plt.legend()
@@ -45,7 +75,7 @@ def plot_rl_greedy_ratio(rl_steps, rl_curve_idx, greedy_steps, show=True, save=T
     plt.ylabel("Ratio")
     plt.title('Greedy/RL Ratio')
     if save:
-        plt.savefig('plots/rl_greedy_ratio_train.jpg')
+        plt.savefig('plots/rl_greedy_ratio_train.jpg', dpi=300)
     if show:
         plt.show()
 
@@ -72,11 +102,13 @@ if __name__ == '__main__':
     data = 'Training Curve data.csv'
     rl_df = pd.read_csv(data)
     episode_rewards = rl_df['episode_rewards']
-    plot_running_reward(episode_rewards, save=False, show=True)
+    plot_running_reward(episode_rewards, save=True, show=True)
 
     greedy_data = 'data/poly_greedy_data.csv'
     greedy_df = pd.read_csv(greedy_data)
     greedy_steps_data = greedy_df['n_primitives']
     rl_steps_data = rl_df['episode_steps']
     rl_target_curve = rl_df['curve']
-    plot_rl_greedy_ratio(rl_steps_data, rl_target_curve, greedy_steps_data, save=False, show=True)
+    plot_rl_greedy_ratio(rl_steps_data, rl_target_curve, greedy_steps_data, save=True, show=True)
+
+    plot_evaluation("Train Eval Result.csv", greedy_steps_data, show=True, save=True)
