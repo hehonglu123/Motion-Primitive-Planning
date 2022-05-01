@@ -12,11 +12,15 @@ sys.path.append('../../../greedy_fitting')
 from greedy_poly import *
 
 # move_type='movel'
-move_type='movej'
+# move_type='movej'
 
 # data_dir="../data/slicing_compare_"+move_type+'/'
-data_dir="../data/greedy_poly/"
+# data_dir="../data/greedy_poly/"
+data_dir="../data/greedy_poly_offset/"
 robot = m900ia(d=50)
+
+x_offset=500
+y_offset=500
 
 # the original curve in Cartesian space
 col_names=['X', 'Y', 'Z','direction_x', 'direction_y', 'direction_z'] 
@@ -24,13 +28,15 @@ data = read_csv("../../../data/from_ge/Curve_in_base_frame2.csv", names=col_name
 curve_x=data['X'].tolist()
 curve_y=data['Y'].tolist()
 curve_z=data['Z'].tolist()
+curve_x = np.array(curve_x)+x_offset
+curve_y = np.array(curve_y)-y_offset
 curve=np.vstack((curve_x, curve_y, curve_z)).T
 
 max_error_mat=np.zeros((4,))
 # ave_error_mat=np.zeros((4,4))
 ave_speed_mat=np.zeros((4,))
 
-all_zones=[25,50]
+all_zones=[25,50,75,100]
 # all_zones=[100]
 
 mat_i=0

@@ -44,7 +44,7 @@ def main():
     curve_poly_coeff=np.vstack((poly_x, poly_y, poly_z))
 
     col_names=['poly_q1', 'poly_q2', 'poly_q3','poly_q4', 'poly_q5', 'poly_q6'] 
-    data = read_csv("../../../data/from_ge/Curve_js_poly.csv", names=col_names)
+    data = read_csv("../../../data/fanuc/m900ia_curve_js_sol4_poly.csv", names=col_names)
     poly_q1=data['poly_q1'].tolist()
     poly_q2=data['poly_q2'].tolist()
     poly_q3=data['poly_q3'].tolist()
@@ -88,15 +88,15 @@ def main():
     #         break
 
     # define speed and zone (CNT)
-    speed = 2000 # max is 2000 mmsec
+    speed = 400 # max is 2000 mmsec
     j_speed = 100 # max is 100 %
     # zone = 100
 
     # fanuc client
     client = FANUCClient()
 
-    # all_zones=[25,50,75,100]
-    all_zones=[25,50]
+    all_zones=[25,50,75,100]
+    # all_zones=[25,50]
     # all_zones=[100]
 
     for zone in all_zones:

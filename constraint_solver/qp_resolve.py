@@ -22,7 +22,7 @@ def single_arm_stepwise_optimize(robot,q_init,lam,lamdot_des,curve,curve_normal)
 		idx=0
 		lam_qp=0
 		K_trak_p=100
-		K_trak_R=100
+		K_trak_R=10
 		qdot_prev=[]
 		act_speed=[]
 		# for i in range(1,total_timestep):
@@ -34,7 +34,7 @@ def single_arm_stepwise_optimize(robot,q_init,lam,lamdot_des,curve,curve_normal)
 			pose_now=robot.fwd(q_all[-1])
 			
 			Kw=10
-			Kq=.01*np.eye(6)    #small value to make sure positive definite
+			Kq=.00001*np.eye(6)    #small value to make sure positive definite
 			KR=np.eye(3)        #gains for position and orientation error
 
 			J=robot.jacobian(q_all[-1])        #calculate current Jacobian
@@ -55,15 +55,17 @@ def single_arm_stepwise_optimize(robot,q_init,lam,lamdot_des,curve,curve_normal)
 			# vd=lamdot_des*vd/np.linalg.norm(vd)
 			# ezdotd=(curve_normal[idx]-pose_now.R[:,-1])/ts
 
-			print(np.linalg.norm(vd))
+			# print(np.linalg.norm(vd))
 
 			f=-np.dot(np.transpose(Jp),vd)-Kw*np.dot(np.transpose(JR_mod),ezdotd)
 			if len(qdot_prev)==0:
 				lb=-robot.joint_vel_limit
 				ub=robot.joint_vel_limit
 			else:
-				lb=np.maximum(-robot.joint_vel_limit,(qdot_prev-robot.joint_acc_limit)*ts)
-				ub=np.minimum(robot.joint_vel_limit,(qdot_prev+robot.joint_acc_limit)*ts)
+				# lb=np.maximum(-robot.joint_vel_limit,(qdot_prev-robot.joint_acc_limit)*ts)
+				# ub=np.minimum(robot.joint_vel_limit,(qdot_prev+robot.joint_acc_limit)*ts)
+				lb=-robot.joint_vel_limit
+				ub=robot.joint_vel_limit
 
 			qdot=solve_qp(H,f,lb=lb,ub=ub)
 			qdot_prev=qdot

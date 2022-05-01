@@ -13,6 +13,9 @@ from lambda_calc import *
 
 def main():
 
+	x_offset=500
+	y_offset=500
+
 	col_names=['X', 'Y', 'Z','direction_x','direction_y','direction_z'] 
 	data = read_csv("from_ge/Curve_in_base_frame2.csv", names=col_names)
 	curve_x=data['X'].tolist()
@@ -21,6 +24,9 @@ def main():
 	curve_direction_x=data['direction_x'].tolist()
 	curve_direction_y=data['direction_y'].tolist()
 	curve_direction_z=data['direction_z'].tolist()
+
+	curve_x = np.array(curve_x)+x_offset
+	curve_y = np.array(curve_y)-y_offset
 
 	curve=np.vstack((curve_x, curve_y, curve_z)).T
 	curve_direction=np.vstack((curve_direction_x,curve_direction_y,curve_direction_z)).T
@@ -56,11 +62,12 @@ def main():
 	print('polyfit_dir error: ',np.max(diff_dir),np.average(diff_dir))
 
 
-	df=DataFrame({'x':lam})
-	df.to_csv("from_ge/lambda.csv",header=False,index=False)
+	# df=DataFrame({'x':lam})
+	# df.to_csv("from_ge/lambda.csv",header=False,index=False)
 
 	df=DataFrame({'polyfit_x':polyfit[:,0],'polyfit_y':polyfit[:,1],'polyfit_z':polyfit[:,2],'polyfit_x_dir':polyfit_dir[:,0],'polyfit_y_dir':polyfit_dir[:,1],'polyfit_z_dir':polyfit_dir[:,2]})
-	df.to_csv("from_ge/analytical_expression.csv",header=False,index=False)
+	# df.to_csv("from_ge/analytical_expression.csv",header=False,index=False)
+	df.to_csv("fanuc/analytical_expression_offset.csv",header=False,index=False)
 
 if __name__ == "__main__":
 	main()

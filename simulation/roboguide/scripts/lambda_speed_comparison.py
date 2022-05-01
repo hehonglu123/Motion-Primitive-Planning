@@ -9,8 +9,8 @@ from robots_def import *
 from lambda_calc import *
 from error_check import *
 
-# move_type='movel'
-move_type='movej'
+move_type='movel'
+# move_type='movej'
 
 # data_dir="../data/slicing_compare_"+move_type+'/'
 data_dir="../data/qp_"+move_type+'/'

@@ -47,7 +47,7 @@ def main():
     save_dir='../data/qp_movej/'
 
     lam=calc_lam_cs(curve)
-    lamdot_des=1000
+    lamdot_des=500
     q_all,lam_out,curve_out,curve_normal_out,act_speed=single_arm_stepwise_optimize(robot,curve_js[0],lam,lamdot_des,curve,curve_normal)
     print("Error",calc_max_error_w_normal(curve_out[2:],curve,curve_normal_out[2:],curve_normal))
     print("Best Speed",np.min(act_speed))
