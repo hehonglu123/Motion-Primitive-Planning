@@ -206,8 +206,8 @@ class greedy_fit(fitting_toolbox):
 def main():
 	###read in points
 	col_names=['q1', 'q2', 'q3','q4', 'q5', 'q6'] 
-	data = read_csv("../data/from_ge/Curve_js2.csv", names=col_names)
-	# data = read_csv("../data/from_ge/qsol.csv", names=col_names)
+	# data = read_csv("../data/from_ge/Curve_js2.csv", names=col_names)
+	data = read_csv("../data/wood/Curve_js.csv", names=col_names)
 	# data = read_csv("../data/from_Jon/qbestcurve_new.csv", names=col_names)
 	# data = read_csv("../constraint_solver/single_arm/trajectory/curve_pose_opt/curve_pose_opt_js.csv", names=col_names)
 	# data = read_csv("../constraint_solver/single_arm/trajectory/all_theta_opt_blended/all_theta_opt_js.csv", names=col_names)
@@ -226,7 +226,7 @@ def main():
 
 
 	###set primitive choices, defaults are all 3
-	# greedy_fit_obj.primitives={'movel_fit':greedy_fit_obj.movel_fit_greedy,'movec_fit':greedy_fit_obj.movec_fit_greedy}
+	greedy_fit_obj.primitives={'movel_fit':greedy_fit_obj.movel_fit_greedy,'movec_fit':greedy_fit_obj.movec_fit_greedy}
 
 	# greedy_fit_obj.primitives={'movel_fit':greedy_fit_obj.movel_fit_greedy}
 	# greedy_fit_obj.primitives={'movej_fit':greedy_fit_obj.movej_fit_greedy}

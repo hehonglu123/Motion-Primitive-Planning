@@ -74,15 +74,18 @@ def extract_points(primitive_type,points):
         return list(map(float, endpoint))
 
 
-def visualize_curve_w_normal(curve,curve_normal,stepsize=500):
+def visualize_curve_w_normal(curve,curve_normal,stepsize=500,equal_axis=False):
 	curve=curve[::stepsize]
 	curve_normal=curve_normal[::stepsize]
-	X, Y, Z = zip(*curve)
-	U, V, W = zip(*curve_normal*50)
 	fig = plt.figure()
 	ax = fig.add_subplot(111, projection='3d')
-	ax.quiver(X, Y, Z, U, V, W)
-	ax.set_box_aspect((np.ptp(X), np.ptp(Y), np.ptp(Z)))
+	ax.plot3D(curve[:,0], curve[:,1],curve[:,2], 'gray')
+	ax.quiver(curve[:,0],curve[:,1],curve[:,2],10*curve_normal[:,0],10*curve_normal[:,1],10*curve_normal[:,2])
+
+	if equal_axis:
+		ax.set_x_lim([0,3000])
+		ax.set_y_lim([0,3000])
+		ax.set_z_lim([0,3000])
 
 	plt.show()
 
