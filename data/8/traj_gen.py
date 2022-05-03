@@ -7,7 +7,7 @@ sys.path.append('../../toolbox')
 from lambda_calc import *
 from utils import *
 
-R = 25.4 * 0.75
+R = 25.4 * 2
 H = 25.4 * 2
 
 ###generate curve for 1.5x3.5 parabola
