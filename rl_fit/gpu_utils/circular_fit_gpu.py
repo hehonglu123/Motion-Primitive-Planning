@@ -6,6 +6,7 @@ import torch
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 device = torch.device(device)
+print(device)
 
 
 def generate_circle_by_vectors(t, C, r, n, u):
@@ -31,16 +32,16 @@ def fit_circle_2d(x, y, p=[], p2=[]):
     elif len(p2) == 0:
 
         ###rewrite lstsq to fit point p on circle
-        A = torch.as_tensor([x - p[0], y - p[1]]).T
+        A = torch.stack([x - p[0], y - p[1]]).T
         b = x ** 2 + y ** 2 - p[0] ** 2 - p[1] ** 2
 
         # Solve by method of least squares
-        c = torch.lstsq(A, b).solution
+        c = torch.linalg.lstsq(A, b).solution
 
         # Get circle parameters from solution c
         xc = c[0] / 2
         yc = c[1] / 2
-        r = torch.norm(p[:-1] - torch.as_tensor([xc, yc]))
+        r = torch.norm(p[:-1] - torch.as_tensor([xc, yc], device=device))
         return xc, yc, r
     else:
         A_x = (p[0] + p2[0]) / 2
@@ -49,7 +50,7 @@ def fit_circle_2d(x, y, p=[], p2=[]):
         vT = vT / torch.norm(vT)
         A = torch.as_tensor([vT[0] * (x - p[0]) + vT[1] * (y - p[1])]).T
         b = x ** 2 + y ** 2 - p[0] ** 2 - p[1] ** 2 - 2 * A_x * x + 2 * A_x * p[0] - 2 * A_y * y + 2 * A_y * p[1]
-        d = torch.lstsq(A, b).solution[0]
+        d = torch.linalg.lstsq(A, b).solution
         xc = A_x + d * vT[0]
         yc = A_y + d * vT[1]
         r = abs(d)
@@ -93,12 +94,13 @@ def rodrigues_rot(curve, n0, n1):
     # Get vector of rotation k and angle theta
     n0 = n0 / torch.norm(n0)
     n1 = n1 / torch.norm(n1)
-    k = torch.cross(n0, n1)
+    k = torch.cross(n0.float(), n1.float())
     k = k / torch.norm(k)
-    theta = torch.arccos(torch.dot(n0, n1))
+    theta = torch.arccos(torch.dot(n0.float(), n1.float()))
 
     # Compute rotated points
-    curve_rot = torch.zeros((len(curve), 3))
+    curve_rot = torch.zeros((len(curve), 3), device=device)
+    curve = curve.float()
     for i in range(len(curve)):
         curve_rot[i] = curve[i] * torch.cos(theta) + torch.cross(k, curve[i]) * torch.sin(theta) + \
                        k * torch.dot(k, curve[i]) * (1 - torch.cos(theta))
@@ -297,25 +299,26 @@ def circle_fit(curve, p=None, p2=None):
 
         ###constraint fitting
         ###rewrite lstsq to fit point p on plane
-        A = torch.as_tensor([curve_centered[:, 0] - p_centered[0] * curve_centered[:, 2] / p_centered[2],
+        A = torch.stack([curve_centered[:, 0] - p_centered[0] * curve_centered[:, 2] / p_centered[2],
                       curve_centered[:, 1] - p_centered[1] * curve_centered[:, 2] / p_centered[2]]).T
         b = torch.ones(len(curve), device=device) - curve_centered[:, 2] / p_centered[2]
-        c = torch.lstsq(A, b).solution
-        normal = torch.as_tensor([c[0], c[1], (1 - c[0] * p_centered[0] - c[1] * p_centered[1]) / p_centered[2]])
+        c = torch.linalg.lstsq(A, b).solution
+        normal = torch.as_tensor([c[0], c[1], (1 - c[0] * p_centered[0] - c[1] * p_centered[1]) / p_centered[2]],
+                                 device=device)
 
         ###make sure constraint point is on plane
         # print(np.dot(normal,p_centered))
         ###normalize plane normal
         normal = normal / torch.norm(normal)
 
-        curve_xy = rodrigues_rot(curve_centered, normal, [0, 0, 1])
-        p_temp = rodrigues_rot(p_centered, normal, [0, 0, 1])
+        curve_xy = rodrigues_rot(curve_centered, normal.float(), torch.tensor([0., 0., 1.], device=device).float())
+        p_temp = rodrigues_rot(p_centered, normal.float(), torch.tensor([0., 0., 1.], device=device).float())
         p_temp = p_temp.flatten()
 
         xc, yc, r = fit_circle_2d(curve_xy[:, 0], curve_xy[:, 1], p_temp)
 
         ###convert to 3D coordinates
-        C = rodrigues_rot(torch.as_tensor([xc, yc, 0]), [0, 0, 1], normal) + curve_mean
+        C = rodrigues_rot(torch.as_tensor([xc, yc, 0], device=device), torch.tensor([0., 0., 1.], device=device).float(), normal) + curve_mean
         C = C.flatten()
         ###get 3D circular arc
         ###always start from constraint p
@@ -326,7 +329,7 @@ def circle_fit(curve, p=None, p2=None):
             v = curve[0] - C
 
         theta = angle_between(u, v, normal)
-        l = torch.linspace(0, theta, len(curve) + 1)
+        l = torch.linspace(0, theta.data, len(curve) + 1, device=device)
         curve_fitarc = generate_circle_by_vectors(l, C, r, normal, u)[1:]
 
     else:
@@ -338,7 +341,7 @@ def circle_fit(curve, p=None, p2=None):
 
         ###constraint fitting
         ###rewrite lstsq to fit point p on plane
-        A = torch.as_tensor([curve_centered[:, 0] - p_centered[0] * curve_centered[:, 2] / p_centered[2] - (
+        A = torch.stack([curve_centered[:, 0] - p_centered[0] * curve_centered[:, 2] / p_centered[2] - (
                     p2_centered[0] - p_centered[0] * p2_centered[2] / p_centered[2]) * (
                                   curve_centered[:, 1] - p_centered[1] * curve_centered[:, 2] / p_centered[2]) / (
                                   p2_centered[1] - p_centered[1] * p2_centered[2] / p_centered[2])]).T
@@ -346,12 +349,13 @@ def circle_fit(curve, p=None, p2=None):
                     curve_centered[:, 1] - p_centered[1] * curve_centered[:, 2] / p_centered[2]) / (
                         p2_centered[1] - p_centered[1] * p2_centered[2] / p_centered[2])
 
-        c = torch.lstsq(A, b).solution
+        c = torch.linalg.lstsq(A, b).solution
         A_out = c[0]
         B_out = (1 - p2_centered[2] / p_centered[2] - A_out * (
                     p2_centered[0] - p_centered[0] * p2_centered[2] / p_centered[2])) / (
                             p2_centered[1] - p_centered[1] * p2_centered[2] / p_centered[2])
-        normal = torch.as_tensor([A_out, B_out, (1 - A_out * p_centered[0] - B_out * p_centered[1]) / p_centered[2]])
+        normal = torch.as_tensor([A_out, B_out, (1 - A_out * p_centered[0] - B_out * p_centered[1]) / p_centered[2]],
+                                 device=device)
 
         ###make sure constraint point is on plane
         # print(np.dot(normal,p_centered))
@@ -377,7 +381,7 @@ def circle_fit(curve, p=None, p2=None):
         l = torch.linspace(0, theta, len(curve) + 1)
         curve_fitarc = generate_circle_by_vectors(l, C, r, normal, u)[1:]
 
-    l = torch.linspace(0, 2 * np.pi, 1000)
+    l = torch.linspace(0, 2 * np.pi, 1000, device=device)
     curve_fitcircle = generate_circle_by_vectors(l, C, r, normal, u)
 
     return curve_fitarc, curve_fitcircle

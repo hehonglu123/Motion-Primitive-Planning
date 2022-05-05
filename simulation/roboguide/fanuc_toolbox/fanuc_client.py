@@ -188,7 +188,7 @@ class TPMotionProgram(object):
         filename = 'TMP'
         # program name, attribute, motion
         mo = '/PROG  '+filename+'\n/ATTR\n/MN\n'
-        mo += '   1:  UFRAME_NUM=0 ;\n   2:  UTOOL_NUM=1 ;\n   3:  DO[101]=ON ;\n   4:  RUN DATARECORDER ;\n'
+        mo += '   1:  UFRAME_NUM=0 ;\n   2:  UTOOL_NUM=2 ;\n   3:  DO[101]=ON ;\n   4:  RUN DATARECORDER ;\n'
         line_num=5
         for prog in self.progs:
             mo += '   '+str(line_num)+':'

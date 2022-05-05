@@ -9,9 +9,10 @@ from robots_def import *
 from utils import *
 
 def main():
+	data_dir='8/'
 
 	col_names=['X', 'Y', 'Z','direction_x','direction_y','direction_z'] 
-	data = read_csv("from_ge/Curve_in_base_frame2.csv", names=col_names)
+	data = read_csv(data_dir+"Curve_in_base_frame.csv", names=col_names)
 	curve_x=data['X'].tolist()
 	curve_y=data['Y'].tolist()
 	curve_z=data['Z'].tolist()
@@ -31,11 +32,6 @@ def main():
 	for i in range(len(curve)):
 		try:
 			R_curve=direction2R(curve_direction[i],-curve[i+1]+curve[i])
-			if i>0:
-				k,angle_of_change=R2rot(np.dot(curve_R[-1],R_curve.T))
-				if angle_of_change>0.1:
-					curve_R.append(curve_R[-1])
-					continue
 		except:
 			traceback.print_exc()
 			pass
@@ -47,7 +43,8 @@ def main():
 	curve_js=np.zeros((len(curve),6))
 
 	# q_init=np.radians([35.414132, 12.483655, 27.914093, -89.255298, 51.405928, -128.026891])
-	q_init=np.array([0.625835928,	0.836930134,	-0.239948016,	1.697010866,	-0.89108048,	0.800838687])
+	q_init=np.array([0.037714178,	-0.115203944,	-0.042585354,	3.083265742,	-0.574133809,	0.764513956])
+	# q_init=np.array([0.543376746,	0.510155551,	-0.124620498,	1.838981323,	-0.725032709,	7.21E-06])
 	for i in range(len(curve)):
 		try:
 			q_all=np.array(abb6640_obj.inv(curve[i],curve_R[i]))
@@ -68,6 +65,8 @@ def main():
 
 			except:
 				q_all=np.array(abb6640_obj.inv(curve[i],curve_R[i]))
+				print(np.degrees(curve_js[i-1]))
+				print(i)
 				traceback.print_exc()
 				break
 
@@ -85,7 +84,7 @@ def main():
 
 	###output to csv
 	df=DataFrame({'q0':curve_js[:,0],'q1':curve_js[:,1],'q2':curve_js[:,2],'q3':curve_js[:,3],'q4':curve_js[:,4],'q5':curve_js[:,5]})
-	df.to_csv('from_ge/Curve_js2.csv',header=False,index=False)
+	df.to_csv(data_dir+'Curve_js.csv',header=False,index=False)
 
 
 def main2():

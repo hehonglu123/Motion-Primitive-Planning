@@ -361,5 +361,14 @@ simulation/traj_prediction/data_param_vertical/
 simulation/traj_prediction/data_param_zheight100/
 simulation/traj_prediction/move_robot/*.csv
 
+simulation/roboguide/data/movec_smooth_car/*.npy
+simulation/roboguide/data/movec_smooth_car/*.png
+simulation/roboguide/data/movel_smooth_car/*.npy
+simulation/roboguide/data/movel_smooth_car/*.png
+simulation/roboguide/data/movec_smooth_ori/*.npy
+simulation/roboguide/data/movec_smooth_ori/*.png
+simulation/roboguide/data/movel_smooth_ori/*.npy
+simulation/roboguide/data/movel_smooth_ori/*.png
+
 # compile karel
 *.pc
