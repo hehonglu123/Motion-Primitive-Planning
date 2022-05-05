@@ -84,9 +84,6 @@ def save_data(episode_rewards, episode_steps, episode_target_curve):
     df.to_csv("Training Curve Data.csv")
 
 
-ERROR_THRESHOLD = 1.0
-MAX_GREEDY_STEP = 10
-
 EPS_START = 0.5
 EPS_END = 0.0001
 EPS_DECAY = 10
@@ -94,6 +91,7 @@ EPS_DECAY = 10
 LEARNING_RATE = 1e-4
 GAMMA = 0.99
 BATCH_SIZE = 256
+MEM_CAP = 1e5
 
 REWARD_FINISH = 2000  # -------------------------------------- HERE
 REWARD_DECAY_FACTOR = 0.9
@@ -111,7 +109,8 @@ def reward_function(i_step, done):
 
 
 class MemoryReplayer(object):
-    def __init__(self, capacity=int(3e5)):
+    def __init__(self, capacity=int(MEM_CAP)):
+        self.capacity = capacity
         self.memory = deque([], maxlen=capacity)
 
     def push(self, memory):
@@ -177,8 +176,7 @@ class Agent(object):
         self.action_types = ['movel_fit'] * n_action + ['movec_fit'] * n_action + ['movej_fit'] * n_action
 
         self.best_reward = -9999
-        self.roll_back_counter = 0
-        self.best_policy = None
+        self.best_episode = 0
 
     def get_action(self, state, epsilon=0.):
         self.policy_net.eval()
@@ -237,24 +235,17 @@ class Agent(object):
         loss.backward()
         self.optimizer.step()
 
-    def roll_back(self, episode_rewards):
-        if len(episode_rewards) < 2000:
-            return
+    def roll_back(self, eval_reward, i_episode=0):
+        reward = np.mean(eval_reward)
+        torch.save(self.policy_net.state_dict(), "model/checkpoints/model_{}.pth".format(i_episode))
 
-        running_reward = np.mean(episode_rewards[-200:])
-        if running_reward >= self.best_reward:
-            self.best_reward = running_reward
-            self.roll_back_counter = 0
-            self.best_policy = self.policy_net.state_dict().copy()
-            return
+        if reward >= self.best_reward:
+            self.best_reward = reward
+            self.best_episode = i_episode
         else:
-            self.roll_back_counter += 1
-
-        if self.roll_back_counter > 1000:
-            print("*** [Rollback] Episode {}; Best Reward {:2f}".format(len(episode_rewards), self.best_reward))
-            self.policy_net.load_state_dict(self.best_policy.copy())
-            self.target_net.load_state_dict(self.best_policy.copy())
-            self.roll_back_counter = 0
+            print("*** [Rollback] Episode {}; Current Reward {}; Best Reward {:2f}".format(i_episode, reward, self.best_reward))
+            self.policy_net.load_state_dict(torch.load("model/checkpoints/model_{}.pth".format(self.best_episode)))
+            self.target_net.load_state_dict(torch.load("model/checkpoints/model_{}.pth".format(self.best_episode)))
 
     def update_target_nets(self):
         self.target_net.load_state_dict(self.policy_net.state_dict())
@@ -263,7 +254,8 @@ class Agent(object):
         torch.save(self.policy_net.state_dict(), path + os.sep + 'DQN_policy_net.pth')
 
     def load_model(self, path):
-        self.policy_net.load_state_dict(torch.load(path + os.sep + 'DQN_policy_net.pth'))
+        # self.policy_net.load_state_dict(torch.load(path + os.sep + 'DQN_policy_net.pth'))
+        self.policy_net.load_state_dict(torch.load(path))
         self.target_net.load_state_dict(self.policy_net.state_dict())
 
 
@@ -542,7 +534,8 @@ class TrajEnv(greedy_fit):
             else:
                 ax.plot3D(p_curve[:, 0], p_curve[:, 1], p_curve[:, 2], color=color, linewidth=2)
             ax.plot3D(p_curve[0, 0], p_curve[0, 1], p_curve[0, 2], "mx", linewidth=3)
-            ax.plot3D(p_curve[-1, 0], p_curve[-1, 1], p_curve[-1, 2], "mx")
+            # ax.plot3D(p_curve[-1, 0], p_curve[-1, 1], p_curve[-1, 2], "mx")
+
 
         plt.title("#BP {}; #Primitive {}; Length {}".format(len(self.breakpoints), len(self.fit_primitives),
                                                             len(self.curve_fit)))
@@ -551,7 +544,7 @@ class TrajEnv(greedy_fit):
         plt.close()
 
 
-def train(agent: Agent, base_data, js_data, lam_data, max_episode=50000):
+def train(agent: Agent, base_data, js_data, lam_data, max_episode=10000):
     robot = abb6640(d=50)
 
     print("RL Training Start")
@@ -578,7 +571,7 @@ def train(agent: Agent, base_data, js_data, lam_data, max_episode=50000):
     eval_episodes = []
     # ============================
 
-    start_learn = 200
+    start_learn = 500
 
     for i_episode in range(episode_start, max_episode):
         timer = time.time()
@@ -618,15 +611,15 @@ def train(agent: Agent, base_data, js_data, lam_data, max_episode=50000):
         episode_steps.append(len(env.fit_primitives))
         episode_target_curves.append(target_curve_idx)
 
-        print("Episode {} / {} Epsilon: {:.3f} --- {} Steps --- Reward: {:.3f} --- MemCap: {} --- {:.3f}s Curve {}"
+        print("Episode {} / {} Epsilon: {:.3f} --- {} Steps --- Reward: {:.3f} --- MemCap: {:.3f}% --- {:.3f}s Curve {}"
               .format(i_episode + 1, max_episode, epsilon, i_step, episode_reward,
-                      len(agent.memory), time.time() - timer, target_curve_idx))
+                      len(agent.memory)*100/agent.memory.capacity, time.time() - timer, target_curve_idx))
         # agent.roll_back(episode_rewards)
 
         if (i_episode + 1) % SAVE_MODEL == 0 and i_episode > start_learn:
             print("=== Saving Model ===")
             save_data(episode_rewards, episode_steps, episode_target_curves)
-            agent.save_model('model')
+            # agent.save_model('model')
             print("DQNs saved at '{}'".format('model/'))
             print("======")
 
@@ -641,8 +634,9 @@ def train(agent: Agent, base_data, js_data, lam_data, max_episode=50000):
             eval_df = pd.DataFrame({"id": eval_idxs, "reward": eval_rewards, "n_primitive": eval_steps,
                                     "episode": eval_episodes})
             eval_df.to_csv("Train Eval Result.csv", index=False)
+            agent.roll_back(eval_reward, i_episode + 1)
 
-        env.plot_curve(target_curve_idx)
+        # env.plot_curve(target_curve_idx)
 
 
 def evaluate(agent: Agent, base_data, js_data, lam_data):
@@ -692,7 +686,7 @@ def evaluate(agent: Agent, base_data, js_data, lam_data):
 def main():
     base_data, js_data, lam_data = read_data()
     agent = Agent(n_action=10)
-    # agent.load_model('model')
+    # agent.load_model('model/checkpoints/model_10000.pth')
     train(agent, base_data, js_data, lam_data)
 
     # eval_idx, eval_reward, eval_step = evaluate(agent, base_data, js_data, lam_data)
