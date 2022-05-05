@@ -43,9 +43,9 @@ class greedy_fit(fitting_toolbox):
 		self.slope_constraint=np.radians(180)
 		self.break_early=False
 		###initial primitive candidates
-		self.primitives = {'movej_fit': self.movej_fit_greedy}
-		# self.primitives = {'movel_fit': self.movel_fit_greedy, 'movej_fit': self.movej_fit_greedy,
-		# 				   'movec_fit': self.movec_fit_greedy}
+		# self.primitives = {'movej_fit': self.movej_fit_greedy}
+		self.primitives = {'movel_fit': self.movel_fit_greedy, 'movej_fit': self.movej_fit_greedy,
+						   'movec_fit': self.movec_fit_greedy}
 
 	def movel_fit_greedy(self,curve,curve_js,curve_R):	###unit vector slope
 		
@@ -126,7 +126,7 @@ class greedy_fit(fitting_toolbox):
 					prev_possible_point=next_point
 					prev_point_temp=next_point
 					next_point= min(next_point + int(np.abs(next_point-prev_point)),len(self.curve)-self.breakpoints[-1])
-					next_point = max(2, next_point)
+					# next_point = max(2, next_point)
 					prev_point=prev_point_temp
 					
 
@@ -267,14 +267,14 @@ def main():
 
 		robot=abb6640(d=50)
 
-		greedy_fit_obj=greedy_fit(robot,curve_poly_coeff,curve_js_poly_coeff, lam_f=lam, num_points=5000, orientation_weight=1)
+		greedy_fit_obj=greedy_fit(robot,curve_poly_coeff,curve_js_poly_coeff, lam_f=lam, num_points=500, orientation_weight=1)
 
 
 		###set primitive choices, defaults are all 3
 		# greedy_fit_obj.primitives={'movel_fit':greedy_fit_obj.movel_fit_greedy,'movec_fit':greedy_fit_obj.movec_fit_greedy}
 
 		now=time.time()
-		breakpoints,primitives_choices,points=greedy_fit_obj.fit_under_error(1)
+		breakpoints,primitives_choices,points=greedy_fit_obj.fit_under_error(1.)
 		print('Greedy Search Time: ',time.time()-now)
 
 		curve_idx.append(i)
@@ -305,8 +305,8 @@ def main():
 		# print(len(primitives_choices))
 		# print(len(points))
 
-	# if i > 2:
-	# 	break
+		# if i > 2:
+		# 	break
 
 		# df=DataFrame({'breakpoints':breakpoints,'primitives':primitives_choices,'points':points})
 		# df.to_csv('command.csv',header=True,index=False)
