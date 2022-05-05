@@ -104,6 +104,9 @@ def vec_proj_plane(u,n):
 #   curve_rot = P*cos(theta) + (k x P)*sin(theta) + k*<k,P>*(1-cos(theta))
 #-------------------------------------------------------------------------------
 def rodrigues_rot(curve, n0, n1):
+
+    if np.all(n0==n1):
+        return curve
     
     # If curve is only 1d array (coords of single point), fix it to be matrix
     if curve.ndim == 1:
@@ -215,40 +218,53 @@ def get_intersect(a1, a2, b1, b2):
 
 def circle_fit_w_2slope(curve,p,p2,slope1,slope2):
     ###fit a circle with 2 points constraint and 2 slope constraints
-    ###fit a plane with 2 point constraint
-    curve_mean = curve.mean(axis=0)
-    curve_centered = curve - curve_mean
-    p_centered = p - curve_mean
-    p2_centered= p2 - curve_mean
+    #output include p1 & p2, size=len(curve)+2
+    ###fit a plane with 2 point constraint first
 
     ###constraint fitting
     ###rewrite lstsq to fit point p on plane
-    A = np.array([curve_centered[:,0]-p_centered[0]*curve_centered[:,2]/p_centered[2]-(p2_centered[0]-p_centered[0]*p2_centered[2]/p_centered[2])*(curve_centered[:,1]-p_centered[1]*curve_centered[:,2]/p_centered[2])/(p2_centered[1]-p_centered[1]*p2_centered[2]/p_centered[2])]).T
-    b = np.ones(len(curve))-curve_centered[:,2]/p_centered[2]-(1-p2_centered[2]/p_centered[2])*(curve_centered[:,1]-p_centered[1]*curve_centered[:,2]/p_centered[2])/(p2_centered[1]-p_centered[1]*p2_centered[2]/p_centered[2])
+    A = np.array([curve[:,0]-p[0]*curve[:,2]/p[2]-(p2[0]-p[0]*p2[2]/p[2])*(curve[:,1]-p[1]*curve[:,2]/p[2])/(p2[1]-p[1]*p2[2]/p[2])]).T
+    b = np.ones(len(curve))-curve[:,2]/p[2]-(1-p2[2]/p[2])*(curve[:,1]-p[1]*curve[:,2]/p[2])/(p2[1]-p[1]*p2[2]/p[2])
+    if np.linalg.norm(b)==0:        ###corner case, when all z have same value
+        normal=np.array([0,0,1])
+    else:
 
-    c = np.linalg.lstsq(A,b,rcond=None)[0]
-    A_out=c[0]
-    B_out=(1-p2_centered[2]/p_centered[2]-A_out*(p2_centered[0]-p_centered[0]*p2_centered[2]/p_centered[2]))/(p2_centered[1]-p_centered[1]*p2_centered[2]/p_centered[2])
-    normal=np.array([A_out,B_out,(1-A_out*p_centered[0]-B_out*p_centered[1])/p_centered[2]])
+        c = np.linalg.lstsq(A,b,rcond=None)[0]
+        A_out=c[0]
+        B_out=(1-p2[2]/p[2]-A_out*(p2[0]-p[0]*p2[2]/p[2]))/(p2[1]-p[1]*p2[2]/p[2])
+        normal=np.array([A_out,B_out,(1-A_out*p[0]-B_out*p[1])/p[2]])
 
     ###make sure constraint point is on plane
-    # print(np.dot(normal,p_centered))
-    # print(np.dot(normal,p2_centered))
+    # print(np.dot(normal,p))
+    # print(np.dot(normal,p2))
     ###normalize plane normal
     normal=normal/np.linalg.norm(normal)
 
-    curve_xy = rodrigues_rot(curve_centered, normal, [0,0,1])
-    p_temp1 = rodrigues_rot(p_centered, normal, [0,0,1]).flatten()[:-1]
-    p_temp2 = rodrigues_rot(p2_centered, normal, [0,0,1]).flatten()[:-1]
+    curve_xy = rodrigues_rot(curve, normal, [0,0,1])
+    p_temp1 = rodrigues_rot(p, normal, [0,0,1]).flatten()[:-1]
+    p_temp2 = rodrigues_rot(p2, normal, [0,0,1]).flatten()[:-1]
     slope_temp1 = rodrigues_rot(slope1, normal, [0,0,1]).flatten()[:-1]
     slope_temp2 = rodrigues_rot(slope2, normal, [0,0,1]).flatten()[:-1]
 
-    xc, yc = get_intersect(p_temp1,p_temp1+np.array([-slope_temp1[1],slope_temp1[0]]),p_temp2,p_temp2+np.array([-slope_temp2[1],slope_temp2[0]]))
+    
+
+    p_mid=(p_temp1+p_temp2)/2
+    slope_mid=-(p_temp2[0]-p_temp1[0])/(p_temp2[1]-p_temp1[1])
+
+    xc1, yc1 = get_intersect(p_temp1,p_temp1+np.array([-slope_temp1[1],slope_temp1[0]]),p_mid,p_mid+np.array([1,slope_mid]))
+    xc2, yc2 = get_intersect(p_temp2,p_temp2-np.array([-slope_temp2[1],slope_temp2[0]]),p_mid,p_mid+np.array([1,slope_mid]))
+
+    xc=(xc1+xc2)/2
+    yc=(yc1+yc2)/2
+
+
     r=np.linalg.norm(p_temp1-np.array([xc,yc]))
 
     ###convert to 3D coordinates
-    C = rodrigues_rot(np.array([xc,yc,0]), [0,0,1], normal) + curve_mean
+    C = rodrigues_rot(np.array([xc,yc,0]), [0,0,1], normal) + np.array([0,0,np.average(curve[:,-1])])
     C = C.flatten()
+
+
     ###get 3D circular arc
     ###always start from constraint p
     u=p-C
@@ -259,7 +275,7 @@ def circle_fit_w_2slope(curve,p,p2,slope1,slope2):
 
     theta = angle_between(u, v, normal)
 
-    l = np.linspace(0, theta, len(curve))
+    l = np.linspace(0, theta, len(curve)+2)
     curve_fitarc = generate_circle_by_vectors(l, C, r, normal, u)
     l = np.linspace(0, 2*np.pi, 1000)
     curve_fitcircle = generate_circle_by_vectors(l, C, r, normal, u)

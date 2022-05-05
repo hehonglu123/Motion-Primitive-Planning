@@ -18,7 +18,7 @@ curve_y=data['Y'].tolist()
 curve_z=data['Z'].tolist()
 curve=np.vstack((curve_x, curve_y, curve_z)).T
 
-speed=['v500']
+speed=['vmax']
 zone=['z10']
 data_dir=""
 

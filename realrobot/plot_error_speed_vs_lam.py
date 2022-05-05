@@ -18,27 +18,29 @@ curve_y=data['Y'].tolist()
 curve_z=data['Z'].tolist()
 curve=np.vstack((curve_x, curve_y, curve_z)).T
 
-speed=['v50','v100','v200','v400','v800']
+# speed=['v50','v100','v200','v400','v800']
+speed=['v400']
 zone=['z10']
 data_dir="recorded_data/qp_movel/"
 
 for s in speed:
     for z in zone:
         ###read in curve_exe
-        col_names=['timestamp', 'cmd_num', 'J1', 'J2','J3', 'J4', 'J5', 'J6'] 
-        data = read_csv(data_dir+"curve_exe_"+s+'_'+z+".csv",names=col_names)
-        q1=data['J1'].tolist()[1:]
-        q2=data['J2'].tolist()[1:]
-        q3=data['J3'].tolist()[1:]
-        q4=data['J4'].tolist()[1:]
-        q5=data['J5'].tolist()[1:]
-        q6=data['J6'].tolist()[1:]
-        cmd_num=np.array(data['cmd_num'].tolist()[1:]).astype(float)
+        data = read_csv(data_dir+"curve_exe_"+s+'_'+z+".csv")#,names=col_names)
+        q1=data[' J1'].tolist()
+        q2=data[' J2'].tolist()
+        q3=data[' J3'].tolist()
+        q4=data[' J4'].tolist()
+        q5=data[' J5'].tolist()
+        q6=data[' J6'].tolist()
+        cmd_num=np.array(data[' cmd_num'].tolist()[1:]).astype(float)
         start_idx=np.where(cmd_num==6)[0][0]
         curve_exe_js=np.radians(np.vstack((q1,q2,q3,q4,q5,q6)).T.astype(float)[start_idx:])
         timestamp=np.array(data['timestamp'].tolist()[start_idx:]).astype(float)
 
-        timestep=np.average(timestamp[1:]-timestamp[:-1])
+        ###data filtering
+        timestamp, curve_exe_js=lfilter(timestamp, curve_exe_js)
+
 
         robot=abb6640(d=50)
         act_speed=[]
@@ -52,8 +54,8 @@ for s in speed:
             if i>0:
                 lam.append(lam[-1]+np.linalg.norm(curve_exe[i]-curve_exe[i-1]))
             try:
-                if timestamp[-1]!=timestamp[-2]:
-                    act_speed.append(np.linalg.norm(curve_exe[-1]-curve_exe[-2])/timestep)
+                if timestamp[i-1]!=timestamp[i]:
+                    act_speed.append(np.linalg.norm(curve_exe[-1]-curve_exe[-2])/(timestamp[i]-timestamp[i-1]))
                     
             except IndexError:
                 pass
