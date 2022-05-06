@@ -18,7 +18,7 @@ from curve_normalization import PCA_normalization, fft_feature
 from general_robotics_toolbox import *
 
 sys.path.append('../greedy_fitting/')
-from greedy_poly import greedy_fit
+from greedy_new import greedy_fit
 
 sys.path.append('../toolbox')
 from robots_def import *
@@ -41,40 +41,27 @@ random.seed(random_seed)
 
 
 def read_data():
-    all_base = []
+    # all_base = []
     all_js = []
-    all_lam = []
 
     for i in range(201):
-        lambda_file = "data/poly/lambda/lambda_{}.csv".format(i)
-        base_file = "data/poly/base/curve_base_poly_{}.csv".format(i)
-        js_file = "data/poly/js/curve_js_poly_{}.csv".format(i)
+        # base_file = "data/poly/base/curve_base_poly_{}.csv".format(i)
+        js_file = "data/js_new/traj_{}_js_new.csv".format(i)
 
-        lambda_data = pd.read_csv(lambda_file, header=None)
-        lam = lambda_data.values[-1][0]
-
-        col_names = ['poly_x', 'poly_y', 'poly_z', 'poly_direction_x', 'poly_direction_y', 'poly_direction_z']
-        data = pd.read_csv(base_file, names=col_names)
-        poly_x = data['poly_x'].tolist()
-        poly_y = data['poly_y'].tolist()
-        poly_z = data['poly_z'].tolist()
-        curve_poly_coeff = np.vstack((poly_x, poly_y, poly_z))
-
-        col_names = ['poly_q1', 'poly_q2', 'poly_q3', 'poly_q4', 'poly_q5', 'poly_q6']
+        col_names=['q1', 'q2', 'q3','q4', 'q5', 'q6']
         data = pd.read_csv(js_file, names=col_names)
-        poly_q1 = data['poly_q1'].tolist()
-        poly_q2 = data['poly_q2'].tolist()
-        poly_q3 = data['poly_q3'].tolist()
-        poly_q4 = data['poly_q4'].tolist()
-        poly_q5 = data['poly_q5'].tolist()
-        poly_q6 = data['poly_q6'].tolist()
-        curve_js_poly_coeff = np.vstack((poly_q1, poly_q2, poly_q3, poly_q4, poly_q5, poly_q6))
+        curve_q1 = data['q1'].tolist()
+        curve_q2 = data['q2'].tolist()
+        curve_q3 = data['q3'].tolist()
+        curve_q4 = data['q4'].tolist()
+        curve_q5 = data['q5'].tolist()
+        curve_q6 = data['q6'].tolist()
+        curve_js = np.vstack((curve_q1, curve_q2, curve_q3, curve_q4, curve_q5, curve_q6)).T
 
-        all_base.append(curve_poly_coeff)
-        all_js.append(curve_js_poly_coeff)
-        all_lam.append(lam)
+        # all_base.append(curve_poly_coeff)
+        all_js.append(curve_js)
 
-    return all_base, all_js, all_lam
+    return all_js
 
 
 def save_data(episode_rewards, episode_steps, episode_target_curve):
@@ -260,11 +247,9 @@ class Agent(object):
 
 
 class TrajEnv(greedy_fit):
-    def __init__(self, robot, curve_poly_coeff, curve_js_poly_coeff, lam_f=1758.276831, num_points=50000,
-                 orientation_weight=1):
+    def __init__(self, robot, curve_js, orientation_weight=1):
 
-        super().__init__(robot, curve_poly_coeff, curve_js_poly_coeff, lam_f=lam_f, num_points=num_points,
-                         orientation_weight=orientation_weight)
+        super().__init__(robot, curve_js, orientation_weight=orientation_weight)
 
         self.curve_fit = []
         self.curve_fit_R = []
@@ -283,13 +268,10 @@ class TrajEnv(greedy_fit):
 
     def fit_primitive(self, max_error_threshold, max_ori_threshold=np.radians(3),
                       primitives=['movel_fit', 'movej_fit', 'movec_fit']):
-        step_size = int(len(self.curve) / 20)
-        ###initialize
-
         primitives_choices = []
         points = []
 
-        next_point = min(step_size, len(self.curve) - self.breakpoints[-1])
+        next_point = min(20, len(self.curve) - self.breakpoints[-1])
         prev_point = 0
         prev_possible_point = 0
 
@@ -414,12 +396,12 @@ class TrajEnv(greedy_fit):
 
         # print(self.breakpoints)
         # print(primitives_choices)
-        curve_fit = curve_fit[:len(curve_fit) - (next_point-idx)]
-        curve_fit_R = curve_fit_R[:len(curve_fit) - (next_point-idx)]
+        curve_fit = curve_fit[:len(curve_fit) - (next_point - idx)]
+        curve_fit_R = curve_fit_R[:len(curve_fit) - (next_point - idx)]
         if primitives_choices[-1] == 'movej_fit':
             curve_fit_js = curve_fit_js[:len(curve_fit) - (next_point - idx)]
 
-        return (self.breakpoints[-1], next_break_point), primitives_choices, (curve_fit, curve_fit_R, curve_fit_js),\
+        return (self.breakpoints[-1], next_break_point), primitives_choices, (curve_fit, curve_fit_R, curve_fit_js), \
                (max_errors, max_ori_errors)
 
     def get_greedy_primitives(self):
@@ -544,7 +526,7 @@ class TrajEnv(greedy_fit):
         plt.close()
 
 
-def train(agent: Agent, base_data, js_data, lam_data, max_episode=10000):
+def train(agent: Agent, js_data, max_episode=10000):
     robot = abb6640(d=50)
 
     print("RL Training Start")
@@ -578,12 +560,10 @@ def train(agent: Agent, base_data, js_data, lam_data, max_episode=10000):
         epsilon = EPS_START - min(1., max(0, i_episode - start_learn) / (max_episode * 1.0)) * (EPS_START - EPS_END)
         epsilon = 1. if i_episode < start_learn else epsilon
         episode_reward = 0
-        target_curve_idx = np.random.randint(0, len(base_data))
-        curve_poly_coeff = base_data[target_curve_idx]
-        curve_js_coeff = js_data[target_curve_idx]
-        lam = lam_data[target_curve_idx]
+        target_curve_idx = np.random.randint(0, len(js_data))
+        curve_js = js_data[target_curve_idx]
 
-        env = TrajEnv(robot, curve_poly_coeff, curve_js_coeff, lam_f=lam, num_points=500)
+        env = TrajEnv(robot, curve_js)
         episode_memory = []
         state, done = env.reset()
 
@@ -639,7 +619,7 @@ def train(agent: Agent, base_data, js_data, lam_data, max_episode=10000):
         # env.plot_curve(target_curve_idx)
 
 
-def evaluate(agent: Agent, base_data, js_data, lam_data):
+def evaluate(agent: Agent, js_data):
     robot = abb6640(d=50)
 
     print("RL Evaluation Start")
@@ -648,16 +628,14 @@ def evaluate(agent: Agent, base_data, js_data, lam_data):
     curve_steps = []
     curve_idx = []
 
-    for i in range(len(base_data)):
+    for i in range(len(js_data)):
         timer = time.time()
 
         episode_reward = 0
         target_curve_idx = i
-        curve_poly_coeff = base_data[target_curve_idx]
-        curve_js_coeff = js_data[target_curve_idx]
-        lam = lam_data[target_curve_idx]
+        curve_js = js_data[target_curve_idx]
 
-        env = TrajEnv(robot, curve_poly_coeff, curve_js_coeff, lam_f=lam, num_points=500)
+        env = TrajEnv(robot, curve_js)
         state, done = env.reset()
 
         i_step = 0
@@ -670,7 +648,7 @@ def evaluate(agent: Agent, base_data, js_data, lam_data):
                 break
             state = next_state
 
-        print("[EVAL] Curve {}/{} --- Step: {} --- Reward: {:.2f} --- {:.3f}s".format(i, len(base_data), i_step,
+        print("[EVAL] Curve {}/{} --- Step: {} --- Reward: {:.2f} --- {:.3f}s".format(i, len(js_data), i_step,
                                                                                   episode_reward, time.time() - timer))
 
         curve_rewards.append(episode_reward)
@@ -687,7 +665,7 @@ def main():
     base_data, js_data, lam_data = read_data()
     agent = Agent(n_action=10)
     # agent.load_model('model/checkpoints/model_10000.pth')
-    train(agent, base_data, js_data, lam_data)
+    train(agent, js_data)
 
     # eval_idx, eval_reward, eval_step = evaluate(agent, base_data, js_data, lam_data)
     # eval_episode = [1] * len(eval_idx)
