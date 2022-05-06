@@ -6,7 +6,7 @@ from general_robotics_toolbox import *
 sys.path.append('../toolbox')
 from robots_def import *
 
-data_dir='8/'
+data_dir='wood/'
 
 col_names=['X', 'Y', 'Z','direction_x','direction_y','direction_z'] 
 data = read_csv(data_dir+"Curve_dense.csv", names=col_names)

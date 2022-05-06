@@ -23,8 +23,6 @@ def find_point(t):
     return np.vstack((x,y,z)).T
 def find_normal(p):
     nx = np.zeros((1,len(p[:,0])))
-    # ny = p[:,1] / np.sqrt(p[:,1] ** 2 + R ** 4 / (4 * H ** 2))
-    # nz = np.sqrt(abs(R ** 2 - p[:,1] ** 2)) / R
 
     ny=np.ones(len(p))
     nz=-2*H*p[:,1]/R**2

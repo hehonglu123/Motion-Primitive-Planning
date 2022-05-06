@@ -9,7 +9,7 @@ from robots_def import *
 from utils import *
 
 def main():
-	data_dir='8/'
+	data_dir='wood/'
 
 	col_names=['X', 'Y', 'Z','direction_x','direction_y','direction_z'] 
 	data = read_csv(data_dir+"Curve_in_base_frame.csv", names=col_names)

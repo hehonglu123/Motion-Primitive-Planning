@@ -117,7 +117,10 @@ class MotionSend(object):
         q5=df[' J5'].tolist()
         q6=df[' J6'].tolist()
         cmd_num=np.array(df[' cmd_num'].tolist()).astype(float)
-        start_idx=np.where(cmd_num==6)[0][0]
+        #find closest to 5 cmd_num
+        idx = np.absolute(cmd_num-5).argmin()
+        # print('cmd_num ',cmd_num[idx])
+        start_idx=np.where(cmd_num==cmd_num[idx])[0][0]
         curve_exe_js=np.radians(np.vstack((q1,q2,q3,q4,q5,q6)).T.astype(float)[start_idx:])
         timestamp=np.array(df['timestamp'].tolist()[start_idx:]).astype(float)
 
