@@ -13,8 +13,8 @@ def main():
 	###read actual curve
 	col_names=['q1', 'q2', 'q3','q4', 'q5', 'q6'] 
 	# data = read_csv(data_dir+"/arm1.csv", names=col_names)
-	# data = read_csv("../../../data/8/Curve_js.csv", names=col_names)
-	data = read_csv("../../../constraint_solver/single_arm/trajectory/stepwise_opt/arm1.csv", names=col_names)
+	data = read_csv("../../../data/wood/Curve_js.csv", names=col_names)
+	# data = read_csv("../../../constraint_solver/single_arm/trajectory/stepwise_opt/arm1.csv", names=col_names)
 
 	curve_q1=data['q1'].tolist()
 	curve_q2=data['q2'].tolist()

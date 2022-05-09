@@ -9,12 +9,12 @@ from utils import *
 
 R = 25.4 * 2
 H = 25.4 * 1
-W = 40
+W = 30
 #38x89mm
 
 ###generate curve for 1.5x3.5 parabola
 def find_point(t):
-    fr = 0.55 * np.pi / 180.0 * (t/1000.) ** (1.)
+    fr = 0.54 * np.pi / 180.0 * (t/1000.) ** (1.)
 
     x = t
     y = W * np.sin(np.multiply(fr,x))

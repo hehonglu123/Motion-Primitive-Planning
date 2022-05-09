@@ -8,7 +8,8 @@ from lambda_calc import *
 from utils import *
 
 R = 25.4 * 2
-H = 25.4 * 2
+H = 25.4 * 1
+W = 30
 
 ###generate curve for 1.5x3.5 parabola
 def find_point(t):
@@ -17,7 +18,7 @@ def find_point(t):
     div=150.
     x=a*(1+np.cos(t/div)/(1+np.sin(t/div)**2))
     y=a*np.sin(t/div)*np.cos(t/div)/(1+np.sin(t/div)**2)
-    y=15*y/176.776
+    y=W*y/176.776
     z = (R ** 2 - y ** 2) * H / R ** 2
 
     return np.vstack((x,y,z)).T
@@ -100,7 +101,7 @@ DataFrame(np.hstack((curve_act,curve_normal_act))).to_csv('Curve_dense.csv',head
 
 fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
 ax.plot3D(curve_act[:,0],curve_act[:,1],curve_act[:,2],'r.-')
-ax.quiver(curve_act[:,0],curve_act[:,1],curve_act[:,2],curve_normal_act[:,0],curve_normal_act[:,1],curve_normal_act[:,2],length=10, normalize=True)
+ax.quiver(curve_act[:,0],curve_act[:,1],curve_act[:,2],curve_normal_act[:,0],curve_normal_act[:,1],curve_normal_act[:,2],length=1, normalize=True)
 plt.show()
 
 visualize_curve_w_normal(curve_act,curve_normal_act,stepsize=10)

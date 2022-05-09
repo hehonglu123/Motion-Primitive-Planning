@@ -125,3 +125,16 @@ def lfilter(x, y):
 	y1=moving_average(y,n)
 	y2=moving_average(np.flip(y,axis=0),n)
 	return x[int(n/2):-int(n/2)+1], (y1+np.flip(y2,axis=0))/2
+
+def orientation_interp(R_init,R_end,steps):
+	curve_fit_R=[]
+	###find axis angle first
+	R_diff=np.dot(R_init.T,R_end)
+	k,theta=R2rot(R_diff)
+	for i in range(steps):
+		###linearly interpolate angle
+		angle=theta*i/(steps-1)
+		R=rot(k,angle)
+		curve_fit_R.append(np.dot(R_init,R))
+	curve_fit_R=np.array(curve_fit_R)
+	return curve_fit_R
