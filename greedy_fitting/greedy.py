@@ -167,26 +167,20 @@ def main():
 
 	############insert initial configuration#################
 	primitives_choices.insert(0,'movej_fit')
-	q_all=np.array(robot.inv(greedy_fit_obj.curve_fit[0],greedy_fit_obj.curve_fit_R[0]))
-	###choose inv_kin closest to previous joints
-	temp_q=q_all-curve_js[0]
-	order=np.argsort(np.linalg.norm(temp_q,axis=1))
-	q_init=q_all[order[0]]
-	points.insert(0,[q_init])
+	points.insert(0,[greedy_fit_obj.curve_fit_js[0]])
 
 	print(len(breakpoints))
 	print(len(primitives_choices))
 	print(len(points))
 
 	df=DataFrame({'breakpoints':breakpoints,'primitives':primitives_choices,'points':points})
-	df.to_csv('command.csv',header=True,index=False)
+	df.to_csv('greedy_output/command.csv',header=True,index=False)
 	df=DataFrame({'x':greedy_fit_obj.curve_fit[:,0],'y':greedy_fit_obj.curve_fit[:,1],'z':greedy_fit_obj.curve_fit[:,2],\
 		'R1':greedy_fit_obj.curve_fit_R[:,0,0],'R2':greedy_fit_obj.curve_fit_R[:,0,1],'R3':greedy_fit_obj.curve_fit_R[:,0,2],\
 		'R4':greedy_fit_obj.curve_fit_R[:,1,0],'R5':greedy_fit_obj.curve_fit_R[:,1,1],'R6':greedy_fit_obj.curve_fit_R[:,1,2],\
 		'R7':greedy_fit_obj.curve_fit_R[:,2,0],'R8':greedy_fit_obj.curve_fit_R[:,2,1],'R9':greedy_fit_obj.curve_fit_R[:,2,2]})
-	df.to_csv('curve_fit.csv',header=True,index=False)
-	df=DataFrame({'j1':greedy_fit_obj.curve_fit_js[:,0],'j2':greedy_fit_obj.curve_fit_js[:,1],'j3':greedy_fit_obj.curve_fit_js[:,2],'j4':greedy_fit_obj.curve_fit_js[:,3],'j5':greedy_fit_obj.curve_fit_js[:,4],'j6':greedy_fit_obj.curve_fit_js[:,5]})
-	df.to_csv('curve_fit_js.csv',header=False,index=False)
+	df.to_csv('greedy_output/curve_fit.csv',header=True,index=False)
+	DataFrame(greedy_fit_obj.curve_fit_js).to_csv('greedy_output/curve_fit_js.csv',header=False,index=False)
 
 def greedy_execute():
 	###read in points

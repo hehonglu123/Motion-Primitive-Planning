@@ -12,13 +12,13 @@ from lambda_calc import *
 from scipy.interpolate import UnivariateSpline
 
 col_names=['X', 'Y', 'Z','direction_x', 'direction_y', 'direction_z'] 
-data = read_csv("../../../data/from_ge/relative_path_tool_frame.csv", names=col_names)
+data = read_csv("../../../data/from_NX/relative_path_tool_frame.csv", names=col_names)
 curve_x=data['X'].tolist()
 curve_y=data['Y'].tolist()
 curve_z=data['Z'].tolist()
 curve=np.vstack((curve_x, curve_y, curve_z)).T
 
-speed=['vmax']
+speed=['v500']
 zone=['z10']
 data_dir=""
 

@@ -123,7 +123,7 @@ class greedy_fit(fitting_toolbox):
 			###find best primitive
 			key2=max(length2, key=length2.get)
 
-			print(max_errors1,max_ori_errors1)
+			# print(max_errors1,max_ori_errors1)
 
 			if length1[key1]>length2[key2]:
 				curve_fit1[key1],curve_fit_R1[key1],curve_fit_js1[key1],max_errors1[key1],max_ori_errors1[key1]=\
@@ -142,7 +142,7 @@ class greedy_fit(fitting_toolbox):
 				points1.append([curve_fit_js1[key1][-1]])
 
 			if key2=='movec_fit':
-				points2.append([curve_fit2[key2][int(len(curve_fit2[key2])/2)],curve_fit[key2][-1]])
+				points2.append([curve_fit2[key2][int(len(curve_fit2[key2])/2)],curve_fit2[key2][-1]])
 			elif key2=='movel_fit':
 				points2.append([curve_fit2[key2][-1]])
 			else:
@@ -176,9 +176,9 @@ class greedy_fit(fitting_toolbox):
 					self.curve_fit_js2.extend(self.car2js(self.robot2,curve_fit2[key2],curve_fit_R2[key2],self.curve_js2[0]))
 
 
-			# print(self.breakpoints)
-			# print(primitives_choices1)
-			# print(max_errors1[key1],max_ori_errors1[key1])
+			print(self.breakpoints)
+			print(primitives_choices1)
+			print(max_errors1[key1],max_ori_errors1[key1])
 			
 
 		##############################check error (against fitting back projected curve)##############################
@@ -193,6 +193,8 @@ class greedy_fit(fitting_toolbox):
 		self.curve_fit2=np.array(self.curve_fit2)
 		self.curve_fit_R2=np.array(self.curve_fit_R2)
 		self.curve_fit_js2=np.array(self.curve_fit_js2)
+
+		self.curve_fit2_global=(self.base2_R@self.curve_fit2.T).T+np.tile(self.base2_p,(len(self.curve_fit2),1))
 
 		return self.breakpoints,primitives_choices1,points1,primitives_choices2,points2
 
@@ -209,11 +211,11 @@ def main():
 	with open('../constraint_solver/dual_arm/trajectory/abb6640.yaml') as file:
 		H_6640 = np.array(yaml.safe_load(file)['H'],dtype=np.float64)
 
-	greedy_fit_obj=greedy_fit(robot1,robot2,curve_js1,curve_js2,H_6640[:-1,-1],H_6640[:-1,:-1],0.5)
+	greedy_fit_obj=greedy_fit(robot1,robot2,curve_js1[::10],curve_js2[::10],1000.*H_6640[:-1,-1],H_6640[:-1,:-1],0.5)
 
 
 	###set primitive choices, defaults are all 3
-	greedy_fit_obj.primitives={'movel_fit':greedy_fit_obj.movel_fit_greedy,'movec_fit':greedy_fit_obj.movec_fit_greedy}
+	greedy_fit_obj.primitives={'movel_fit':greedy_fit_obj.movel_fit_greedy,'movej_fit':greedy_fit_obj.movej_fit_greedy}
 
 	breakpoints,primitives_choices1,points1,primitives_choices2,points2=greedy_fit_obj.fit_under_error()
 
@@ -221,33 +223,43 @@ def main():
 	###3D plot
 	plt.figure()
 	ax = plt.axes(projection='3d')
-	ax.plot3D(greedy_fit_obj.curve[:,0], greedy_fit_obj.curve[:,1],greedy_fit_obj.curve[:,2], 'gray')
-	
-	ax.scatter3D(greedy_fit_obj.curve_fit[:,0], greedy_fit_obj.curve_fit[:,1], greedy_fit_obj.curve_fit[:,2], c=greedy_fit_obj.curve_fit[:,2], cmap='Greens')
+	ax.plot3D(greedy_fit_obj.curve_fit1[:,0], greedy_fit_obj.curve_fit1[:,1],greedy_fit_obj.curve_fit1[:,2], 'gray', label='arm1')
+	ax.plot3D(greedy_fit_obj.curve_fit2_global[:,0], greedy_fit_obj.curve_fit2_global[:,1],greedy_fit_obj.curve_fit2_global[:,2], 'green', label='arm2')
+	plt.legend()
 	plt.show()
 
 	############insert initial configuration#################
-	# primitives_choices.insert(0,'movej_fit')
-	# q_all=np.array(robot.inv(greedy_fit_obj.curve_fit[0],greedy_fit_obj.curve_fit_R[0]))
-	# ###choose inv_kin closest to previous joints
-	# temp_q=q_all-curve_js[0]
-	# order=np.argsort(np.linalg.norm(temp_q,axis=1))
-	# q_init=q_all[order[0]]
-	# points.insert(0,[q_init])
+	primitives_choices1.insert(0,'movej_fit')
+	points1.insert(0,[greedy_fit_obj.curve_fit_js1[0]])
 
-	# print(len(breakpoints))
-	# print(len(primitives_choices))
-	# print(len(points))
+	primitives_choices2.insert(0,'movej_fit')
+	points2.insert(0,[greedy_fit_obj.curve_fit_js2[0]])
 
-	# df=DataFrame({'breakpoints':breakpoints,'primitives':primitives_choices,'points':points})
-	# df.to_csv('command.csv',header=True,index=False)
-	# df=DataFrame({'x':greedy_fit_obj.curve_fit[:,0],'y':greedy_fit_obj.curve_fit[:,1],'z':greedy_fit_obj.curve_fit[:,2],\
-	# 	'R1':greedy_fit_obj.curve_fit_R[:,0,0],'R2':greedy_fit_obj.curve_fit_R[:,0,1],'R3':greedy_fit_obj.curve_fit_R[:,0,2],\
-	# 	'R4':greedy_fit_obj.curve_fit_R[:,1,0],'R5':greedy_fit_obj.curve_fit_R[:,1,1],'R6':greedy_fit_obj.curve_fit_R[:,1,2],\
-	# 	'R7':greedy_fit_obj.curve_fit_R[:,2,0],'R8':greedy_fit_obj.curve_fit_R[:,2,1],'R9':greedy_fit_obj.curve_fit_R[:,2,2]})
-	# df.to_csv('curve_fit.csv',header=True,index=False)
-	# df=DataFrame({'j1':greedy_fit_obj.curve_fit_js[:,0],'j2':greedy_fit_obj.curve_fit_js[:,1],'j3':greedy_fit_obj.curve_fit_js[:,2],'j4':greedy_fit_obj.curve_fit_js[:,3],'j5':greedy_fit_obj.curve_fit_js[:,4],'j6':greedy_fit_obj.curve_fit_js[:,5]})
-	# df.to_csv('curve_fit_js.csv',header=False,index=False)
+
+	print(len(breakpoints))
+	print(len(primitives_choices1))
+	print(len(points1))
+
+	###save arm1
+	df=DataFrame({'breakpoints':breakpoints,'primitives':primitives_choices1,'points':points1})
+	df.to_csv('greedy_dual_output/command1.csv',header=True,index=False)
+	df=DataFrame({'x':greedy_fit_obj.curve_fit1[:,0],'y':greedy_fit_obj.curve_fit1[:,1],'z':greedy_fit_obj.curve_fit1[:,2],\
+		'R1':greedy_fit_obj.curve_fit_R1[:,0,0],'R2':greedy_fit_obj.curve_fit_R1[:,0,1],'R3':greedy_fit_obj.curve_fit_R1[:,0,2],\
+		'R4':greedy_fit_obj.curve_fit_R1[:,1,0],'R5':greedy_fit_obj.curve_fit_R1[:,1,1],'R6':greedy_fit_obj.curve_fit_R1[:,1,2],\
+		'R7':greedy_fit_obj.curve_fit_R1[:,2,0],'R8':greedy_fit_obj.curve_fit_R1[:,2,1],'R9':greedy_fit_obj.curve_fit_R1[:,2,2]})
+	df.to_csv('greedy_dual_output/curve_fit1.csv',header=True,index=False)
+	DataFrame(greedy_fit_obj.curve_fit_js1).to_csv('greedy_dual_output/curve_fit_js1.csv',header=False,index=False)
+
+	###save arm2
+	df=DataFrame({'breakpoints':breakpoints,'primitives':primitives_choices2,'points':points2})
+	df.to_csv('greedy_dual_output/command2.csv',header=True,index=False)
+	df=DataFrame({'x':greedy_fit_obj.curve_fit2[:,0],'y':greedy_fit_obj.curve_fit2[:,1],'z':greedy_fit_obj.curve_fit2[:,2],\
+		'R1':greedy_fit_obj.curve_fit_R2[:,0,0],'R2':greedy_fit_obj.curve_fit_R2[:,0,1],'R3':greedy_fit_obj.curve_fit_R2[:,0,2],\
+		'R4':greedy_fit_obj.curve_fit_R2[:,1,0],'R5':greedy_fit_obj.curve_fit_R2[:,1,1],'R6':greedy_fit_obj.curve_fit_R2[:,1,2],\
+		'R7':greedy_fit_obj.curve_fit_R2[:,2,0],'R8':greedy_fit_obj.curve_fit_R2[:,2,1],'R9':greedy_fit_obj.curve_fit_R2[:,2,2]})
+	df.to_csv('greedy_dual_output/curve_fit2.csv',header=True,index=False)
+	DataFrame(greedy_fit_obj.curve_fit_js2).to_csv('greedy_dual_output/curve_fit_js2.csv',header=False,index=False)
+
 
 if __name__ == "__main__":
 	main()
