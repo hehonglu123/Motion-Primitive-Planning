@@ -137,19 +137,19 @@ class greedy_fit(fitting_toolbox):
 
 def main():
 	###read in points
-	# curve_js = read_csv("../data/wood/Curve_js.csv",header=None).values
+	curve_js = read_csv("../data/wood/Curve_js.csv",header=None).values
 
-	curve_js = read_csv("../constraint_solver/dual_arm/trajectory/arm2.csv",header=None).values
+	# curve_js = read_csv("../constraint_solver/dual_arm/trajectory/arm2.csv",header=None).values
 
 	robot=abb6640(d=50)
 
-	greedy_fit_obj=greedy_fit(robot,curve_js,0.5)
+	greedy_fit_obj=greedy_fit(robot,curve_js,0.2)
 
 
 	###set primitive choices, defaults are all 3
 	# greedy_fit_obj.primitives={'movel_fit':greedy_fit_obj.movel_fit_greedy,'movec_fit':greedy_fit_obj.movec_fit_greedy}
 
-	# greedy_fit_obj.primitives={'movel_fit':greedy_fit_obj.movel_fit_greedy}
+	greedy_fit_obj.primitives={'movel_fit':greedy_fit_obj.movel_fit_greedy}
 	# greedy_fit_obj.primitives={'movej_fit':greedy_fit_obj.movej_fit_greedy}
 	# greedy_fit_obj.primitives={'movec_fit':greedy_fit_obj.movec_fit_greedy}
 
@@ -211,7 +211,7 @@ def greedy_execute():
 	StringData=StringIO(ms.exec_motions(primitives_choices,act_breakpoints,points,greedy_fit_obj.curve_fit_js,v500,z10))
 	df = read_csv(StringData, sep =",")
 	##############################data analysis#####################################
-	lam, curve_exe, curve_exe_R, speed, timestamp=ms.logged_data_analysis(df)
+	lam, curve_exe, curve_exe_R,curve_exe_js, speed, timestamp=ms.logged_data_analysis(df)
 	max_error,max_error_angle, max_error_idx=calc_max_error_w_normal(curve_exe,greedy_fit_obj.curve,curve_exe_R[:,:,-1],greedy_fit_obj.curve_R[:,:,-1])
 
 	print('time: ',timestamp[-1]-timestamp[0],'error: ',max_error,'normal error: ',max_error_angle)

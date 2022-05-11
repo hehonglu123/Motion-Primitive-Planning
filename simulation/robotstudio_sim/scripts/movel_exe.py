@@ -20,11 +20,16 @@ def main():
 	quatR = R2q(rot([0,1,0],math.radians(30)))
 	tool = tooldata(True,pose([75,0,493.30127019],[quatR[0],quatR[1],quatR[2],quatR[3]]),loaddata(1,[0,0,0.001],[1,0,0,0],0,0,0))
 	robot=abb6640(d=50)
-	data_dir="fitting_output_new/python_qp_movel/"
+	
+	data_dir="../../../data/wood/"
 
 	###read actual curve
+	curve_js = read_csv(data_dir+'Curve_js.csv',header=None).values
+
+
+	# data_dir="fitting_output_new/python_qp_movel/"
 	# col_names=['q1', 'q2', 'q3','q4', 'q5', 'q6'] 
-	# data = read_csv("Curve_js2.csv", names=col_names)
+	# data = read_csv(data_dir+"arm1.csv", names=col_names)
 	# curve_q1=data['q1'].tolist()
 	# curve_q2=data['q2'].tolist()
 	# curve_q3=data['q3'].tolist()
@@ -33,22 +38,12 @@ def main():
 	# curve_q6=data['q6'].tolist()
 	# curve_js=np.vstack((curve_q1, curve_q2, curve_q3,curve_q4,curve_q5,curve_q6)).T
 
-	col_names=['q1', 'q2', 'q3','q4', 'q5', 'q6'] 
-	data = read_csv(data_dir+"arm1.csv", names=col_names)
-	curve_q1=data['q1'].tolist()
-	curve_q2=data['q2'].tolist()
-	curve_q3=data['q3'].tolist()
-	curve_q4=data['q4'].tolist()
-	curve_q5=data['q5'].tolist()
-	curve_q6=data['q6'].tolist()
-	curve_js=np.vstack((curve_q1, curve_q2, curve_q3,curve_q4,curve_q5,curve_q6)).T
-
 
 	step=int(len(curve_js)/50)
 
-	v700 = speeddata(700,500,5000,1000)
+	v180 = speeddata(180,500,5000,1000)
 
-	speed={"vmax":vmax}
+	speed={"v180":v180}
 	zone={"z10":z10}
 
 	for s in speed:

@@ -215,7 +215,7 @@ class MotionSend(object):
         return self.exec_motions_multimove(breakpoints,primitives1,primitives2,points_list1,points_list2,curve_js1,curve_js2,speed1,speed2,zone1,zone2)
 
 
-    def logged_data_analysis(self,df):
+    def logged_data_analysis(self,robot,df):
         q1=df[' J1'].tolist()
         q2=df[' J2'].tolist()
         q3=df[' J3'].tolist()
@@ -229,26 +229,29 @@ class MotionSend(object):
         start_idx=np.where(cmd_num==cmd_num[idx])[0][0]
         curve_exe_js=np.radians(np.vstack((q1,q2,q3,q4,q5,q6)).T.astype(float)[start_idx:])
         timestamp=np.array(df['timestamp'].tolist()[start_idx:]).astype(float)
+        timestep=np.average(timestamp[1:]-timestamp[:-1])
+
 
         act_speed=[]
         lam=[0]
         curve_exe=[]
         curve_exe_R=[]
         for i in range(len(curve_exe_js)):
-            robot_pose=self.robot.fwd(curve_exe_js[i])
+            robot_pose=robot.fwd(curve_exe_js[i])
             curve_exe.append(robot_pose.p)
             curve_exe_R.append(robot_pose.R)
             if i>0:
                 lam.append(lam[-1]+np.linalg.norm(curve_exe[i]-curve_exe[i-1]))
             try:
                 if timestamp[i-1]!=timestamp[i] and np.linalg.norm(curve_exe_js[i-1]-curve_exe_js[i])!=0:
-                    act_speed.append(np.linalg.norm(curve_exe[-1]-curve_exe[-2])/(timestamp[i]-timestamp[i-1]))
+                    # act_speed.append(np.linalg.norm(curve_exe[-1]-curve_exe[-2])/(timestamp[i]-timestamp[i-1]))
+                    act_speed.append(np.linalg.norm(curve_exe[-1]-curve_exe[-2])/timestep)
                 else:
                     act_speed.append(act_speed[-1])      
             except IndexError:
                 pass
 
-        return lam, np.array(curve_exe), np.array(curve_exe_R), act_speed, timestamp
+        return lam, np.array(curve_exe), np.array(curve_exe_R),curve_exe_js, act_speed, timestamp
 
 def main():
     ms = MotionSend()
