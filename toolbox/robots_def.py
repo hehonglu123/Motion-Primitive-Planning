@@ -13,6 +13,14 @@ ex=np.array([[1],[0],[0]])
 ey=np.array([[0],[1],[0]])
 ez=np.array([[0],[0],[1]])
 
+def unwrapped_angle_check(q_init,q_all):
+
+    temp_q=q_all-q_init
+    temp_q = np.unwrap(temp_q)
+    order=np.argsort(np.linalg.norm(temp_q,axis=1))
+    # return q_all[order[0]]
+    return temp_q[order[0]]+q_init
+
 #ALL in mm
 class abb6640(object):
 	#default tool paintgun

@@ -80,8 +80,6 @@ for ang in all_angle:
     print('total length: ',calc_lam_cs(curve)[-1])
     DataFrame(curve_js).to_csv(save_dir+'Curve_js_'+str(ang)+'.csv',header=False,index=False)
 
-    continue
-
     for speed in all_speed:
         for zone in all_zone:
 

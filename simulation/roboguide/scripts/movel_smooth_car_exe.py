@@ -46,12 +46,12 @@ for ang in all_angle:
 
     R=rot(k,theta)
     new_vec=R@(end_p-mid_p)
-    end_p=mid_p+new_vec
+    new_end_p=mid_p+new_vec
 
     ###calculate lambda
     lam1_f=np.linalg.norm(mid_p-start_p)
     lam1=np.linspace(0,lam1_f,num=25001)
-    lam_f=lam1_f+np.linalg.norm(mid_p-end_p)
+    lam_f=lam1_f+np.linalg.norm(mid_p-new_end_p)
     lam2=np.linspace(lam1_f,lam_f,num=25001)
 
     lam=np.hstack((lam1,lam2[1:]))
@@ -62,9 +62,9 @@ for ang in all_angle:
     a3,b3,c3=lineFromPoints([lam1[0],start_p[2]],[lam1[-1],mid_p[2]])
     line1=np.vstack(((-a1*lam1-c1)/b1,(-a2*lam1-c2)/b2,(-a3*lam1-c3)/b3)).T
 
-    a1,b1,c1=lineFromPoints([lam2[0],mid_p[0]],[lam2[-1],end_p[0]])
-    a2,b2,c2=lineFromPoints([lam2[0],mid_p[1]],[lam2[-1],end_p[1]])
-    a3,b3,c3=lineFromPoints([lam2[0],mid_p[2]],[lam2[-1],end_p[2]])
+    a1,b1,c1=lineFromPoints([lam2[0],mid_p[0]],[lam2[-1],new_end_p[0]])
+    a2,b2,c2=lineFromPoints([lam2[0],mid_p[1]],[lam2[-1],new_end_p[1]])
+    a3,b3,c3=lineFromPoints([lam2[0],mid_p[2]],[lam2[-1],new_end_p[2]])
     line2=np.vstack(((-a1*lam2-c1)/b1,(-a2*lam2-c2)/b2,(-a3*lam2-c3)/b3)).T
 
     curve=np.vstack((line1,line2[1:]))
@@ -93,8 +93,6 @@ for ang in all_angle:
     R_all=np.array(R_all)
     print('total length: ',calc_lam_cs(curve)[-1])
     DataFrame(curve_js).to_csv(save_dir+'Curve_js_'+str(ang)+'.csv',header=False,index=False)
-
-    continue
 
     for speed in all_speed:
         for zone in all_zone:
