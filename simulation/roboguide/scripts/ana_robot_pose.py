@@ -16,7 +16,14 @@ robot = m900ia(d=50)
 
 start_p = np.array([2200,500, 1000])
 end_p = np.array([2200, -500, 1000])
-mid_p=(start_p+end_p)/2
+
+motion='movel'
+# motion='movec'
+
+if motion == 'movel':
+    mid_p=(start_p+end_p)/2
+if motion == 'movec':
+    mid_p = np.array([2500,0,1000])
 
 save_dir='../data/robot_pose_test/'
 ang=30
@@ -26,8 +33,7 @@ all_ori = [0,50]
 for curve_ori in all_ori:
 
     if curve_ori == 0:
-        # all_pose_d_x = [0,-300,500]
-        all_pose_d_x = [500]
+        all_pose_d_x = [0,-300,500]
         all_pose_d_y = [0,-1000,1000]
         all_pose = []
         for x in all_pose_d_x:
@@ -53,7 +59,7 @@ for curve_ori in all_ori:
 
     for curve_pose in all_pose:
 
-        this_case = 'movel_ori'+str(curve_ori)+'_x'+str(curve_pose[0])+'_y'+str(curve_pose[1])
+        this_case = motion+'_ori'+str(curve_ori)+'_x'+str(curve_pose[0])+'_y'+str(curve_pose[1])
         print(this_case)
 
         try:
@@ -138,9 +144,10 @@ for curve_ori in all_ori:
         ax1.set_ylabel('Speed/lamdot (mm/s)', color='g')
         ax2.set_ylabel('Error (mm or deg)', color='b')
         ax2.set_ylim(0,1)
-        plt.title('Error vs Lambda '+'h='+str(h))
+        plt.title('Error vs Lambda '+this_case)
         # plt.show()
         plt.savefig(save_dir+'error_speed_'+this_case+'.png')
+        # exit()
 
         with open(save_dir+'error_'+this_case+'.npy','wb') as f:
             np.save(f,error)

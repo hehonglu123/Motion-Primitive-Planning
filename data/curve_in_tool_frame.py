@@ -6,10 +6,9 @@ from general_robotics_toolbox import *
 sys.path.append('../toolbox')
 from robots_def import *
 
-data_dir='from_NX/'
 
 col_names=['X', 'Y', 'Z','direction_x','direction_y','direction_z'] 
-data = read_csv(data_dir+"Curve_dense.csv", names=col_names)
+data = read_csv("from_ge/relative_path.csv", names=col_names)
 curve_x=data['X'].tolist()
 curve_y=data['Y'].tolist()
 curve_z=data['Z'].tolist()
@@ -33,4 +32,4 @@ curve_direction=np.dot(R,curve_direction).T
 curve_tool=np.flip(curve_tool,axis=0)
 curve_direction=np.flip(curve_direction,axis=0)
 df=DataFrame({'x':curve_tool[:,0],'y':curve_tool[:,1], 'z':curve_tool[:,2],'x_direction':curve_direction[:,0],'y_direction':curve_direction[:,1],'z_direction':curve_direction[:,2]})
-df.to_csv(data_dir+'relative_path_tool_frame.csv',header=False,index=False)
+df.to_csv('from_ge/relative_path_tool_frame.csv',header=False,index=False)

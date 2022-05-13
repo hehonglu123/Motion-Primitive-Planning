@@ -42,7 +42,6 @@ robot=m900ia(d=50)
 ###generate a continuous arc, with linear orientation
 start_p = np.array([2200,500, 1000])
 end_p = np.array([2200, -500, 1000])
-mid_p=(start_p+end_p)/2
 
 # fanuc client
 client = FANUCClient()
@@ -58,11 +57,11 @@ speed=1000
 all_ori = [0,50]
 
 # movel part
+mid_p=(start_p+end_p)/2
 for curve_ori in all_ori:
 
     if curve_ori == 0:
-        # all_pose_d_x = [0,-300,500]
-        all_pose_d_x = [500]
+        all_pose_d_x = [0,-300,500]
         all_pose_d_y = [0,-1000,1000]
         all_pose = []
         for x in all_pose_d_x:
@@ -201,14 +200,24 @@ for curve_ori in all_ori:
         with open(save_dir+'Curve_exec_movel_ori'+str(curve_ori)+'_x'+str(curve_pose[0])+'_y'+str(curve_pose[1])+'.csv',"wb") as f:
             f.write(res)
 
-exit()
+# exit()
 
 # movec part
+start_p = np.array([2200,500, 1000])
+end_p = np.array([2200, -500, 1000])
+mid_p = np.array([2500,0,1000])
 for curve_ori in all_ori:
 
     if curve_ori == 0:
-        # all_pose_d_x = [0,-300,600]
-        all_pose_d_x = [500]
+        all_pose_d_x = [0,-300,500]
+        all_pose_d_y = [0,-1000,1000]
+        all_pose = []
+        for x in all_pose_d_x:
+            for y in all_pose_d_y:
+                p = np.array([x,y,0])
+                all_pose.append(p)
+    if curve_ori == 50:
+        all_pose_d_x = [0]
         all_pose_d_y = [0,-1000,1000]
         all_pose = []
         for x in all_pose_d_x:
@@ -216,7 +225,7 @@ for curve_ori in all_ori:
                 p = np.array([x,y,0])
                 all_pose.append(p)
     if curve_ori == 90:
-        all_pose_d_x = [200]
+        all_pose_d_x = [0]
         all_pose_d_y = [0,-1000,1000]
         all_pose = []
         for x in all_pose_d_x:
@@ -227,20 +236,10 @@ for curve_ori in all_ori:
     for curve_pose in all_pose:
 
         ##### create curve #####
-        ###start rotation by 'ang' deg
-        k=np.cross(end_p+np.array([0.1,0,0])-mid_p,start_p-mid_p)
-        k=k/np.linalg.norm(k)
-        theta=np.radians(ang)
-
-        R=rot(k,theta)
-        new_vec=R@(end_p-mid_p)
-        new_end_p=mid_p+new_vec
-
-        ###calculate lambda
         arc=arc_from_3point(start_p,end_p,mid_p,N=50001)
         arc1=arc[:int((len(arc)+1)/2)]
         arc2=arc[int((len(arc)+1)/2):]
-        ###start rotation by 30 deg
+        ###start rotation by 'ang' deg
         k=np.cross(end_p-arc2[0],start_p-arc2[0])
         k=k/np.linalg.norm(k)
         theta=np.radians(ang)
@@ -277,7 +276,7 @@ for curve_ori in all_ori:
             with open(save_dir+'Curve_js_movec_ori'+str(curve_ori)+'_x'+str(curve_pose[0])+'_y'+str(curve_pose[1])+'.npy','rb') as f:
                 curve_js = np.load(f)
         except OSError as e:
-            all_q_init = robot.inv(start_p,R_init)
+            all_q_init = robot.inv(curve[0],R_init)
             argmin_q = -1
             max_min_svj = 0
             for i in range(len(all_q_init)):
@@ -288,7 +287,7 @@ for curve_ori in all_ori:
             if argmin_q==-1:
                 print("No solution")
                 continue
-                
+            print("There is solution")
             q_init=all_q_init[argmin_q]
             curve_js=[q_init]
             # theta=np.pi/4 #force 45deg change
@@ -313,15 +312,19 @@ for curve_ori in all_ori:
         client.execute_motion_program(tp_pre)
 
         tp = TPMotionProgram()
-        robt_1 = joint2robtarget(curve_js[int(len(curve)/4)],robot,1,1,utool_num)
-        robt_2 = joint2robtarget(curve_js[int((len(curve)+1)/2)],robot,1,1,utool_num)
+        # robt_1 = joint2robtarget(curve_js[int(len(curve)/4)],robot,1,1,utool_num)
+        # robt_2 = joint2robtarget(curve_js[int((len(curve)+1)/2)],robot,1,1,utool_num)
+        robt_1 = jointtarget(1,1,utool_num,np.degrees(curve_js[int(len(curve)/4)]),[0]*6)
+        robt_2 = jointtarget(1,1,utool_num,np.degrees(curve_js[int((len(curve)+1)/2)]),[0]*6)
         tp.moveC(robt_1,robt_2,speed,'mmsec',zone)
-        robt_3 = joint2robtarget(curve_js[int(3*len(curve)/4)],robot,1,1,utool_num)
-        robt_4 = joint2robtarget(curve_js[-1],robot,1,1,utool_num)
+        # robt_3 = joint2robtarget(curve_js[int(3*len(curve)/4)],robot,1,1,utool_num)
+        # robt_4 = joint2robtarget(curve_js[-1],robot,1,1,utool_num)
+        robt_3 = jointtarget(1,1,utool_num,np.degrees(curve_js[int(3*len(curve)/4)]),[0]*6)
+        robt_4 = jointtarget(1,1,utool_num,np.degrees(curve_js[-1]),[0]*6)
         tp.moveC(robt_3,robt_4,speed,'mmsec',-1)
 
         # execute 
         res = client.execute_motion_program(tp)
         # Write log csv to file
-        with open(save_dir+'Curve_exec_movec_ori'+str(curve_ori)+'_x'+str(curve_pose[0])+'_y'+str(curve_pose[1])+'.npy',"wb") as f:
+        with open(save_dir+'Curve_exec_movec_ori'+str(curve_ori)+'_x'+str(curve_pose[0])+'_y'+str(curve_pose[1])+'.csv',"wb") as f:
             f.write(res)

@@ -60,16 +60,46 @@ speed='vmax'
 zone='z10'
 ###read in curve_exe
 col_names=['timestamp', 'cmd_num', 'J1', 'J2','J3', 'J4', 'J5', 'J6'] 
-df = read_csv(data_dir+"curve_exe"+"_"+s+"_"+z+".csv")
-lam, curve_exe, curve_exe_R,curve_exe_js, act_speed, timestamp=ms.logged_data_analysis(robot,df)
+data = read_csv(data_dir+"curve_exe_"+speed+'_'+zone+".csv",names=col_names)
+q1=data['J1'].tolist()[1:]
+q2=data['J2'].tolist()[1:]
+q3=data['J3'].tolist()[1:]
+q4=data['J4'].tolist()[1:]
+q5=data['J5'].tolist()[1:]
+q6=data['J6'].tolist()[1:]
+cmd_num=np.array(data['cmd_num'].tolist()[1:]).astype(float)
+start_idx=np.where(cmd_num==4)[0][0]
+curve_exe_js=np.radians(np.vstack((q1,q2,q3,q4,q5,q6)).T.astype(float)[start_idx:])
+timestamp=np.array(data['timestamp'].tolist()[start_idx:]).astype(float)
+
+timestep=np.average(timestamp[1:]-timestamp[:-1])
+
+act_speed=[]
+lam_speed=[0]
+curve_exe=[]
+curve_exe_R=[]
+for i in range(len(curve_exe_js)):
+    robot_pose=robot.fwd(curve_exe_js[i])
+    curve_exe.append(robot_pose.p)
+    curve_exe_R.append(robot_pose.R)
+    if i>0:
+        lam_speed.append(lam_speed[-1]+np.linalg.norm(curve_exe[i]-curve_exe[i-1]))
+    try:
+        if timestamp[-1]!=timestamp[-2]:
+            act_speed.append(np.linalg.norm(curve_exe[-1]-curve_exe[-2])/timestep)
+            
+    except IndexError:
+        pass
+
+lamdot_act=calc_lamdot(curve_exe_js,lam_speed,robot,1)
 
 
 # plt.plot(lam_opt[1:],lamdot_opt, label='Optimization')
 
 plt.plot(lam_fit,lamdot_fit, label='Fitting')
 
-plt.plot(lam,lamdot_act, label='Recorded Joints')
-plt.plot(lam[1:],act_speed, label='Actual speed')
+plt.plot(lam_speed,lamdot_act, label='Recorded Joints')
+plt.plot(lam_speed[1:],act_speed, label='Actual speed')
 
 plt.title("speed vs lambda")
 plt.ylabel('speed (mm/s)')

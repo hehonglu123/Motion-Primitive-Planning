@@ -17,7 +17,8 @@ VAR
     
     IntANGa1,IntANGa2,IntANGa3,IntANGa4,IntANGa5,IntANGa6    : REAL
     IntANGa1Str, IntANGa2Str, IntANGa3Str,IntANGa4Str, IntANGa5Str, IntANGa6Str: STRING[9]
- 
+    write_line : STRING[100]
+
     entry      : INTEGER
     status     : INTEGER
     -- tests
@@ -57,7 +58,7 @@ BEGIN -- execute the program
     -- begin the clock time count
     CONNECT TIMER TO clock_var
     
-    period = 8 -- ms
+    period = 1 -- ms
 
     -- get actual time and convert it into string
     GET_TIME(timeInt)
@@ -95,19 +96,22 @@ BEGIN -- execute the program
       CNV_REAL_STR(IntANGa4, 9, 4, IntANGa4Str)
       CNV_REAL_STR(IntANGa5, 9, 4, IntANGa5Str)
       CNV_REAL_STR(IntANGa6, 9, 4, IntANGa6Str)
+    --   WRITE logFile(clock_var)
+    --   WRITE logFile(',')
+    --   WRITE logFile(IntANGa1Str)
+    --   WRITE logFile(',')
+    --   WRITE logFile(IntANGa2Str)
+    --   WRITE logFile(',')
+    --   WRITE logFile(IntANGa3Str)
+    --   WRITE logFile(',')
+    --   WRITE logFile(IntANGa4Str)
+    --   WRITE logFile(',')
+    --   WRITE logFile(IntANGa5Str)
+    --   WRITE logFile(',')
+    --   WRITE logFile(IntANGa6Str,CR)
       WRITE logFile(clock_var)
-      WRITE logFile(',')
-      WRITE logFile(IntANGa1Str)
-      WRITE logFile(',')
-      WRITE logFile(IntANGa2Str)
-      WRITE logFile(',')
-      WRITE logFile(IntANGa3Str)
-      WRITE logFile(',')
-      WRITE logFile(IntANGa4Str)
-      WRITE logFile(',')
-      WRITE logFile(IntANGa5Str)
-      WRITE logFile(',')
-      WRITE logFile(IntANGa6Str,CR)
+      write_line=','+IntANGa1Str+','+IntANGa2Str+','+IntANGa3Str+','+IntANGa4Str+','+IntANGa5Str+','+IntANGa6Str
+      WRITE logFile(write_line,CR)
       DELAY(period)
     UNTIL(DOUT[101]=OFF)
     -- stop recording, close log file

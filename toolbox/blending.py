@@ -8,6 +8,12 @@ import matplotlib.pyplot as plt
 from scipy.interpolate import UnivariateSpline
 from lambda_calc import *
 
+
+def moving_average(a, n=3) :
+    ret = np.cumsum(a, dtype=float)
+    ret[n:] = ret[n:] - ret[:-n]
+    return ret[n - 1:] / n
+
 def blend_cs(q,curve,breakpoints,lam,primitives,robot,N=10):
 ###blending in cartesian space with known primitives
 	#q:				joint configuration at each breakpoints

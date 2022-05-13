@@ -59,9 +59,9 @@ def plot_rl_greedy_ratio(rl_steps, rl_curve_idx, greedy_steps, show=True, save=T
         greedy_step = greedy_steps[target_curve_idx]
         rl_step = rl_steps[i]
         ratios.append(greedy_step/rl_step)
-        mean_ratio = np.mean(ratios[max(0, i-200):i+1])
+        mean_ratio = np.mean(ratios[max(0, i-100):i+1])
         mean_ratios.append(mean_ratio)
-        median = np.median(ratios[max(0, i-200):i+1])
+        median = np.median(ratios[max(0, i-100):i+1])
         median_ratios.append(median)
 
     fig = plt.figure()
