@@ -147,6 +147,24 @@ class MotionSend(object):
             endpoint=points[8:-3].split(',')
             return list(map(float, endpoint))
 
+    def exe_from_file_w_extension(self,filename,filename_js,speed,zone):
+        data = read_csv(filename)
+        breakpoints=np.array(data['breakpoints'].tolist())
+        primitives=data['primitives'].tolist()
+        points=data['points'].tolist()
+        
+        ###initial point extension
+        #TODO: add C/J extension
+        pose_start=self.robot2.fwd(points[0])
+        p_start=pose_start.p
+        R_start=pose_start.R
+        if primitives[1]=='movel_fit':
+            slope_p=points[1]-p_start
+            slope_p=slope_p/np.linalg.norm(slope_p)
+            p_start_new=points[1]-50*slope_p        ###extend 5cm backward
+            R_1=
+            q_all = np.array(self.robot2.inv(p_start_new, curve_R[i]))
+
     def exe_from_file(self,filename,filename_js,speed,zone):
         data = read_csv(filename)
         breakpoints=np.array(data['breakpoints'].tolist())

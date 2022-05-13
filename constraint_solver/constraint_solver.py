@@ -73,8 +73,6 @@ class lambda_opt(object):
 			try:
 				error_fb=999
 				error_fb_prev=999
-				if i==0:
-					continue
 
 				while error_fb>0.01:
 
@@ -117,7 +115,7 @@ class lambda_opt(object):
 
 			q_out.append(q_all[-1])
 
-		q_out=np.array(q_out)
+		q_out=np.array(q_out)[1:]
 		return q_out
 	def error_calc2(self,alpha,q1,qdot1,pose2_world_now,curve,curve_normal):
 		q1_next=q1+alpha*qdot1

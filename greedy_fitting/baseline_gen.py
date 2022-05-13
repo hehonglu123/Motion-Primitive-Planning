@@ -6,7 +6,7 @@ def main():
 	###list of threshold metric
 	thresholds=[0.1,0.2,0.5,0.9]
 	data_dir='../data/wood/'
-	data_dir='../data/from_NX/'
+	# data_dir='../data/from_NX/'
 	###read in points
 	curve_js = read_csv(data_dir+"Curve_js.csv",header=None).values
 
