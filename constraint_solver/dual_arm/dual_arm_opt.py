@@ -2,7 +2,7 @@ import sys
 sys.path.append('../')
 from constraint_solver import *
 
-data_dir='../../data/from_NX/'
+data_dir='../../data/wood/'
 
 col_names=['X', 'Y', 'Z','direction_x','direction_y','direction_z'] 
 data = read_csv(data_dir+"relative_path_tool_frame.csv", names=col_names)

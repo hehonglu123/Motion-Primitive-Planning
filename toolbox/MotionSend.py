@@ -47,8 +47,8 @@ class MotionSend(object):
         
         for i in range(len(primitives)):
             ###force last point to be fine
-            if i==len(primitives)-1:
-                zone=fine
+            # if i==len(primitives)-1:
+            #     zone=fine
             motion = primitives[i]
             if motion == 'movel_fit':
                 robt = self.moveL_target(self.robot2,curve_js[breakpoints[i]],points[i])
@@ -81,8 +81,8 @@ class MotionSend(object):
         
         for i in range(len(primitives1)):
             ###force last point to be fine
-            if i==len(primitives1)-1:
-                zone1=fine
+            # if i==len(primitives1)-1:
+            #     zone1=fine
             motion = primitives1[i]
             if motion == 'movel_fit':
                 robt = self.moveL_target(self.robot1,curve_js1[breakpoints[i]],points1[i])
@@ -104,8 +104,8 @@ class MotionSend(object):
 
         for i in range(len(primitives2)):
             ###force last point to be fine
-            if i==len(primitives2)-1:
-                zone2=fine
+            # if i==len(primitives2)-1:
+            #     zone2=fine
             motion = primitives2[i]
             if motion == 'movel_fit':
                 robt = self.moveL_target(self.robot2,curve_js2[breakpoints[i]],points2[i])

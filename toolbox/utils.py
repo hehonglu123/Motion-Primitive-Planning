@@ -22,7 +22,6 @@ def cross(v):
 def direction2R(v_norm,v_tang):
 	v_norm=v_norm/np.linalg.norm(v_norm)
 	v_tang=VectorPlaneProjection(v_tang,v_norm)
-	v_tang=v_tang/np.linalg.norm(v_tang)
 	y=np.cross(v_norm,v_tang)
 
 	R=np.vstack((v_tang,y,v_norm)).T
@@ -42,7 +41,9 @@ def LinePlaneCollision(planeNormal, planePoint, rayDirection, rayPoint, epsilon=
 
 def VectorPlaneProjection(v,n):
 	temp = (np.dot(v, n)/np.linalg.norm(n)**2)*n
-	return v-temp
+	v_out=v-temp
+	v_out=v_out/np.linalg.norm(v_out)
+	return v_out
 
 def find_j_min(robot,curve_js):
 	sing_min=[]
@@ -50,7 +51,7 @@ def find_j_min(robot,curve_js):
 		u, s, vh = np.linalg.svd(robot.jacobian(q))
 		sing_min.append(s[-1])
 
-	return np.min(sing_min),np.argmin(sing_min)
+	return sing_min
 
 def get_angle(v1,v2,less90=False):
 	v1=v1/np.linalg.norm(v1)
@@ -94,9 +95,9 @@ def visualize_curve_w_normal(curve,curve_normal,stepsize=500,equal_axis=False):
 	ax.quiver(curve[:,0],curve[:,1],curve[:,2],10*curve_normal[:,0],10*curve_normal[:,1],10*curve_normal[:,2])
 
 	if equal_axis:
-		ax.set_x_lim([0,3000])
-		ax.set_y_lim([0,3000])
-		ax.set_z_lim([0,3000])
+		ax.set_xlim([0,3000])
+		ax.set_ylim([0,3000])
+		ax.set_zlim([0,3000])
 
 	plt.show()
 
@@ -138,3 +139,6 @@ def orientation_interp(R_init,R_end,steps):
 		curve_fit_R.append(np.dot(R_init,R))
 	curve_fit_R=np.array(curve_fit_R)
 	return curve_fit_R
+
+def H_from_RT(R,T):
+	return np.hstack((np.vstack((R,np.zeros(3))),np.append(T,1).reshape(4,1)))

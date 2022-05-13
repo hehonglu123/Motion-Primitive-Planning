@@ -13,9 +13,9 @@ from MotionSend import *
 
 curve = read_csv('../../../data/wood/Curve_in_base_frame.csv',header=None).values
 
-speed=['v170']
+speed=['v180']
 zone=['z10']
-data_dir="greedy_output/wood_0.2/"
+data_dir="greedy_output/wood_L/"
 
 ms=MotionSend()
 robot=abb6640(d=50)
@@ -27,7 +27,7 @@ for s in speed:
 
         error,angle_error=calc_all_error_w_normal(curve_exe,curve[:,:3],curve_exe_R[:,:,-1],curve[:,3:])
 
-
+        print('speed standard deviation: ',np.std(act_speed))
         fig, ax1 = plt.subplots()
 
         ax2 = ax1.twinx()

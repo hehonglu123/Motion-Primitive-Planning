@@ -6,7 +6,7 @@ from general_robotics_toolbox import *
 sys.path.append('../toolbox')
 from robots_def import *
 
-data_dir='from_NX/'
+data_dir='wood/'
 
 col_names=['X', 'Y', 'Z','direction_x','direction_y','direction_z'] 
 data = read_csv(data_dir+"Curve_dense.csv", names=col_names)
@@ -21,6 +21,9 @@ curve=np.vstack((curve_x, curve_y, curve_z)).T
 curve_direction=np.vstack((curve_direction_x, curve_direction_y, curve_direction_z))
 
 ###reference frame transformation, from cad frame to tool frame, align z axis
+# R=np.eye(3)
+# T=np.zeros((3,1))
+
 R=np.dot(Rz(np.radians(90)),Rx(np.radians(180)))
 T=np.array([[-300.],[0.],[462.]])			###offset in blade frame 
 H=np.vstack((np.hstack((R,T)),np.array([0,0,0,1])))
