@@ -15,7 +15,7 @@ def pose_opt(robot,curve,curve_normal):
 	C=np.average(curve,axis=0)
 	p=robot.fwd(np.zeros(len(robot.joint_vel_limit))).p
 	#arbitrary best center point for curve
-	p[0]=2*p[0]/3
+	p[0]=p[0]/2
 	p[-1]=p[-1]/2
 	###determine Vy by eig(cov)
 	curve_cov=np.cov(curve.T)
@@ -81,7 +81,7 @@ def find_js(robot,curve,curve_normal):
 			if len(q_all)==0:
 				#if no solution
 				print(i)
-				print(curve_js[i-1])
+				print(np.degrees(curve_js[i-1]))
 				print('no solution available')
 				return
 
@@ -101,8 +101,8 @@ def find_js(robot,curve,curve_normal):
 
 def main():
 	#select dataset
-	data_dir='from_NX/'
-	# data_dir='wood/'
+	# data_dir='from_NX/'
+	data_dir='wood/'
 
 	###read in curves
 	curve = read_csv(data_dir+"Curve_dense.csv",header=None).values
