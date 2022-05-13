@@ -218,6 +218,91 @@ class lambda_opt(object):
 		q_out2=np.array(q_out2)[1:]
 		return q_out1, q_out2
 
+	def dual_arm_stepwise_optimize_separate(self,q_init1,q_init2):
+		#QP motion solver for robot1 fixed position, robot2 fixed orientation
+		#curve_normal: expressed in second robot tool frame
+		###all (jacobian) in robot2 tool frame
+		q_all1=[q_init1]
+		q_out1=[q_init1]
+		q_all2=[q_init2]
+		q_out2=[q_init2]
+
+		#####weights
+		Kw=0.1
+		Kq=.01*np.eye(6)    #small value to make sure positive definite
+		KR=np.eye(3)        #gains for position and orientation error
+
+		for i in range(len(self.curve)):
+			print(i)
+			try:
+				error_fb=999
+				error_fb_prev=999
+
+				while error_fb>0.2:
+					pose1_now=self.robot1.fwd(q_all1[-1])
+					pose2_now=self.robot2.fwd(q_all2[-1])
+
+					pose2_world_now=self.robot2.fwd(q_all2[-1],self.base2_R,self.base2_p)
+
+					error_fb=np.linalg.norm(np.dot(pose2_world_now.R.T,pose1_now.p-pose2_world_now.p)-self.curve[i])+np.linalg.norm(np.dot(pose2_world_now.R.T,pose1_now.R[:,-1])-self.curve_normal[i])	
+
+					# print(i)
+					# print(np.dot(pose2_world_now.R.T,pose1_now.p-pose2_world_now.p)-self.curve[i])
+					# print(np.dot(pose2_world_now.R.T,pose1_now.R[:,-1])-self.curve_normal[i])
+					########################################################QP formation###########################################
+					
+					J1=self.robot1.jacobian(q_all1[-1])        #calculate current Jacobian
+					J1p=np.dot(pose2_world_now.R.T,J1[3:,:])
+					J1R=np.dot(pose2_world_now.R.T,J1[:3,:])
+					J1R_mod=-np.dot(hat(np.dot(pose2_world_now.R.T,pose1_now.R[:,-1])),J1R)
+
+					J2=self.robot2.jacobian(q_all2[-1])        #calculate current Jacobian, mapped to robot2 tool frame
+					J2p=np.dot(pose2_now.R.T,J2[3:,:])
+					J2R=np.dot(pose2_now.R.T,J2[:3,:])
+					J2R_mod=-np.dot(hat(np.dot(pose2_world_now.R.T,pose1_now.R[:,-1])),J2R)
+
+					###Robot 1 QP, only for orientation
+
+					H=np.transpose(J1R_mod)@J1R_mod+Kq
+					H=(H+np.transpose(H))/2
+
+					ezdotd=self.curve_normal[i]-np.dot(pose2_world_now.R.T,pose1_now.R[:,-1])
+
+					f=-np.transpose(J1R_mod)@ezdotd
+
+
+					q1dot=solve_qp(H,f,A=J1p,b=np.zeros(3),lb=self.robot1.lower_limit-q_all1[-1]+self.lim_factor*np.ones(6),ub=self.robot1.upper_limit-q_all1[-1]-self.lim_factor*np.ones(6))
+
+
+					###Robot 1 QP, only for position
+					H=np.transpose(J2p)@J2p+Kq
+					H=(H+np.transpose(H))/2
+
+					vd=self.curve[i]-np.dot(pose2_world_now.R.T,pose1_now.p-pose2_world_now.p)
+
+					#negate vd here for second arm due to relative motion
+					f=-np.dot(np.transpose(J2p),-vd)
+					q2dot=solve_qp(H,f,A=J2R,b=np.zeros(3),lb=self.robot2.lower_limit-q_all2[-1]+self.lim_factor*np.ones(6),ub=self.robot2.upper_limit-q_all2[-1]-self.lim_factor*np.ones(6))
+
+					
+					alpha=1
+					q_all1.append(q_all1[-1]+alpha*q1dot)
+					q_all2.append(q_all2[-1]+alpha*q2dot)
+			except:
+				traceback.print_exc()
+				q_out1.append(q_all1[-1])
+				q_out2.append(q_all2[-1])			
+				raise AssertionError
+				break
+
+			q_out1.append(q_all1[-1])
+			q_out2.append(q_all2[-1])
+
+		q_out1=np.array(q_out1)[1:]
+		q_out2=np.array(q_out2)[1:]
+		return q_out1, q_out2
+
+
 
 	def orientation_interp(self,R_init,R_end,steps):
 		curve_fit_R=[]

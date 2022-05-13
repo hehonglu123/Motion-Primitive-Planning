@@ -18,9 +18,9 @@ curve_y=data['Y'].tolist()
 curve_z=data['Z'].tolist()
 curve=np.vstack((curve_x, curve_y, curve_z)).T
 
-speed='v160'
-zone='z10'
-data_dir='fitting_output_new/Jon/'
+speed=['v180']
+zone=['z10']
+data_dir="greedy_output/wood_L/"
 ###read in curve_exe
 col_names=['timestamp', 'cmd_num', 'J1', 'J2','J3', 'J4', 'J5', 'J6'] 
 data = read_csv(data_dir+"curve_exe_"+speed+'_'+zone+".csv",names=col_names)
@@ -36,6 +36,7 @@ curve_exe_js=np.radians(np.vstack((q1,q2,q3,q4,q5,q6)).T.astype(float)[start_idx
 timestamp=np.array(data['timestamp'].tolist()[start_idx:]).astype(float)
 
 timestep=np.average(timestamp[1:]-timestamp[:-1])
+
 
 robot=abb6640(d=50)
 act_speed=[]
@@ -59,7 +60,7 @@ error=calc_all_error(curve_exe,curve)
 
 lamdot_act=calc_lamdot(curve_exe_js,lam,robot,1)
 
-
+print('speed standard deviation: ',np.std(act_speed))
 fig, ax1 = plt.subplots()
 
 ax2 = ax1.twinx()
