@@ -137,8 +137,8 @@ class greedy_fit(fitting_toolbox):
 
 def main():
 	###read in points
-	curve_js = read_csv("../data/wood/Curve_js.csv",header=None).values
-
+	# curve_js = read_csv("../data/wood/Curve_js.csv",header=None).values
+	curve_js = read_csv("../data/from_ge/Curve_js2.csv",header=None).values
 	# curve_js = read_csv("../constraint_solver/dual_arm/trajectory/arm2.csv",header=None).values
 
 	robot=abb6640(d=50)

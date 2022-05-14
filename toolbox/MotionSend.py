@@ -70,7 +70,7 @@ class MotionSend(object):
         ###add sleep at the end to wait for data transmission
         mp.WaitTime(0.1)
         
-        print(mp.get_program_rapid())
+        # print(mp.get_program_rapid())
         log_results = self.client.execute_motion_program(mp)
         log_results_str = log_results.decode('ascii')
         return log_results_str
@@ -147,23 +147,83 @@ class MotionSend(object):
             endpoint=points[8:-3].split(',')
             return list(map(float, endpoint))
 
-    def exe_from_file_w_extension(self,filename,filename_js,speed,zone):
+    def exe_from_file_w_extension(self,filename,filename_js,speed,zone,extension_d=100):
         data = read_csv(filename)
         breakpoints=np.array(data['breakpoints'].tolist())
         primitives=data['primitives'].tolist()
         points=data['points'].tolist()
+        curve_js=read_csv(filename_js,header=None).values
+        breakpoints[1:]=breakpoints[1:]-1
+
+        #parser
+        points_list=[]
+        for i in range(len(breakpoints)):
+            if primitives[i]=='movel_fit':
+                point=extract_points(primitives[i],points[i])
+                points_list.append(point)
+            elif primitives[i]=='movec_fit':
+                point1,point2=extract_points(primitives[i],points[i])
+                points_list.append([point1,point2])
+            else:
+                point=extract_points(primitives[i],points[i])
+                points_list.append(point)
         
         ###initial point extension
-        #TODO: add C/J extension
-        pose_start=self.robot2.fwd(points[0])
+        
+        pose_start=self.robot2.fwd(curve_js[0])
         p_start=pose_start.p
         R_start=pose_start.R
+        pose_end=self.robot2.fwd(curve_js[breakpoints[1]])
+        p_end=pose_end.p
+        R_end=pose_end.R
         if primitives[1]=='movel_fit':
-            slope_p=points[1]-p_start
+            slope_p=p_end-p_start
             slope_p=slope_p/np.linalg.norm(slope_p)
-            p_start_new=points[1]-50*slope_p        ###extend 5cm backward
-            R_1=
-            q_all = np.array(self.robot2.inv(p_start_new, curve_R[i]))
+            p_start_new=p_start-extension_d*slope_p        ###extend 5cm backward
+
+            k,theta=R2rot(R_end@R_start.T)
+            theta_new=-extension_d*theta/np.linalg.norm(p_end-p_start)
+            R_start_new=rot(k,theta_new)@R_start
+
+            q_all = self.robot2.inv(p_start_new, R_start_new)
+            temp_q=q_all-curve_js[0]
+            order=np.argsort(np.linalg.norm(temp_q,axis=1))
+            points_list[0]=q_all[order[0]]
+        elif  primitives[1]=='movec_fit':
+            #TODO: add C/J extension
+            pass
+        else:
+            pass
+
+        pose_start=self.robot2.fwd(curve_js[breakpoints[-2]])
+        p_start=pose_start.p
+        R_start=pose_start.R
+        pose_end=self.robot2.fwd(curve_js[-1])
+        p_end=pose_end.p
+        R_end=pose_end.R
+
+        if primitives[-1]=='movel_fit':
+            slope_p=p_end-p_start
+            slope_p=slope_p/np.linalg.norm(slope_p)
+            p_end_new=p_end+extension_d*slope_p        ###extend 5cm backward
+
+            k,theta=R2rot(R_end@R_start.T)
+            theta_new=extension_d*theta/np.linalg.norm(p_end-p_start)
+            R_end_new=rot(k,theta_new)@R_end
+
+            q_all = self.robot2.inv(p_end_new, R_end_new)
+            temp_q=q_all-curve_js[-1]
+            order=np.argsort(np.linalg.norm(temp_q,axis=1))
+            curve_js[-1]=q_all[order[0]]
+            points_list[-1]=p_end_new
+
+        elif  primitives[1]=='movec_fit':
+            #TODO: add C/J extension
+            pass
+        else:
+            pass
+
+        return self.exec_motions(primitives,breakpoints,points_list,curve_js,speed,zone)
 
     def exe_from_file(self,filename,filename_js,speed,zone):
         data = read_csv(filename)

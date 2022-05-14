@@ -99,6 +99,9 @@ def find_js(robot,curve,curve_normal):
 
 	return curve_js_all
 
+def define_robot():
+	return abb6640(d=50)
+
 def main():
 	#select dataset
 	# data_dir='from_NX/'
@@ -108,12 +111,13 @@ def main():
 	curve = read_csv(data_dir+"Curve_dense.csv",header=None).values
 	lam=calc_lam_cs(curve)
 	robot=abb6640(d=50)
+	print("OPTIMIZING ON CURVE POSE")
 	H=pose_opt(robot,curve[:,:3],curve[:,3:])
 	print(H)
 
-	print("OPTIMIZING ON CURVE POSE")
+	
 	curve_base,curve_normal_base=curve_frame_conversion(curve[:,:3],curve[:,3:],H)
-	visualize_curve_w_normal(curve_base,curve_normal_base,equal_axis=True)
+	# visualize_curve_w_normal(curve_base,curve_normal_base,equal_axis=True)
 
 	###get all inv solutions
 	print("FIND ALL POSSIBLE INV SOLUTIONS")
