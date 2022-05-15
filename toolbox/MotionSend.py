@@ -5,7 +5,8 @@ import sys
 from abb_motion_program_exec_client import *
 from robots_def import *
 from error_check import *
-
+sys.path.append('../toolbox')
+from toolbox_circular_fit import *
 
 class MotionSend(object):
     def __init__(self) -> None:
@@ -177,24 +178,58 @@ class MotionSend(object):
         p_end=pose_end.p
         R_end=pose_end.R
         if primitives[1]=='movel_fit':
+            #find new start point
             slope_p=p_end-p_start
             slope_p=slope_p/np.linalg.norm(slope_p)
             p_start_new=p_start-extension_d*slope_p        ###extend 5cm backward
 
+            #find new start orientation
             k,theta=R2rot(R_end@R_start.T)
             theta_new=-extension_d*theta/np.linalg.norm(p_end-p_start)
             R_start_new=rot(k,theta_new)@R_start
 
+            #solve invkin for initial point
             q_all = self.robot2.inv(p_start_new, R_start_new)
             temp_q=q_all-curve_js[0]
             order=np.argsort(np.linalg.norm(temp_q,axis=1))
             points_list[0]=q_all[order[0]]
-        elif  primitives[1]=='movec_fit':
-            #TODO: add C/J extension
-            pass
-        else:
-            pass
 
+        elif  primitives[1]=='movec_fit':
+            #define circle first
+            pose_mid=self.robot2.fwd(curve_js[int(breakpoints[1]/2)])
+            p_mid=pose_mid.p
+            R_mid=pose_mid.R
+            center, radius=circle_from_3point(p_start,p_end,p_mid)
+
+            #find desired rotation angle
+            angle=extension_d/radius
+
+            #find new start point
+            plane_N=np.cross(p_end-center,p_start-center)
+            plane_N=plane_N/np.linalg.norm(plane_N)
+            R_temp=rot(plane_N,angle)
+            p_start_new=center+R_temp@(p_start-center)
+
+            #find new start orientation
+            k,theta=R2rot(R_end@R_start.T)
+            theta_new=-extension_d*theta/np.linalg.norm(p_end-p_start)
+            R_start_new=rot(k,theta_new)@R_start
+
+            #solve invkin for initial point
+            q_all = self.robot2.inv(p_start_new, R_start_new)
+            temp_q=q_all-curve_js[0]
+            order=np.argsort(np.linalg.norm(temp_q,axis=1))
+            points_list[0]=q_all[order[0]]
+
+        else:
+            #find new start point
+            J_start=self.robot2.jacobian(curve_js[0])
+            qdot=curve_js[breakpoints[1]]-curve_js[0]
+            v=J_start[3:,:]@qdot
+            t=extension_d/v
+            points_list[0]=curve_js[0]+qdot*t
+
+        ###end point extension
         pose_start=self.robot2.fwd(curve_js[breakpoints[-2]])
         p_start=pose_start.p
         R_start=pose_start.R
@@ -203,14 +238,17 @@ class MotionSend(object):
         R_end=pose_end.R
 
         if primitives[-1]=='movel_fit':
+            #find new end point
             slope_p=p_end-p_start
             slope_p=slope_p/np.linalg.norm(slope_p)
             p_end_new=p_end+extension_d*slope_p        ###extend 5cm backward
 
+            #find new end orientation
             k,theta=R2rot(R_end@R_start.T)
             theta_new=extension_d*theta/np.linalg.norm(p_end-p_start)
             R_end_new=rot(k,theta_new)@R_end
 
+            #solve invkin for end point
             q_all = self.robot2.inv(p_end_new, R_end_new)
             temp_q=q_all-curve_js[-1]
             order=np.argsort(np.linalg.norm(temp_q,axis=1))
@@ -218,10 +256,40 @@ class MotionSend(object):
             points_list[-1]=p_end_new
 
         elif  primitives[1]=='movec_fit':
-            #TODO: add C/J extension
-            pass
+            #define circle first
+            pose_mid=self.robot2.fwd(curve_js[int((breakpoints[-1]+breakpoints[-2])/2)])
+            p_mid=pose_mid.p
+            R_mid=pose_mid.R
+            center, radius=circle_from_3point(p_start,p_end,p_mid)
+
+            #find desired rotation angle
+            angle=extension_d/radius
+
+            #find new end point
+            plane_N=np.cross(p_start-center,p_end-center)
+            plane_N=plane_N/np.linalg.norm(plane_N)
+            R_temp=rot(plane_N,angle)
+            p_end_new=center+R_temp@(p_end-center)
+
+            #find new end orientation
+            k,theta=R2rot(R_end@R_start.T)
+            theta_new=extension_d*theta/np.linalg.norm(p_end-p_start)
+            R_end_new=rot(k,theta_new)@R_end
+
+            #solve invkin for end point
+            q_all = self.robot2.inv(p_end_new, R_end_new)
+            temp_q=q_all-curve_js[-1]
+            order=np.argsort(np.linalg.norm(temp_q,axis=1))
+            curve_js[-1]=q_all[order[0]]
+            points_list[-1][-1]=p_end_new   #midpoint not changed
+
         else:
-            pass
+            #find new end point
+            J_end=self.robot2.jacobian(curve_js[-1])
+            qdot=curve_js[-1]-curve_js[breakpoints[-2]]
+            v=J_end[3:,:]@qdot
+            t=extension_d/v
+            points_list[-1]=curve_js[-1]+qdot*t
 
         return self.exec_motions(primitives,breakpoints,points_list,curve_js,speed,zone)
 
