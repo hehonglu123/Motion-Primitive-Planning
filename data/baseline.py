@@ -82,6 +82,8 @@ def find_js(robot,curve,curve_normal):
 				#if no solution
 				print(i)
 				print(curve_js[i-1])
+				print(curve[i])
+				print(curve_R[i][:,-1])
 				print('no solution available')
 				return
 
