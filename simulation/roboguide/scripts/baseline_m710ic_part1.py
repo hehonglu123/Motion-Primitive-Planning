@@ -40,6 +40,7 @@ def pose_opt(robot,curve,curve_normal):
 
     ###form transformation
     R=np.vstack((np.cross(Vy,-N),Vy,-N))
+    # R=np.vstack((Vy,np.cross(-N,Vy),-N))
     T=p-R@C
 
     return H_from_RT(R,T)
@@ -151,9 +152,10 @@ def find_js(robot,curve,curve_normal):
 
     return curve_js_all
 
-# obj_type='wood'
-obj_type='blade'
+obj_type='wood'
+# obj_type='blade'
 data_dir='../data/baseline_m710ic/'+obj_type+'/'
+print(obj_type)
 
 # define robot
 robot=m710ic(d=50)
@@ -164,13 +166,14 @@ robot=m710ic(d=50)
 if obj_type=='wood':
     curve = read_csv("../../../data/wood/Curve_dense.csv",header=None).values
 else:
-    curve = read_csv("../../../data/from_NX/Curve_in_base_frame.csv",header=None).values
+    # curve = read_csv("../../../data/from_NX/Curve_in_base_frame.csv",header=None).values
+    curve = read_csv("../../../data/from_NX/Curve_dense.csv",header=None).values
 lam=calc_lam_cs(curve)
 
 # put the curve in the best pose relative to the robot
-# H = pose_opt(robot_fake,curve[:,:3],curve[:,3:])
-# print(H)
-# curve_base,curve_normal_base=curve_frame_conversion(curve[:,:3],curve[:,3:],H)
+H = pose_opt(robot,curve[:,:3],curve[:,3:])
+print(H)
+curve_base,curve_normal_base=curve_frame_conversion(curve[:,:3],curve[:,3:],H)
 
 # print(curve_base[0])
 # print(curve_normal_base[0])
@@ -181,16 +184,16 @@ lam=calc_lam_cs(curve)
 # ax.plot3D(curve[:,0], curve[:,1],curve[:,2], 'red',label='original')
 # ax.plot3D(curve_base[:,0], curve_base[:,1],curve_base[:,2], 'green',label='tranform')
 
-H=np.eye(4)
-if obj_type=='wood':
-    H_trans = Transform(np.eye(3),[600,0,800])*Transform(rot([0,0,1],radians(0)),[0,0,0])*Transform(rot([1,0,0],radians(0)),[0,0,0])
-else:
-    H_trans = Transform(np.eye(3),[-500,-250,-400])*Transform(rot([0,0,1],radians(0)),[0,0,0])*Transform(rot([1,0,0],radians(0)),[0,0,0])
-H[:3,:3]=H_trans.R
-H[:3,3]=H_trans.p
-print(H)
+# H=np.eye(4)
+# if obj_type=='wood':
+#     H_trans = Transform(np.eye(3),[1200,500,800])*Transform(rot([0,0,1],radians(-90)),[0,0,0])*Transform(rot([1,0,0],radians(0)),[0,0,0])
+# else:
+#     H_trans = Transform(np.eye(3),[-800,-150,-400])*Transform(rot([0,0,1],radians(0)),[0,0,0])*Transform(rot([1,0,0],radians(0)),[0,0,0])
+# H[:3,:3]=H_trans.R
+# H[:3,3]=H_trans.p
+# print(H)
 
-curve_base,curve_normal_base=curve_frame_conversion(curve[:,:3],curve[:,3:],H)
+# curve_base,curve_normal_base=curve_frame_conversion(curve[:,:3],curve[:,3:],H)
 
 # ax.plot3D(curve_base[:,0], curve_base[:,1],curve_base[:,2], 'blue',label='tranform 2')
 # ax.scatter3D(curve_base[36790,0], curve_base[36790,1],curve_base[36790,2], 'blue')
@@ -203,7 +206,7 @@ curve_base,curve_normal_base=curve_frame_conversion(curve[:,:3],curve[:,3:],H)
 
 curve_js_all=find_js(robot,curve_base,curve_normal_base)
 
-# print(len(curve_js_all))
+print(len(curve_js_all))
 # exit()
 
 J_min=[]
@@ -211,13 +214,13 @@ for i in range(len(curve_js_all)):
     J_min.append(find_j_min(robot,curve_js_all[i]))
 
 J_min=np.array(J_min)
-plt.figure()
-for i in range(len(J_min)):
-    plt.plot(lam,J_min[i],label="inv choice "+str(i))
+# plt.figure()
+# for i in range(len(J_min)):
+#     plt.plot(lam,J_min[i],label="inv choice "+str(i))
 
-plt.legend()
-plt.title('Minimum J_SINGULAR')
-plt.show()
+# plt.legend()
+# plt.title('Minimum J_SINGULAR')
+# plt.show()
 curve_js=curve_js_all[np.argmin(J_min.min(axis=1))]
 
 ###save file
