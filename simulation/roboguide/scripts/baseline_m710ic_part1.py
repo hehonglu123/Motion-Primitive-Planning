@@ -111,11 +111,6 @@ def find_js(robot,curve,curve_normal):
     curve_js_all=[]
     for q_init in q_inits:
 
-        # ignore solution with joint 1 > pi/2 or < -pi/2
-        if q_init[0]>pi/2 or q_init[0]<-pi/2:
-            print("Ignore solution with joint 1 > pi/2 or < -pi/2")
-            continue
-
         curve_js=np.zeros((len(curve),6))
         curve_js[0]=q_init
         for i in range(1,len(curve)):
