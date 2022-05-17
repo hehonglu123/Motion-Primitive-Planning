@@ -234,14 +234,42 @@ else:
     curve_blend[zone_start_i:zone_end_i]=blending_curve
 
 
-plt.plot(curve[:,1],curve[:,0], 'red')
-plt.plot(curve_exe[:,1],curve_exe[:,0], 'green')
-plt.plot(curve_blend[zone_start_i:zone_end_i,1],curve_blend[zone_start_i:zone_end_i,0], 'blue')
+# plt.figure()
+# ax = plt.axes(projection='3d')
+# ax.plot3D(curve[:,0], curve[:,1],curve[:,2], 'red',label='Motion Cmd')
+breakpoints=np.array([0,int((len(curve)+1)/2),int(len(curve)-1)])
+# ax.scatter3D(curve[breakpoints,0], curve[breakpoints,1],curve[breakpoints,2], 'blue',label='(Start/End/Break) points')
+# #plot execution curve
+# ax.plot3D(curve_exe[:,0], curve_exe[:,1],curve_exe[:,2], 'green',label='Executed Motion')
+# ax.plot3D(curve_blend[zone_start_i:zone_end_i+1,0], curve_blend[zone_start_i:zone_end_i+1,1],curve_blend[zone_start_i:zone_end_i+1,2], 'blue',label='Interpolation')
+# ax.view_init(elev=40, azim=-145)
+# ax.set_title('Cartesian Interpolation using Motion Cmd')
+# ax.set_xlabel('x-axis (mm)')
+# ax.set_ylabel('y-axis (mm)')
+# ax.set_zlabel('z-axis (mm)')
+# ax.set_xlim(2200,2550)
+# ax.set_ylim(-500,600)
+# ax.set_zlim(999.4,1000.02)
+# ax.legend()
+# plt.show()
+# plt.clf()
+
+plt.plot(curve[:,1],curve[:,0], 'red',label='Motion Cmd')
+plt.scatter(curve[breakpoints,1], curve[breakpoints,0],8,'royalblue',label='(Start/End/Break) points')
+plt.plot(curve_exe[:,1],curve_exe[:,0], 'green',label='Executed Motion')
+plt.plot(curve_blend[zone_start_i:zone_end_i,1],curve_blend[zone_start_i:zone_end_i,0], 'blue',label='Interpolation')
 # plt.plot(zone_x_fit,zone_y_fit,'blue')
 plt.axis('equal')
-plt.title('Curve (2D) '+this_case)
+plt.title('Joint Interpolation using Motion Cmd (XY plane)')
 plt.gca().invert_xaxis()
+plt.xlim(173,-151)
+plt.ylim(2175,2364)
+plt.legend()
+plt.xlabel('y-axis (mm)')
+plt.ylabel('x-axis (mm)')
 plt.show()
+
+exit()
 
 if cart_blend:
     if not use_exec_lam:
@@ -283,15 +311,7 @@ else:
             plt.show()
 
 
-plt.figure()
-ax = plt.axes(projection='3d')
-ax.plot3D(curve[:,0], curve[:,1],curve[:,2], 'red',label='original')
-breakpoints=np.array([0,int((len(curve)+1)/2),int(len(curve)-1)])
-ax.scatter3D(curve[breakpoints,0], curve[breakpoints,1],curve[breakpoints,2], 'blue')
-#plot execution curve
-ax.plot3D(curve_exe[:,0], curve_exe[:,1],curve_exe[:,2], 'green',label='execution')
-ax.plot3D(curve_blend[zone_start_i:zone_end_i,0], curve_blend[zone_start_i:zone_end_i,1],curve_blend[zone_start_i:zone_end_i,2], 'blue',label='blend')
-plt.show()
+
 
 # with open(save_dir+'error_'+this_case+'.npy','wb') as f:
 #     np.save(f,error)
