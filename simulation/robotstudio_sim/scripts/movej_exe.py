@@ -11,45 +11,38 @@ def main():
 	robot=abb6640(d=50)
 	# data_dir="fitting_output_new/all_theta_opt/"
 	###read actual curve
-	col_names=['q1', 'q2', 'q3','q4', 'q5', 'q6'] 
-	# data = read_csv(data_dir+"/arm1.csv", names=col_names)
-	data = read_csv("../../../data/wood/Curve_js.csv", names=col_names)
-	# data = read_csv("../../../constraint_solver/single_arm/trajectory/stepwise_opt/arm1.csv", names=col_names)
-
-	curve_q1=data['q1'].tolist()
-	curve_q2=data['q2'].tolist()
-	curve_q3=data['q3'].tolist()
-	curve_q4=data['q4'].tolist()
-	curve_q5=data['q5'].tolist()
-	curve_q6=data['q6'].tolist()
-	curve_js=np.vstack((curve_q1, curve_q2, curve_q3,curve_q4,curve_q5,curve_q6)).T
+	data_dir='tesseract/'
+	curve_js = read_csv(data_dir+'movej_waypoints.csv',header=None).values[:,1:]
 
 	step=int(len(curve_js)/500)
 
 	v700 = speeddata(700,500,5000,1000)
-	speed=v500
-	mp = MotionProgram()
-	j0=jointtarget(np.degrees(curve_js[0]),[0]*6)
-	mp.MoveAbsJ(j0,v500,fine)
-	mp.WaitTime(1)
-	mp.MoveAbsJ(j0,v50,fine)
-	for i in range(1,len(curve_js),step):
-		j = jointtarget(np.degrees(curve_js[i]),[0]*6)
-		mp.MoveAbsJ(j,speed,z10)
+	speed={'v500':v500}
+	zone={'z10':z10}
+	for s in speed:
+		for z in zone:
+			mp = MotionProgram()
+			j0=jointtarget(np.degrees(curve_js[0]),[0]*6)
+			mp.MoveAbsJ(j0,v500,fine)
+			mp.WaitTime(1)
+			mp.MoveAbsJ(j0,v50,fine)
+			for i in range(1,len(curve_js),step):
+				j = jointtarget(np.degrees(curve_js[i]),[0]*6)
+				mp.MoveAbsJ(j,speed[s],zone[z])
 
 
-	jf=jointtarget(np.degrees(curve_js[-1]),[0]*6)
-	mp.MoveAbsJ(jf,speed,fine)
-	mp.WaitTime(1)
+			jf=jointtarget(np.degrees(curve_js[-1]),[0]*6)
+			mp.MoveAbsJ(jf,speed[s],zone[z])
+			mp.WaitTime(1)
 
-	print(mp.get_program_rapid())
+			print(mp.get_program_rapid())
 
-	client = MotionProgramExecClient()
-	log_results = client.execute_motion_program(mp)
+			client = MotionProgramExecClient()
+			log_results = client.execute_motion_program(mp)
 
-	# Write log csv to file
-	with open("log.csv","wb") as f:
-	   f.write(log_results)
+			# Write log csv to file
+			with open(data_dir+"curve_exe_"+s+'_'+z+".csv","wb") as f:
+			   f.write(log_results)
 
 if __name__ == "__main__":
 	main()

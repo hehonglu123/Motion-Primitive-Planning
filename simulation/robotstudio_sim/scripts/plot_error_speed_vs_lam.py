@@ -11,11 +11,12 @@ from error_check import *
 from lambda_calc import *
 from MotionSend import *
 
-curve = read_csv('../../../data/wood/Curve_in_base_frame.csv',header=None).values
+# curve = read_csv('../../../data/wood/Curve_in_base_frame.csv',header=None).values
+curve = read_csv('../../../data/from_ge/Curve_in_base_frame2.csv',header=None).values
 
-speed=['v180']
+speed=['v500']
 zone=['z10']
-data_dir="greedy_output/wood_L/"
+data_dir="tesseract/"
 
 ms=MotionSend()
 robot=abb6640(d=50)
@@ -37,7 +38,7 @@ for s in speed:
 
         ax1.set_xlabel('lambda (mm)')
         ax1.set_ylabel('Speed/lamdot (mm/s)', color='g')
-        ax2.set_ylabel('Error (mm)', color='b')
+        ax2.set_ylabel('Error/Normal Error (mm/deg)', color='b')
         plt.title("Speed: "+data_dir+s+'_'+z)
         ax1.legend(loc=0)
 

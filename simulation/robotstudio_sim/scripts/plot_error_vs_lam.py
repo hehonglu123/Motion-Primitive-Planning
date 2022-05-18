@@ -25,9 +25,11 @@ robot=abb6640(d=50)
 # data_dir="fitting_output/threshold0.1/"
 # speed={"v50":v50,"v500":v500,"v5000":v5000}
 # zone={"fine":fine,"z1":z1,"z10":z10}
-speed=['v50','v150','v200','v400','v800']
+# speed=['v50','v150','v200','v400','v800']
+speed=['v500']
+
 zone=['z10']
-data_dir="recorded_data/qp_movel/"
+data_dir="tesseract/"
 
 
 for s in speed:
