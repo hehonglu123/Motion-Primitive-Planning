@@ -51,6 +51,17 @@ def R2wpr(R):
     w=math.degrees(math.atan2(2*(q[0]*q[1]+q[2]*q[3]),1.-2*(q[1]**2+q[2]**2)))
     return [w,p,r]
 
+def getrobtarget(pose,ref_q,robot,group,uframe,utool):
+    
+    qall=robot.inv(pose.p,pose.R)
+    q = unwrapped_angle_check(ref_q,qall)
+    wpr=R2wpr(pose.R)
+    robt = joint2robtarget(q,robot,group,uframe,utool)
+    for i in range(3):
+        robt.trans[i]=pose.p[i]
+        robt.rot[i]=wpr[i]
+    return robt
+
 def joint2robtarget(q,robot,group,uframe,utool):
     
     pose_tar = robot.fwd(q)

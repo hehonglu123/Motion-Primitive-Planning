@@ -1,7 +1,7 @@
 from math import ceil, radians, floor, degrees
 import numpy as np
 from pandas import read_csv
-
+from matplotlib import pyplot as plt
 from general_robotics_toolbox import *
 import sys
 
@@ -23,8 +23,8 @@ all_objtype=['wood','blade']
 # all_objtype=['blade']
 # all_objtype=['wood']
 
-thresholds=[0.1,0.2,0.5,0.9]
-# thresholds=[1]
+# num_ls=[80,100,150]
+num_ls=[100]
 
 for obj_type in all_objtype:
 
@@ -43,10 +43,10 @@ for obj_type in all_objtype:
     # curve_js = read_csv(data_dir+"Curve_js.csv",header=None).values
     # curve_js=np.array(curve_js)
 
-    for threshold in thresholds:
-        print(obj_type+' '+str(threshold))
+    for num_l in num_ls:
+        print(obj_type+' '+str(num_l))
         col_names=['','breakpoints','primitives','q1', 'q2', 'q3','q4', 'q5', 'q6'] 
-        data = read_csv(data_dir+str(threshold)+"/command.csv", names=col_names)
+        data = read_csv(data_dir+str(num_l)+"/command.csv", names=col_names)
         target_q1=data['q1'].tolist()[1:]
         target_q2=data['q2'].tolist()[1:]
         target_q3=data['q3'].tolist()[1:]
@@ -82,7 +82,7 @@ for obj_type in all_objtype:
             robt_start.trans[1] = robt_start.trans[1]+start_direction[1]*100
             robt_start.trans[2] = robt_start.trans[2]+start_direction[2]*100
             # tp_pre.moveL(robt_start,5,'mmsec',-1)
-            tp_pre.moveL(robt_start,500,'mmsec',-1)
+            tp_pre.moveL(robt_start,50,'mmsec',-1)
             client.execute_motion_program(tp_pre)
             
             tp = TPMotionProgram()
@@ -100,13 +100,13 @@ for obj_type in all_objtype:
             res = client.execute_motion_program(tp)
 
             # Write log csv to file
-            with open(data_dir+str(threshold)+"/curve_js_exe.csv","wb") as f:
+            with open(data_dir+str(num_l)+"/curve_js_exe.csv","wb") as f:
                 f.write(res)
             
             # the executed in Joint space (FANUC m710ic)
             col_names=['timestamp','J1', 'J2','J3', 'J4', 'J5', 'J6'] 
             # data=read_csv(data_dir+'movel_3_'+str(int(h*10))+'.csv',names=col_names)
-            data=read_csv(data_dir+str(threshold)+"/curve_js_exe.csv",names=col_names)
+            data=read_csv(data_dir+str(num_l)+"/curve_js_exe.csv",names=col_names)
             q1=data['J1'].tolist()[1:]
             q2=data['J2'].tolist()[1:]
             q3=data['J3'].tolist()[1:]
@@ -200,11 +200,37 @@ for obj_type in all_objtype:
                 speed_found=True
         
         lamdot_act=calc_lamdot(curve_exe_js_act,lam_exec,robot,1)
-        with open(data_dir+str(threshold)+'/error.npy','wb') as f:
+        lam=calc_lam_cs(curve_exe)
+        with open(data_dir+str(num_l)+'/error.npy','wb') as f:
             np.save(f,error)
-        with open(data_dir+str(threshold)+'/normal_error.npy','wb') as f:
+        with open(data_dir+str(num_l)+'/normal_error.npy','wb') as f:
             np.save(f,angle_error)
-        with open(data_dir+str(threshold)+'/speed.npy','wb') as f:
+        with open(data_dir+str(num_l)+'/speed.npy','wb') as f:
             np.save(f,act_speed)
         
-        print(threshold,": Speed:",speed,',Max Error:',error_max,',Angle Error:',angle_error_max)
+        print(num_l,": Speed:",speed,',Max Error:',error_max,',Angle Error:',angle_error_max)
+
+        fig, ax1 = plt.subplots()
+
+        ax2 = ax1.twinx()
+        ax1.plot(lam,speed, 'g-', label='Speed')
+        ax2.plot(lam, error, 'b-',label='Error')
+        ax2.plot(lam, np.degrees(angle_error), 'y-',label='Normal Error')
+
+        ax1.set_xlabel('lambda (mm)')
+        ax1.set_ylabel('Speed/lamdot (mm/s)', color='g')
+        ax2.set_ylabel('Error/Normal Error (mm/deg)', color='b')
+        plt.title("Execution Result (Speed/Error/Normal Error v.s. Lambda)")
+        ax1.legend(loc=0)
+        ax2.legend(loc=0)
+        plt.show()
+        plt.clf()
+        
+        plt.plot(lam_exec,lamdot_act, label='Logged Joint Ldot Constraint')
+        plt.plot(lam_exec[1:],act_speed, label='Actual speed')
+        plt.title("Execution Result (Ldot Constraint/Actual Speed v.s. Lambda)")
+        plt.ylabel('Speed (mm/s)')
+        plt.xlabel('Lambda (mm)')
+        plt.legend()
+        plt.show()
+        plt.clf()

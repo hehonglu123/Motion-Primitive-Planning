@@ -22,8 +22,8 @@ all_objtype=['wood','blade']
 # all_objtype=['blade']
 # all_objtype=['wood']
 
-# num_ls=[80,100,150]
-num_ls=[100]
+thresholds=[0.1,0.2,0.5,0.9]
+# thresholds=[1]
 
 for obj_type in all_objtype:
 
@@ -39,22 +39,22 @@ for obj_type in all_objtype:
     curve_js = read_csv(data_dir+"Curve_js.csv",header=None).values
     curve_js=np.array(curve_js)
 
-    for num_l in num_ls:
-        breakpoints=np.linspace(0,len(curve_js),num_l+1).astype(int)
+    for threshold in thresholds:
+        greedy_fit_obj=greedy_fit(robot,curve_js,threshold)
+        greedy_fit_obj.primitives={'movel_fit':greedy_fit_obj.movel_fit_greedy}
+        breakpoints,primitives_choices,points=greedy_fit_obj.fit_under_error()
 
-        primitives_choices=['movej_fit']
-        points=[curve_js[0]]
-        for i in range(num_l):
-            primitives_choices.append('movel_fit')
-            points.append(curve_js[i])
-        points=np.array(points)
+        primitives_choices.insert(0,'movej_fit')
+        points.insert(0,[greedy_fit_obj.curve_fit_js[0]])
+        # print(greedy_fit_obj.curve_fit_js)
 
         breakpoints=np.array(breakpoints)
         breakpoints[1:]=breakpoints[1:]-1
         ## save commands
         df=DataFrame({'breakpoints':breakpoints,'primitives':primitives_choices,\
-            'J1':points[:,0],'J2':points[:,1],\
-            'J3':points[:,2],'J4':points[:,3],\
-            'J5':points[:,4],'J6':points[:,5]})
-        df.to_csv(data_dir+str(num_l)+'/command.csv')
+            'J1':greedy_fit_obj.curve_fit_js[breakpoints,0],'J2':greedy_fit_obj.curve_fit_js[breakpoints,1],\
+            'J3':greedy_fit_obj.curve_fit_js[breakpoints,2],'J4':greedy_fit_obj.curve_fit_js[breakpoints,3],\
+            'J5':greedy_fit_obj.curve_fit_js[breakpoints,4],'J6':greedy_fit_obj.curve_fit_js[breakpoints,5]})
+        df.to_csv(data_dir+str(threshold)+'/command.csv')
         df=DataFrame()
+        DataFrame(greedy_fit_obj.curve_fit_js).to_csv(data_dir+str(threshold)+'/curve_fit_js.csv',header=False,index=False)

@@ -170,35 +170,6 @@ H = pose_opt(robot,curve[:,:3],curve[:,3:])
 print(H)
 curve_base,curve_normal_base=curve_frame_conversion(curve[:,:3],curve[:,3:],H)
 
-# print(curve_base[0])
-# print(curve_normal_base[0])
-# exit()
-
-# plt.figure()
-# ax = plt.axes(projection='3d')
-# ax.plot3D(curve[:,0], curve[:,1],curve[:,2], 'red',label='original')
-# ax.plot3D(curve_base[:,0], curve_base[:,1],curve_base[:,2], 'green',label='tranform')
-
-# H=np.eye(4)
-# if obj_type=='wood':
-#     H_trans = Transform(np.eye(3),[1200,500,800])*Transform(rot([0,0,1],radians(-90)),[0,0,0])*Transform(rot([1,0,0],radians(0)),[0,0,0])
-# else:
-#     H_trans = Transform(np.eye(3),[-800,-150,-400])*Transform(rot([0,0,1],radians(0)),[0,0,0])*Transform(rot([1,0,0],radians(0)),[0,0,0])
-# H[:3,:3]=H_trans.R
-# H[:3,3]=H_trans.p
-# print(H)
-
-# curve_base,curve_normal_base=curve_frame_conversion(curve[:,:3],curve[:,3:],H)
-
-# ax.plot3D(curve_base[:,0], curve_base[:,1],curve_base[:,2], 'blue',label='tranform 2')
-# ax.scatter3D(curve_base[36790,0], curve_base[36790,1],curve_base[36790,2], 'blue')
-# plt.show()
-
-# exit()
-
-# curve_base=curve_base[::10]
-# curve_normal_base=curve_normal_base[::10]
-
 curve_js_all=find_js(robot,curve_base,curve_normal_base)
 
 print(len(curve_js_all))
