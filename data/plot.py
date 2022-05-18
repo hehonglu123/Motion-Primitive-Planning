@@ -11,7 +11,7 @@ from utils import *
 
 def main():
 	robot=abb6640(d=50)
-	data_dir='wood/'
+	data_dir='from_NX/'
 
 	
 	col_names=['X', 'Y', 'Z','normal_x','normal_y','normal_z'] 
@@ -44,7 +44,7 @@ def main():
 	# curve=np.array(curve)
 	# curve_normal=np.array(curve_normal)
 
-	visualize_curve_w_normal(curve,curve_normal,stepsize=10,equal_axis=True)
+	visualize_curve_w_normal(curve,curve_normal,stepsize=1000,equal_axis=True)
 
 	print(np.amax(curve[:,0])-np.amin(curve[:,0]),np.amax(curve[:,1])-np.amin(curve[:,1]),np.amax(curve[:,2])-np.amin(curve[:,2]))
 

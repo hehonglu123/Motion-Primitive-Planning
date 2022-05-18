@@ -92,8 +92,10 @@ def visualize_curve_w_normal(curve,curve_normal,stepsize=500,equal_axis=False):
 	fig = plt.figure()
 	ax = fig.add_subplot(111, projection='3d')
 	ax.plot3D(curve[:,0], curve[:,1],curve[:,2], 'gray')
-	ax.quiver(curve[:,0],curve[:,1],curve[:,2],10*curve_normal[:,0],10*curve_normal[:,1],10*curve_normal[:,2])
-
+	ax.quiver(curve[:,0],curve[:,1],curve[:,2],30*curve_normal[:,0],30*curve_normal[:,1],30*curve_normal[:,2])
+	ax.set_xlabel('x (mm)')
+	ax.set_ylabel('y (mm)')
+	ax.set_zlabel('z (mm)')
 	if equal_axis:
 		ax.set_xlim([0,3000])
 		ax.set_ylim([0,3000])

@@ -20,17 +20,19 @@ from lambda_calc import *
 def main():
     robot=abb6640(d=50)
     #determine correct commanded speed to keep error within 1mm
-    thresholds=[0.1,0.2,0.5,0.9]
+    # thresholds=[0.1,0.2,0.5,0.9]
+    num_ls=[150]
 
-    dataset="../../../data/wood/"
+
+    dataset="../../../data/from_NX/"
     
 
     curve = read_csv(dataset+"Curve_in_base_frame.csv",header=None).values
 
-    for threshold in thresholds:
+    for num_l in num_ls:
         ms = MotionSend()
         
-        data_dir=dataset+"baseline/"+str(threshold)+'/'
+        data_dir=dataset+"baseline/"+str(num_l)+'L/'
 
         vmax = speeddata(10000,9999999,9999999,999999)
         v=1500
@@ -44,17 +46,29 @@ def main():
             ###update velocity profile
             v_cmd = speeddata(v,9999999,9999999,999999)
             #execute with 10cm acc/dcc range
-            logged_data=ms.exe_from_file_w_extension(data_dir+"command.csv",data_dir+"curve_fit_js.csv",v_cmd,z10,extension_d=100)
+            logged_data=ms.exe_from_file_w_extension(data_dir+"command.csv",dataset+"Curve_js.csv",v_cmd,z10,extension_d=100)
             StringData=StringIO(logged_data)
             df = read_csv(StringData, sep =",")
             ##############################data analysis#####################################
-            lam, curve_exe, curve_exe_R,curve_exe_js, speed, timestamp=ms.logged_data_analysis(robot,df)
+            lam, curve_exe, curve_exe_R,curve_exe_js, speed, timestamp=ms.logged_data_analysis(robot,df,filt=False,realrobot=False)
             error,angle_error=calc_all_error_w_normal(curve_exe,curve[:,:3],curve_exe_R[:,:,-1],curve[:,3:],extension=True)
+
+
+
+            start_idx=np.argmin(np.linalg.norm(curve[0,:3]-curve_exe,axis=1))
+            end_idx=np.argmin(np.linalg.norm(curve[-1,:3]-curve_exe,axis=1))
+
+            curve_exe=curve_exe[start_idx:end_idx+1]
+            curve_exe_R=curve_exe_R[start_idx:end_idx+1]
+            speed=speed[start_idx:end_idx+1]
+            lam=calc_lam_cs(curve_exe)
+
+            # _,speed=lfilter(timestamp[start_idx:end_idx+1],np.array(speed))
             
             max_error=max(error)
-            print(v,max_error)
+            print('cmd speed: ',v, 'max error: ',max_error, 'max ori error: ', max(angle_error), 'std(speed): ',np.std(speed))
             v_prev_temp=v
-            if max_error>1:
+            if max_error>0.5 or np.std(speed)>np.average(speed)/20 or max(angle_error)>np.radians(3):
                 v-=abs(v_prev-v)/2
             else:
                 v_prev_possible=v
@@ -66,10 +80,10 @@ def main():
             v_prev=v_prev_temp
 
             #if stuck
-            if abs(v-v_prev)<0.1:
+            if abs(v-v_prev)<1:
                 v=v_prev_possible
                 v_cmd = speeddata(v,9999999,9999999,999999)
-                logged_data=ms.exe_from_file_w_extension(data_dir+"command.csv",data_dir+"curve_fit_js.csv",v_cmd,z10,extension_d=100)
+                logged_data=ms.exe_from_file_w_extension(data_dir+"command.csv",dataset+"Curve_js.csv",v_cmd,z10,extension_d=100)
                 StringData=StringIO(logged_data)
                 df = read_csv(StringData, sep =",")
                 lam, curve_exe, curve_exe_R,curve_exe_js, speed, timestamp=ms.logged_data_analysis(robot,df)
@@ -77,6 +91,40 @@ def main():
                 
                 max_error=max(error)
                 break
+
+
+            # fig, ax1 = plt.subplots()
+
+            # ax2 = ax1.twinx()
+            # ax1.plot(lam,speed, 'g-', label='Speed')
+            # ax2.plot(lam, error, 'b-',label='Error')
+            # ax2.plot(lam, np.degrees(angle_error), 'y-',label='Normal Error')
+
+            # ax1.set_xlabel('lambda (mm)')
+            # ax1.set_ylabel('Speed/lamdot (mm/s)', color='g')
+            # ax2.set_ylabel('Error/Normal Error (mm/deg)', color='b')
+            # plt.title("Speed: "+data_dir+'v_'+str(v_prev)+'_z10')
+            # ax1.legend(loc=0)
+
+            # ax2.legend(loc=0)
+
+            # plt.legend()
+            # plt.show()
+
+
+            ###timestamp plot
+            # fig, ax1 = plt.subplots()
+            # ax2 = ax1.twinx()
+            # ax1.plot(lam,speed, 'g-', label='Speed')
+            # ax2.plot(lam, np.gradient(timestamp[start_idx:end_idx+1]), 'b-',label='Timestamp')
+            # ax1.set_xlabel('lambda (mm)')
+            # ax1.set_ylabel('Speed/lamdot (mm/s)', color='g')
+            # ax2.set_ylabel('timestamp (s)', color='b')
+            # plt.title("Speed: "+data_dir+'v_'+str(v_prev)+'_z10')
+            # ax1.legend(loc=0)
+            # ax2.legend(loc=0)
+            # plt.legend()
+            # plt.show()
 
         
         start_idx=np.argmin(np.linalg.norm(curve[0,:3]-curve_exe,axis=1))
@@ -97,7 +145,7 @@ def main():
 
         # ax1.set_xlabel('lambda (mm)')
         # ax1.set_ylabel('Speed/lamdot (mm/s)', color='g')
-        # ax2.set_ylabel('Error (mm)', color='b')
+        # ax2.set_ylabel('Error/Normal Error (mm/deg)', color='b')
         # plt.title("Speed: "+data_dir+'v_'+str(v)+'_z10')
         # ax1.legend(loc=0)
 
