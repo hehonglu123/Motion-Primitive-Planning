@@ -73,7 +73,6 @@ for obj_type in all_objtype:
             robtend = joint2robtarget(target_joints[-1],robot,1,1,utool_num)
             robtend_1 = joint2robtarget(target_joints[-2],robot,1,1,utool_num)
             end_direction=(robtend.trans-robtend_1.trans)/np.linalg.norm(robtend.trans-robtend_1.trans)
-
             tp_pre = TPMotionProgram()
             j0 = jointtarget(1,1,utool_num,np.degrees(target_joints[0]),[0]*6)
             tp_pre.moveJ(j0,50,'%',-1)
@@ -164,6 +163,7 @@ for obj_type in all_objtype:
             # lamdot_act=calc_lamdot(curve_exe_js_act,lam_exec,robot,1)
             error,angle_error=calc_all_error_w_normal(curve_exe,curve,curve_exe_R[:,:,-1],curve_normal)
             
+
             start_id = 10
             end_id = -10
 
@@ -178,16 +178,21 @@ for obj_type in all_objtype:
             error=error[start_id:end_id+1]
             angle_error=angle_error[start_id:end_id+1]
             act_speed=act_speed[start_id-1:end_id]
+            curve_exe=curve_exe[start_id-1:end_id]
+            curve_exe_R=curve_exe_R[start_id-1:end_id]
+            curve_exe_js_act=curve_exe_js_act[start_id-1:end_id]
+            lam_exec=calc_lam_cs(curve_exe)
             
             error_max = np.max(error)
             angle_error_max = np.max(angle_error)
+            speed_ave=np.average(act_speed)
+            speed_std=np.std(act_speed)
 
             if speed_found:
                 break
 
-            
-            print('Speed:',speed,',Error:',error_max,',Angle Error:',degrees(angle_error_max))
-            if error_max > 1 or angle_error_max > radians(3):
+            print('Speed:',speed,',Error:',error_max,',Angle Error:',degrees(angle_error_max),'Speed Ave:',speed_ave,'Speed Std:',speed_std)
+            if error_max > 0.5 or angle_error_max > radians(3) or speed_std>speed_ave*0.05:
                 speed_up=speed
                 speed=ceil((speed_up+speed_low)/2.)
             else:
@@ -200,37 +205,41 @@ for obj_type in all_objtype:
                 speed_found=True
         
         lamdot_act=calc_lamdot(curve_exe_js_act,lam_exec,robot,1)
-        lam=calc_lam_cs(curve_exe)
+        
+        with open(data_dir+str(num_l)+"/curve_js_exe_"+str(speed)+".csv","wb") as f:
+            f.write(res)
         with open(data_dir+str(num_l)+'/error.npy','wb') as f:
             np.save(f,error)
         with open(data_dir+str(num_l)+'/normal_error.npy','wb') as f:
             np.save(f,angle_error)
         with open(data_dir+str(num_l)+'/speed.npy','wb') as f:
             np.save(f,act_speed)
+        with open(data_dir+str(num_l)+'/lambda.npy','wb') as f:
+            np.save(f,lam_exec)
         
-        print(num_l,": Speed:",speed,',Max Error:',error_max,',Angle Error:',angle_error_max)
+        print(num_l,": Speed:",speed,',Max Error:',error_max,',Angle Error:',angle_error_max,'Speed Ave:',speed_ave,'Speed Std:',speed_std)
 
-        fig, ax1 = plt.subplots()
+        # fig, ax1 = plt.subplots()
 
-        ax2 = ax1.twinx()
-        ax1.plot(lam,speed, 'g-', label='Speed')
-        ax2.plot(lam, error, 'b-',label='Error')
-        ax2.plot(lam, np.degrees(angle_error), 'y-',label='Normal Error')
+        # ax2 = ax1.twinx()
+        # ax1.plot(lam_exec,speed, 'g-', label='Speed')
+        # ax2.plot(lam_exec, error, 'b-',label='Error')
+        # ax2.plot(lam_exec, np.degrees(angle_error), 'y-',label='Normal Error')
 
-        ax1.set_xlabel('lambda (mm)')
-        ax1.set_ylabel('Speed/lamdot (mm/s)', color='g')
-        ax2.set_ylabel('Error/Normal Error (mm/deg)', color='b')
-        plt.title("Execution Result (Speed/Error/Normal Error v.s. Lambda)")
-        ax1.legend(loc=0)
-        ax2.legend(loc=0)
-        plt.show()
-        plt.clf()
+        # ax1.set_xlabel('lambda (mm)')
+        # ax1.set_ylabel('Speed/lamdot (mm/s)', color='g')
+        # ax2.set_ylabel('Error/Normal Error (mm/deg)', color='b')
+        # plt.title("Execution Result (Speed/Error/Normal Error v.s. Lambda)")
+        # ax1.legend(loc=0)
+        # ax2.legend(loc=0)
+        # plt.show()
+        # plt.clf()
         
-        plt.plot(lam_exec,lamdot_act, label='Logged Joint Ldot Constraint')
-        plt.plot(lam_exec[1:],act_speed, label='Actual speed')
-        plt.title("Execution Result (Ldot Constraint/Actual Speed v.s. Lambda)")
-        plt.ylabel('Speed (mm/s)')
-        plt.xlabel('Lambda (mm)')
-        plt.legend()
-        plt.show()
-        plt.clf()
+        # plt.plot(lam_exec,lamdot_act, label='Logged Joint Ldot Constraint')
+        # plt.plot(lam_exec[1:],act_speed, label='Actual speed')
+        # plt.title("Execution Result (Ldot Constraint/Actual Speed v.s. Lambda)")
+        # plt.ylabel('Speed (mm/s)')
+        # plt.xlabel('Lambda (mm)')
+        # plt.legend()
+        # plt.show()
+        # plt.clf()

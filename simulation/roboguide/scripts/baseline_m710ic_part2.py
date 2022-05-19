@@ -41,16 +41,15 @@ for obj_type in all_objtype:
 
     for num_l in num_ls:
         breakpoints=np.linspace(0,len(curve_js),num_l+1).astype(int)
+        breakpoints[1:]=breakpoints[1:]-1
 
         primitives_choices=['movej_fit']
         points=[curve_js[0]]
-        for i in range(num_l):
+        for i in breakpoints[1:]:
             primitives_choices.append('movel_fit')
             points.append(curve_js[i])
         points=np.array(points)
-
-        breakpoints=np.array(breakpoints)
-        breakpoints[1:]=breakpoints[1:]-1
+        
         ## save commands
         df=DataFrame({'breakpoints':breakpoints,'primitives':primitives_choices,\
             'J1':points[:,0],'J2':points[:,1],\
