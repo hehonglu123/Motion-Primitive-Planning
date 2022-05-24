@@ -192,8 +192,8 @@ def circle_fit_w_slope1(curve,p,slope):
         v=curve[0] - C
     theta = angle_between(u, v, circle_plane_normal)
 
-    l = np.linspace(0, theta, len(curve))
-    curve_fitarc = generate_circle_by_vectors(l, C, r, circle_plane_normal, u)
+    l = np.linspace(0, theta, len(curve)+1)
+    curve_fitarc = generate_circle_by_vectors(l, C, r, circle_plane_normal, u)[1:]
     l = np.linspace(0, 2*np.pi, 1000)
     curve_fitcircle = generate_circle_by_vectors(l, C, r, circle_plane_normal, u)
 

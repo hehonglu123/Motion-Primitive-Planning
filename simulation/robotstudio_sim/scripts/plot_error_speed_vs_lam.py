@@ -20,6 +20,7 @@ data_dir="tesseract/"
 
 ms=MotionSend()
 robot=abb6640(d=50)
+# robot=abb6640(R_tool=Ry(np.radians(90)),p_tool=1000*np.array([0.2995,0,0.03]))
 for s in speed:
     for z in zone:
         ###read in curve_exe

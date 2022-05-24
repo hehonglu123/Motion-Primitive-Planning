@@ -1,6 +1,6 @@
 import numpy as np
 import sys,copy
-sys.path.append('../circular_fit')
+sys.path.append('../toolbox')
 from toolbox_circular_fit import *
 
 
@@ -138,7 +138,7 @@ class fitting_toolbox(object):
 		return data_fit
 
 
-	def movel_fit(self,curve,curve_js,curve_R,robot_idx,p_constraint=[],R_constraint=[],slope_constraint=[]):	###unit vector slope
+	def movel_fit(self,curve,curve_js,curve_R,robot,p_constraint=[],R_constraint=[],slope_constraint=[]):	###unit vector slope
 		###convert orientation to w first
 		curve_w=self.R2w(curve_R,R_constraint)
 
@@ -160,11 +160,7 @@ class fitting_toolbox(object):
 		
 
 
-	def movej_fit(self,curve,curve_js,curve_R,robot_idx,p_constraint=[],R_constraint=[],slope_constraint=[]):
-		if robot_idx==1:
-			robot=self.robot1
-		else:
-			robot=self.robot2
+	def movej_fit(self,curve,curve_js,curve_R,robot,p_constraint=[],R_constraint=[],slope_constraint=[]):
 		###convert orientation to w first
 		curve_w=self.R2w(curve_R,R_constraint)
 
@@ -194,7 +190,7 @@ class fitting_toolbox(object):
 		return curve_fit,curve_fit_R,curve_fit_js,np.max(p_error), np.max(ori_error)
 
 
-	def movec_fit(self,curve,curve_js,curve_R,robot_idx,p_constraint=[],R_constraint=[],slope_constraint=[]):
+	def movec_fit(self,curve,curve_js,curve_R,robot,p_constraint=[],R_constraint=[],slope_constraint=[]):
 		curve_w=self.R2w(curve_R,R_constraint)	
 
 		curve_fit,curve_fit_circle=circle_fit(curve,[] if len(R_constraint)==0 else p_constraint)

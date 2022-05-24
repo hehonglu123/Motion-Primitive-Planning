@@ -16,13 +16,14 @@ from error_check import *
 from MotionSend import *
 
 def main():
-    ms = MotionSend()
-    data_dir="greedy_dual_output/"
+    ms = MotionSend(robot1=abb1200(d=50),robot2=abb6640(),tool1=tooldata(True,pose([75,0,493.30127019],[quatR[0],quatR[1],quatR[2],quatR[3]]),loaddata(1,[0,0,0.001],[1,0,0,0],0,0,0)),tool2=tooldata(True,pose([50,0,450],[quatR[0],quatR[1],quatR[2],quatR[3]]),loaddata(1,[0,0,0.001],[1,0,0,0],0,0,0)))
+    data_dir="from_NX/greedy_dual_output/"
 
     vmax = speeddata(10000,9999999,9999999,999999)
     v680 = speeddata(680,9999999,9999999,999999)
-    speed={"v500":v500}
-    zone={"z10":z10}
+    speed={'v1000':v1000}
+    # speed={'v50':v50,'v100':v100,'v200':v200,'v400':v400,'v500':v500,'vmax':vmax}
+    zone={'z10':z10}
 
     for s in speed:
         for z in zone: 

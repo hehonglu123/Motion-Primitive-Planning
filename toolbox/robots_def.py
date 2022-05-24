@@ -29,6 +29,7 @@ class abb6640(object):
 
 		###fake link for fitting
 		tcp_new=p_tool+np.dot(R_tool,np.array([0,0,d]))
+		# print(tcp_new)
 
 
 		self.P=np.concatenate((p0,p1,p2,p3,p4,p5,p6),axis=1)*1000.
@@ -264,9 +265,7 @@ def jdot(q,qdot):
 	return Jdotmat[-1]
 
 def main():
-	p_tool=np.array([0.45,0,-0.05])*1000.
-	R_tool=R_tool=Ry(np.radians(120))
-	print(p_tool+np.dot(R_tool,np.array([0,0,50])))
+	abb6640(d=50)
 	return
 
 if __name__ == '__main__':

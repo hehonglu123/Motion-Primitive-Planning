@@ -11,13 +11,13 @@ def main():
 	robot=abb6640(d=50)
 	# data_dir="fitting_output_new/all_theta_opt/"
 	###read actual curve
-	data_dir='tesseract/'
-	curve_js = read_csv(data_dir+'movej_waypoints.csv',header=None).values[:,1:]
+	data_dir='curve_pose_opt/'
+	curve_js = read_csv(data_dir+'arm1.csv',header=None).values
 
-	step=int(len(curve_js)/500)
+	step=int(len(curve_js)/25)
 
 	v700 = speeddata(700,500,5000,1000)
-	speed={'v500':v500}
+	speed={'vmax':vmax}
 	zone={'z10':z10}
 	for s in speed:
 		for z in zone:

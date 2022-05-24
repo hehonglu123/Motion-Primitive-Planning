@@ -8,19 +8,20 @@ from error_check import *
 sys.path.append('../toolbox')
 from toolbox_circular_fit import *
 
+quatR = R2q(rot([0,1,0],math.radians(30)))
 class MotionSend(object):
-    def __init__(self) -> None:
+    def __init__(self,robot1=abb1200(),robot2=abb6640(d=50),tool1=tooldata(True,pose([50,0,450],[quatR[0],quatR[1],quatR[2],quatR[3]]),loaddata(1,[0,0,0.001],[1,0,0,0],0,0,0)),tool2=tooldata(True,pose([75,0,493.30127019],[quatR[0],quatR[1],quatR[2],quatR[3]]),loaddata(1,[0,0,0.001],[1,0,0,0],0,0,0))) -> None:
         ###robot1: 1200
         ###robot2: 6640 with d=50 fake link
         
         self.client = MotionProgramExecClient()
 
         ###with fake link
-        self.robot1=abb1200()
-        self.robot2=abb6640(d=50)
-        quatR = R2q(rot([0,1,0],math.radians(30)))
-        self.tool1 = tooldata(True,pose([50,0,450],[quatR[0],quatR[1],quatR[2],quatR[3]]),loaddata(1,[0,0,0.001],[1,0,0,0],0,0,0))
-        self.tool2 = tooldata(True,pose([75,0,493.30127019],[quatR[0],quatR[1],quatR[2],quatR[3]]),loaddata(1,[0,0,0.001],[1,0,0,0],0,0,0))
+        self.robot1=robot1
+        self.robot2=robot2
+        
+        self.tool1 = tool1
+        self.tool2 = tool2
         
 
     def moveL_target(self,robot,q,point):

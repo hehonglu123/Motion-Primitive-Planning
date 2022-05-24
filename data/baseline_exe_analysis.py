@@ -15,16 +15,19 @@ robot=abb6640(d=50)
 
 num_ls=[100]
 
-dataset="wood/"
+dataset="from_NX/"
 curve_js = read_csv(dataset+'Curve_js.csv',header=None).values
 curve = read_csv(dataset+"Curve_in_base_frame.csv",header=None).values
+step=10
+lam=calc_lam_cs(curve)
+lamdot=calc_lamdot(curve_js,lam,robot,step)
 
 ms=MotionSend()
 for num_l in num_ls:
     ms = MotionSend()
     data_dir=dataset+"baseline/"+str(num_l)+'L/'
-    df = read_csv(data_dir+"curve_exe_v123.046875_z10.csv")
-    lam, curve_exe, curve_exe_R,curve_exe_js, speed, timestamp=ms.logged_data_analysis(robot,df)
+    df = read_csv(data_dir+"curve_exe_v402.83203125_z10.csv")
+    lam_exe, curve_exe, curve_exe_R,curve_exe_js, speed, timestamp=ms.logged_data_analysis(robot,df)
 
     error,angle_error=calc_all_error_w_normal(curve_exe,curve[:,:3],curve_exe_R[:,:,-1],curve[:,3:],extension=True)
 
@@ -33,17 +36,20 @@ for num_l in num_ls:
 
     curve_exe=curve_exe[start_idx:end_idx+1]
     curve_exe_R=curve_exe_R[start_idx:end_idx+1]
+    curve_exe_js=curve_exe_js[start_idx:end_idx+1]
     speed=speed[start_idx:end_idx+1]
-    lam=calc_lam_cs(curve_exe)
+    lam_exe=calc_lam_cs(curve_exe)
+    
+    lamdot_exe=calc_lamdot(curve_exe_js,lam_exe,robot,step)
 
     fig, ax1 = plt.subplots()
 
     ax2 = ax1.twinx()
-    ax1.plot(lam, speed, 'g-', label='Speed')
-    ax2.plot(lam, error, 'b-',label='Error')
-    ax2.plot(lam, np.degrees(angle_error), 'y-',label='Normal Error')
+    ax1.plot(lam_exe, speed, 'g-', label='Speed')
+    ax2.plot(lam_exe, error, 'b-',label='Error')
+    ax2.plot(lam_exe, np.degrees(angle_error), 'y-',label='Normal Error')
 
-    ax1.set_xlabel('lambda (mm)')
+    ax1.set_xlabel('Lambda (mm)')
     ax1.set_ylabel('Speed/lamdot (mm/s)', color='g')
     ax2.set_ylabel('Error/Normal Error (mm/deg)', color='b')
     plt.title("Execution Results")
@@ -52,6 +58,14 @@ for num_l in num_ls:
     ax2.legend(loc=0)
 
     plt.legend()
+
+    plt.figure()
+    plt.plot(lam_exe[::step],lamdot_exe,label='execution curve')
+    plt.plot(lam[::step],lamdot,label='original curve')
+    plt.xlabel('Lambda (mm)')
+    plt.ylabel('Lambdadot Constraint (mm/s)')
+    plt.legend()
+    plt.title('Lambda Dot Constraint')
     plt.show()
 
     

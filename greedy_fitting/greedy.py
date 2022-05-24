@@ -5,9 +5,8 @@ import matplotlib.pyplot as plt
 from pandas import *
 from fitting_toolbox import *
 import sys
-sys.path.append('../circular_fit')
-from toolbox_circular_fit import *
 sys.path.append('../toolbox')
+from toolbox_circular_fit import *
 from robots_def import *
 from general_robotics_toolbox import *
 from error_check import *
@@ -22,7 +21,7 @@ class greedy_fit(fitting_toolbox):
 		self.max_ori_threshold=max_ori_threshold
 		self.step=int(len(curve_js)/25)
 
-		self.slope_constraint=np.radians(180)
+		self.slope_constraint=np.radians(30)
 		self.break_early=False
 		###initial primitive candidates
 		self.primitives={'movel_fit':self.movel_fit_greedy,'movej_fit':self.movej_fit_greedy,'movec_fit':self.movec_fit_greedy}
@@ -138,12 +137,12 @@ class greedy_fit(fitting_toolbox):
 def main():
 	###read in points
 	# curve_js = read_csv("../data/wood/Curve_js.csv",header=None).values
-	curve_js = read_csv("../data/from_ge/Curve_js2.csv",header=None).values
+	curve_js = read_csv("../data/from_NX/Curve_js.csv",header=None).values
 	# curve_js = read_csv("../constraint_solver/dual_arm/trajectory/arm2.csv",header=None).values
 
 	robot=abb6640(d=50)
 
-	greedy_fit_obj=greedy_fit(robot,curve_js,0.2)
+	greedy_fit_obj=greedy_fit(robot,curve_js,1.)
 
 
 	###set primitive choices, defaults are all 3
@@ -155,6 +154,8 @@ def main():
 
 	breakpoints,primitives_choices,points=greedy_fit_obj.fit_under_error()
 	# breakpoints,primitives_choices,points=greedy_fit_obj.smooth_slope(greedy_fit_obj.curve_fit,greedy_fit_obj.curve_fit_R,breakpoints,primitives_choices,points)
+
+	print('slope diff js (deg): ',np.degrees(greedy_fit_obj.get_slope_js(greedy_fit_obj.curve_fit_js,breakpoints)))
 
 	###plt
 	###3D plot

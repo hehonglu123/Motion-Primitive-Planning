@@ -17,7 +17,7 @@ from utils import *
 class lambda_opt(object):
 	###robot1 hold paint gun for single arm
 	###robot1 hold paint gun, robot2 hold blade for dual arm
-	def __init__(self,curve,curve_normal,robot1=abb6640(),robot2=abb1200(),base2_R=np.eye(3),base2_p=np.zeros(3),steps=32,breakpoints=[],primitives=[]):
+	def __init__(self,curve,curve_normal,robot1=abb6640(),robot2=abb1200(),base2_R=np.eye(3),base2_p=np.zeros(3),steps=50,breakpoints=[],primitives=[]):
 
 		self.curve_original=curve
 		self.curve_normal_original=curve_normal
@@ -69,7 +69,7 @@ class lambda_opt(object):
 		q_out=[q_init]
 		Kw=1
 		for i in range(len(curve)):
-			print(i)
+			# print(i)
 			try:
 				error_fb=999
 				error_fb_prev=999
@@ -117,6 +117,88 @@ class lambda_opt(object):
 
 		q_out=np.array(q_out)[1:]
 		return q_out
+
+	def single_arm_stepwise_optimize2(self,q_init,lamdot_des,curve=[],curve_normal=[]):
+		if len(curve)==0:
+			curve=self.curve
+			curve_normal=self.curve_normal
+		lam=self.lam
+
+		q_all=[q_init]
+		lam_out=[0]
+		curve_out=[curve[0]]
+		curve_normal_out=[curve_normal[0]]
+		ts=0.01
+		total_time=lam[-1]/lamdot_des
+		total_timestep=int(total_time/ts)
+		idx=0
+		lam_qp=0
+		K_trak=100
+		qdot_prev=[]
+		act_speed=[]
+		# for i in range(1,total_timestep):
+		while lam_qp<lam[-1] and idx<len(curve)-1:
+			#find corresponding idx in curve & curve normal
+			prev_idx=np.abs(lam-lam_qp).argmin()
+			idx=np.abs(lam-(lam_qp+ts*lamdot_des)).argmin()
+
+			pose_now=self.robot1.fwd(q_all[-1])
+			
+			Kw=10
+			Kq=.01*np.eye(6)    #small value to make sure positive definite
+			KR=np.eye(3)        #gains for position and orientation error
+
+			J=self.robot1.jacobian(q_all[-1])        #calculate current Jacobian
+			Jp=J[3:,:]
+			JR=J[:3,:]
+			JR_mod=-np.dot(hat(pose_now.R[:,-1]),JR)
+
+			H=np.dot(np.transpose(Jp),Jp)+Kq+Kw*np.dot(np.transpose(JR_mod),JR_mod)
+			H=(H+np.transpose(H))/2
+			#####vd = - v_des - K ( x - x_des)
+			v_des=(curve[idx]-curve[prev_idx])/ts
+			vd=v_des+K_trak*(curve[prev_idx]-pose_now.p)
+			ezdot_des=(curve_normal[idx]-curve_normal[prev_idx])/ts
+			ezdotd=ezdot_des+K_trak*(curve_normal[prev_idx]-pose_now.R[:,-1])
+
+			#####vd = K ( x_des_next - x_cur)
+			# vd=(curve[idx]-pose_now.p)/ts
+			# vd=lamdot_des*vd/np.linalg.norm(vd)
+			# ezdotd=(curve_normal[idx]-pose_now.R[:,-1])/ts
+
+			# print(np.linalg.norm(vd))
+
+			f=-np.dot(np.transpose(Jp),vd)-Kw*np.dot(np.transpose(JR_mod),ezdotd)
+			if len(qdot_prev)==0:
+				lb=-self.robot1.joint_vel_limit
+				ub=self.robot1.joint_vel_limit
+			else:
+				lb=np.maximum(-self.robot1.joint_vel_limit,(qdot_prev-self.robot1.joint_acc_limit)*ts)
+				ub=np.minimum(self.robot1.joint_vel_limit,(qdot_prev+self.robot1.joint_acc_limit)*ts)
+				# lb=-robot.joint_vel_limit
+				# ub=robot.joint_vel_limit
+
+			qdot=solve_qp(H,f,lb=lb,ub=ub)
+			qdot_prev=qdot
+
+			q_all.append(q_all[-1]+ts*qdot)
+
+			curve_out.append(pose_now.p)
+			curve_normal_out.append(pose_now.R[:,-1])
+
+			
+			lam_qp+=np.linalg.norm(self.robot1.fwd(q_all[-1]).p-pose_now.p)
+			lam_out.append(lam_qp)
+
+			act_speed.append(np.linalg.norm(np.dot(Jp,qdot)))
+
+		q_all=np.array(q_all)
+		curve_out=np.array(curve_out)
+		curve_normal_out=np.array(curve_normal_out)
+
+		return q_all,lam_out,curve_out,curve_normal_out,act_speed
+
+
 	def error_calc2(self,alpha,q1,qdot1,pose2_world_now,curve,curve_normal):
 		q1_next=q1+alpha*qdot1
 		pose1_next=self.robot1.fwd(q1_next)
@@ -133,6 +215,46 @@ class lambda_opt(object):
 		pose2_world_next=self.robot2.fwd(q2_next,self.base2_R,self.base2_p)	
 		return np.linalg.norm(np.dot(pose2_world_next.R.T,pose1_next.p-pose2_world_next.p)-curve)+np.linalg.norm(np.dot(pose2_world_next.R.T,pose1_next.R[:,-1])-curve_normal)	
 
+	def followx(self,curve,curve_direction):
+		curve_R=[]
+
+		for i in range(len(curve)-1):
+
+			R_curve=direction2R(curve_direction[i],-curve[i+1]+curve[i])
+			curve_R.append(R_curve)
+
+		###insert initial orientation
+		curve_R.insert(0,curve_R[0])
+
+		try:
+			q_inits=np.array(self.robot1.inv(curve[0],curve_R[0]))
+		except:
+			raise AssertionError('no solution available')
+			return []
+
+		for q_init in q_inits:
+			curve_js=np.zeros((len(curve),6))
+			curve_js[0]=q_init
+			for i in range(1,len(curve)):
+				try:
+					q_all=np.array(self.robot1.inv(curve[i],curve_R[i]))
+				except:
+					#if no solution
+					raise AssertionError('no solution available')
+					return
+
+				temp_q=q_all-curve_js[i-1]
+				order=np.argsort(np.linalg.norm(temp_q,axis=1))
+				if np.linalg.norm(q_all[order[0]]-curve_js[i-1])>0.5:
+					# print('large change')
+					break	#if large changes in q
+				else:
+					curve_js[i]=q_all[order[0]]
+
+			#check if all q found
+			if np.linalg.norm(curve_js[-1])>0:
+				break
+		return curve_js
 	def dual_arm_stepwise_optimize(self,q_init1,q_init2):
 		#curve_normal: expressed in second robot tool frame
 		###all (jacobian) in robot2 tool frame
@@ -334,7 +456,7 @@ class lambda_opt(object):
 				traceback.print_exc()
 				return
 		return curve_js
-	def curve_pose_opt(self,x):
+	def curve_pose_opt(self,x,method=1):
 		###optimize on curve pose for single arm
 		theta0=np.linalg.norm(x[:3])	###pose rotation angle
 		k=x[:3]/theta0					###pose rotation axis
@@ -349,7 +471,10 @@ class lambda_opt(object):
 		R=np.dot(R_temp,Rz(theta1))
 		try:
 			q_init=self.robot1.inv(curve_new[0],R)[0]
-			q_out=self.single_arm_stepwise_optimize(q_init,curve_new,curve_normal_new)
+			if method==1:###follow +x
+				q_out=self.followx(curve_new,curve_normal_new)
+			else:
+				q_out=self.single_arm_stepwise_optimize(q_init,curve_new,curve_normal_new)
 			
 		except:
 			# traceback.print_exc()
