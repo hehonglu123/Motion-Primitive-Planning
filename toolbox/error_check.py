@@ -31,27 +31,35 @@ def calc_max_error(fit,curve):
 
 	return max_error, max_error_idx
 
-def calc_max_error_w_normal(fit,curve,fit_normal,curve_normal,extension=False):
+def calc_max_error_w_normal(fit,curve,fit_normal,curve_normal,extension=False, eval_mode=False):
 	if extension:
 		start_idx=np.argmin(np.linalg.norm(curve[0]-fit,axis=1))
 		end_idx=np.argmin(np.linalg.norm(curve[-1]-fit,axis=1))
 		fit=fit[start_idx:end_idx+1]
 		fit_normal=fit_normal[start_idx:end_idx+1]
-		
 
 	max_error=0
 	max_error_angle=0
 	idx=0
 	max_error_idx=0
+	error_log = [0] * len(fit)
+	normal_error_log = [0] * len(fit_normal)
 	for i in range(len(fit)):
 		error,idx2=calc_error(fit[i],curve)
 		normal_angle=get_angle(fit_normal[i],curve_normal[idx2])
+
 		if error>max_error:
 			max_error_idx=idx
 			max_error=copy.deepcopy(error)
 		if normal_angle>max_error_angle:
 			max_error_angle=copy.deepcopy(normal_angle)
 		idx+=1
+
+		if eval_mode:
+			error_log[i] = error
+			normal_error_log[i] = normal_angle
+	if eval_mode:
+		return max_error,max_error_angle, max_error_idx, error_log, normal_error_log
 
 	return max_error,max_error_angle, max_error_idx
 
