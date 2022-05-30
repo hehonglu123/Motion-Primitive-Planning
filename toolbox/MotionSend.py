@@ -44,7 +44,7 @@ class MotionSend(object):
         jointt = jointtarget([q[0],q[1],q[2],q[3],q[4],q[5]],[0]*6)
         return jointt
 
-    def exec_motions(self,primitives,breakpoints,points,curve_js,speed,zone):
+    def exec_motions(self,robot,primitives,breakpoints,points,curve_js,speed,zone):
         mp = MotionProgram(tool=self.tool2)
         
         for i in range(len(primitives)):
@@ -53,11 +53,11 @@ class MotionSend(object):
             #     zone=fine
             motion = primitives[i]
             if motion == 'movel_fit':
-                robt = self.moveL_target(self.robot2,curve_js[breakpoints[i]],points[i])
+                robt = self.moveL_target(robot,curve_js[breakpoints[i]],points[i])
                 mp.MoveL(robt,speed,zone)
 
             elif motion == 'movec_fit':
-                robt1, robt2 = self.moveC_target(self.robot2,curve_js[breakpoints[i-1]],curve_js[breakpoints[i]],points[i][0],points[i][1])
+                robt1, robt2 = self.moveC_target(robot,curve_js[breakpoints[i-1]],curve_js[breakpoints[i]],points[i][0],points[i][1])
                 mp.MoveC(robt1,robt2,speed,zone)
 
             else: # movej_fit
@@ -149,7 +149,7 @@ class MotionSend(object):
             endpoint=points[8:-3].split(',')
             return list(map(float, endpoint))
 
-    def exe_from_file_w_extension(self,filename,filename_js,speed,zone,extension_d=100):
+    def exe_from_file_w_extension(self,robot,filename,filename_js,speed,zone,extension_d=100):
         data = read_csv(filename)
         breakpoints=np.array(data['breakpoints'].tolist())
         primitives=data['primitives'].tolist()
@@ -172,10 +172,10 @@ class MotionSend(object):
         
         ###initial point extension
         
-        pose_start=self.robot2.fwd(curve_js[0])
+        pose_start=robot.fwd(curve_js[0])
         p_start=pose_start.p
         R_start=pose_start.R
-        pose_end=self.robot2.fwd(curve_js[breakpoints[1]])
+        pose_end=robot.fwd(curve_js[breakpoints[1]])
         p_end=pose_end.p
         R_end=pose_end.R
         if primitives[1]=='movel_fit':
@@ -190,14 +190,14 @@ class MotionSend(object):
             R_start_new=rot(k,theta_new)@R_start
 
             #solve invkin for initial point
-            q_all = self.robot2.inv(p_start_new, R_start_new)
+            q_all = robot.inv(p_start_new, R_start_new)
             temp_q=q_all-curve_js[0]
             order=np.argsort(np.linalg.norm(temp_q,axis=1))
             points_list[0]=q_all[order[0]]
 
         elif  primitives[1]=='movec_fit':
             #define circle first
-            pose_mid=self.robot2.fwd(curve_js[int(breakpoints[1]/2)])
+            pose_mid=robot.fwd(curve_js[int(breakpoints[1]/2)])
             p_mid=pose_mid.p
             R_mid=pose_mid.R
             center, radius=circle_from_3point(p_start,p_end,p_mid)
@@ -217,24 +217,24 @@ class MotionSend(object):
             R_start_new=rot(k,theta_new)@R_start
 
             #solve invkin for initial point
-            q_all = self.robot2.inv(p_start_new, R_start_new)
+            q_all = robot.inv(p_start_new, R_start_new)
             temp_q=q_all-curve_js[0]
             order=np.argsort(np.linalg.norm(temp_q,axis=1))
             points_list[0]=q_all[order[0]]
 
         else:
             #find new start point
-            J_start=self.robot2.jacobian(curve_js[0])
+            J_start=robot.jacobian(curve_js[0])
             qdot=curve_js[breakpoints[1]]-curve_js[0]
             v=J_start[3:,:]@qdot
             t=extension_d/v
             points_list[0]=curve_js[0]+qdot*t
 
         ###end point extension
-        pose_start=self.robot2.fwd(curve_js[breakpoints[-2]])
+        pose_start=robot.fwd(curve_js[breakpoints[-2]])
         p_start=pose_start.p
         R_start=pose_start.R
-        pose_end=self.robot2.fwd(curve_js[-1])
+        pose_end=robot.fwd(curve_js[-1])
         p_end=pose_end.p
         R_end=pose_end.R
 
@@ -250,7 +250,7 @@ class MotionSend(object):
             R_end_new=rot(k,theta_new)@R_end
 
             #solve invkin for end point
-            q_all = self.robot2.inv(p_end_new, R_end_new)
+            q_all = robot.inv(p_end_new, R_end_new)
             temp_q=q_all-curve_js[-1]
             order=np.argsort(np.linalg.norm(temp_q,axis=1))
             curve_js[-1]=q_all[order[0]]
@@ -258,7 +258,7 @@ class MotionSend(object):
 
         elif  primitives[1]=='movec_fit':
             #define circle first
-            pose_mid=self.robot2.fwd(curve_js[int((breakpoints[-1]+breakpoints[-2])/2)])
+            pose_mid=robot.fwd(curve_js[int((breakpoints[-1]+breakpoints[-2])/2)])
             p_mid=pose_mid.p
             R_mid=pose_mid.R
             center, radius=circle_from_3point(p_start,p_end,p_mid)
@@ -278,7 +278,7 @@ class MotionSend(object):
             R_end_new=rot(k,theta_new)@R_end
 
             #solve invkin for end point
-            q_all = self.robot2.inv(p_end_new, R_end_new)
+            q_all = robot.inv(p_end_new, R_end_new)
             temp_q=q_all-curve_js[-1]
             order=np.argsort(np.linalg.norm(temp_q,axis=1))
             curve_js[-1]=q_all[order[0]]
@@ -286,15 +286,15 @@ class MotionSend(object):
 
         else:
             #find new end point
-            J_end=self.robot2.jacobian(curve_js[-1])
+            J_end=robot.jacobian(curve_js[-1])
             qdot=curve_js[-1]-curve_js[breakpoints[-2]]
             v=J_end[3:,:]@qdot
             t=extension_d/v
             points_list[-1]=curve_js[-1]+qdot*t
 
-        return self.exec_motions(primitives,breakpoints,points_list,curve_js,speed,zone)
+        return self.exec_motions(robot,primitives,breakpoints,points_list,curve_js,speed,zone)
 
-    def exe_from_file(self,filename,filename_js,speed,zone):
+    def exe_from_file(self,robot,filename,filename_js,speed,zone):
         data = read_csv(filename)
         breakpoints=np.array(data['breakpoints'].tolist())
         primitives=data['primitives'].tolist()
@@ -316,7 +316,7 @@ class MotionSend(object):
                 points_list.append(point)
 
         curve_js=read_csv(filename_js,header=None).values
-        return self.exec_motions(primitives,breakpoints,points_list,curve_js,speed,zone)
+        return self.exec_motions(robot,primitives,breakpoints,points_list,curve_js,speed,zone)
 
     def exe_from_file_multimove(self,filename1,filename2,filename_js1,filename_js2,speed1,speed2,zone1,zone2):
         data1 = read_csv(filename1)

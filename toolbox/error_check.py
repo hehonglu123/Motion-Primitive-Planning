@@ -163,3 +163,21 @@ def complete_points_check2(fit_backproj,curve_backproj,fit,curve):	###error metr
 
 	return max_cartesian_error,avg_cartesian_error,max_cartesian_error_backproj,avg_cartesian_error_backproj,max_total_error,avg_total_error,max_error_index
 
+def logged_data_analysis(robot,timestamp,curve_exe_js):
+
+	act_speed=[]
+	lam=[0]
+	curve_exe=[]
+	curve_exe_R=[]
+	for i in range(len(curve_exe_js)):
+		robot_pose=robot.fwd(curve_exe_js[i])
+		curve_exe.append(robot_pose.p)
+		curve_exe_R.append(robot_pose.R)
+		if i>0:
+			lam.append(lam[-1]+np.linalg.norm(curve_exe[i]-curve_exe[i-1]))
+		try:
+			act_speed.append(np.linalg.norm(curve_exe[-1]-curve_exe[-2])/(timestamp[i]-timestamp[i-1]))
+		except IndexError:
+			pass
+
+	return lam, np.array(curve_exe), np.array(curve_exe_R), act_speed

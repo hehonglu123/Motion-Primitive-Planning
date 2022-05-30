@@ -20,26 +20,30 @@ class greedy_fit(fitting_toolbox):
 		self.max_error_threshold=max_error_threshold
 		self.max_ori_threshold=max_ori_threshold
 		self.step=int(len(curve_js)/25)
+		self.c_min_length=50
 
-		self.slope_constraint=np.radians(30)
+		self.slope_constraint=np.radians(360)
+		self.d2qdlam2=1
 		self.break_early=False
 		###initial primitive candidates
 		self.primitives={'movel_fit':self.movel_fit_greedy,'movej_fit':self.movej_fit_greedy,'movec_fit':self.movec_fit_greedy}
 
 	def movel_fit_greedy(self,curve,curve_js,curve_R):	###unit vector slope
 		
-		return self.movel_fit(curve,curve_js,curve_R,self.curve_fit[-1] if len(self.curve_fit)>0 else [],self.curve_fit_R[-1] if len(self.curve_fit_R)>0 else [])
+		return self.movel_fit(curve,curve_js,curve_R,self.curve_fit[-1] if len(self.curve_fit)>0 else [],self.curve_fit_R[-1] if len(self.curve_fit_R)>0 else [], slope_prev=self.curve_fit_js[-1]-self.curve_fit_js[-2] if len(self.curve_fit_js)>1 else [])
 	
 
 
 	def movej_fit_greedy(self,curve,curve_js,curve_R):
-		return self.movej_fit(curve,curve_js,curve_R,self.curve_fit_js[-1] if len(self.curve_fit_js)>0 else [])
+		return self.movej_fit(curve,curve_js,curve_R,self.curve_fit_js[-1] if len(self.curve_fit_js)>0 else [], slope_prev=self.curve_fit_js[-1]-self.curve_fit_js[-2] if len(self.curve_fit_js)>1 else [])
 
 
 	def movec_fit_greedy(self,curve,curve_js,curve_R):
-		return self.movec_fit(curve,curve_js,curve_R,self.curve_fit[-1] if len(self.curve_fit)>0 else [],self.curve_fit_R[-1] if len(self.curve_fit_R)>0 else [])
+		return self.movec_fit(curve,curve_js,curve_R,self.curve_fit[-1] if len(self.curve_fit)>0 else [],self.curve_fit_R[-1] if len(self.curve_fit_R)>0 else [], slope_prev=self.curve_fit_js[-1]-self.curve_fit_js[-2] if len(self.curve_fit_js)>1 else [])
 
+	##TODO: guard moveC longer than 50mm
 	def bisect(self,primitive,cur_idx):
+
 		next_point = min(self.step,len(self.curve)-self.breakpoints[-1])
 		prev_point=0
 		prev_possible_point=0
@@ -96,6 +100,9 @@ class greedy_fit(fitting_toolbox):
 			###find best primitive
 			key=max(length, key=length.get)
 
+			###moveC length thresholding (>50mm)
+			if key=='movec_fit' and np.linalg.norm(curve_fit['movec_fit'][-1]-curve_fit['movec_fit'][0])<self.c_min_length:
+				key='movel_fit'
 
 			if key=='movec_fit':
 				points.append([curve_fit[key][int(len(curve_fit[key])/2)],curve_fit[key][-1]])
@@ -136,19 +143,19 @@ class greedy_fit(fitting_toolbox):
 
 def main():
 	###read in points
-	# curve_js = read_csv("../data/wood/Curve_js.csv",header=None).values
-	curve_js = read_csv("../data/from_NX/Curve_js.csv",header=None).values
+	curve_js = read_csv("../data/wood/Curve_js.csv",header=None).values
+	# curve_js = read_csv("../data/from_NX/Curve_js.csv",header=None).values
 	# curve_js = read_csv("../constraint_solver/dual_arm/trajectory/arm2.csv",header=None).values
 
 	robot=abb6640(d=50)
 
-	greedy_fit_obj=greedy_fit(robot,curve_js,1.)
+	greedy_fit_obj=greedy_fit(robot,curve_js,0.02)
 
 
 	###set primitive choices, defaults are all 3
 	# greedy_fit_obj.primitives={'movel_fit':greedy_fit_obj.movel_fit_greedy,'movec_fit':greedy_fit_obj.movec_fit_greedy}
 
-	greedy_fit_obj.primitives={'movel_fit':greedy_fit_obj.movel_fit_greedy}
+	# greedy_fit_obj.primitives={'movel_fit':greedy_fit_obj.movel_fit_greedy}
 	# greedy_fit_obj.primitives={'movej_fit':greedy_fit_obj.movej_fit_greedy}
 	# greedy_fit_obj.primitives={'movec_fit':greedy_fit_obj.movec_fit_greedy}
 
@@ -161,9 +168,10 @@ def main():
 	###3D plot
 	plt.figure()
 	ax = plt.axes(projection='3d')
-	ax.plot3D(greedy_fit_obj.curve[:,0], greedy_fit_obj.curve[:,1],greedy_fit_obj.curve[:,2], 'gray')
+	ax.plot3D(greedy_fit_obj.curve[:,0], greedy_fit_obj.curve[:,1],greedy_fit_obj.curve[:,2], 'gray',label='original')
 	
-	ax.scatter3D(greedy_fit_obj.curve_fit[:,0], greedy_fit_obj.curve_fit[:,1], greedy_fit_obj.curve_fit[:,2], c=greedy_fit_obj.curve_fit[:,2], cmap='Greens')
+	ax.plot3D(greedy_fit_obj.curve_fit[:,0], greedy_fit_obj.curve_fit[:,1], greedy_fit_obj.curve_fit[:,2],'green',label='fitting')
+	plt.legend()
 	plt.show()
 
 	############insert initial configuration#################
