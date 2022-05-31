@@ -2,7 +2,7 @@ import numpy as np
 import sys,copy
 sys.path.append('../toolbox')
 from toolbox_circular_fit import *
-
+from lambda_calc import *
 
 class fitting_toolbox(object):
 	def __init__(self,robot,curve_js,curve=[]):
@@ -29,6 +29,8 @@ class fitting_toolbox(object):
 
 		self.curve_R=np.array(self.curve_R)
 		self.curve=np.array(self.curve)
+
+		self.lam=calc_lam_cs(self.curve)
 
 		###seed initial js for inv
 		self.q_prev=curve_js[0]
@@ -204,7 +206,7 @@ class fitting_toolbox(object):
 
 		return (q2-q1)/np.linalg.norm(q2-q1)
 
-	def movel_fit(self,curve,curve_js,curve_R,p_constraint=[],R_constraint=[],slope_prev=[]):	###unit vector slope
+	def movel_fit(self,curve,curve_js,curve_R,p_constraint=[],R_constraint=[],dqdlam_prev=[]):	###unit vector slope
 		###convert orientation to w first
 		curve_w=self.R2w(curve_R,R_constraint)
 
@@ -222,12 +224,47 @@ class fitting_toolbox(object):
 		for i in range(len(curve)):
 			ori_error.append(get_angle(curve_R[i,:,-1],curve_fit_R[i,:,-1]))
 
-		###slope thresholding
-		if len(slope_prev)>0:
-			slope_cur=self.get_start_slope(self.curve_fit[-1],curve_fit[0],self.curve_fit_R[-1],curve_fit_R[0])
-			if get_angle(slope_cur,slope_prev)>self.slope_constraint:
-				# print('triggering slope threshold')
-				slope_new=self.threshold_slope(slope_prev,slope_cur,self.slope_constraint)
+		# ###slope thresholding 1
+		# if len(dqdlam_prev)>0:
+		# 	dqdlam_prev=dqdlam_prev/np.linalg.norm(dqdlam_prev)
+		# 	slope_cur=self.get_start_slope(self.curve_fit[-1],curve_fit[0],self.curve_fit_R[-1],curve_fit_R[0])
+		# 	if get_angle(slope_cur,dqdlam_prev)>self.slope_constraint:
+		# 		# print('triggering slope threshold')
+		# 		slope_new=self.threshold_slope(dqdlam_prev,slope_cur,self.slope_constraint)
+		# 		###propogate to L slope
+		# 		J=self.robot.jacobian(self.curve_fit_js[-1])
+		# 		nu=J@slope_new
+		# 		p_slope=nu[3:]/np.linalg.norm(nu[3:])
+		# 		w_slope=nu[:3]/np.linalg.norm(nu[:3])
+		# 		###find correct length
+		# 		lam_p=p_slope@(curve[-1]-p_constraint)
+		# 		lam_p_all=np.linspace(0,lam_p,num=len(curve)+1)[1:].reshape(-1,1)
+		# 		lam_w=w_slope@(curve_w[-1])
+		# 		lam_w_all=np.linspace(0,lam_w,num=len(curve)+1)[1:].reshape(-1,1)
+		# 		#position
+
+		# 		curve_fit=lam_p_all@p_slope.reshape(1,-1)+p_constraint
+		# 		p_error=np.linalg.norm(curve-curve_fit,axis=1)
+		# 		#orientation
+		# 		curve_fit_w=lam_w_all@w_slope.reshape(1,-1)
+		# 		curve_fit_R=self.w2R(curve_fit_w,R_constraint)
+		# 		ori_error=[]
+		# 		for i in range(len(curve)):
+		# 			ori_error.append(get_angle(curve_R[i,:,-1],curve_fit_R[i,:,-1]))
+
+		###slope thresholding 2
+		if len(dqdlam_prev)>0:
+			q1=self.car2js(curve_fit[0],curve_fit_R[0])[0]
+			dqdlam_cur=(q1-self.curve_fit_js[-1])/(self.lam[len(self.curve_fit_js)]-self.lam[len(self.curve_fit_js)-1])
+			# print(np.max(np.abs(dqdlam_cur-dqdlam_prev)))
+			if np.max(np.abs(dqdlam_cur-dqdlam_prev))>self.dqdlam_slope:
+				dqdlam_new=np.clip(dqdlam_cur,dqdlam_prev-self.dqdlam_slope,dqdlam_prev+self.dqdlam_slope)
+				print('triggering slope threshold')
+				print('fitting slope:',dqdlam_cur)
+				print('lower bound  :',dqdlam_prev-self.dqdlam_slope)
+				print('upper bound  :',dqdlam_prev+self.dqdlam_slope)
+				print('output slope :',dqdlam_new)
+				slope_new=dqdlam_new/np.linalg.norm(dqdlam_new)
 				###propogate to L slope
 				J=self.robot.jacobian(self.curve_fit_js[-1])
 				nu=J@slope_new
@@ -239,7 +276,6 @@ class fitting_toolbox(object):
 				lam_w=w_slope@(curve_w[-1])
 				lam_w_all=np.linspace(0,lam_w,num=len(curve)+1)[1:].reshape(-1,1)
 				#position
-
 				curve_fit=lam_p_all@p_slope.reshape(1,-1)+p_constraint
 				p_error=np.linalg.norm(curve-curve_fit,axis=1)
 				#orientation
@@ -253,7 +289,7 @@ class fitting_toolbox(object):
 		
 
 
-	def movej_fit(self,curve,curve_js,curve_R,p_constraint=[],R_constraint=[],slope_prev=[]):
+	def movej_fit(self,curve,curve_js,curve_R,p_constraint=[],R_constraint=[],dqdlam_prev=[]):
 		###convert orientation to w first
 		curve_w=self.R2w(curve_R,R_constraint)
 
@@ -277,12 +313,43 @@ class fitting_toolbox(object):
 		for i in range(len(curve)):
 			ori_error.append(get_angle(curve_R[i,:,-1],curve_fit_R[i,:,-1]))
 
-		###slope thresholding
-		if len(slope_prev)>0:
-			# print('triggering slope threshold')
-			slope_cur=self.get_start_slope(self.curve_fit[-1],curve_fit[0],self.curve_fit_R[-1],curve_fit_R[0])
-			if get_angle(slope_cur,slope_prev)>self.slope_constraint:
-				slope_new=self.threshold_slope(slope_prev,slope_cur,self.slope_constraint)
+		###slope thresholding 1
+		# if len(dqdlam_prev)>0:
+		# 	dqdlam_prev=dqdlam_prev/np.linalg.norm(dqdlam_prev)
+		# 	slope_cur=self.get_start_slope(self.curve_fit[-1],curve_fit[0],self.curve_fit_R[-1],curve_fit_R[0])
+		# 	if get_angle(slope_cur,dqdlam_prev)>self.slope_constraint:
+		# 		slope_new=self.threshold_slope(dqdlam_prev,slope_cur,self.slope_constraint)
+		# 		###find correct length
+		# 		lam_js=slope_new@(curve_js[-1]-p_constraint)
+		# 		lam_js_all=np.linspace(0,lam_js,num=len(curve)+1)[1:].reshape(-1,1)
+		# 		#joints propogation
+		# 		curve_fit_js=lam_js_all@slope_new.reshape(1,-1)+p_constraint
+		# 		curve_fit=[]
+		# 		curve_fit_R=[]
+		# 		for i in range(len(curve_fit_js)):
+		# 			pose_temp=self.robot.fwd(curve_fit_js[i])
+		# 			curve_fit.append(pose_temp.p)
+		# 			curve_fit_R.append(pose_temp.R)
+		# 		curve_fit=np.array(curve_fit)
+		# 		curve_fit_R=np.array(curve_fit_R)
+
+		# 		###error
+		# 		p_error=np.linalg.norm(curve-curve_fit,axis=1)
+		# 		curve_fit_R=np.array(curve_fit_R)
+		# 		ori_error=[]
+		# 		for i in range(len(curve)):
+		# 			ori_error.append(get_angle(curve_R[i,:,-1],curve_fit_R[i,:,-1]))
+		
+		###slope thresholding 2
+		if len(dqdlam_prev)>0:
+			q1=curve_fit_js[0]
+			dqdlam_cur=(q1-self.curve_fit_js[-1])/(self.lam[len(self.curve_fit_js)]-self.lam[len(self.curve_fit_js)-1])
+
+			if np.max(np.abs(dqdlam_cur-dqdlam_prev))>self.dqdlam_slope:
+
+				dqdlam_new=np.clip(dqdlam_cur,dqdlam_prev-self.dqdlam_slope,dqdlam_prev+self.dqdlam_slope)
+				print('triggering slope threshold')
+				slope_new=dqdlam_new/np.linalg.norm(dqdlam_new)
 				###find correct length
 				lam_js=slope_new@(curve_js[-1]-p_constraint)
 				lam_js_all=np.linspace(0,lam_js,num=len(curve)+1)[1:].reshape(-1,1)
@@ -303,11 +370,11 @@ class fitting_toolbox(object):
 				ori_error=[]
 				for i in range(len(curve)):
 					ori_error.append(get_angle(curve_R[i,:,-1],curve_fit_R[i,:,-1]))
-		
+
 		return curve_fit,curve_fit_R,curve_fit_js,np.max(p_error), np.max(ori_error)
 
 
-	def movec_fit(self,curve,curve_js,curve_R,p_constraint=[],R_constraint=[],slope_prev=[]):
+	def movec_fit(self,curve,curve_js,curve_R,p_constraint=[],R_constraint=[],dqdlam_prev=[]):
 		curve_w=self.R2w(curve_R,R_constraint)	
 
 		curve_fit,curve_fit_circle=circle_fit(curve,[] if len(R_constraint)==0 else p_constraint)
@@ -322,12 +389,40 @@ class fitting_toolbox(object):
 		for i in range(len(curve)):
 			ori_error.append(get_angle(curve_R[i,:,-1],curve_fit_R[i,:,-1]))
 
-		###slope thresholding
-		if len(slope_prev)>0:
-			# print('triggering slope threshold')
-			slope_cur=self.get_start_slope(self.curve_fit[-1],curve_fit[0],self.curve_fit_R[-1],curve_fit_R[0])
-			if get_angle(slope_cur,slope_prev)>self.slope_constraint:
-				slope_new=self.threshold_slope(slope_prev,slope_cur,self.slope_constraint)
+		###slope thresholding 1
+		# if len(dqdlam_prev)>0:
+		# 	dqdlam_prev=dqdlam_prev/np.linalg.norm(dqdlam_prev)
+		# 	# print('triggering slope threshold')
+		# 	slope_cur=self.get_start_slope(self.curve_fit[-1],curve_fit[0],self.curve_fit_R[-1],curve_fit_R[0])
+		# 	if get_angle(slope_cur,dqdlam_prev)>self.slope_constraint:
+		# 		slope_new=self.threshold_slope(dqdlam_prev,slope_cur,self.slope_constraint)
+		# 		###propogate to L slope
+		# 		J=self.robot.jacobian(self.curve_fit_js[-1])
+		# 		nu=J@slope_new
+		# 		p_slope=nu[3:]/np.linalg.norm(nu[3:])
+		# 		w_slope=nu[:3]/np.linalg.norm(nu[:3])
+		# 		###position
+		# 		curve_fit,curve_fit_circle=circle_fit_w_slope1(curve,p_constraint,p_slope)
+		# 		p_error=np.linalg.norm(curve-curve_fit,axis=1)
+		# 		lam_w=w_slope@(curve_w[-1])
+		# 		lam_w_all=np.linspace(0,lam_w,num=len(curve)+1)[1:].reshape(-1,1)
+		# 		###orientation
+		# 		curve_fit_w=lam_w_all@w_slope.reshape(1,-1)
+		# 		curve_fit_R=self.w2R(curve_fit_w,R_constraint)
+		# 		ori_error=[]
+		# 		for i in range(len(curve)):
+		# 			ori_error.append(get_angle(curve_R[i,:,-1],curve_fit_R[i,:,-1]))
+
+		###slope thresholding 2
+		if len(dqdlam_prev)>0:
+			q1=self.car2js(curve_fit[0],curve_fit_R[0])[0]
+			dqdlam_cur=(q1-self.curve_fit_js[-1])/(self.lam[len(self.curve_fit_js)]-self.lam[len(self.curve_fit_js)-1])
+			
+			if np.max(np.abs(dqdlam_cur-dqdlam_prev))>self.dqdlam_slope:
+
+				dqdlam_new=np.clip(dqdlam_cur,dqdlam_prev-self.dqdlam_slope,dqdlam_prev+self.dqdlam_slope)
+				print('triggering slope threshold')
+				slope_new=dqdlam_new/np.linalg.norm(dqdlam_new)
 				###propogate to L slope
 				J=self.robot.jacobian(self.curve_fit_js[-1])
 				nu=J@slope_new

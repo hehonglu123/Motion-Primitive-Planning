@@ -4,6 +4,9 @@ import matplotlib.pyplot as plt
 from scipy.interpolate import interp1d
 from scipy import signal
 
+def reject_outliers(data, m=3):
+    return data[abs(data - np.mean(data)) < m * np.std(data)]
+    
 def quadrant(q):
     temp=np.ceil(np.array([q[0],q[3],q[5]])/(np.pi/2))-1
     
@@ -144,3 +147,31 @@ def orientation_interp(R_init,R_end,steps):
 
 def H_from_RT(R,T):
 	return np.hstack((np.vstack((R,np.zeros(3))),np.append(T,1).reshape(4,1)))
+
+
+def car2js(robot,q_init,curve_fit,curve_fit_R):
+
+	###calculate corresponding joint configs
+	curve_fit_js=[]
+	if curve_fit.shape==(3,):
+		q_all=np.array(robot.inv(curve_fit,curve_fit_R))
+
+		###choose inv_kin closest to previous joints
+		if len(curve_fit_js)>1:
+			temp_q=q_all-curve_fit_js[-1]
+		else:
+			temp_q=q_all-q_init
+		order=np.argsort(np.linalg.norm(temp_q,axis=1))
+		curve_fit_js.append(q_all[order[0]])
+	else:
+		for i in range(len(curve_fit)):
+			q_all=np.array(robot.inv(curve_fit[i],curve_fit_R[i]))
+
+			###choose inv_kin closest to previous joints
+			if len(curve_fit_js)>1:
+				temp_q=q_all-curve_fit_js[-1]
+			else:
+				temp_q=q_all-q_init
+			order=np.argsort(np.linalg.norm(temp_q,axis=1))
+			curve_fit_js.append(q_all[order[0]])
+	return curve_fit_js

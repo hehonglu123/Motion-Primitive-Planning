@@ -53,7 +53,11 @@ class MotionSend(object):
             #     zone=fine
             motion = primitives[i]
             if motion == 'movel_fit':
-                robt = self.moveL_target(robot,curve_js[breakpoints[i]],points[i])
+                if len(points[i])==1:
+                    p=points[i][0]
+                else:
+                    p=points[i]
+                robt = self.moveL_target(robot,curve_js[breakpoints[i]],p)
                 mp.MoveL(robt,speed,zone)
 
             elif motion == 'movec_fit':
@@ -61,7 +65,11 @@ class MotionSend(object):
                 mp.MoveC(robt1,robt2,speed,zone)
 
             else: # movej_fit
-                jointt = self.moveJ_target(points[i])
+                if len(points[i])==1:
+                    p=points[i][0]
+                else:
+                    p=points[i]
+                jointt = self.moveJ_target(p)
                 if i==0:
                     mp.MoveAbsJ(jointt,v500,fine)
                     mp.WaitTime(1)
@@ -147,7 +155,132 @@ class MotionSend(object):
             return list(map(float, endpoint1)),list(map(float, endpoint2))
         else:
             endpoint=points[8:-3].split(',')
-            return list(map(float, endpoint))
+            return list(map(float, endpoint))   
+
+    def extend(self,robot,curve_js,primitives,breakpoints,points_list,extension_d=100):
+        ###initial point extension
+        
+        pose_start=robot.fwd(curve_js[0])
+        p_start=pose_start.p
+        R_start=pose_start.R
+        pose_end=robot.fwd(curve_js[breakpoints[1]])
+        p_end=pose_end.p
+        R_end=pose_end.R
+        if primitives[1]=='movel_fit':
+            #find new start point
+            slope_p=p_end-p_start
+            slope_p=slope_p/np.linalg.norm(slope_p)
+            p_start_new=p_start-extension_d*slope_p        ###extend 5cm backward
+
+            #find new start orientation
+            k,theta=R2rot(R_end@R_start.T)
+            theta_new=-extension_d*theta/np.linalg.norm(p_end-p_start)
+            R_start_new=rot(k,theta_new)@R_start
+
+            #solve invkin for initial point
+            q_all = robot.inv(p_start_new, R_start_new)
+            temp_q=q_all-curve_js[0]
+            order=np.argsort(np.linalg.norm(temp_q,axis=1))
+            points_list[0]=q_all[order[0]]
+
+        elif  primitives[1]=='movec_fit':
+            #define circle first
+            pose_mid=robot.fwd(curve_js[int(breakpoints[1]/2)])
+            p_mid=pose_mid.p
+            R_mid=pose_mid.R
+            center, radius=circle_from_3point(p_start,p_end,p_mid)
+
+            #find desired rotation angle
+            angle=extension_d/radius
+
+            #find new start point
+            plane_N=np.cross(p_end-center,p_start-center)
+            plane_N=plane_N/np.linalg.norm(plane_N)
+            R_temp=rot(plane_N,angle)
+            p_start_new=center+R_temp@(p_start-center)
+
+            #find new start orientation
+            k,theta=R2rot(R_end@R_start.T)
+            theta_new=-extension_d*theta/np.linalg.norm(p_end-p_start)
+            R_start_new=rot(k,theta_new)@R_start
+
+            #solve invkin for initial point
+            q_all = robot.inv(p_start_new, R_start_new)
+            temp_q=q_all-curve_js[0]
+            order=np.argsort(np.linalg.norm(temp_q,axis=1))
+            points_list[0]=q_all[order[0]]
+
+        else:
+            #find new start point
+            J_start=robot.jacobian(curve_js[0])
+            qdot=curve_js[breakpoints[1]]-curve_js[0]
+            v=J_start[3:,:]@qdot
+            t=extension_d/v
+            points_list[0]=curve_js[0]+qdot*t
+
+        ###end point extension
+        pose_start=robot.fwd(curve_js[breakpoints[-2]])
+        p_start=pose_start.p
+        R_start=pose_start.R
+        pose_end=robot.fwd(curve_js[-1])
+        p_end=pose_end.p
+        R_end=pose_end.R
+
+        if primitives[-1]=='movel_fit':
+            #find new end point
+            slope_p=p_end-p_start
+            slope_p=slope_p/np.linalg.norm(slope_p)
+            p_end_new=p_end+extension_d*slope_p        ###extend 5cm backward
+
+            #find new end orientation
+            k,theta=R2rot(R_end@R_start.T)
+            theta_new=extension_d*theta/np.linalg.norm(p_end-p_start)
+            R_end_new=rot(k,theta_new)@R_end
+
+            #solve invkin for end point
+            q_all = robot.inv(p_end_new, R_end_new)
+            temp_q=q_all-curve_js[-1]
+            order=np.argsort(np.linalg.norm(temp_q,axis=1))
+            curve_js[-1]=q_all[order[0]]
+            points_list[-1]=p_end_new
+
+        elif  primitives[1]=='movec_fit':
+            #define circle first
+            pose_mid=robot.fwd(curve_js[int((breakpoints[-1]+breakpoints[-2])/2)])
+            p_mid=pose_mid.p
+            R_mid=pose_mid.R
+            center, radius=circle_from_3point(p_start,p_end,p_mid)
+
+            #find desired rotation angle
+            angle=extension_d/radius
+
+            #find new end point
+            plane_N=np.cross(p_start-center,p_end-center)
+            plane_N=plane_N/np.linalg.norm(plane_N)
+            R_temp=rot(plane_N,angle)
+            p_end_new=center+R_temp@(p_end-center)
+
+            #find new end orientation
+            k,theta=R2rot(R_end@R_start.T)
+            theta_new=extension_d*theta/np.linalg.norm(p_end-p_start)
+            R_end_new=rot(k,theta_new)@R_end
+
+            #solve invkin for end point
+            q_all = robot.inv(p_end_new, R_end_new)
+            temp_q=q_all-curve_js[-1]
+            order=np.argsort(np.linalg.norm(temp_q,axis=1))
+            curve_js[-1]=q_all[order[0]]
+            points_list[-1][-1]=p_end_new   #midpoint not changed
+
+        else:
+            #find new end point
+            J_end=robot.jacobian(curve_js[-1])
+            qdot=curve_js[-1]-curve_js[breakpoints[-2]]
+            v=J_end[3:,:]@qdot
+            t=extension_d/v
+            points_list[-1]=curve_js[-1]+qdot*t
+
+        return primitives,points_list,curve_js
 
     def exe_from_file_w_extension(self,robot,filename,filename_js,speed,zone,extension_d=100):
         data = read_csv(filename)

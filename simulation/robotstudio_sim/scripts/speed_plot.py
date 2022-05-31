@@ -11,9 +11,9 @@ from error_check import *
 from lambda_calc import *
 from MotionSend import *
 
-speed='vmax'
+speed='v55.6640625'
 zone='z10'
-data_dir='curve_pose_opt/'
+data_dir='fitting_output/wood/threshold0.2/'
 ms=MotionSend()
 robot=abb6640(d=50)
 
@@ -24,7 +24,7 @@ lam, curve_exe, curve_exe_R,curve_exe_js, act_speed, timestamp=ms.logged_data_an
 lamdot=calc_lamdot(curve_exe_js,lam,robot,step=1)
 
 plt.plot(lam[1:],act_speed,label='act speed')
-plt.plot(lam,lamdot,label='constraint')
+# plt.plot(lam,lamdot,label='constraint')
 plt.title("Speed: "+data_dir+speed+'_'+zone)
 # plt.ylim([0,1600])
 plt.ylabel('Speed (mm/s)')

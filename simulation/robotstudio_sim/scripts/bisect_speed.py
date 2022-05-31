@@ -1,9 +1,3 @@
-########
-# This module utilized https://github.com/johnwason/abb_motion_program_exec
-# and send whatever the motion primitives that algorithms generate
-# to RobotStudio
-########
-
 import numpy as np
 from general_robotics_toolbox import *
 from pandas import read_csv
@@ -20,7 +14,7 @@ from lambda_calc import *
 def main():
     robot=abb6640(d=50)
     #determine correct commanded speed to keep error within 1mm
-    thresholds=[0.5]
+    thresholds=[0.4,0.3,0.2,0.1,0.05,0.02]
     max_error_threshold=0.5
     max_ori_threshold=np.radians(3)
 
@@ -63,7 +57,7 @@ def main():
             else:
                 v_prev_possible=v
                 #stop condition
-                if max_error_threshold-max_error<max_error_threshold/10 or max_ori_threshold-max_angle_error<max_ori_threshold/10:
+                if max_error_threshold-max_error<max_error_threshold/20 or max_ori_threshold-max_angle_error<max_ori_threshold/20:
                     break   
                 v+=abs(v_prev-v)/2
 
