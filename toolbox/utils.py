@@ -5,18 +5,21 @@ from scipy.interpolate import interp1d
 from scipy import signal
 
 def reject_outliers(data, m=3):
-    return data[abs(data - np.mean(data)) < m * np.std(data)]
-    
-def quadrant(q):
-    temp=np.ceil(np.array([q[0],q[3],q[5]])/(np.pi/2))-1
-    
-    if q[4] < 0:
-        last = 1
-    else:
-        last = 0
+	return data[abs(data - np.mean(data)) < m * np.std(data)]
+def replace_outliers(data, m=3):
+	data[abs(data - np.mean(data)) > m * np.std(data)] = np.mean(data)
+	return data
 
-    return np.hstack((temp,[last])).astype(int)
-    
+def quadrant(q):
+	temp=np.ceil(np.array([q[0],q[3],q[5]])/(np.pi/2))-1
+	
+	if q[4] < 0:
+		last = 1
+	else:
+		last = 0
+
+	return np.hstack((temp,[last])).astype(int)
+	
 def cross(v):
 	return np.array([[0,-v[-1],v[1]],
 					[v[-1],0,-v[0]],
@@ -72,21 +75,21 @@ def get_angle(v1,v2,less90=False):
 
 def lineFromPoints(P, Q):
 	#return coeff ax+by+c=0
-    a = Q[1] - P[1]
-    b = P[0] - Q[0]
-    c = -(a*(P[0]) + b*(P[1]))
-    return a,b,c
+	a = Q[1] - P[1]
+	b = P[0] - Q[0]
+	c = -(a*(P[0]) + b*(P[1]))
+	return a,b,c
 
 def extract_points(primitive_type,points):
-    if primitive_type=='movec_fit':
-        endpoints=points[8:-3].split('array')
-        endpoint1=endpoints[0][:-4].split(',')
-        endpoint2=endpoints[1][2:].split(',')
+	if primitive_type=='movec_fit':
+		endpoints=points[8:-3].split('array')
+		endpoint1=endpoints[0][:-4].split(',')
+		endpoint2=endpoints[1][2:].split(',')
 
-        return list(map(float, endpoint1)),list(map(float, endpoint2))
-    else:
-        endpoint=points[8:-3].split(',')
-        return list(map(float, endpoint))
+		return list(map(float, endpoint1)),list(map(float, endpoint2))
+	else:
+		endpoint=points[8:-3].split(',')
+		return list(map(float, endpoint))
 
 
 def visualize_curve_w_normal(curve,curve_normal,stepsize=500,equal_axis=False):
@@ -120,9 +123,9 @@ def linear_interp(x,y):
 	return x_new, f(x_new).T
 
 def moving_average(a, n=10) :
-    ret = np.cumsum(a, axis=0)
-    ret[n:] = ret[n:] - ret[:-n]
-    return ret[n - 1:] / n
+	ret = np.cumsum(a, axis=0)
+	ret[n:] = ret[n:] - ret[:-n]
+	return ret[n - 1:] / n
 
 
 def lfilter(x, y):

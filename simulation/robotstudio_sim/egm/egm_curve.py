@@ -53,7 +53,7 @@ except KeyboardInterrupt:
 # 	if not res_i:
 # 		break
 
-curve_exe=[]
+curve_exe_js=[]
 timestamp=[]
 ###traverse curve
 print('traversing trajectory')
@@ -64,11 +64,11 @@ try:
 			if res_i:
 				send_res = egm.send_to_robot(curve_js[i])
 				#save joint angles
-				curve_exe.append(np.radians(state_i.joint_angles))
+				curve_exe_js.append(np.radians(state_i.joint_angles))
 				#TODO: replace with controller time
 				timestamp.append(state_i.robot_message.header.tm)
 				break
 except KeyboardInterrupt:
 	raise
 
-DataFrame(np.hstack((np.array(timestamp).reshape((-1,1)),curve_exe))).to_csv(dataset+'curve_exe_v'+str(vd)+'.csv',header=False,index=False)
+DataFrame(np.hstack((np.array(timestamp).reshape((-1,1)),curve_exe_js))).to_csv(dataset+'curve_exe_v'+str(vd)+'.csv',header=False,index=False)
