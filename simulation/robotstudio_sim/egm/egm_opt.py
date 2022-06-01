@@ -14,15 +14,23 @@ from MotionSend import *
 from lambda_calc import *
 
 def main():
+    robot=abb6640(d=50)
+
     egm = rpi_abb_irc5.EGM()
 
-    dataset='wood/'
+    dataset='from_NX/'
     data_dir='../../../data/'
     curve_js = read_csv(data_dir+dataset+'Curve_js.csv',header=None).values
     curve = read_csv(data_dir+dataset+'Curve_in_base_frame.csv',header=None).values
-    vd=150
+    curve_R=[]
+    for q in curve_js:
+        curve_R.append(robot.fwd(q).R)
+    curve_R=np.array(curve_R)
+
+
+    vd=600
     max_error_threshold=0.5
-    robot=abb6640(d=50)
+    
     lam=calc_lam_cs(curve[:,:3])
     ts=0.004
 
@@ -31,7 +39,7 @@ def main():
     curve_cmd_js=curve_js[breakpoints]
     curve_cmd=curve[breakpoints,:3]
     #################add extension#########################
-    extension_num=250
+    extension_num=150
     init_extension=np.linspace(curve_cmd_js[0]-extension_num*(curve_cmd_js[1]-curve_cmd_js[0]),curve_cmd_js[0],num=extension_num,endpoint=False)
     end_extension=np.linspace(curve_cmd_js[-1],curve_cmd_js[-1]+extension_num*(curve_cmd_js[-1]-curve_cmd_js[-2]),num=extension_num+1)[1:]
 
@@ -39,12 +47,13 @@ def main():
 
     res, state = egm.receive_from_robot(.1)
     q_cur=np.radians(state.joint_angles)
-    num=int(np.linalg.norm(curve_cmd_js_ext[0]-q_cur)/ts)
+    num=int(2*np.linalg.norm(curve_cmd_js_ext[0]-q_cur)/ts)
     curve2start=np.linspace(q_cur,curve_cmd_js_ext[0],num=num)
 
     max_error=999
+    it=0
     while max_error>max_error_threshold:
-
+        it+=1
         ###move to start first
         print('moving to start point')
         try:
@@ -80,6 +89,8 @@ def main():
         except KeyboardInterrupt:
             raise
 
+        timestamp=np.array(timestamp)/1000
+
         lam, curve_exe, curve_exe_R, speed=logged_data_analysis(robot,timestamp,curve_exe_js)
         #############################chop extension off##################################
         start_idx=np.argmin(np.linalg.norm(curve[0,:3]-curve_exe,axis=1))
@@ -99,55 +110,63 @@ def main():
 
         ##############################calcualte error########################################
         error,angle_error=calc_all_error_w_normal(curve_exe,curve[:,:3],curve_exe_R[:,:,-1],curve[:,3:])
-               
-        ##############################plot error#####################################
-        fig, ax1 = plt.subplots()
-        ax2 = ax1.twinx()
-        ax1.plot(lam, speed, 'g-', label='Speed')
-        ax2.plot(lam, error, 'b-',label='Error')
-        ax2.plot(lam, np.degrees(angle_error), 'y-',label='Normal Error')
-
-        ax1.set_xlabel('lambda (mm)')
-        ax1.set_ylabel('Speed/lamdot (mm/s)', color='g')
-        ax2.set_ylabel('Error/Normal Error (mm/deg)', color='b')
-        plt.title("Speed and Error Plot")
-        ax1.legend(loc=0)
-
-        ax2.legend(loc=0)
-
-        plt.legend()
-        ###########################find closest cmd point####################################
-        bp_idx=np.absolute(breakpoints-max_error_curve_idx).argmin()
-        ###########################plot for verification###################################
-        plt.figure()
-        ax = plt.axes(projection='3d')
-        ax.plot3D(curve[:,0], curve[:,1], curve[:,2], c='gray',label='original')
-        ax.plot3D(curve_exe[:,0], curve_exe[:,1], curve_exe[:,2], c='red',label='execution')
-        ax.scatter3D(curve_cmd[:,0], curve_cmd[:,1], curve_cmd[:,2], c=curve_cmd[:,2], cmap='Greens',label='commanded points')
-        ax.scatter(curve_exe[max_error_idx,0], curve_exe[max_error_idx,1], curve_exe[max_error_idx,2],c='orange',label='worst case')
-        ax.quiver(curve_cmd[bp_idx,0],curve_cmd[bp_idx,1],curve_cmd[bp_idx,2],d[0],d[1],d[2],length=1, normalize=True)
-
-
-        plt.legend()
-        plt.show()
-
+          
         
 
         curve_cmd_new=copy.deepcopy(curve_cmd)
         curve_cmd_js=copy.deepcopy(curve_cmd_js)
+        shift_vector=[]
         ##############################Tweak breakpoints#################################################
         for i in range(len(curve_cmd_js)):
-            _,closest_exe_idx=calc_error(curve_cmd[i],curve_exe)        # find closest exe point
+            _,closest_exe_idx=calc_error(curve_cmd_new[i],curve_exe)        # find closest exe point
             _,closest_curve_idx=calc_error(curve_exe[closest_exe_idx],curve[:,:3])  # find closest original curve point to closest exe point
-            d=(curve[closest_curve_idx,:3]-curve_exe[closest_exe_idx])#/2           # shift vector
-            curve_cmd[i]+=d
-            curve_cmd_js[i]=car2js(robot,curve_cmd_js[bp_idx],curve_cmd[bp_idx],robot.fwd(curve_cmd_js[bp_idx]).R)
-        
+            d=(curve[closest_curve_idx,:3]-curve_exe[closest_exe_idx])/2           # shift vector
+            curve_cmd_new[i]+=d
+            ########orientation shift
+            R_temp=curve_exe_R[closest_exe_idx]@curve_R[closest_curve_idx].T
+            k,theta=R2rot(R_temp)
+            R_new=rot(k,-theta)@curve_R[closest_curve_idx]
 
+            ###########inv to get new cmd joints
+            curve_cmd_js[i]=car2js(robot,curve_cmd_js[i],curve_cmd_new[i],R_new)[0]
+
+            shift_vector.append(d)
+        
+        shift_vector=np.array(shift_vector)
 
         curve_cmd_js_ext[len(init_extension):-len(end_extension)]=curve_cmd_js
 
-        
+        if it>30:
+            ##############################plot error#####################################
+            fig, ax1 = plt.subplots()
+            ax2 = ax1.twinx()
+            ax1.plot(lam, speed, 'g-', label='Speed')
+            ax2.plot(lam, error, 'b-',label='Error')
+            ax2.plot(lam, np.degrees(angle_error), 'y-',label='Normal Error')
+
+            ax1.set_xlabel('lambda (mm)')
+            ax1.set_ylabel('Speed/lamdot (mm/s)', color='g')
+            ax2.set_ylabel('Error/Normal Error (mm/deg)', color='b')
+            plt.title("Speed and Error Plot")
+            ax1.legend(loc=0)
+
+            ax2.legend(loc=0)
+
+            plt.legend()
+
+            ###########################plot for verification###################################
+            plt.figure()
+            ax = plt.axes(projection='3d')
+            ax.plot3D(curve[:,0], curve[:,1], curve[:,2], c='gray',label='original')
+            ax.plot3D(curve_exe[:,0], curve_exe[:,1], curve_exe[:,2], c='red',label='execution')
+            ax.scatter3D(curve_cmd[:,0], curve_cmd[:,1], curve_cmd[:,2], c=curve_cmd[:,2], cmap='Greens',label='commanded points')
+
+            ax.quiver(curve_cmd[:,0],curve_cmd[:,1],curve_cmd[:,2],shift_vector[:,0],shift_vector[:,1],shift_vector[:,2],length=1, normalize=True)
+
+            plt.legend()
+            plt.show()
+
+        curve_cmd=curve_cmd_new
 
 if __name__ == "__main__":
     main()
