@@ -43,6 +43,9 @@ def main():
     breakpoints[1:]=breakpoints[1:]-1
     curve_fit_js=read_csv(fitting_output+'curve_fit_js.csv',header=None).values
 
+
+    curve_blended=blend_js(q,breakpoints,lam,bp_exe_start_idx,bp_exe_end_idx)
+
     points_list=[]
     for i in range(len(breakpoints)):
         if primitives[i]=='movel_fit':

@@ -1,6 +1,8 @@
+import time, sys
+sys.path.append('egm_toolbox')
 import rpi_abb_irc5
 import numpy as np
-import time
+
 
 egm = rpi_abb_irc5.EGM()
 
@@ -9,6 +11,7 @@ last_time = time.perf_counter()
 try:
 	while True:
 		res, state = egm.receive_from_robot(.1)
+		print(res)
 		new_time = time.perf_counter()
 		#print((new_time - last_time)/0.004 * 100)
 		last_time = new_time

@@ -1,24 +1,19 @@
 import numpy as np
-from general_robotics_toolbox import *
-from pandas import read_csv
-import sys
-from io import StringIO
+import time, sys
+from pandas import *
 sys.path.append('egm_toolbox')
 import rpi_abb_irc5
-# sys.path.append('../abb_motion_program_exec')
-from abb_motion_program_exec_client import *
+
 sys.path.append('../../../toolbox')
 from robots_def import *
 from error_check import *
-from MotionSend import *
 from lambda_calc import *
-
 def main():
 	robot=abb6640(d=50)
 
 	egm = rpi_abb_irc5.EGM()
 
-	dataset='from_NX/'
+	dataset='wood/'
 	data_dir='../../../data/'
 	curve_js = read_csv(data_dir+dataset+'Curve_js.csv',header=None).values
 	curve = read_csv(data_dir+dataset+'Curve_in_base_frame.csv',header=None).values
@@ -28,7 +23,7 @@ def main():
 	curve_R=np.array(curve_R)
 
 
-	vd=600
+	vd=150
 	max_error_threshold=0.5
 	
 	lam=calc_lam_cs(curve[:,:3])
@@ -38,33 +33,64 @@ def main():
 	breakpoints=np.linspace(0.,len(curve_js)-1,num=steps).astype(int)
 	curve_cmd_js=curve_js[breakpoints]
 	curve_cmd=curve[breakpoints,:3]
+	curve_cmd_R=curve_R[breakpoints]
 	#################add extension#########################
 	extension_num=150
-	init_extension=np.linspace(curve_cmd_js[0]-extension_num*(curve_cmd_js[1]-curve_cmd_js[0]),curve_cmd_js[0],num=extension_num,endpoint=False)
-	end_extension=np.linspace(curve_cmd_js[-1],curve_cmd_js[-1]+extension_num*(curve_cmd_js[-1]-curve_cmd_js[-2]),num=extension_num+1)[1:]
+	init_extension_js=np.linspace(curve_cmd_js[0]-extension_num*(curve_cmd_js[1]-curve_cmd_js[0]),curve_cmd_js[0],num=extension_num,endpoint=False)
+	end_extension_js=np.linspace(curve_cmd_js[-1],curve_cmd_js[-1]+extension_num*(curve_cmd_js[-1]-curve_cmd_js[-2]),num=extension_num+1)[1:]
 
-	curve_cmd_js_ext=np.vstack((init_extension,curve_cmd_js,end_extension))
+	init_extension_p=[]
+	init_extension_R=[]
+	for q in init_extension_js:
+		pose_temp=robot.fwd(q)
+		init_extension_p.append(pose_temp.p)
+		init_extension_R.append(pose_temp.R)
+	init_extension_p=np.array(init_extension_p)
+	init_extension_R=np.array(init_extension_R)
+
+	end_extension_p=[]
+	end_extension_R=[]
+	for q in end_extension_js:
+		pose_temp=robot.fwd(q)
+		end_extension_p.append(pose_temp.p)
+		end_extension_R.append(pose_temp.R)
+	end_extension_p=np.array(end_extension_p)
+	init_extension_R=np.array(init_extension_R)
+
+	curve_cmd_ext=np.vstack((init_extension_p,curve_cmd,end_extension_p))
+	curve_cmd_R_ext=np.vstack((init_extension_R,curve_cmd_R,end_extension_R))
 
 	max_error=999
 	it=0
 	while max_error>max_error_threshold:
 		it+=1
+
 		###move to start first
 		print('moving to start point')
+
 		res, state = egm.receive_from_robot(.1)
 		q_cur=np.radians(state.joint_angles)
-		num=int(np.linalg.norm(curve_cmd_js_ext[0]-q_cur)/ts)
-		curve2start=np.linspace(q_cur,curve_cmd_js_ext[0],num=num)
+		pose_cur=robot.fwd(q_cur)
+		num=int(np.linalg.norm(curve_cmd_ext[0]-pose_cur.p)/(1000*ts))
+		curve2start=np.linspace(pose_cur.p,curve_cmd_ext[0],num=num)
+		R2start=orientation_interp(pose_cur.R,curve_cmd_R_ext[0],num)
+		quat2start=[]
+		for R in R2start:
+			quat2start.append(R2q(R))
+
 		try:
 			for i in range(len(curve2start)):
-				res_i, state_i = egm.receive_from_robot(ts)
-				send_res = egm.send_to_robot(curve2start[i])
+				while True:
+					res_i, state_i = egm.receive_from_robot()
+					if res_i:
+						send_res = egm.send_to_robot_cart(curve2start[i], quat2start[i])
+						break
 
 			for i in range(500):
 				while True:
 					res_i, state_i = egm.receive_from_robot()
 					if res_i:
-						send_res = egm.send_to_robot(curve_cmd_js_ext[0])
+						send_res = egm.send_to_robot_cart(curve_cmd_ext[0], R2q(curve_cmd_R_ext[0]))
 						break
 
 		except KeyboardInterrupt:
@@ -75,11 +101,11 @@ def main():
 		###traverse curve
 		print('traversing trajectory')
 		try:
-			for i in range(len(curve_cmd_js_ext)):
+			for i in range(len(curve_cmd_ext)):
 				while True:
 					res_i, state_i = egm.receive_from_robot()
 					if res_i:
-						send_res = egm.send_to_robot(curve_cmd_js_ext[i])
+						send_res = egm.send_to_robot_cart(curve_cmd_ext[i], R2q(curve_cmd_R_ext[i]))
 						#save joint angles
 						curve_exe_js.append(np.radians(state_i.joint_angles))
 						#TODO: replace with controller time
@@ -87,7 +113,7 @@ def main():
 						break
 		except KeyboardInterrupt:
 			raise
-
+		
 		timestamp=np.array(timestamp)/1000
 
 		lam, curve_exe, curve_exe_R, speed=logged_data_analysis(robot,timestamp,curve_exe_js)
@@ -113,29 +139,30 @@ def main():
 		
 
 		curve_cmd_new=copy.deepcopy(curve_cmd)
+		curve_cmd_R_new=copy.deepcopy(curve_cmd_R)
 		curve_cmd_js=copy.deepcopy(curve_cmd_js)
 		shift_vector=[]
+
 		##############################Tweak breakpoints#################################################
-		for i in range(len(curve_cmd_js)):
-			_,closest_exe_idx=calc_error(curve_cmd_new[i],curve_exe)        # find closest exe point
-			_,closest_curve_idx=calc_error(curve_exe[closest_exe_idx],curve[:,:3])  # find closest original curve point to closest exe point
-			d=(curve[closest_curve_idx,:3]-curve_exe[closest_exe_idx])/2           # shift vector
-			curve_cmd_new[i]+=d
-			########orientation shift
-			R_temp=curve_exe_R[closest_exe_idx]@curve_R[closest_curve_idx].T
-			k,theta=R2rot(R_temp)
-			R_new=rot(k,-theta)@curve_R[closest_curve_idx]
+		for i in range(len(curve_cmd)):
+		    _,closest_exe_idx=calc_error(curve_cmd_new[i],curve_exe)        # find closest exe point
+		    _,closest_curve_idx=calc_error(curve_exe[closest_exe_idx],curve[:,:3])  # find closest original curve point to closest exe point
+		    d=(curve[closest_curve_idx,:3]-curve_exe[closest_exe_idx])/2           # shift vector
+		    curve_cmd_new[i]+=d
+		    ########orientation shift
+		    R_temp=curve_exe_R[closest_exe_idx]@curve_R[closest_curve_idx].T
+		    k,theta=R2rot(R_temp)
+		    R_new=rot(k,-theta)@curve_R[closest_curve_idx]
+		    curve_cmd_R_new[i]=R_new
 
-			###########inv to get new cmd joints
-			curve_cmd_js[i]=car2js(robot,curve_cmd_js[i],curve_cmd_new[i],R_new)[0]
-
-			shift_vector.append(d)
+		    shift_vector.append(d)
 		
 		shift_vector=np.array(shift_vector)
+		###update ext cmd trajectory
+		curve_cmd_ext[len(init_extension_p):-len(end_extension_p)]=curve_cmd_new
+		curve_cmd_R_ext[len(init_extension_R):-len(end_extension_R)]=curve_cmd_R_new
 
-		curve_cmd_js_ext[len(init_extension):-len(end_extension)]=curve_cmd_js
-
-		if it>30:
+		if it>5:
 			##############################plot error#####################################
 			fig, ax1 = plt.subplots()
 			ax2 = ax1.twinx()
