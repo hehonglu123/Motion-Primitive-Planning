@@ -17,6 +17,7 @@ from robots_def import *
 from error_check import *
 from MotionSend import *
 from lambda_calc import *
+from blending import *
 
 def main():
     # data_dir="fitting_output_new/python_qp_movel/"
@@ -43,9 +44,6 @@ def main():
     breakpoints[1:]=breakpoints[1:]-1
     curve_fit_js=read_csv(fitting_output+'curve_fit_js.csv',header=None).values
 
-
-    curve_blended=blend_js(q,breakpoints,lam,bp_exe_start_idx,bp_exe_end_idx)
-
     points_list=[]
     for i in range(len(breakpoints)):
         if primitives[i]=='movel_fit':
@@ -68,7 +66,7 @@ def main():
     inserted_points=[]
     while max_error>max_error_threshold:
         ms = MotionSend()
-        ###execute
+        ###execute,curve_fit_js only used for orientation
         logged_data=ms.exec_motions(robot,primitives,breakpoints,points_list,curve_fit_js,s,z)
 
         StringData=StringIO(logged_data)
@@ -98,7 +96,7 @@ def main():
         max_angle_error=max(angle_error)
         max_error_idx=np.argmax(error)#index of exe curve with max error
         _,max_error_curve_idx=calc_error(curve_exe[max_error_idx],curve[:,:3])  # index of original curve closest to max error point
-        d=(curve[max_error_curve_idx,:3]-curve_exe[max_error_idx])#/2           # shift vector
+        exe_error_vector=(curve[max_error_curve_idx,:3]-curve_exe[max_error_idx])           # shift vector
         
         ##############################plot error#####################################
         fig, ax1 = plt.subplots()
@@ -128,28 +126,57 @@ def main():
         ax.scatter(curve_exe[max_error_idx,0], curve_exe[max_error_idx,1], curve_exe[max_error_idx,2],c='orange',label='worst case')
         
         
+        ##########################################calculate gradient######################################
+        ######gradient calculation related to nearest 3 points from primitive blended trajectory, not actual one
+        ###restore trajectory from primitives
+        q_bp=[]
+        for i in range(len(primitives)):
+            if primitives[i]=='movej_fit':
+                q_bp.append(points_list[i])
+            elif primitives[i]=='movel_fit':
 
-        
-        ##############################Tweak breakpoints#################################################
-        closest_bp = breakpoints[bp_idx]
-        print(closest_bp,max_error_curve_idx)
-        if abs(closest_bp-max_error_curve_idx)<150:  ###arb value, to decide insert or tweak existing bp
-            print('adjusting breakpoints')
-            points_list[bp_idx]+=d
-
-            ax.quiver(points_list_np[bp_idx-1,0],points_list_np[bp_idx-1,1],points_list_np[bp_idx-1,2],d[0],d[1],d[2],length=1, normalize=True)
-        else:
-            print('inserting breakpoints')
-            if breakpoints[bp_idx]>max_error_curve_idx:
-                insertion_idx=bp_idx            #insertion index, the later one
+                q_bp.append(car2js(robot,curve_fit_js[breakpoints[i]],np.array(points_list[i]),robot.fwd(curve_fit_js[breakpoints[i]]).R)[0])
             else:
-                insertion_idx=bp_idx+1
-            points_list.insert(insertion_idx,curve[max_error_curve_idx,:3]+d)
-            breakpoints=np.insert(breakpoints,insertion_idx,max_error_curve_idx)
-            primitives.insert(insertion_idx,'movel_fit')
-            inserted_points.append(curve[max_error_curve_idx,:3]+d)
+                q_bp.append([car2js(robot,curve_fit_js[int((breakpoints[i]+breakpoints[i-1])/2)],points_list[i][0],robot.fwd(curve_fit_js[int((breakpoints[i]+breakpoints[i-1])/2)]).R)[0]\
+                    ,car2js(robot,curve_fit_js[breakpoints[i]],points_list[i][0],robot.fwd(curve_fit_js[breakpoints[i]]).R)[0]])
 
-            ax.scatter(inserted_points[-1][0],inserted_points[-1][1],inserted_points[-1][2],c='blue',label='inserted point')
+
+        curve_interp, curve_R_interp, curve_js_interp, breakpoints_interp=form_traj_from_bp(q_bp,primitives,robot)
+
+        curve_js_blended,curve_blended,curve_R_blended=blend_js_from_primitive(curve_interp, curve_js_interp, breakpoints_interp, primitives,robot,zone=10)
+
+        _,max_error_curve_blended_idx=calc_error(curve_exe[max_error_idx],curve_blended)
+        curve_blended_point=copy.deepcopy(curve_blended[max_error_curve_blended_idx])
+
+        ###############get numerical gradient#####
+        de_dp=[]    #de_dp1x,de_dp1y,...,de_dp3z
+        delta=0.1#mm
+        ###find closest 3 breakpoints
+        order=np.argsort(np.abs(breakpoints_interp-max_error_curve_blended_idx))
+        breakpoint_interp_2tweak_indices=order[:3]
+
+        #len(primitives)==len(breakpoints)==len(breakpoints_interp)==len(points_list)
+        for m in breakpoint_interp_2tweak_indices:  #3 breakpoints
+            for n in range(3): #3DOF, xyz
+                points_list_temp=copy.deepcopy(points_list)
+                q_bp_temp=copy.deepcopy(q_bp)
+                points_list_temp[m][n]+=delta
+                q_bp_temp[m]=car2js(robot,q_bp_temp[m],np.array(points_list_temp[m]),robot.fwd(q_bp_temp[m]).R)[0]
+                #restore new trajectory
+                curve_interp_temp, curve_R_interp_temp, curve_js_interp_temp, breakpoints_interp_temp=form_traj_from_bp(q_bp_temp,primitives,robot)
+                curve_js_blended_temp,curve_blended_temp,curve_R_blended_temp=blend_js_from_primitive(curve_interp_temp, curve_js_interp_temp, breakpoints_interp_temp, primitives,robot,zone=10)
+                
+                worst_case_point_shift=curve_blended_temp[max_error_curve_blended_idx]-curve_blended[max_error_curve_blended_idx]
+                de=np.linalg.norm(exe_error_vector-worst_case_point_shift)-max_error
+                de_dp.append(de/delta)
+
+
+        de_dp=np.reshape(de_dp,(-1,1))
+        alpha=0.5
+        point_adjustment=-alpha*np.linalg.pinv(de_dp)*max_error
+
+        for i in range(len(breakpoint_interp_2tweak_indices)):  #3 breakpoints
+            points_list[breakpoint_interp_2tweak_indices[i]]+=point_adjustment[0][3*i:3*(i+1)]
 
         plt.legend()
         plt.show()
