@@ -141,10 +141,11 @@ def main():
                     ,car2js(robot,curve_fit_js[breakpoints[i]],points_list[i][0],robot.fwd(curve_fit_js[breakpoints[i]]).R)[0]])
 
 
-        curve_interp, curve_R_interp, curve_js_interp, breakpoints_interp=form_traj_from_bp(q_bp,primitives,robot)
+        curve_interp, curve_R_interp, curve_js_interp, breakpoints_blended=form_traj_from_bp(q_bp,primitives,robot)
 
-        curve_js_blended,curve_blended,curve_R_blended=blend_js_from_primitive(curve_interp, curve_js_interp, breakpoints_interp, primitives,robot,zone=10)
+        curve_js_blended,curve_blended,curve_R_blended=blend_js_from_primitive(curve_interp, curve_js_interp, breakpoints_blended, primitives,robot,zone=10)
 
+        ###get closest to worst case point on blended trajectory
         _,max_error_curve_blended_idx=calc_error(curve_exe[max_error_idx],curve_blended)
         curve_blended_point=copy.deepcopy(curve_blended[max_error_curve_blended_idx])
 
@@ -152,10 +153,10 @@ def main():
         de_dp=[]    #de_dp1x,de_dp1y,...,de_dp3z
         delta=0.1#mm
         ###find closest 3 breakpoints
-        order=np.argsort(np.abs(breakpoints_interp-max_error_curve_blended_idx))
+        order=np.argsort(np.abs(breakpoints_blended-max_error_curve_blended_idx))
         breakpoint_interp_2tweak_indices=order[:3]
 
-        #len(primitives)==len(breakpoints)==len(breakpoints_interp)==len(points_list)
+        #len(primitives)==len(breakpoints)==len(breakpoints_blended)==len(points_list)
         for m in breakpoint_interp_2tweak_indices:  #3 breakpoints
             for n in range(3): #3DOF, xyz
                 points_list_temp=copy.deepcopy(points_list)
@@ -163,8 +164,8 @@ def main():
                 points_list_temp[m][n]+=delta
                 q_bp_temp[m]=car2js(robot,q_bp_temp[m],np.array(points_list_temp[m]),robot.fwd(q_bp_temp[m]).R)[0]
                 #restore new trajectory
-                curve_interp_temp, curve_R_interp_temp, curve_js_interp_temp, breakpoints_interp_temp=form_traj_from_bp(q_bp_temp,primitives,robot)
-                curve_js_blended_temp,curve_blended_temp,curve_R_blended_temp=blend_js_from_primitive(curve_interp_temp, curve_js_interp_temp, breakpoints_interp_temp, primitives,robot,zone=10)
+                curve_interp_temp, curve_R_interp_temp, curve_js_interp_temp, breakpoints_blended_temp=form_traj_from_bp(q_bp_temp,primitives,robot)
+                curve_js_blended_temp,curve_blended_temp,curve_R_blended_temp=blend_js_from_primitive(curve_interp_temp, curve_js_interp_temp, breakpoints_blended_temp, primitives,robot,zone=10)
                 
                 worst_case_point_shift=curve_blended_temp[max_error_curve_blended_idx]-curve_blended[max_error_curve_blended_idx]
                 de=np.linalg.norm(exe_error_vector-worst_case_point_shift)-max_error
