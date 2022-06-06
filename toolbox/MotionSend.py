@@ -44,7 +44,7 @@ class MotionSend(object):
         jointt = jointtarget([q[0],q[1],q[2],q[3],q[4],q[5]],[0]*6)
         return jointt
 
-    def exec_motions(self,robot,primitives,breakpoints,points,curve_js,speed,zone):
+    def exec_motions(self,robot,primitives,breakpoints,points,q_bp,speed,zone):
         mp = MotionProgram(tool=self.tool2)
         
         for i in range(len(primitives)):
@@ -57,19 +57,15 @@ class MotionSend(object):
                     p=points[i][0]
                 else:
                     p=points[i]
-                robt = self.moveL_target(robot,curve_js[breakpoints[i]],p)
+                robt = self.moveL_target(robot,q_bp[i][0],p)
                 mp.MoveL(robt,speed,zone)
 
             elif motion == 'movec_fit':
-                robt1, robt2 = self.moveC_target(robot,curve_js[breakpoints[i-1]],curve_js[breakpoints[i]],points[i][0],points[i][1])
+                robt1, robt2 = self.moveC_target(robot,q_bp[i][0],q_bp[i][1],points[i][0],points[i][1])
                 mp.MoveC(robt1,robt2,speed,zone)
 
             else: # movej_fit
-                if len(points[i])==1:
-                    p=points[i][0]
-                else:
-                    p=points[i]
-                jointt = self.moveJ_target(p)
+                jointt = self.moveJ_target(q_bp[i][0])
                 if i==0:
                     mp.MoveAbsJ(jointt,v500,fine)
                     mp.WaitTime(1)
@@ -157,13 +153,12 @@ class MotionSend(object):
             endpoint=points[8:-3].split(',')
             return list(map(float, endpoint))   
 
-    def extend(self,robot,curve_js,primitives,breakpoints,points_list,extension_d=100):
+    def extend(self,robot,q_bp,primitives,breakpoints,points_list,extension_d=100):
         ###initial point extension
-        
-        pose_start=robot.fwd(curve_js[0])
+        pose_start=robot.fwd(q_bp[0][-1])
         p_start=pose_start.p
         R_start=pose_start.R
-        pose_end=robot.fwd(curve_js[breakpoints[1]])
+        pose_end=robot.fwd(q_bp[1][-1])
         p_end=pose_end.p
         R_end=pose_end.R
         if primitives[1]=='movel_fit':
@@ -178,14 +173,12 @@ class MotionSend(object):
             R_start_new=rot(k,theta_new)@R_start
 
             #solve invkin for initial point
-            q_all = robot.inv(p_start_new, R_start_new)
-            temp_q=q_all-curve_js[0]
-            order=np.argsort(np.linalg.norm(temp_q,axis=1))
-            points_list[0]=q_all[order[0]]
+            points_list[0]=p_start_new
+            q_bp[0][0]=car2js(robot,q_bp[0][0],p_start_new,R_start_new)[0]
 
         elif  primitives[1]=='movec_fit':
             #define circle first
-            pose_mid=robot.fwd(curve_js[int(breakpoints[1]/2)])
+            pose_mid=robot.fwd(q_bp[0][0])
             p_mid=pose_mid.p
             R_mid=pose_mid.R
             center, radius=circle_from_3point(p_start,p_end,p_mid)
@@ -205,24 +198,24 @@ class MotionSend(object):
             R_start_new=rot(k,theta_new)@R_start
 
             #solve invkin for initial point
-            q_all = robot.inv(p_start_new, R_start_new)
-            temp_q=q_all-curve_js[0]
-            order=np.argsort(np.linalg.norm(temp_q,axis=1))
-            points_list[0]=q_all[order[0]]
+            points_list[0]=p_start_new
+            q_bp[0][0]=car2js(robot,q_bp[0][0],p_start_new,R_start_new)[0]
 
         else:
             #find new start point
-            J_start=robot.jacobian(curve_js[0])
-            qdot=curve_js[breakpoints[1]]-curve_js[0]
+            J_start=robot.jacobian(q_bp[0][0])
+            qdot=q_bp[1][0]-q_bp[0][0]
             v=J_start[3:,:]@qdot
             t=extension_d/v
-            points_list[0]=curve_js[0]+qdot*t
+            
+            q_bp[0][0]=q_bp[0][0]+qdot*t
+            points_list[0]=robot.fwd(q_bp[0][0]).p
 
         ###end point extension
-        pose_start=robot.fwd(curve_js[breakpoints[-2]])
+        pose_start=robot.fwd(q_bp[-2][-1])
         p_start=pose_start.p
         R_start=pose_start.R
-        pose_end=robot.fwd(curve_js[-1])
+        pose_end=robot.fwd(q_bp[-1][-1])
         p_end=pose_end.p
         R_end=pose_end.R
 
@@ -238,15 +231,13 @@ class MotionSend(object):
             R_end_new=rot(k,theta_new)@R_end
 
             #solve invkin for end point
-            q_all = robot.inv(p_end_new, R_end_new)
-            temp_q=q_all-curve_js[-1]
-            order=np.argsort(np.linalg.norm(temp_q,axis=1))
-            curve_js[-1]=q_all[order[0]]
+            q_bp[-1][-1]=car2js(robot,q_bp[-1][0],p_end_new,R_end_new)[0]
             points_list[-1]=p_end_new
+
 
         elif  primitives[1]=='movec_fit':
             #define circle first
-            pose_mid=robot.fwd(curve_js[int((breakpoints[-1]+breakpoints[-2])/2)])
+            pose_mid=robot.fwd(q_bp[-1][0])
             p_mid=pose_mid.p
             R_mid=pose_mid.R
             center, radius=circle_from_3point(p_start,p_end,p_mid)
@@ -266,21 +257,20 @@ class MotionSend(object):
             R_end_new=rot(k,theta_new)@R_end
 
             #solve invkin for end point
-            q_all = robot.inv(p_end_new, R_end_new)
-            temp_q=q_all-curve_js[-1]
-            order=np.argsort(np.linalg.norm(temp_q,axis=1))
-            curve_js[-1]=q_all[order[0]]
+            q_bp[-1][-1]=car2js(robot,q_bp[-1][-1],p_end_new,R_end_new)[0]
             points_list[-1][-1]=p_end_new   #midpoint not changed
 
         else:
             #find new end point
-            J_end=robot.jacobian(curve_js[-1])
-            qdot=curve_js[-1]-curve_js[breakpoints[-2]]
+            J_end=robot.jacobian(q_bp[-1][0])
+            qdot=q_bp[-1][0]-q_bp[-2][0]
             v=J_end[3:,:]@qdot
             t=extension_d/v
-            points_list[-1]=curve_js[-1]+qdot*t
+            
+            q_bp[-1][-1]=q_bp[-1]+qdot*t
+            points_list[-1]=robot.fwd(q_bp[-1][-1]).p
 
-        return primitives,points_list,curve_js
+        return primitives,points_list,q_bp
 
     def exe_from_file_w_extension(self,robot,filename,filename_js,speed,zone,extension_d=100):
         data = read_csv(filename)
@@ -425,31 +415,38 @@ class MotionSend(object):
             t=extension_d/v
             points_list[-1]=curve_js[-1]+qdot*t
 
-        return self.exec_motions(robot,primitives,breakpoints,points_list,curve_js,speed,zone)
+        return self.exec_motions(robot,primitives,breakpoints,points_list,q_bp,speed,zone)
 
-    def exe_from_file(self,robot,filename,filename_js,speed,zone):
+    def extract_data_from_cmd(self,filename):
         data = read_csv(filename)
         breakpoints=np.array(data['breakpoints'].tolist())
         primitives=data['primitives'].tolist()
         points=data['points'].tolist()
-        
-        breakpoints[1:]=breakpoints[1:]-1
-        
+        qs=data['q_bp'].tolist()
 
-        points_list=[]
+        p_bp=[]
+        q_bp=[]
         for i in range(len(breakpoints)):
             if primitives[i]=='movel_fit':
                 point=extract_points(primitives[i],points[i])
-                points_list.append(point)
+                p_bp.append(point)
+                q=extract_points(primitives[i],qs[i])
+                q_bp.append([q])
+
+
             elif primitives[i]=='movec_fit':
                 point1,point2=extract_points(primitives[i],points[i])
-                points_list.append([point1,point2])
+                p_bp.append([point1,point2])
+                q1,q2=extract_points(primitives[i],qs[i])
+                q_bp.append([q1,q2])
+
             else:
                 point=extract_points(primitives[i],points[i])
-                points_list.append(point)
+                p_bp.append(point)
+                q=extract_points(primitives[i],qs[i])
+                q_bp.append([q])
 
-        curve_js=read_csv(filename_js,header=None).values
-        return self.exec_motions(robot,primitives,breakpoints,points_list,curve_js,speed,zone)
+        return breakpoints,primitives, p_bp,q_bp
 
     def exe_from_file_multimove(self,filename1,filename2,filename_js1,filename_js2,speed1,speed2,zone1,zone2):
         data1 = read_csv(filename1)
