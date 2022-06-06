@@ -12,15 +12,15 @@ from lambda_calc import *
 def form_traj_from_bp(q_bp,primitives,robot):
 	###TODO: generate equally spaced curve
 	N=100#number in each segment
-	curve_js=[q_bp[0]]
-	init_pose=robot.fwd(q_bp[0])
+	curve_js=[q_bp[0][0]]
+	init_pose=robot.fwd(q_bp[0][0])
 	curve=[init_pose.p]
 	curve_R=[init_pose.R]
 	breakpoints=[0]
 	for i in range(1,len(primitives)):
 		if primitives[i]=='movej_fit':
 			#interpolate joint space linearly
-			q_movej=np.linspace(curve_js[-1],q_bp[i],num=N+1)[1:]
+			q_movej=np.linspace(curve_js[-1],q_bp[i][0],num=N+1)[1:]
 			curve_js.extend(q_movej)
 			#propogate to cartesian space
 			for q in q_movej:
@@ -28,7 +28,7 @@ def form_traj_from_bp(q_bp,primitives,robot):
 				curve.append(pose_temp.p)
 				curve_R.append(pose_temp.R)
 		elif primitives[i]=='movel_fit':
-			pose_end=robot.fwd(q_bp[i])
+			pose_end=robot.fwd(q_bp[i][0])
 			#interpolate xyz linearly
 			p_movel=np.linspace(curve[-1],pose_end.p,num=N+1)[1:]
 			curve.extend(p_movel)
@@ -47,16 +47,17 @@ def form_traj_from_bp(q_bp,primitives,robot):
 			pose_mid=robot.fwd(q_bp[i][0])
 			pose_end=robot.fwd(q_bp[i][1])
 			p_movec=arc_from_3point(curve[-1],pose_end.p,pose_mid.p,N+1)[1:]
+			curve.extend(p_movec)
 			#interpolate orientation linearly
-			R_movel_end=pose_end.R@curve_R[-1].T
-			k,theta=R2rot(R_movel_end)
+			R_movec_end=pose_end.R@curve_R[-1].T
+			k,theta=R2rot(R_movec_end)
 			theta_movel=np.linspace(0,theta,num=N+1)[1:]
 			#propogate to joint space
 			R_movec=[]
 			for j in range(len(p_movec)):
 				R_temp=rot(k,theta_movel[j])@curve_R[-1]
 				R_movec.append(R_temp)
-				curve_js.append(car2js(robot,curve_js[-1],p_movel[j],R_temp)[0])
+				curve_js.append(car2js(robot,curve_js[-1],p_movec[j],R_temp)[0])
 			curve_R.extend(R_movec)
 
 		breakpoints.append(len(curve_js)-1)

@@ -80,6 +80,7 @@ class greedy_fit(fitting_toolbox):
 		self.breakpoints=[0]
 		primitives_choices=[]
 		points=[]
+		quats=[]
 
 		self.curve_fit=[]
 		self.curve_fit_R=[]
@@ -107,10 +108,13 @@ class greedy_fit(fitting_toolbox):
 
 			if key=='movec_fit':
 				points.append([curve_fit[key][int(len(curve_fit[key])/2)],curve_fit[key][-1]])
+				quats.append([R2q(curve_fit_R[key][int(len(curve_fit_R[key])/2)]),R2q(curve_fit_R[key][-1])])
 			elif key=='movel_fit':
 				points.append([curve_fit[key][-1]])
+				quats.append([R2q(curve_fit_R[key][-1])])
 			else:
 				points.append([curve_fit_js[key][-1]])
+				quats.append([R2q(curve_fit_R[key][-1])])
 			
 			primitives_choices.append(key)
 			self.breakpoints.append(min(self.breakpoints[-1]+len(curve_fit[key]),len(self.curve)))
@@ -138,7 +142,7 @@ class greedy_fit(fitting_toolbox):
 		self.curve_fit_R=np.array(self.curve_fit_R)
 		self.curve_fit_js=np.array(self.curve_fit_js)
 
-		return self.breakpoints,primitives_choices,points
+		return self.breakpoints,primitives_choices,points,quats
 
 
 
@@ -156,11 +160,11 @@ def main():
 	###set primitive choices, defaults are all 3
 	# greedy_fit_obj.primitives={'movel_fit':greedy_fit_obj.movel_fit_greedy,'movec_fit':greedy_fit_obj.movec_fit_greedy}
 
-	greedy_fit_obj.primitives={'movel_fit':greedy_fit_obj.movel_fit_greedy}
+	# greedy_fit_obj.primitives={'movel_fit':greedy_fit_obj.movel_fit_greedy}
 	# greedy_fit_obj.primitives={'movej_fit':greedy_fit_obj.movej_fit_greedy}
 	# greedy_fit_obj.primitives={'movec_fit':greedy_fit_obj.movec_fit_greedy}
 
-	breakpoints,primitives_choices,points=greedy_fit_obj.fit_under_error()
+	breakpoints,primitives_choices,points,quats=greedy_fit_obj.fit_under_error()
 	# breakpoints,primitives_choices,points=greedy_fit_obj.smooth_slope(greedy_fit_obj.curve_fit,greedy_fit_obj.curve_fit_R,breakpoints,primitives_choices,points)
 
 	print('slope diff js (deg): ',np.degrees(greedy_fit_obj.get_slope_js(greedy_fit_obj.curve_fit_js,breakpoints)))
@@ -178,12 +182,14 @@ def main():
 	############insert initial configuration#################
 	primitives_choices.insert(0,'movej_fit')
 	points.insert(0,[greedy_fit_obj.curve_fit_js[0]])
+	quats.insert(0,[R2q(robot.fwd(greedy_fit_obj.curve_fit_js[0]).R)])
 
 	print(len(breakpoints))
 	print(len(primitives_choices))
 	print(len(points))
+	print(len(quats))
 
-	df=DataFrame({'breakpoints':breakpoints,'primitives':primitives_choices,'points':points})
+	df=DataFrame({'breakpoints':breakpoints,'primitives':primitives_choices,'points':points,'quats':quats})
 	df.to_csv('greedy_output/command.csv',header=True,index=False)
 	df=DataFrame({'x':greedy_fit_obj.curve_fit[:,0],'y':greedy_fit_obj.curve_fit[:,1],'z':greedy_fit_obj.curve_fit[:,2],\
 		'R1':greedy_fit_obj.curve_fit_R[:,0,0],'R2':greedy_fit_obj.curve_fit_R[:,0,1],'R3':greedy_fit_obj.curve_fit_R[:,0,2],\
@@ -227,5 +233,5 @@ def greedy_execute():
 	print('time: ',timestamp[-1]-timestamp[0],'error: ',max_error,'normal error: ',max_error_angle)
 
 if __name__ == "__main__":
-	greedy_execute()
-	# main()
+	# greedy_execute()
+	main()
