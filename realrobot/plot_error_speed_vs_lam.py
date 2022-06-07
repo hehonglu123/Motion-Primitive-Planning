@@ -18,7 +18,7 @@ curve_y=data['Y'].tolist()
 curve_z=data['Z'].tolist()
 curve=np.vstack((curve_x, curve_y, curve_z)).T
 
-speed=['v50','v100','v200','v400','v800']
+speed=['v50']#,'v100','v200','v400','v800']
 zone=['z10']
 data_dir="recorded_data/qp_movel/"
 
@@ -38,30 +38,38 @@ for s in speed:
         curve_exe_js=np.radians(np.vstack((q1,q2,q3,q4,q5,q6)).T.astype(float)[start_idx:])
         timestamp=np.array(data['timestamp'].tolist()[start_idx:]).astype(float)
 
-        timestep=np.average(timestamp[1:]-timestamp[:-1])
-
         robot=abb6640(d=50)
         act_speed=[]
         lam=[0]
         curve_exe=[]
         curve_exe_R=[]
+        time_steps=[]
         for i in range(len(curve_exe_js)):
             robot_pose=robot.fwd(curve_exe_js[i])
             curve_exe.append(robot_pose.p)
             curve_exe_R.append(robot_pose.R)
             if i>0:
                 lam.append(lam[-1]+np.linalg.norm(curve_exe[i]-curve_exe[i-1]))
-            try:
-                if timestamp[-1]!=timestamp[-2]:
-                    act_speed.append(np.linalg.norm(curve_exe[-1]-curve_exe[-2])/timestep)
-                    
-            except IndexError:
-                pass
+                time_diff=np.round(timestamp[i]-timestamp[i-1],6)       ###need to round to same decimal for real timestamp
+                act_speed.append(np.linalg.norm(curve_exe[-1]-curve_exe[-2])/time_diff)
+                time_steps.append(time_diff)
 
+        curve_exe=np.array(curve_exe)
         error=calc_all_error(curve_exe,curve)
 
-        lamdot_act=calc_lamdot(curve_exe_js,lam,robot,1)
 
+        lamdot_act=calc_lamdot(curve_exe_js,lam,robot,1)
+        ###time plots
+        plt.figure()
+        plt.plot(time_steps)
+        plt.title('timestep')
+        plt.show()
+        ###3D plot
+        plt.figure()
+        ax = plt.axes(projection='3d')
+        ax.plot3D(curve_exe[:,0], curve_exe[:,1], curve_exe[:,2], c='gray')
+
+        ###error plot
 
         fig, ax1 = plt.subplots()
 

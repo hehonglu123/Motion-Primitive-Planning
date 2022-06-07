@@ -46,9 +46,9 @@ def main():
 		for z in zone:
 			mp = MotionProgram(tool=tool)
 			j0=jointtarget(np.degrees(curve_js[0]),[0]*6)
-			mp.MoveAbsJ(j0,v50,fine)
+			mp.MoveAbsJ(j0,v100,fine)
 			mp.WaitTime(1)
-			mp.MoveAbsJ(j0,v50,fine)
+			mp.MoveAbsJ(j0,v100,fine)
 			for i in range(1,len(curve_js)+1,step):
 				pose_temp=robot.fwd(curve_js[i])
 				quatR=R2q(pose_temp.R)
