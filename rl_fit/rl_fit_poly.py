@@ -29,7 +29,7 @@ warnings.filterwarnings("ignore")
 
 # Util Class
 Action = namedtuple("Action", ("Type", "Length", "Code"))
-Primitive = namedtuple("Primitive", ("Start", "End", "Type", "Fits"))
+Primitive = namedtuple("Primitive", ("Start", "End", "Type", "Fits", "Error", "OriError"))
 Memory = namedtuple('Memory', ('state', 'action', 'reward', 'next_state', 'done'))
 
 
@@ -84,20 +84,14 @@ def save_data(episode_rewards, episode_steps, episode_target_curve):
     df.to_csv("Training Curve Data.csv")
 
 
-ERROR_THRESHOLD = 1.0
-MAX_GREEDY_STEP = 10
-
 EPS_START = 0.5
-EPS_END = 0.01
+EPS_END = 0.0001
 EPS_DECAY = 10
 
-TAU_START = 10
-TAU_END = 0.01
-MAX_TAU_EPISODE = 0.6
-LEARNING_RATE = 0.001
-LEARNING_FREQ = 4
+LEARNING_RATE = 1e-4
 GAMMA = 0.99
 BATCH_SIZE = 256
+MEM_CAP = 1e5
 
 REWARD_FINISH = 2000  # -------------------------------------- HERE
 REWARD_DECAY_FACTOR = 0.9
@@ -115,7 +109,8 @@ def reward_function(i_step, done):
 
 
 class MemoryReplayer(object):
-    def __init__(self, capacity=int(1e6)):
+    def __init__(self, capacity=int(MEM_CAP)):
+        self.capacity = capacity
         self.memory = deque([], maxlen=capacity)
 
     def push(self, memory):
@@ -181,8 +176,7 @@ class Agent(object):
         self.action_types = ['movel_fit'] * n_action + ['movec_fit'] * n_action + ['movej_fit'] * n_action
 
         self.best_reward = -9999
-        self.roll_back_counter = 0
-        self.best_policy = None
+        self.best_episode = 0
 
     def get_action(self, state, epsilon=0.):
         self.policy_net.eval()
@@ -241,24 +235,17 @@ class Agent(object):
         loss.backward()
         self.optimizer.step()
 
-    def roll_back(self, episode_rewards):
-        if len(episode_rewards) < 2000:
-            return
+    def roll_back(self, eval_reward, i_episode=0):
+        reward = np.mean(eval_reward)
+        torch.save(self.policy_net.state_dict(), "model/checkpoints/model_{}.pth".format(i_episode))
 
-        running_reward = np.mean(episode_rewards[-200:])
-        if running_reward >= self.best_reward:
-            self.best_reward = running_reward
-            self.roll_back_counter = 0
-            self.best_policy = self.policy_net.state_dict().copy()
-            return
+        if reward >= self.best_reward:
+            self.best_reward = reward
+            self.best_episode = i_episode
         else:
-            self.roll_back_counter += 1
-
-        if self.roll_back_counter > 1000:
-            print("*** [Rollback] Episode {}; Best Reward {:2f}".format(len(episode_rewards), self.best_reward))
-            self.policy_net.load_state_dict(self.best_policy.copy())
-            self.target_net.load_state_dict(self.best_policy.copy())
-            self.roll_back_counter = 0
+            print("*** [Rollback] Episode {}; Current Reward {}; Best Reward {:2f}".format(i_episode, reward, self.best_reward))
+            self.policy_net.load_state_dict(torch.load("model/checkpoints/model_{}.pth".format(self.best_episode)))
+            self.target_net.load_state_dict(torch.load("model/checkpoints/model_{}.pth".format(self.best_episode)))
 
     def update_target_nets(self):
         self.target_net.load_state_dict(self.policy_net.state_dict())
@@ -267,7 +254,8 @@ class Agent(object):
         torch.save(self.policy_net.state_dict(), path + os.sep + 'DQN_policy_net.pth')
 
     def load_model(self, path):
-        self.policy_net.load_state_dict(torch.load(path + os.sep + 'DQN_policy_net.pth'))
+        # self.policy_net.load_state_dict(torch.load(path + os.sep + 'DQN_policy_net.pth'))
+        self.policy_net.load_state_dict(torch.load(path))
         self.target_net.load_state_dict(self.policy_net.state_dict())
 
 
@@ -290,6 +278,8 @@ class TrajEnv(greedy_fit):
         self.fit_primitives = []
 
         self.greedy_primitives = {'movel_fit': None, 'movej_fit': None, 'movec_fit': None}
+        self.max_error = -1
+        self.max_ori_error = -1
 
     def fit_primitive(self, max_error_threshold, max_ori_threshold=np.radians(3),
                       primitives=['movel_fit', 'movej_fit', 'movec_fit']):
@@ -429,16 +419,18 @@ class TrajEnv(greedy_fit):
         if primitives_choices[-1] == 'movej_fit':
             curve_fit_js = curve_fit_js[:len(curve_fit) - (next_point - idx)]
 
-        return (self.breakpoints[-1], next_break_point), primitives_choices, (curve_fit, curve_fit_R, curve_fit_js)
+        return (self.breakpoints[-1], next_break_point), primitives_choices, (curve_fit, curve_fit_R, curve_fit_js),\
+               (max_errors, max_ori_errors)
 
     def get_greedy_primitives(self):
 
         for key in self.primitives:
-            breakpoints, primitive_type, fits = self.fit_primitive(0.5, primitives=[key])
+            breakpoints, primitive_type, fits, errors = self.fit_primitive(1., primitives=[key])
             start_point, end_point = breakpoints
+            max_error, max_ori_error = errors
             # assert (key == primitive_type[0])
             primitive_type = primitive_type[0]
-            primitive = Primitive(start_point, end_point, primitive_type, fits)
+            primitive = Primitive(start_point, end_point, primitive_type, fits, max_error, max_ori_error)
             self.greedy_primitives[key] = primitive
 
         return self.greedy_primitives
@@ -461,9 +453,11 @@ class TrajEnv(greedy_fit):
         new_breakpoint = greedy_primitive.Start + new_primitive_length
         new_breakpoint = min(new_breakpoint, len(self.curve))
         new_primitive_length = new_breakpoint - greedy_primitive.Start
+        self.max_error = max(self.max_error, greedy_primitive.Error[primitive_type])
+        self.max_ori_error = max(self.max_ori_error, greedy_primitive.OriError[primitive_type])
 
         # ============== Add the fitting curve ============ Greedy Part
-        self.fit_primitives.append(greedy_primitive)
+        self.fit_primitives.append((primitive_type, curve_fit[:new_primitive_length]))
         self.breakpoints.append(new_breakpoint)
         self.curve_fit.extend(curve_fit[:new_primitive_length])
         self.curve_fit_R.extend(curve_fit_R[:new_primitive_length])
@@ -509,31 +503,79 @@ class TrajEnv(greedy_fit):
 
         return state, reward, done
 
-    def plot_curve(self, curve_idx):
+    def plot_curve(self, curve_idx=-1):
         plt.figure()
         ax = plt.axes(projection='3d')
         ax.plot3D(self.curve[:, 0], self.curve[:, 1], self.curve[:, 2], 'red', linewidth=10)
         ax.scatter3D(self.curve_fit[:, 0], self.curve_fit[:, 1], self.curve_fit[:, 2], c=self.curve_fit[:,2], cmap='Greens')
-        plt.title("#BP {}; #Primitive {}; Length {}".format(len(self.breakpoints), len(self.fit_primitives), len(self.curve_fit)))
-        plt.savefig("plots/poly_rl/{}.jpg".format(curve_idx))
+        plt.title("#BP {}; #Primitive {}; Length {}; Error {:.3f}; OriError {:.3f}".format(len(self.breakpoints), len(self.fit_primitives), len(self.curve_fit), self.max_error, self.max_ori_error))
+        plt.savefig("plots/poly_rl/{}.jpg".format(curve_idx), dpi=300)
         plt.close()
         # plt.show()
 
+    def plot_primitives(self, curve_idx=-1):
+        plt.figure()
+        ax = plt.axes(projection='3d')
+        ax.plot3D(self.curve[:, 0], self.curve[:, 1], self.curve[:, 2], 'gray', linewidth=10, label='Target')
 
-def train(agent: Agent, base_data, js_data, lam_data, max_episode=20000):
+        used_types = {"movel_fit": False, "movec_fit": False, "movej_fit": False}
+
+        for p_type, p_curve in self.fit_primitives:
+            color = 'b'
+            if p_type == 'movel_fit':
+                color = 'b'
+            elif p_type == 'movec_fit':
+                color = 'r'
+            elif p_type == 'movej_fit':
+                color = 'g'
+            if not used_types[p_type]:
+                ax.plot3D(p_curve[:, 0], p_curve[:, 1], p_curve[:, 2], color=color, linewidth=2, label=p_type)
+                used_types[p_type] = True
+            else:
+                ax.plot3D(p_curve[:, 0], p_curve[:, 1], p_curve[:, 2], color=color, linewidth=2)
+            ax.plot3D(p_curve[0, 0], p_curve[0, 1], p_curve[0, 2], "mx", linewidth=3)
+            # ax.plot3D(p_curve[-1, 0], p_curve[-1, 1], p_curve[-1, 2], "mx")
+
+
+        plt.title("#BP {}; #Primitive {}; Length {}".format(len(self.breakpoints), len(self.fit_primitives),
+                                                            len(self.curve_fit)))
+        plt.legend()
+        plt.savefig("plots/poly_rl_primitive/{}.jpg".format(curve_idx), dpi=300)
+        plt.close()
+
+
+def train(agent: Agent, base_data, js_data, lam_data, max_episode=10000):
     robot = abb6640(d=50)
 
     print("RL Training Start")
 
+    # ==== Load Previous Training Record ====
+    # training_data = pd.read_csv("Training Curve Data.csv")
+    # episode_rewards = [x for x in training_data["episode_rewards"].values]
+    # episode_steps = [x for x in training_data["episode_steps"].values]
+    # episode_target_curves = [x for x in training_data["curve"].values]
+    # episode_start = len(episode_rewards)
+    # =======================================
+
+    # ==== Start from scratch ====
     episode_rewards = []
     episode_steps = []
     episode_target_curves = []
+    episode_start = 0
+    # ============================
 
-    start_learn = 200
+    # ==== Evaluation Results ====
+    eval_idxs = []
+    eval_rewards = []
+    eval_steps = []
+    eval_episodes = []
+    # ============================
 
-    for i_episode in range(max_episode):
+    start_learn = 500
+
+    for i_episode in range(episode_start, max_episode):
         timer = time.time()
-        epsilon = EPS_START - min(1., max(0, i_episode - start_learn) / (max_episode * 0.8)) * (EPS_START - EPS_END)
+        epsilon = EPS_START - min(1., max(0, i_episode - start_learn) / (max_episode * 1.0)) * (EPS_START - EPS_END)
         epsilon = 1. if i_episode < start_learn else epsilon
         episode_reward = 0
         target_curve_idx = np.random.randint(0, len(base_data))
@@ -569,26 +611,90 @@ def train(agent: Agent, base_data, js_data, lam_data, max_episode=20000):
         episode_steps.append(len(env.fit_primitives))
         episode_target_curves.append(target_curve_idx)
 
-        print("Episode {} / {} Epsilon: {:.3f} --- {} Steps --- Reward: {:.3f} --- {:.3f}s Curve {}"
+        print("Episode {} / {} Epsilon: {:.3f} --- {} Steps --- Reward: {:.3f} --- MemCap: {:.3f}% --- {:.3f}s Curve {}"
               .format(i_episode + 1, max_episode, epsilon, i_step, episode_reward,
-                      time.time() - timer, target_curve_idx))
-        agent.roll_back(episode_rewards)
+                      len(agent.memory)*100/agent.memory.capacity, time.time() - timer, target_curve_idx))
+        # agent.roll_back(episode_rewards)
 
-        if (i_episode + 1) % SAVE_MODEL == 0:
+        if (i_episode + 1) % SAVE_MODEL == 0 and i_episode > start_learn:
             print("=== Saving Model ===")
             save_data(episode_rewards, episode_steps, episode_target_curves)
-            agent.save_model('model')
+            # agent.save_model('model')
             print("DQNs saved at '{}'".format('model/'))
             print("======")
 
-        env.plot_curve(target_curve_idx)
+        if (i_episode + 1) % 2000 == 0 and i_episode > start_learn:
+            eval_idx, eval_reward, eval_step = evaluate(agent, base_data, js_data, lam_data)
+            eval_episode = [i_episode + 1] * len(eval_idx)
+            eval_idxs += eval_idx
+            eval_rewards += eval_reward
+            eval_steps += eval_step
+            eval_episodes += eval_episode
+
+            eval_df = pd.DataFrame({"id": eval_idxs, "reward": eval_rewards, "n_primitive": eval_steps,
+                                    "episode": eval_episodes})
+            eval_df.to_csv("Train Eval Result.csv", index=False)
+            agent.roll_back(eval_reward, i_episode + 1)
+
+        # env.plot_curve(target_curve_idx)
+
+
+def evaluate(agent: Agent, base_data, js_data, lam_data):
+    robot = abb6640(d=50)
+
+    print("RL Evaluation Start")
+
+    curve_rewards = []
+    curve_steps = []
+    curve_idx = []
+
+    for i in range(len(base_data)):
+        timer = time.time()
+
+        episode_reward = 0
+        target_curve_idx = i
+        curve_poly_coeff = base_data[target_curve_idx]
+        curve_js_coeff = js_data[target_curve_idx]
+        lam = lam_data[target_curve_idx]
+
+        env = TrajEnv(robot, curve_poly_coeff, curve_js_coeff, lam_f=lam, num_points=500)
+        state, done = env.reset()
+
+        i_step = 0
+        while not done:
+            i_step += 1
+            action = agent.get_action(state, 0.)
+            next_state, reward, done = env.step(action, i_step)
+            episode_reward += reward
+            if done:
+                break
+            state = next_state
+
+        print("[EVAL] Curve {}/{} --- Step: {} --- Reward: {:.2f} --- {:.3f}s".format(i, len(base_data), i_step,
+                                                                                  episode_reward, time.time() - timer))
+
+        curve_rewards.append(episode_reward)
+        curve_steps.append(len(env.fit_primitives))
+        curve_idx.append(target_curve_idx)
+
+        env.plot_curve(i)
+        env.plot_primitives(i)
+
+    return curve_idx, curve_rewards, curve_steps
 
 
 def main():
     base_data, js_data, lam_data = read_data()
     agent = Agent(n_action=10)
+    # agent.load_model('model/checkpoints/model_10000.pth')
     train(agent, base_data, js_data, lam_data)
 
+    # eval_idx, eval_reward, eval_step = evaluate(agent, base_data, js_data, lam_data)
+    # eval_episode = [1] * len(eval_idx)
+    #
+    # eval_df = pd.DataFrame({"id": eval_idx, "reward": eval_reward, "n_primitive": eval_step,
+    #                         "episode": eval_episode})
+    # eval_df.to_csv("Train Eval Result.csv", index=False)
 
 if __name__ == '__main__':
     main()

@@ -1,70 +1,74 @@
-import rpi_abb_irc5
 import numpy as np
-import time
+import time, sys
 from pandas import *
+sys.path.append('egm_toolbox')
+import rpi_abb_irc5
+
+sys.path.append('../../../toolbox')
+from robots_def import *
+from error_check import *
+from lambda_calc import *
 
 egm = rpi_abb_irc5.EGM()
 
-col_names=['q1', 'q2', 'q3','q4', 'q5', 'q6'] 
-data = read_csv('../../../data/from_ge/Curve_js2.csv', names=col_names)
-curve_q1=data['q1'].tolist()
-curve_q2=data['q2'].tolist()
-curve_q3=data['q3'].tolist()
-curve_q4=data['q4'].tolist()
-curve_q5=data['q5'].tolist()
-curve_q6=data['q6'].tolist()
-curve_js=np.vstack((curve_q1, curve_q2, curve_q3,curve_q4,curve_q5,curve_q6)).T
+dataset='wood/'
+data_dir='../../../data/'
+curve_js = read_csv(data_dir+dataset+'Curve_js.csv',header=None).values
+curve = read_csv(data_dir+dataset+'Curve_in_base_frame.csv',header=None).values
+vd=50
 
-lam_des=500
-lam_f=1758
-steps=lam_f/lam_des/0.004
-step_size=len(curve_js)/steps
+robot=abb6640(d=50)
+lam=calc_lam_cs(curve[:,:3])
+ts=0.004
 
-q_cur=np.zeros(6)
+steps=int((lam[-1]/vd)/ts)
+idx=np.linspace(0.,len(curve_js)-1,num=steps).astype(int)
+curve_js=curve_js[idx]
+
+res, state = egm.receive_from_robot(.1)
+q_cur=np.radians(state.joint_angles)
+num=int(np.linalg.norm(curve_js[0]-q_cur)/ts)
+curve2start=np.linspace(q_cur,curve_js[0],num=num)
+
 ###move to start first
+print('moving to start point')
 try:
-	while np.linalg.norm(q_cur-curve_js[0])>0.001:
-		res, state = egm.receive_from_robot(.1)
-		if res:
-			# Clear queue
-			i = 0
-			while True:
-				res_i, state_i = egm.receive_from_robot()
-				if res_i: # there was another msg waiting
-					state = state_i
-					i += 1
-				else: # previous msg was end of queue
-					break
+	for i in range(len(curve2start)):
+		res_i, state_i = egm.receive_from_robot(ts)
+		send_res = egm.send_to_robot(curve2start[i])
 
-			if i > 0:
-				print("Number of extra msgs in queue: ", i)
+	for i in range(500):
+		while True:
+			res_i, state_i = egm.receive_from_robot()
+			if res_i:
+				send_res = egm.send_to_robot(curve_js[0])
+				break
 
-			send_res = egm.send_to_robot(curve_js[0])
-			q_cur=np.radians(state.joint_angles)
 except KeyboardInterrupt:
 	raise
 
+# # Clear queue
+# while True:
+# 	res_i, state_i = egm.receive_from_robot()
+# 	if not res_i:
+# 		break
 
+curve_exe_js=[]
+timestamp=[]
+###traverse curve
+print('traversing trajectory')
 try:
-	while True:
-		res, state = egm.receive_from_robot(.1)
-
-		if res:
-			# Clear queue
-			i = 0
-			while True:
-				res_i, state_i = egm.receive_from_robot()
-				if res_i: # there was another msg waiting
-					state = state_i
-					i += 1
-				else: # previous msg was end of queue
-					break
-
-			if i > 0:
-				print("Number of extra msgs in queue: ", i)
-
-			send_res = egm.send_to_robot(curve_js[int(step_size*i)])
-			print(state.joint_angles)
-
+	for i in range(len(curve_js)):
+		while True:
+			res_i, state_i = egm.receive_from_robot()
+			if res_i:
+				send_res = egm.send_to_robot(curve_js[i])
+				#save joint angles
+				curve_exe_js.append(np.radians(state_i.joint_angles))
+				#TODO: replace with controller time
+				timestamp.append(state_i.robot_message.header.tm)
+				break
 except KeyboardInterrupt:
 	raise
+
+DataFrame(np.hstack((np.array(timestamp).reshape((-1,1)),curve_exe_js))).to_csv(dataset+'curve_exe_v'+str(vd)+'.csv',header=False,index=False)

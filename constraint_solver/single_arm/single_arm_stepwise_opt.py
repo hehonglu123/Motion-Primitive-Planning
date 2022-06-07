@@ -5,7 +5,9 @@ from constraint_solver import *
 
 def main():
 	col_names=['X', 'Y', 'Z','direction_x','direction_y','direction_z'] 
-	data = read_csv("../../data/from_ge/Curve_in_base_frame2.csv", names=col_names)
+	# data = read_csv("../../data/from_ge/Curve_in_base_frame2.csv", names=col_names)
+	# data = read_csv("../../data/wood/Curve_in_base_frame.csv", names=col_names)
+	data = read_csv("../../data/from_NX/Curve_in_base_frame.csv", names=col_names)
 	curve_x=data['X'].tolist()
 	curve_y=data['Y'].tolist()
 	curve_z=data['Z'].tolist()
@@ -17,9 +19,11 @@ def main():
 
 	robot=abb6640(d=50)
 	opt=lambda_opt(curve,curve_normal,robot1=robot,steps=50000)
-	q_init=[0.627591343,	0.839862344,	-0.238013642,	1.679129375,	-0.901227684,	0.79092621]
+	# q_init=[0.627591343,	0.839862344,	-0.238013642,	1.679129375,	-0.901227684,	0.79092621]
+	# q_init=[-5.39E-10,	0.42424468,	0.863930807,	0,	-1.811774263,	0]
+	q_init=[-1.71E-06,	0.458127951,	0.800479092,	-5.65E-06,	-1.782205819,	-7.34E-06]
 
-	q_out=opt.single_arm_stepwise_optimize2(q_init)
+	q_out=opt.single_arm_stepwise_optimize(q_init)
 
 	####output to trajectory csv
 	df=DataFrame({'q0':q_out[:,0],'q1':q_out[:,1],'q2':q_out[:,2],'q3':q_out[:,3],'q4':q_out[:,4],'q5':q_out[:,5]})

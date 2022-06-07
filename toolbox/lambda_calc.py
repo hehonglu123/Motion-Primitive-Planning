@@ -4,6 +4,7 @@ import sys, traceback
 from general_robotics_toolbox import *
 import matplotlib.pyplot as plt
 from robots_def import *
+from utils import * 
 
 def calc_lam_js(curve_js,robot):
 	#calculate lambda from joints
@@ -19,7 +20,11 @@ def calc_lam_js(curve_js,robot):
 def calc_lam_js_2arm(curve_js1,curve_js2,robot1,robot2,base2_R,base2_p):
 	curve=[]
 	for i in range(len(curve_js1)):
-		curve.append(robot1.fwd(curve_js1[i]).p-robot2.fwd(curve_js2[i],base2_R,base2_p).p)
+		pose1_now=robot1.fwd(curve_js1[i])
+		pose2_world_now=robot2.fwd(curve_js2[i],base2_R,base2_p)
+
+		curve.append(pose2_world_now.R.T@(pose1_now.p-pose2_world_now.p))
+	# visualize_curve(np.array(curve))
 	lam=calc_lam_cs(curve)
 	return np.array(lam)
 
@@ -219,65 +224,46 @@ def calc_lamdot_dual(curve_js1,curve_js2,lam,joint_vel_limit1,joint_vel_limit2,s
 
 def main():
 	robot=abb6640(d=50)
+	curve_js = read_csv("../data/from_NX/Curve_js.csv",header=None).values
 
-	col_names=['q1', 'q2', 'q3','q4', 'q5', 'q6'] 
-	# data = read_csv("../data/from_NX/Curve_js.csv", names=col_names)
-	data = read_csv("../data/from_ge/Curve_js2.csv", names=col_names)
+	# data = read_csv("../constraint_solver/single_arm/trajectory/curve_pose_opt/arm1.csv", names=col_names)
 	# data = read_csv("qsol.csv", names=col_names)
 	# data = read_csv("../constraint_solver/single_arm/trajectory/all_theta_opt/all_theta_opt_js.csv", names=col_names)
-	curve_q1=data['q1'].tolist()
-	curve_q2=data['q2'].tolist()
-	curve_q3=data['q3'].tolist()
-	curve_q4=data['q4'].tolist()
-	curve_q5=data['q5'].tolist()
-	curve_q6=data['q6'].tolist()
-	curve_js=np.vstack((curve_q1, curve_q2, curve_q3,curve_q4,curve_q5,curve_q6)).T
-	# lam=calc_lam_cs(curve)
+
 	lam=calc_lam_js(curve_js,robot)
 	
-	step=1000
+	step=10
 	lam_dot=calc_lamdot(curve_js,lam,robot,step)
 	plt.plot(lam[::step],lam_dot)
 	plt.xlabel('path length (mm)')
 	plt.ylabel('max lambda_dot')
+	plt.ylim([0,4000])
 	plt.title('lambda_dot vs lambda')
 	plt.show()
 
 def main2():
+	###read in points
+	curve_js1 = read_csv("../constraint_solver/dual_arm/trajectory/arm1.csv",header=None).values
+	curve_js2 = read_csv("../constraint_solver/dual_arm/trajectory/arm2.csv",header=None).values
+	###define robots
 	robot1=abb1200(d=50)
 	robot2=abb6640()
-	###read actual curve
-	col_names=['q1', 'q2', 'q3','q4', 'q5', 'q6'] 
-	data = read_csv("../constraint_solver/dual_arm/trajectory/arm1.csv", names=col_names)
-	curve_q1=data['q1'].tolist()
-	curve_q2=data['q2'].tolist()
-	curve_q3=data['q3'].tolist()
-	curve_q4=data['q4'].tolist()
-	curve_q5=data['q5'].tolist()
-	curve_q6=data['q6'].tolist()
-	curve_js1=np.vstack((curve_q1, curve_q2, curve_q3,curve_q4,curve_q5,curve_q6)).T
 
-	col_names=['q1', 'q2', 'q3','q4', 'q5', 'q6'] 
-	data = read_csv("../constraint_solver/dual_arm/trajectory/arm2.csv", names=col_names)
-	curve_q1=data['q1'].tolist()
-	curve_q2=data['q2'].tolist()
-	curve_q3=data['q3'].tolist()
-	curve_q4=data['q4'].tolist()
-	curve_q5=data['q5'].tolist()
-	curve_q6=data['q6'].tolist()
-	curve_js2=np.vstack((curve_q1, curve_q2, curve_q3,curve_q4,curve_q5,curve_q6)).T
+	###read in robot2 pose
+	with open('../constraint_solver/dual_arm/trajectory/abb6640.yaml') as file:
+		H_6640 = np.array(yaml.safe_load(file)['H'],dtype=np.float64)
 
-	base2_R=np.array([[-1,0,0],[0,-1,0],[0,0,1]])
-	base2_p=np.array([3000,1000,0])
+	base2_R=H_6640[:-1,:-1]
+	base2_p=1000.*H_6640[:-1,-1]
 	
-	step_size=1000
-	lam=calc_lam_js_2arm(curve_js1[::step_size],curve_js2[::step_size],robot1,robot2,base2_R,base2_p)
-
-	lam_dot=calc_lamdot_2arm(np.hstack((curve_js1[::step_size],curve_js2[::step_size])),lam,robot1,robot2,1)
-	plt.plot(lam,lam_dot)
+	lam=calc_lam_js_2arm(curve_js1,curve_js2,robot1,robot2,base2_R,base2_p)
+	step=10
+	lam_dot=calc_lamdot_2arm(np.hstack((curve_js1,curve_js2)),lam,robot1,robot2,step)
+	plt.plot(lam[::step],lam_dot)
 	plt.xlabel('path length (mm)')
 	plt.ylabel('max lambda_dot')
 	plt.title('lambda_dot vs lambda')
+	plt.ylim([0,2000])
 	plt.show()
 
 

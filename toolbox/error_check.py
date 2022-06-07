@@ -31,20 +31,35 @@ def calc_max_error(fit,curve):
 
 	return max_error, max_error_idx
 
-def calc_max_error_w_normal(fit,curve,fit_normal,curve_normal):
+def calc_max_error_w_normal(fit,curve,fit_normal,curve_normal,extension=False, eval_mode=False):
+	if extension:
+		start_idx=np.argmin(np.linalg.norm(curve[0]-fit,axis=1))
+		end_idx=np.argmin(np.linalg.norm(curve[-1]-fit,axis=1))
+		fit=fit[start_idx:end_idx+1]
+		fit_normal=fit_normal[start_idx:end_idx+1]
+
 	max_error=0
 	max_error_angle=0
 	idx=0
 	max_error_idx=0
+	error_log = [0] * len(fit)
+	normal_error_log = [0] * len(fit_normal)
 	for i in range(len(fit)):
 		error,idx2=calc_error(fit[i],curve)
 		normal_angle=get_angle(fit_normal[i],curve_normal[idx2])
+
 		if error>max_error:
 			max_error_idx=idx
 			max_error=copy.deepcopy(error)
 		if normal_angle>max_error_angle:
 			max_error_angle=copy.deepcopy(normal_angle)
 		idx+=1
+
+		if eval_mode:
+			error_log[i] = error
+			normal_error_log[i] = normal_angle
+	if eval_mode:
+		return max_error,max_error_angle, max_error_idx, error_log, normal_error_log
 
 	return max_error,max_error_angle, max_error_idx
 
@@ -80,7 +95,12 @@ def calc_all_error(fit,curve):
 		error.append(error_temp)
 	return error
 
-def calc_all_error_w_normal(fit,curve,fit_normal,curve_normal):
+def calc_all_error_w_normal(fit,curve,fit_normal,curve_normal,extension=False):
+	if extension:
+		start_idx=np.argmin(np.linalg.norm(curve[0]-fit,axis=1))
+		end_idx=np.argmin(np.linalg.norm(curve[-1]-fit,axis=1))
+		fit=fit[start_idx:end_idx+1]
+		fit_normal=fit_normal[start_idx:end_idx+1]
 	error=[]
 	angle_error=[]
 	for i in range(len(fit)):
@@ -151,3 +171,21 @@ def complete_points_check2(fit_backproj,curve_backproj,fit,curve):	###error metr
 
 	return max_cartesian_error,avg_cartesian_error,max_cartesian_error_backproj,avg_cartesian_error_backproj,max_total_error,avg_total_error,max_error_index
 
+def logged_data_analysis(robot,timestamp,curve_exe_js):
+
+	act_speed=[]
+	lam=[0]
+	curve_exe=[]
+	curve_exe_R=[]
+	for i in range(len(curve_exe_js)):
+		robot_pose=robot.fwd(curve_exe_js[i])
+		curve_exe.append(robot_pose.p)
+		curve_exe_R.append(robot_pose.R)
+		if i>0:
+			lam.append(lam[-1]+np.linalg.norm(curve_exe[i]-curve_exe[i-1]))
+		try:
+			act_speed.append(np.linalg.norm(curve_exe[-1]-curve_exe[-2])/(timestamp[i]-timestamp[i-1]))
+		except IndexError:
+			pass
+
+	return lam, np.array(curve_exe), np.array(curve_exe_R), act_speed

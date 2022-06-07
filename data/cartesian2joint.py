@@ -9,7 +9,7 @@ from robots_def import *
 from utils import *
 
 def main():
-	data_dir='from_NX/'
+	data_dir='wood/'
 
 	col_names=['X', 'Y', 'Z','direction_x','direction_y','direction_z'] 
 	data = read_csv(data_dir+"Curve_in_base_frame.csv", names=col_names)
@@ -32,11 +32,6 @@ def main():
 	for i in range(len(curve)):
 		try:
 			R_curve=direction2R(curve_direction[i],-curve[i+1]+curve[i])
-			if i>0:
-				k,angle_of_change=R2rot(np.dot(curve_R[-1],R_curve.T))
-				if angle_of_change>0.1:
-					curve_R.append(curve_R[-1])
-					continue
 		except:
 			traceback.print_exc()
 			pass
@@ -45,33 +40,36 @@ def main():
 
 	###insert initial orientation
 	curve_R.insert(0,curve_R[0])
-	curve_js=np.zeros((len(curve),6))
+	
 
-	# q_init=np.radians([35.414132, 12.483655, 27.914093, -89.255298, 51.405928, -128.026891])
-	# q_init=np.radians([31.58,7.45,5.14,-32.59,69.49,112.41])
-	q_init=np.array([0.543376746,	0.510155551,	-0.124620498,	1.838981323,	-0.725032709,	7.21E-06])
-	for i in range(len(curve)):
-		try:
-			q_all=np.array(abb6640_obj.inv(curve[i],curve_R[i]))
-		except:
-			traceback.print_exc()
-			pass
-		###choose inv_kin closest to previous joints
-		if i==0:
-			temp_q=q_all-q_init
-			order=np.argsort(np.linalg.norm(temp_q,axis=1))
-			curve_js[i]=q_all[order[0]]
+	try:
+		q_inits=np.array(abb6640_obj.inv(curve[0],curve_R[0]))
+	except:
+		print('no solution available')
+		return
 
-		else:
+	for q_init in q_inits:
+		curve_js=np.zeros((len(curve),6))
+		curve_js[0]=q_init
+		for i in range(1,len(curve)):
 			try:
-				temp_q=q_all-curve_js[i-1]
-				order=np.argsort(np.linalg.norm(temp_q,axis=1))
+				q_all=np.array(abb6640_obj.inv(curve[i],curve_R[i]))
+			except:
+				#if no solution
+				print('no solution available')
+				return
+
+			temp_q=q_all-curve_js[i-1]
+			order=np.argsort(np.linalg.norm(temp_q,axis=1))
+			if np.linalg.norm(q_all[order[0]]-curve_js[i-1])>0.5:
+				print('large change')
+				break	#if large changes in q
+			else:
 				curve_js[i]=q_all[order[0]]
 
-			except:
-				q_all=np.array(abb6640_obj.inv(curve[i],curve_R[i]))
-				traceback.print_exc()
-				break
+		#check if all q found
+		if np.linalg.norm(curve_js[-1])>0:
+			break
 
 
 	###checkpoint3

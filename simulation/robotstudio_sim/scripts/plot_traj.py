@@ -11,24 +11,15 @@ from lambda_calc import *
 
 def main():
 
-	data_dir='fitting_output_new/threshold0.5/'
+	data_dir='tesseract/'
 
 	data = read_csv(data_dir+'command.csv')
 	breakpoints=np.array(data['breakpoints'].tolist())#[:3]
 	primitives=data['primitives'].tolist()[1:]#[:2]
 
-	col_names=['J1', 'J2','J3', 'J4', 'J5', 'J6'] 
-	data=read_csv(data_dir+'curve_fit_js.csv',names=col_names)
-	q1=data['J1'].tolist()
-	q2=data['J2'].tolist()
-	q3=data['J3'].tolist()
-	q4=data['J4'].tolist()
-	q5=data['J5'].tolist()
-	q6=data['J6'].tolist()
-	curve_js=np.vstack((q1,q2,q3,q4,q5,q6)).T.astype(float)
+	curve_js = read_csv(data_dir+'curve_fit_js.csv',header=None).values[:,1:]
 
-
-	speed='v300'
+	speed='v500'
 	zone='z10'
 	###read in curve_exe
 	col_names=['timestamp', 'cmd_num', 'J1', 'J2','J3', 'J4', 'J5', 'J6'] 

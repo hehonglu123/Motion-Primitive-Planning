@@ -3,7 +3,7 @@ from matplotlib.pyplot import *
 from mpl_toolkits.mplot3d.axes3d import Axes3D
 import matplotlib.pyplot as plt
 from pandas import *
-from fitting_toolbox_new import *
+from fitting_toolbox import *
 import sys
 sys.path.append('../circular_fit')
 from toolbox_circular_fit import *
@@ -11,7 +11,7 @@ sys.path.append('../toolbox')
 from robots_def import *
 from general_robotics_toolbox import *
 from error_check import *
-# from robotstudio_send import MotionSend
+from MotionSend import *
 
 #####################3d curve-fitting with MoveL, MoveJ, MoveC; stepwise incremental bi-section searched self.breakpoints###############################
 
@@ -206,8 +206,8 @@ class greedy_fit(fitting_toolbox):
 def main():
 	###read in points
 	col_names=['q1', 'q2', 'q3','q4', 'q5', 'q6'] 
-	data = read_csv("../data/from_ge/Curve_js2.csv", names=col_names)
-	# data = read_csv("../data/from_ge/qsol.csv", names=col_names)
+	# data = read_csv("../data/from_ge/Curve_js2.csv", names=col_names)
+	data = read_csv("../data/wood/Curve_js.csv", names=col_names)
 	# data = read_csv("../data/from_Jon/qbestcurve_new.csv", names=col_names)
 	# data = read_csv("../constraint_solver/single_arm/trajectory/curve_pose_opt/curve_pose_opt_js.csv", names=col_names)
 	# data = read_csv("../constraint_solver/single_arm/trajectory/all_theta_opt_blended/all_theta_opt_js.csv", names=col_names)
@@ -226,7 +226,7 @@ def main():
 
 
 	###set primitive choices, defaults are all 3
-	# greedy_fit_obj.primitives={'movel_fit':greedy_fit_obj.movel_fit_greedy,'movec_fit':greedy_fit_obj.movec_fit_greedy}
+	greedy_fit_obj.primitives={'movel_fit':greedy_fit_obj.movel_fit_greedy,'movec_fit':greedy_fit_obj.movec_fit_greedy}
 
 	# greedy_fit_obj.primitives={'movel_fit':greedy_fit_obj.movel_fit_greedy}
 	# greedy_fit_obj.primitives={'movej_fit':greedy_fit_obj.movej_fit_greedy}
@@ -266,6 +266,41 @@ def main():
 	df.to_csv('curve_fit.csv',header=True,index=False)
 	df=DataFrame({'j1':greedy_fit_obj.curve_fit_js[:,0],'j2':greedy_fit_obj.curve_fit_js[:,1],'j3':greedy_fit_obj.curve_fit_js[:,2],'j4':greedy_fit_obj.curve_fit_js[:,3],'j5':greedy_fit_obj.curve_fit_js[:,4],'j6':greedy_fit_obj.curve_fit_js[:,5]})
 	df.to_csv('curve_fit_js.csv',header=False,index=False)
+
+def greedy_execute():
+	###read in points
+	curve_js=read_csv("../data/from_ge/Curve_js2.csv",header=None).values
+
+	robot=abb6640(d=50)
+
+	greedy_fit_obj=greedy_fit(robot,curve_js[::50],orientation_weight=1)
+
+	breakpoints,primitives_choices,points=greedy_fit_obj.fit_under_error(0.5)
+
+	############insert initial configuration#################
+	primitives_choices.insert(0,'movej_fit')
+	q_all=np.array(robot.inv(greedy_fit_obj.curve_fit[0],greedy_fit_obj.curve_fit_R[0]))
+	###choose inv_kin closest to previous joints
+	temp_q=q_all-curve_js[0]
+	order=np.argsort(np.linalg.norm(temp_q,axis=1))
+	q_init=q_all[order[0]]
+	points.insert(0,[q_init])
+
+	act_breakpoints=np.array(breakpoints)
+
+	act_breakpoints[1:]=act_breakpoints[1:]-1
+
+	#######################RS execution################################
+	from io import StringIO
+	ms = MotionSend()
+	StringData=StringIO(ms.exec_motions(primitives_choices,act_breakpoints,points,greedy_fit_obj.curve_fit_js,v500,z10))
+	df = read_csv(StringData, sep =",")
+	##############################data analysis#####################################
+	lam, curve_exe, curve_exe_R, speed, timestamp=ms.logged_data_analysis(df)
+	max_error,max_error_angle, max_error_idx=calc_max_error_w_normal(curve_exe,greedy_fit_obj.curve,curve_exe_R[:,:,-1],greedy_fit_obj.curve_R[:,:,-1])
+
+	print('time: ',timestamp[-1]-timestamp[0],'error: ',max_error,'normal error: ',max_error_angle)
+
 
 def rl_fit_data():
 	import glob, pickle
@@ -316,4 +351,4 @@ def rl_fit_data():
 
 
 if __name__ == "__main__":
-	main()
+	greedy_execute()

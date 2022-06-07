@@ -53,15 +53,6 @@ def main():
 	plt.plot(curve_fit_2d_vis[:,0],curve_fit_2d_vis[:,1])
 	plt.scatter(curve_fit_2d_vis[breakpoints.astype(int),0],curve_fit_2d_vis[breakpoints.astype(int),1])
 	plt.legend(['original curve','curve fit','breakpoints'])
-
-
-	# fig = plt.figure()
-	# ax = plt.axes(projection='3d')
-	# ax.plot3D(curve[:,0], curve[:,1], curve[:,2],label='original',c='gray')
-	# ax.plot3D(curve_fit[:,0], curve_fit[:,1], curve_fit[:,2],label='curve_fit',c='red')
-	# ax.scatter(curve_fit[breakpoints.astype(int),0],curve_fit[breakpoints.astype(int),1],curve_fit[breakpoints.astype(int),2])
-	# ax.legend()
-
 	
 
 	plt.show()
