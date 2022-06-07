@@ -44,6 +44,14 @@ class jointtarget(NamedTuple):
     robax: np.ndarray # shape=(6,)
     extax: np.ndarray # shape=(6,)
 
+def unwrapped_angle_check(q_init,q_all):
+
+    temp_q=q_all-q_init
+    temp_q = np.unwrap(temp_q)
+    order=np.argsort(np.linalg.norm(temp_q,axis=1))
+    # return q_all[order[0]]
+    return temp_q[order[0]]+q_init
+
 def R2wpr(R):
     q=rox.R2q(R)
     r=math.degrees(math.atan2(2*(q[0]*q[3]+q[1]*q[2]),1.-2*(q[2]**2+q[3]**2)))
@@ -123,9 +131,9 @@ class TPMotionProgram(object):
         self.t_num += 1
         mo += 'P['+str(self.t_num)+'] '
         
-        if vel_unit == 'sec':
+        if vel_unit == 'msec':
             vel = np.min([np.max([vel,1]),32000])
-            mo += str(vel) + 'sec '
+            mo += str(vel) + 'msec '
         else:
             vel = np.min([np.max([vel,1]),100])
             mo += str(vel) + '% '

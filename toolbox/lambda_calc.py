@@ -10,10 +10,10 @@ def calc_lam_js(curve_js,robot):
 	lam=[0]
 	curve=[]
 	for i in range(len(curve_js)):
-	    robot_pose=robot.fwd(curve_js[i])
-	    curve.append(robot_pose.p)
-	    if i>0:
-	        lam.append(lam[-1]+np.linalg.norm(curve[i]-curve[i-1]))
+		robot_pose=robot.fwd(curve_js[i])
+		curve.append(robot_pose.p)
+		if i>0:
+			lam.append(lam[-1]+np.linalg.norm(curve[i]-curve[i-1]))
 	return np.array(lam)
 
 def calc_lam_cs(curve):
