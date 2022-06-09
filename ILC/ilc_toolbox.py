@@ -167,3 +167,48 @@ class ilc_toolbox(object):
 			p_bp[breakpoint_interp_2tweak_indices[i]]=self.robot.fwd(q_bp[breakpoint_interp_2tweak_indices[i]]).p
 
 		return p_bp, q_bp
+
+	def get_error_bp(self,p_bp,q_bp,curve_exe,curve_exe_R,curve_bp,curve_R_bp):
+		###p_bp:								xyz of breakpoints, u
+		###q_bp:								joint configs of breakpoints, u
+		###curve_exe:							execution curve
+		###curve_exe_R:							execution curve R
+		###curve_bp:							"breakpoints" on original curve, y_d
+		###curve_R_bp:							"breakpoints" on original curve R, y_d
+
+
+		exe_bp_idx=[]
+		ep=[]
+		eR=[]
+		###calculate error excluding start & end
+		for i in range(1,len(p_bp)-1):
+			###get output y index by finding closest on curve_exe
+			exe_bp_idx.append(calc_error(p_bp[i],curve_exe)[1])
+			###find error y-y_d
+			ep.append(curve_exe[exe_bp_idx[-1]]-curve_bp[i])
+			# eR.append(curve_exe_R[exe_bp_idx[-1]]@self.robot.fwd(q_bp[i][0]).R.T)
+
+		return ep, eR, curve_exe[exe_bp_idx],curve_exe_R[exe_bp_idx]
+
+	def update_bp_ilc(self,p_bp,q_bp,exe_bp_p,exe_bp_R,exe_bp_p_new, exe_bp_R_new,alpha1=0.5,alpha2=0.5):
+		###fixing initial and end breakpoint
+		###TODO, add rotation gradient
+
+		###p_bp:								xyz of breakpoints, u
+		###q_bp:								joint configs of breakpoints, u
+		###exe_bp_p:							breakpoints of execution, position, output y
+		###exe_bp_R:							breakpoints of execution, R, output y
+		###exe_bp_p_new:						breakpoints of execution with augmented input u', position, output y'
+		###exe_bp_R_new:						breakpoints of execution with augmented input u', R, 		output y'
+
+		for i in range(1,len(p_bp)-1):
+			###get new ek
+			grad_ep=exe_bp_p_new[i-1]-exe_bp_p[i-1]
+			###time reverse
+			reverse_idx=-1-i
+			p_bp[reverse_idx]-=alpha1*grad_ep
+
+
+			q_bp[reverse_idx][0]=car2js(self.robot,q_bp[reverse_idx][0],p_bp[reverse_idx],self.robot.fwd(q_bp[reverse_idx][0]).R)[0]
+		return p_bp,q_bp
+

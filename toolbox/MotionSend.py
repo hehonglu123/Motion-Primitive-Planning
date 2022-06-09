@@ -7,7 +7,7 @@ from robots_def import *
 from error_check import *
 sys.path.append('../toolbox')
 from toolbox_circular_fit import *
-
+from lambda_calc import *
 quatR = R2q(rot([0,1,0],math.radians(30)))
 class MotionSend(object):
     def __init__(self,robot1=abb1200(),robot2=abb6640(d=50),tool1=tooldata(True,pose([50,0,450],[quatR[0],quatR[1],quatR[2],quatR[3]]),loaddata(1,[0,0,0.001],[1,0,0,0],0,0,0)),tool2=tooldata(True,pose([75,0,493.30127019],[quatR[0],quatR[1],quatR[2],quatR[3]]),loaddata(1,[0,0,0.001],[1,0,0,0],0,0,0)),url='http://127.0.0.1:80') -> None:
@@ -534,6 +534,25 @@ class MotionSend(object):
                 pass
 
         return lam, np.array(curve_exe), np.array(curve_exe_R),curve_exe_js, act_speed, timestamp
+
+    def chop_extension(self,curve_exe, curve_exe_R,curve_exe_js, speed, timestamp,p_start,p_end):
+        start_idx=np.argmin(np.linalg.norm(p_start-curve_exe,axis=1))
+        end_idx=np.argmin(np.linalg.norm(p_end-curve_exe,axis=1))
+
+        #make sure extension doesn't introduce error
+        if np.linalg.norm(curve_exe[start_idx]-p_start)>0.5:
+            start_idx+=1
+        if np.linalg.norm(curve_exe[end_idx]-p_end)>0.5:
+            end_idx-=1
+
+        curve_exe=curve_exe[start_idx:end_idx+1]
+        curve_exe_js=curve_exe_js[start_idx:end_idx+1]
+        curve_exe_R=curve_exe_R[start_idx:end_idx+1]
+        speed=speed[start_idx:end_idx+1]
+        speed=replace_outliers(np.array(speed))
+        lam=calc_lam_cs(curve_exe)
+
+        return lam, curve_exe, curve_exe_R,curve_exe_js, speed, timestamp
 
 def main():
     ms = MotionSend()

@@ -4,8 +4,13 @@ import matplotlib.pyplot as plt
 from scipy.interpolate import interp1d
 from scipy import signal
 
-def reject_outliers(data, m=3):
-	return data[abs(data - np.mean(data)) < m * np.std(data)]
+def replace_outliers2(data):
+	rolling_window=30
+	for i in range(len(data)-rolling_window):
+		rolling_avg=np.mean(data[i:i+rolling_window])
+		if np.abs(data[i]-rolling_avg)>0.02*rolling_avg:
+			data[i]=rolling_avg
+	return data
 def replace_outliers(data, m=3):
 	data[abs(data - np.mean(data)) > m * np.std(data)] = np.mean(data)
 	return data
@@ -153,7 +158,6 @@ def H_from_RT(R,T):
 
 
 def car2js(robot,q_init,curve_fit,curve_fit_R):
-
 	###calculate corresponding joint configs
 	curve_fit_js=[]
 	if curve_fit.shape==(3,):
@@ -178,3 +182,31 @@ def car2js(robot,q_init,curve_fit,curve_fit_R):
 			order=np.argsort(np.linalg.norm(temp_q,axis=1))
 			curve_fit_js.append(q_all[order[0]])
 	return curve_fit_js
+
+def R2w(curve_R,R_constraint=[]):
+	if len(R_constraint)==0:
+		R_init=curve_R[0]
+		curve_w=[np.zeros(3)]
+	else:
+		R_init=R_constraint
+		R_diff=np.dot(curve_R[0],R_init.T)
+		k,theta=R2rot(R_diff)
+		k=np.array(k)
+		curve_w=[k*theta]
+	
+	for i in range(1,len(curve_R)):
+		R_diff=np.dot(curve_R[i],R_init.T)
+		k,theta=R2rot(R_diff)
+		k=np.array(k)
+		curve_w.append(k*theta)
+	return np.array(curve_w)
+def w2R(curve_w,R_init):
+	curve_R=[]
+	for i in range(len(curve_w)):
+		theta=np.linalg.norm(curve_w[i])
+		if theta==0:
+			curve_R.append(R_init)
+		else:
+			curve_R.append(np.dot(rot(curve_w[i]/theta,theta),R_init))
+
+	return np.array(curve_R)
