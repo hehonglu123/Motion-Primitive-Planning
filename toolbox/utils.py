@@ -8,7 +8,7 @@ def replace_outliers2(data):
 	rolling_window=30
 	for i in range(len(data)-rolling_window):
 		rolling_avg=np.mean(data[i:i+rolling_window])
-		if np.abs(data[i]-rolling_avg)>0.02*rolling_avg:
+		if np.abs(data[i]-rolling_avg)>0.0001*rolling_avg:
 			data[i]=rolling_avg
 	return data
 def replace_outliers(data, m=3):

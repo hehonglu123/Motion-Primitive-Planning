@@ -348,7 +348,7 @@ class MotionSend(object):
         return self.exec_motions_multimove(breakpoints,primitives1,primitives2,points_list1,points_list2,curve_js1,curve_js2,speed1,speed2,zone1,zone2)
 
 
-    def logged_data_analysis(self,robot,df,filt=False,realrobot=False):
+    def logged_data_analysis(self,robot,df,realrobot=False):
         q1=df[' J1'].tolist()
         q2=df[' J2'].tolist()
         q3=df[' J3'].tolist()
@@ -364,9 +364,8 @@ class MotionSend(object):
         timestamp=np.array(df['timestamp'].tolist()[start_idx:]).astype(float)
         timestep=np.average(timestamp[1:]-timestamp[:-1])
 
-        if filt:
+        if realrobot:
             timestamp, curve_exe_js=lfilter(timestamp, curve_exe_js)
-
 
         act_speed=[]
         lam=[0]
