@@ -114,6 +114,132 @@ class abb1200(object):
 		q_all=robot6_sphericalwrist_invkin(self.robot_def,pose)
 		return q_all
 
+class m900ia(object):
+	#default tool paintgun
+	def __init__(self,R_tool=Ry(np.radians(120)),p_tool=np.array([0.45,0,-0.05])*1000.,d=0):
+		###FANUC m900iA 350 Robot Definition
+		self.H=np.concatenate((ez,ey,-ey,-ex,-ey,-ex),axis=1)
+		p0=np.array([[0],[0],[0.95]])
+		p1=np.array([[0.37],[0],[0]])
+		p2=np.array([[0.],[0],[1.050]])
+		p3=np.array([[0],[0],[0.2]])   
+		p4=np.array([[1.250],[0],[0]])
+		p5=np.array([[0.27],[0],[0]])
+		p6=np.array([[0.0],[0],[0.0]])
+
+		###fake link for fitting
+		tcp_new=p_tool+np.dot(R_tool,np.array([0,0,d]))
+
+		self.P=np.concatenate((p0,p1,p2,p3,p4,p5,p6),axis=1)*1000.
+		self.joint_type=np.zeros(6)
+		
+		###updated range&vel limit
+		self.upper_limit=np.radians([180.,66.,66.,360.,125.,360.])
+		self.lower_limit=np.radians([-180.,-65.,-66.,-360.,-125.,-360.])
+		self.joint_vel_limit=np.radians([100.,95.,95.,105.,105.,170.])
+		self.joint_acc_limit=np.radians([300.,561.,743.,244.,319.,243.])
+		self.robot_def=Robot(self.H,self.P,self.joint_type,joint_lower_limit = self.lower_limit, joint_upper_limit = self.upper_limit, joint_vel_limit=self.joint_vel_limit, R_tool=R_tool,p_tool=tcp_new)
+
+	def jacobian(self,q):
+		return robotjacobian(self.robot_def,q)
+	def fwd(self,q,base_R=np.eye(3),base_p=np.array([0,0,0])):
+		pose_temp=fwdkin(self.robot_def,q)
+		pose_temp.p=np.dot(base_R,pose_temp.p)+base_p
+		pose_temp.R=np.dot(base_R,pose_temp.R)
+		return pose_temp
+	
+	def fwd_j456(self,q):
+		if (self.robot_def.joint_lower_limit is not None and self.robot_def.joint_upper_limit is not None):
+			assert np.greater_equal(q, self.robot_def.joint_lower_limit).all(), "Specified joints out of range"
+			assert np.less_equal(q, self.robot_def.joint_upper_limit).all(), "Specified joints out of range"
+
+		p = self.robot_def.P[:,[1]]
+		R = np.identity(3)
+		for i in xrange(1,len(self.robot_def.joint_type)-1):
+			R = R.dot(rot(self.robot_def.H[:,[i]],q[i]))
+			p = p + R.dot(self.robot_def.P[:,[i+1]])
+		p=np.reshape(p,(3,))
+
+		return Transform(R, p)
+
+	def fwd_all(self,q_all,base_R=np.eye(3),base_p=np.array([0,0,0])):
+		pose_p_all=[]
+		pose_R_all=[]
+		for q in q_all:
+			pose_temp=fwd(q,base_R,base_p)
+			pose_p_all.append(pose_temp.p)
+			pose_R_all.append(pose_temp.R)
+
+		return Transform_all(pose_p_all,pose_R_all)
+
+	def inv(self,p,R=np.eye(3)):
+		pose=Transform(R,p)
+		q_all=robot6_sphericalwrist_invkin(self.robot_def,pose)
+		return q_all
+
+class m710ic(object):
+	#default tool paintgun
+	def __init__(self,R_tool=Ry(np.radians(120)),p_tool=np.array([0.45,0,-0.05])*1000.,d=0):
+		###FANUC m710ic 70 Robot Definition
+		self.H=np.concatenate((ez,ey,-ey,-ex,-ey,-ex),axis=1)
+		p0=np.array([[0],[0],[0.565]])
+		p1=np.array([[0.15],[0],[0]])
+		p2=np.array([[0.],[0],[0.870]])
+		p3=np.array([[0],[0],[0.17]])   
+		p4=np.array([[1.016],[0],[0]])
+		p5=np.array([[0.175],[0],[0]])
+		p6=np.array([[0.0],[0],[0.0]])
+
+		###fake link for fitting
+		tcp_new=p_tool+np.dot(R_tool,np.array([0,0,d]))
+
+		self.P=np.concatenate((p0,p1,p2,p3,p4,p5,p6),axis=1)*1000.
+		self.joint_type=np.zeros(6)
+		
+		###updated range&vel limit
+		self.upper_limit=np.radians([180.,135,205.,360.,125.,360.])
+		self.lower_limit=np.radians([-180.,-80.,-80.,-360.,-125.,-360.])
+		self.joint_vel_limit=np.radians([160.,120.,120.,225.,225.,225.])
+		self.joint_acc_limit=np.radians([640.,520.,700.,910.,910.,1207.])
+		self.robot_def=Robot(self.H,self.P,self.joint_type,joint_lower_limit = self.lower_limit, joint_upper_limit = self.upper_limit, joint_vel_limit=self.joint_vel_limit, R_tool=R_tool,p_tool=tcp_new)
+
+	def jacobian(self,q):
+		return robotjacobian(self.robot_def,q)
+	def fwd(self,q,base_R=np.eye(3),base_p=np.array([0,0,0])):
+		pose_temp=fwdkin(self.robot_def,q)
+		pose_temp.p=np.dot(base_R,pose_temp.p)+base_p
+		pose_temp.R=np.dot(base_R,pose_temp.R)
+		return pose_temp
+	
+	def fwd_j456(self,q):
+		if (self.robot_def.joint_lower_limit is not None and self.robot_def.joint_upper_limit is not None):
+			assert np.greater_equal(q, self.robot_def.joint_lower_limit).all(), "Specified joints out of range"
+			assert np.less_equal(q, self.robot_def.joint_upper_limit).all(), "Specified joints out of range"
+
+		p = self.robot_def.P[:,[1]]
+		R = np.identity(3)
+		for i in xrange(1,len(self.robot_def.joint_type)-1):
+			R = R.dot(rot(self.robot_def.H[:,[i]],q[i]))
+			p = p + R.dot(self.robot_def.P[:,[i+1]])
+		p=np.reshape(p,(3,))
+
+		return Transform(R, p)
+
+	def fwd_all(self,q_all,base_R=np.eye(3),base_p=np.array([0,0,0])):
+		pose_p_all=[]
+		pose_R_all=[]
+		for q in q_all:
+			pose_temp=fwd(q,base_R,base_p)
+			pose_p_all.append(pose_temp.p)
+			pose_R_all.append(pose_temp.R)
+
+		return Transform_all(pose_p_all,pose_R_all)
+
+	def inv(self,p,R=np.eye(3)):
+		pose=Transform(R,p)
+		q_all=robot6_sphericalwrist_invkin(self.robot_def,pose)
+		return q_all
+
 class arb_robot(object):
 	#R_tool make tool z pointing to +x at 0 config
 	def __init__(self, H,P,joint_type,upper_limit,lower_limit, joint_vel_limit,R_tool=Ry(np.radians(90)),p_tool=np.zeros(3),d=0):

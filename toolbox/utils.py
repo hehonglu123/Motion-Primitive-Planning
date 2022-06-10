@@ -210,3 +210,11 @@ def w2R(curve_w,R_init):
 			curve_R.append(np.dot(rot(curve_w[i]/theta,theta),R_init))
 
 	return np.array(curve_R)
+
+def unwrapped_angle_check(q_init,q_all):
+
+    temp_q=q_all-q_init
+    temp_q = np.unwrap(temp_q)
+    order=np.argsort(np.linalg.norm(temp_q,axis=1))
+    # return q_all[order[0]]
+    return temp_q[order[0]]+q_init
