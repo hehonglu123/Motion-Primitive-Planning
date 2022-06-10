@@ -1,10 +1,12 @@
 % initialization
 clear all; close all;
 
-gm = importGeometry('test_stl.stl');
+stl_file = 'test_stl_compare.stl';
+% stl_file = 'test_stl_dense.stl';
 
+gm = importGeometry(stl_file);
 
-data = stlread('test_stl.stl');
+data = stlread(stl_file);
 figure(100); trimesh(data,'FaceColor','none','EdgeColor','k'); hold; 
 plotTransforms([0 0 0],[1 0 0 0],'Framesize',10); axis equal;
 title("The mold (mesh)")
@@ -18,7 +20,7 @@ title("The mold (mesh)")
 a = 18;
 sigma = 1.4;
 stand_off = 25;
-v0 = 400;
+v0 = 50;
 % v0 = 4;
 line_space = 0.5;
 
@@ -74,6 +76,8 @@ else
     end
 end
 
+writematrix(qs,'qs.csv');
+
 % plot robot waypoint
 figure(1); 
 trimesh(data,'FaceColor','none','EdgeColor','k'); hold
@@ -113,12 +117,14 @@ for n=1:length(qs(1,:))-1
             continue
         else
             pn_noz = [nx';ny';nz';]*(p_last_layer(:,p_i)-qs(:,n));
-            g1 = a*nz/(2*sqrt(2)*pi*sigma);
+            g1 = a*nz/(2*sqrt(2*pi)*sigma*ln);
             g2 = exp(-(pn_noz(2)^2)/(2*sigma^2));
             g3 = erf(pn_noz(1)/(sqrt(2)*sigma))-erf((pn_noz(1)-ln)/(sqrt(2)*sigma));
             gp = g1*g2*g3;
             
             p_progress(:,p_i) = p_progress(:,p_i)+gp*delta_t;
+            
+            
         end
     end
     
