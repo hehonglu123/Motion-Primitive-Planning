@@ -1,0 +1,501 @@
+<?xml version='1.0'?>
+<sdf version='1.7'>
+  <model name='fanuc_m900ia'>
+    <link name='base_link'>
+      <inertial>
+        <pose>-0.047955 0.000592 0.183848 0 -0 0</pose>
+        <mass>0.179503</mass>
+        <inertia>
+          <ixx>758.003</ixx>
+          <ixy>0.059074</ixy>
+          <ixz>-29.8337</ixz>
+          <iyy>1059.35</iyy>
+          <iyz>0.779661</iyz>
+          <izz>1392.73</izz>
+        </inertia>
+      </inertial>
+      <collision name='base_link_collision'>
+        <pose>0 0 0 0 -0 0</pose>
+        <geometry>
+          <mesh>
+            <scale>1 1 1</scale>
+            <uri>model://fanuc_m900ia/meshes/m900ia260l/collision/base_link.stl</uri>
+          </mesh>
+        </geometry>
+      </collision>
+      <visual name='base_link_visual'>
+        <pose>0 0 0 0 -0 0</pose>
+        <geometry>
+          <mesh>
+            <scale>1 1 1</scale>
+            <uri>model://fanuc_m900ia/meshes/m900ia260l/visual/base_link.stl</uri>
+          </mesh>
+        </geometry>
+      </visual>
+    </link>
+    <joint name='joint_1' type='revolute'>
+      <pose relative_to='base_link'>0 0 0.95 0 -0 0</pose>
+      <parent>base_link</parent>
+      <child>link_1</child>
+      <axis>
+        <xyz>0 0 1</xyz>
+        <limit>
+          <lower>-3.14159</lower>
+          <upper>3.14159</upper>
+          <effort>0</effort>
+          <velocity>1.74533</velocity>
+        </limit>
+        <dynamics>
+          <spring_reference>0</spring_reference>
+          <spring_stiffness>0</spring_stiffness>
+        </dynamics>
+      </axis>
+    </joint>
+    <link name='link_1'>
+      <pose relative_to='joint_1'>0 0 0 0 -0 0</pose>
+      <inertial>
+        <pose>0.250806 -0.003948 -0.187639 0 -0 0</pose>
+        <mass>0.428307</mass>
+        <inertia>
+          <ixx>4593.86</ixx>
+          <ixy>-51.4594</ixy>
+          <ixz>-767.66</ixz>
+          <iyy>3659.62</iyy>
+          <iyz>0.543368</iyz>
+          <izz>4472.77</izz>
+        </inertia>
+      </inertial>
+      <collision name='link_1_collision'>
+        <pose>0 0 0 0 -0 0</pose>
+        <geometry>
+          <mesh>
+            <scale>1 1 1</scale>
+            <uri>model://fanuc_m900ia/meshes/m900ia260l/collision/link_1.stl</uri>
+          </mesh>
+        </geometry>
+      </collision>
+      <visual name='link_1_visual'>
+        <pose>0 0 0 0 -0 0</pose>
+        <geometry>
+          <mesh>
+            <scale>1 1 1</scale>
+            <uri>model://fanuc_m900ia/meshes/m900ia260l/visual/link_1.stl</uri>
+          </mesh>
+        </geometry>
+      </visual>
+    </link>
+    <joint name='joint_2' type='revolute'>
+      <pose relative_to='link_1'>0.37 0 0 0 -0 0</pose>
+      <parent>link_1</parent>
+      <child>link_2</child>
+      <axis>
+        <xyz>0 1 0</xyz>
+        <limit>
+          <lower>-1.309</lower>
+          <upper>1.309</upper>
+          <effort>0</effort>
+          <velocity>1.8326</velocity>
+        </limit>
+        <dynamics>
+          <spring_reference>0</spring_reference>
+          <spring_stiffness>0</spring_stiffness>
+        </dynamics>
+      </axis>
+    </joint>
+    <link name='link_2'>
+      <pose relative_to='joint_2'>0 0 0 0 -0 0</pose>
+      <inertial>
+        <pose>0.0208 -0.032152 0.469871 0 -0 0</pose>
+        <mass>0.146324</mass>
+        <inertia>
+          <ixx>1881.39</ixx>
+          <ixy>-15.6041</ixy>
+          <ixz>29.1713</ixz>
+          <iyy>1862.44</iyy>
+          <iyz>-94.6171</iyz>
+          <izz>311.525</izz>
+        </inertia>
+      </inertial>
+      <collision name='link_2_collision'>
+        <pose>0 0 0 0 -0 0</pose>
+        <geometry>
+          <mesh>
+            <scale>1 1 1</scale>
+            <uri>model://fanuc_m900ia/meshes/m900ia260l/collision/link_2.stl</uri>
+          </mesh>
+        </geometry>
+      </collision>
+      <visual name='link_2_visual'>
+        <pose>0 0 0 0 -0 0</pose>
+        <geometry>
+          <mesh>
+            <scale>1 1 1</scale>
+            <uri>model://fanuc_m900ia/meshes/m900ia260l/visual/link_2.stl</uri>
+          </mesh>
+        </geometry>
+      </visual>
+    </link>
+    <joint name='joint_3' type='revolute'>
+      <pose relative_to='link_2'>0 0 1.05 0 -0 0</pose>
+      <parent>link_2</parent>
+      <child>link_3</child>
+      <axis>
+        <xyz>0 -1 0</xyz>
+        <limit>
+          <lower>-2.11666</lower>
+          <upper>1.5708</upper>
+          <effort>0</effort>
+          <velocity>1.65806</velocity>
+        </limit>
+        <dynamics>
+          <spring_reference>0</spring_reference>
+          <spring_stiffness>0</spring_stiffness>
+        </dynamics>
+      </axis>
+    </joint>
+    <link name='link_3'>
+      <pose relative_to='joint_3'>0 0 0 0 -0 0</pose>
+      <inertial>
+        <pose>0.394093 -0.002099 0.14852 0 -0 0</pose>
+        <mass>0.206138</mass>
+        <inertia>
+          <ixx>399.825</ixx>
+          <ixy>2.88435</ixy>
+          <ixz>-246.776</ixz>
+          <iyy>5650.4</iyy>
+          <iyz>-2.08167</iyz>
+          <izz>5621.28</izz>
+        </inertia>
+      </inertial>
+      <collision name='link_3_collision'>
+        <pose>0 0 0 0 -0 0</pose>
+        <geometry>
+          <mesh>
+            <scale>1 1 1</scale>
+            <uri>model://fanuc_m900ia/meshes/m900ia260l/collision/link_3.stl</uri>
+          </mesh>
+        </geometry>
+      </collision>
+      <visual name='link_3_visual'>
+        <pose>0 0 0 0 -0 0</pose>
+        <geometry>
+          <mesh>
+            <scale>1 1 1</scale>
+            <uri>model://fanuc_m900ia/meshes/m900ia260l/visual/link_3.stl</uri>
+          </mesh>
+        </geometry>
+      </visual>
+    </link>
+    <joint name='joint_4' type='revolute'>
+      <pose relative_to='link_3'>0 0 0.2 0 -0 0</pose>
+      <parent>link_3</parent>
+      <child>link_4</child>
+      <axis>
+        <xyz>-1 0 0</xyz>
+        <limit>
+          <lower>-6.28318</lower>
+          <upper>6.28318</upper>
+          <effort>0</effort>
+          <velocity>2.0944</velocity>
+        </limit>
+        <dynamics>
+          <spring_reference>0</spring_reference>
+          <spring_stiffness>0</spring_stiffness>
+        </dynamics>
+      </axis>
+    </joint>
+    <link name='link_4'>
+      <pose relative_to='joint_4'>0 0 0 0 -0 0</pose>
+      <inertial>
+        <pose>1.59841 -0.007051 -2e-06 0 -0 0</pose>
+        <mass>0.0114384</mass>
+        <inertia>
+          <ixx>6.72143</ixx>
+          <ixy>0.585065</ixy>
+          <ixz>-0.000148</ixz>
+          <iyy>14.1254</iyy>
+          <iyz>-6e-06</iyz>
+          <izz>13.0541</izz>
+        </inertia>
+      </inertial>
+      <collision name='link_4_collision'>
+        <pose>0 0 0 0 -0 0</pose>
+        <geometry>
+          <mesh>
+            <scale>1 1 1</scale>
+            <uri>model://fanuc_m900ia/meshes/m900ia260l/collision/link_4.stl</uri>
+          </mesh>
+        </geometry>
+      </collision>
+      <visual name='link_4_visual'>
+        <pose>0 0 0 0 -0 0</pose>
+        <geometry>
+          <mesh>
+            <scale>1 1 1</scale>
+            <uri>model://fanuc_m900ia/meshes/m900ia260l/visual/link_4.stl</uri>
+          </mesh>
+        </geometry>
+      </visual>
+    </link>
+    <joint name='joint_5' type='revolute'>
+      <pose relative_to='link_4'>1.705 0 0 0 -0 0</pose>
+      <parent>link_4</parent>
+      <child>link_5</child>
+      <axis>
+        <xyz>0 -1 0</xyz>
+        <limit>
+          <lower>-2.18166</lower>
+          <upper>2.18166</upper>
+          <effort>0</effort>
+          <velocity>2.0944</velocity>
+        </limit>
+        <dynamics>
+          <spring_reference>0</spring_reference>
+          <spring_stiffness>0</spring_stiffness>
+        </dynamics>
+      </axis>
+    </joint>
+    <link name='link_5'>
+      <pose relative_to='joint_5'>0 0 0 0 -0 0</pose>
+      <inertial>
+        <pose>0.041906 -0.027871 -1e-06 0 -0 0</pose>
+        <mass>0.0204317</mass>
+        <inertia>
+          <ixx>22.3347</ixx>
+          <ixy>-2.87228</ixy>
+          <ixz>5.1e-05</ixz>
+          <iyy>24.9792</iyy>
+          <iyz>6.4e-05</iyz>
+          <izz>29.3866</izz>
+        </inertia>
+      </inertial>
+      <collision name='link_5_collision'>
+        <pose>0 0 0 0 -0 0</pose>
+        <geometry>
+          <mesh>
+            <scale>1 1 1</scale>
+            <uri>model://fanuc_m900ia/meshes/m900ia260l/collision/link_5.stl</uri>
+          </mesh>
+        </geometry>
+      </collision>
+      <visual name='link_5_visual'>
+        <pose>0 0 0 0 -0 0</pose>
+        <geometry>
+          <mesh>
+            <scale>1 1 1</scale>
+            <uri>model://fanuc_m900ia/meshes/m900ia260l/visual/link_5.stl</uri>
+          </mesh>
+        </geometry>
+      </visual>
+    </link>
+    <joint name='joint_6' type='revolute'>
+      <pose relative_to='link_5'>0.27 0 0 0 -0 0</pose>
+      <parent>link_5</parent>
+      <child>link_6</child>
+      <axis>
+        <xyz>-1 0 0</xyz>
+        <limit>
+          <lower>-6.28318</lower>
+          <upper>6.28318</upper>
+          <effort>0</effort>
+          <velocity>3.49066</velocity>
+        </limit>
+        <dynamics>
+          <spring_reference>0</spring_reference>
+          <spring_stiffness>0</spring_stiffness>
+        </dynamics>
+      </axis>
+    </joint>
+    <link name='link_6'>
+      <pose relative_to='joint_6'>0 0 0 0 -0 0</pose>
+      <inertial>
+        <pose>-0.027494 0 0 0 -0 0</pose>
+        <mass>0.00240685</mass>
+        <inertia>
+          <ixx>1.55572</ixx>
+          <ixy>0</ixy>
+          <ixz>0</ixz>
+          <iyy>0.850091</iyy>
+          <iyz>0</iyz>
+          <izz>0.850086</izz>
+        </inertia>
+      </inertial>
+      <collision name='link_6_collision'>
+        <pose>0 0 0 0 -0 0</pose>
+        <geometry>
+          <mesh>
+            <scale>1 1 1</scale>
+            <uri>model://fanuc_m900ia/meshes/m900ia260l/collision/link_6.stl</uri>
+          </mesh>
+        </geometry>
+      </collision>
+      <visual name='link_6_visual'>
+        <pose>0 0 0 0 -0 0</pose>
+        <geometry>
+          <mesh>
+            <scale>1 1 1</scale>
+            <uri>model://fanuc_m900ia/meshes/m900ia260l/visual/link_6.stl</uri>
+          </mesh>
+        </geometry>
+      </visual>
+    </link>
+    <joint name='pjoint_2' type='revolute'>
+      <pose relative_to='link_3'>-0.4 0.096 0 0 -0 0</pose>
+      <parent>link_3</parent>
+      <child>plink_2</child>
+      <axis>
+        <xyz>0 1 0</xyz>
+        <limit>
+          <lower>-1e+16</lower>
+          <upper>1e+16</upper>
+        </limit>
+        <dynamics>
+          <spring_reference>0</spring_reference>
+          <spring_stiffness>0</spring_stiffness>
+        </dynamics>
+      </axis>
+    </joint>
+    <link name='plink_2'>
+      <pose relative_to='pjoint_2'>0 0 0 0 -0 0</pose>
+      <inertial>
+        <pose>-0.028539 0.002235 -0.54229 0 -0 0</pose>
+        <mass>0.012706</mass>
+        <inertia>
+          <ixx>115.503</ixx>
+          <ixy>-0.0276</ixy>
+          <ixz>-1.78299</ixz>
+          <iyy>118.432</iyy>
+          <iyz>-0.02226</iyz>
+          <izz>3.92213</izz>
+        </inertia>
+      </inertial>
+      <collision name='plink_2_collision'>
+        <pose>0 0 0 0 -0 0</pose>
+        <geometry>
+          <mesh>
+            <scale>1 1 1</scale>
+            <uri>model://fanuc_m900ia/meshes/m900ia260l/collision/plink_2.stl</uri>
+          </mesh>
+        </geometry>
+      </collision>
+      <visual name='plink_2_visual'>
+        <pose>0 0 0 0 -0 0</pose>
+        <geometry>
+          <mesh>
+            <scale>1 1 1</scale>
+            <uri>model://fanuc_m900ia/meshes/m900ia260l/visual/plink_2.stl</uri>
+          </mesh>
+        </geometry>
+      </visual>
+    </link>
+    <joint name='pjoint_1' type='revolute'>
+      <pose relative_to='link_2'>0 0.17 0 0 -0 0</pose>
+      <parent>link_2</parent>
+      <child>plink_1</child>
+      <axis>
+        <xyz>0 1 0</xyz>
+        <limit>
+          <lower>-1e+16</lower>
+          <upper>1e+16</upper>
+        </limit>
+        <dynamics>
+          <spring_reference>0</spring_reference>
+          <spring_stiffness>0</spring_stiffness>
+        </dynamics>
+      </axis>
+    </joint>
+    <link name='plink_1'>
+      <pose relative_to='pjoint_1'>0 0 0 0 -0 0</pose>
+      <inertial>
+        <pose>-0.104312 -0.050438 -0.014542 0 -0 0</pose>
+        <mass>0.0275785</mass>
+        <inertia>
+          <ixx>32.9502</ixx>
+          <ixy>-1.91105</ixy>
+          <ixz>-1.27205</ixz>
+          <iyy>97.8126</iyy>
+          <iyz>0.253856</iyz>
+          <izz>73.8737</izz>
+        </inertia>
+      </inertial>
+      <collision name='plink_1_collision'>
+        <pose>0 0 0 0 -0 0</pose>
+        <geometry>
+          <mesh>
+            <scale>1 1 1</scale>
+            <uri>model://fanuc_m900ia/meshes/m900ia260l/collision/plink_1.stl</uri>
+          </mesh>
+        </geometry>
+      </collision>
+      <visual name='plink_1_visual'>
+        <pose>0 0 0 0 -0 0</pose>
+        <geometry>
+          <mesh>
+            <scale>1 1 1</scale>
+            <uri>model://fanuc_m900ia/meshes/m900ia260l/visual/plink_1.stl</uri>
+          </mesh>
+        </geometry>
+      </visual>
+    </link>
+
+    <link name='paint_gun'>
+      <pose>1.662 0 2.055 0 1.57079632679 0</pose>
+      <inertial>
+        <pose>0 0 0 0 0 0</pose>
+        <mass>0.137</mass>
+        <inertia>
+          <ixx>0.001</ixx>
+          <ixy>0</ixy>
+          <ixz>0</ixz>
+          <iyy>0.001</iyy>
+          <iyz>0</iyz>
+          <izz>0.001</izz>
+        </inertia>
+      </inertial>
+      <self_collide>0</self_collide>
+      <enable_wind>0</enable_wind>
+      <kinematic>0</kinematic>
+      <visual name='paint_gun_visual'>
+        <pose>0 0 0 0 -0 0</pose>
+        <geometry>
+          <mesh>
+            <scale>0.001 0.001 0.001</scale>
+            <uri>model://paint_gun.stl</uri>
+          </mesh>
+        </geometry>
+        <material>
+          <shader type='pixel'/>
+        </material>
+        <transparency>0</transparency>
+        <cast_shadows>1</cast_shadows>
+      </visual>
+    </link>
+
+    <!-- ROS-Industrial 'flange' frame: attachment point for EEF models -->
+    <!-- <link name="flange"/>
+    <joint name="joint_6-flange" type="fixed">
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <parent link="link_6"/>
+      <child link="flange"/>
+    </joint> -->
+    <!-- ROS-Industrial 'tool0' frame: all-zeros tool frame -->
+    <!-- <link name="tool0"/>
+    <joint name="link_6-tool0" type="fixed">
+      <origin rpy="3.141592653589793 -1.5707963267948966 0" xyz="0 0 0"/>
+      <parent link="flange"/>
+      <child link="tool0"/>
+    </joint> -->
+
+    <joint name='eef_joint' type='fixed'>
+      <parent>link_6</parent>
+      <child>paint_gun</child>
+    </joint>
+
+    <joint name='fix to ground' type='fixed'>
+      <parent>world</parent>
+      <child>base_link</child>
+    </joint>
+    <static>0</static>
+    <allow_auto_disable>1</allow_auto_disable>
+  </model>
+</sdf>

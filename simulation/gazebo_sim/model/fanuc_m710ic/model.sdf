@@ -1,0 +1,341 @@
+<?xml version='1.0'?>
+<sdf version='1.7'>
+  <model name='fanuc_m710ic'>
+    <link name='base_link'>
+      <inertial>
+        <pose>-0.049408 -0.000217 0.119217 0 -0 0</pose>
+        <mass>70.2023</mass>
+        <inertia>
+          <ixx>1.86647</ixx>
+          <ixy>0.00508834</ixy>
+          <ixz>0.0288028</ixz>
+          <iyy>1.90692</iyy>
+          <iyz>-0.00238281</iyz>
+          <izz>3.0367</izz>
+        </inertia>
+      </inertial>
+      <visual name='base_link_visual'>
+        <pose>0 0 0 0 -0 0</pose>
+        <geometry>
+          <mesh>
+            <scale>1 1 1</scale>
+            <uri>model://fanuc_m710ic_support/meshes/m710ic50/visual/base_link.stl</uri>
+          </mesh>
+        </geometry>
+      </visual>
+    </link>
+    <joint name='joint_1' type='revolute'>
+      <pose relative_to='base_link'>0 0 0.565 0 -0 0</pose>
+      <parent>base_link</parent>
+      <child>link_1</child>
+      <axis>
+        <xyz>0 0 1</xyz>
+        <limit>
+          <lower>-3.1415</lower>
+          <upper>3.1415</upper>
+          <effort>0</effort>
+          <velocity>2.7925</velocity>
+        </limit>
+        <dynamics>
+          <spring_reference>0</spring_reference>
+          <spring_stiffness>0</spring_stiffness>
+        </dynamics>
+      </axis>
+    </joint>
+    <link name='link_1'>
+      <pose relative_to='joint_1'>0 0 0 0 -0 0</pose>
+      <inertial>
+        <pose>0.051395 -0.007063 -0.105077 0 -0 0</pose>
+        <mass>108.645</mass>
+        <inertia>
+          <ixx>4.05402</ixx>
+          <ixy>-0.179443</ixy>
+          <ixz>-0.27176</ixz>
+          <iyy>3.45571</iyy>
+          <iyz>0.119149</iyz>
+          <izz>4.33796</izz>
+        </inertia>
+      </inertial>
+      <visual name='link_1_visual'>
+        <pose>0 0 0 0 -0 0</pose>
+        <geometry>
+          <mesh>
+            <scale>1 1 1</scale>
+            <uri>model://fanuc_m710ic_support/meshes/m710ic50/visual/link_1.stl</uri>
+          </mesh>
+        </geometry>
+      </visual>
+    </link>
+    <joint name='joint_2' type='revolute'>
+      <pose relative_to='link_1'>0.15 0 0 0 -0 0</pose>
+      <parent>link_1</parent>
+      <child>link_2</child>
+      <axis>
+        <xyz>0 1 0</xyz>
+        <limit>
+          <lower>-1.5707</lower>
+          <upper>2.3561</upper>
+          <effort>0</effort>
+          <velocity>2.0943</velocity>
+        </limit>
+        <dynamics>
+          <spring_reference>0</spring_reference>
+          <spring_stiffness>0</spring_stiffness>
+        </dynamics>
+      </axis>
+    </joint>
+    <link name='link_2'>
+      <pose relative_to='joint_2'>0 0 0 0 -0 0</pose>
+      <inertial>
+        <pose>0.003097 0.153906 0.343908 0 -0 0</pose>
+        <mass>48.8727</mass>
+        <inertia>
+          <ixx>4.20817</ixx>
+          <ixy>0.0123892</ixy>
+          <ixz>0.00210191</ixz>
+          <iyy>4.35186</iyy>
+          <iyz>-0.163608</iyz>
+          <izz>0.403485</izz>
+        </inertia>
+      </inertial>
+      <visual name='link_2_visual'>
+        <pose>0 0 0 0 -0 0</pose>
+        <geometry>
+          <mesh>
+            <scale>1 1 1</scale>
+            <uri>model://fanuc_m710ic_support/meshes/m710ic50/visual/link_2.stl</uri>
+          </mesh>
+        </geometry>
+      </visual>
+    </link>
+    <joint name='joint_3' type='revolute'>
+      <pose relative_to='link_2'>0 0 0.87 0 -0 0</pose>
+      <parent>link_2</parent>
+      <child>link_3</child>
+      <axis>
+        <xyz>0 -1 0</xyz>
+        <limit>
+          <lower>-2.7925</lower>
+          <upper>4.8869</upper>
+          <effort>0</effort>
+          <velocity>2.0943</velocity>
+        </limit>
+        <dynamics>
+          <spring_reference>0</spring_reference>
+          <spring_stiffness>0</spring_stiffness>
+        </dynamics>
+      </axis>
+    </joint>
+    <link name='link_3'>
+      <pose relative_to='joint_3'>0 0 0 0 -0 0</pose>
+      <inertial>
+        <pose>0.022331 -0.031486 0.086289 0 -0 0</pose>
+        <mass>51.0354</mass>
+        <inertia>
+          <ixx>0.98289</ixx>
+          <ixy>-0.0974256</ixy>
+          <ixz>-0.138342</ixz>
+          <iyy>1.27484</iyy>
+          <iyz>-0.0530669</iyz>
+          <izz>1.15264</izz>
+        </inertia>
+      </inertial>
+      <visual name='link_3_visual'>
+        <pose>0 0 0 0 -0 0</pose>
+        <geometry>
+          <mesh>
+            <scale>1 1 1</scale>
+            <uri>model://fanuc_m710ic_support/meshes/m710ic50/visual/link_3.stl</uri>
+          </mesh>
+        </geometry>
+      </visual>
+    </link>
+    <joint name='joint_4' type='revolute'>
+      <pose relative_to='link_3'>0 0 0.17 0 -0 0</pose>
+      <parent>link_3</parent>
+      <child>link_4</child>
+      <axis>
+        <xyz>-1 0 0</xyz>
+        <limit>
+          <lower>-6.283</lower>
+          <upper>6.283</upper>
+          <effort>0</effort>
+          <velocity>3.9269</velocity>
+        </limit>
+        <dynamics>
+          <spring_reference>0</spring_reference>
+          <spring_stiffness>0</spring_stiffness>
+        </dynamics>
+      </axis>
+    </joint>
+    <link name='link_4'>
+      <pose relative_to='joint_4'>0 0 0 0 -0 0</pose>
+      <inertial>
+        <pose>0.68289 -0.022166 0.000473 0 -0 0</pose>
+        <mass>17.6208</mass>
+        <inertia>
+          <ixx>0.0640047</ixx>
+          <ixy>0.0534009</ixy>
+          <ixz>-0.000592623</ixz>
+          <iyy>0.905915</iyy>
+          <iyz>-0.000326473</iyz>
+          <izz>0.911534</izz>
+        </inertia>
+      </inertial>
+      <visual name='link_4_visual'>
+        <pose>0 0 0 0 -0 0</pose>
+        <geometry>
+          <mesh>
+            <scale>1 1 1</scale>
+            <uri>model://fanuc_m710ic_support/meshes/m710ic50/visual/link_4.stl</uri>
+          </mesh>
+        </geometry>
+      </visual>
+    </link>
+    <joint name='joint_5' type='revolute'>
+      <pose relative_to='link_4'>1.016 0 0 0 -0 0</pose>
+      <parent>link_4</parent>
+      <child>link_5</child>
+      <axis>
+        <xyz>0 -1 0</xyz>
+        <limit>
+          <lower>-2.1816</lower>
+          <upper>2.1816</upper>
+          <effort>0</effort>
+          <velocity>3.9269</velocity>
+        </limit>
+        <dynamics>
+          <spring_reference>0</spring_reference>
+          <spring_stiffness>0</spring_stiffness>
+        </dynamics>
+      </axis>
+    </joint>
+    <link name='link_5'>
+      <pose relative_to='joint_5'>0 0 0 0 -0 0</pose>
+      <inertial>
+        <pose>0.038458 0.003968 0 0 -0 0</pose>
+        <mass>5.04353</mass>
+        <inertia>
+          <ixx>0.018652</ixx>
+          <ixy>-0.00143202</ixy>
+          <ixz>0</ixz>
+          <iyy>0.0267522</iyy>
+          <iyz>0</iyz>
+          <izz>0.0283865</izz>
+        </inertia>
+      </inertial>
+      <visual name='link_5_visual'>
+        <pose>0 0 0 0 -0 0</pose>
+        <geometry>
+          <mesh>
+            <scale>1 1 1</scale>
+            <uri>model://fanuc_m710ic_support/meshes/m710ic50/visual/link_5.stl</uri>
+          </mesh>
+        </geometry>
+      </visual>
+    </link>
+    <joint name='joint_6' type='revolute'>
+      <pose relative_to='link_5'>0.175 0 0 0 -0 0</pose>
+      <parent>link_5</parent>
+      <child>link_6</child>
+      <axis>
+        <xyz>-1 0 0</xyz>
+        <limit>
+          <lower>-6.2831</lower>
+          <upper>6.2831</upper>
+          <effort>0</effort>
+          <velocity>3.9269</velocity>
+        </limit>
+        <dynamics>
+          <spring_reference>0</spring_reference>
+          <spring_stiffness>0</spring_stiffness>
+        </dynamics>
+      </axis>
+    </joint>
+    <link name='link_6'>
+      <pose relative_to='joint_6'>0 0 0 0 -0 0</pose>
+      <inertial>
+        <pose>-0.012223 1.6e-05 0 0 -0 0</pose>
+        <mass>0.260493</mass>
+        <inertia>
+          <ixx>0.000502705</ixx>
+          <ixy>1.048e-08</ixy>
+          <ixz>0</ixz>
+          <iyy>0.000260491</iyy>
+          <iyz>0</iyz>
+          <izz>0.000260428</izz>
+        </inertia>
+      </inertial>
+      <visual name='link_6_visual'>
+        <pose>0 0 0 0 -0 0</pose>
+        <geometry>
+          <mesh>
+            <scale>1 1 1</scale>
+            <uri>model://fanuc_m710ic_support/meshes/m710ic50/visual/link_6.stl</uri>
+          </mesh>
+        </geometry>
+      </visual>
+    </link>
+
+    <link name='paint_gun'>
+      <!-- <pose>0.533 -0 0.8891 0 1.57079632679 0</pose> -->
+      <pose relative_to='eef_joint'>0 0 0 0 1.5707963267948966 0</pose>
+      <inertial>
+        <pose>0 0 0 0 0 0</pose>
+        <mass>0.137</mass>
+        <inertia>
+          <ixx>0.001</ixx>
+          <ixy>0</ixy>
+          <ixz>0</ixz>
+          <iyy>0.001</iyy>
+          <iyz>0</iyz>
+          <izz>0.001</izz>
+        </inertia>
+      </inertial>
+      <self_collide>0</self_collide>
+      <enable_wind>0</enable_wind>
+      <kinematic>0</kinematic>
+      <visual name='paint_gun_visual'>
+        <pose>0 0 0 0 -0 0</pose>
+        <geometry>
+          <mesh>
+            <scale>0.001 0.001 0.001</scale>
+            <uri>model://paint_gun.stl</uri>
+          </mesh>
+        </geometry>
+        <material>
+          <shader type='pixel'/>
+        </material>
+        <transparency>0</transparency>
+        <cast_shadows>1</cast_shadows>
+      </visual>
+    </link>
+
+    <joint name='eef_joint' type='revolute'>
+      <pose relative_to='link_6'>0 0 0 0 -0 0</pose>
+      <parent>link_6</parent>
+      <child>paint_gun</child>
+      <axis>
+        <xyz>-1 0 0</xyz>
+        <limit>
+          <lower>0</lower>
+          <upper>0</upper>
+          <effort>0</effort>
+          <velocity>0</velocity>
+        </limit>
+        <dynamics>
+          <spring_reference>0</spring_reference>
+          <spring_stiffness>0</spring_stiffness>
+        </dynamics>
+      </axis>
+    </joint>
+
+    <joint name='fix to ground' type='fixed'>
+      <parent>world</parent>
+      <child>base_link</child>
+    </joint>
+
+    <static>0</static>
+    <allow_auto_disable>1</allow_auto_disable>
+  </model>
+</sdf>

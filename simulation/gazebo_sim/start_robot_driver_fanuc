@@ -1,0 +1,3 @@
+#!/bin/bash
+gnome-terminal --tab -e  "bash run_m710ic_driver.sh"
+gnome-terminal --tab -e  "bash run_m900ia_driver.sh"
