@@ -1,5 +1,6 @@
 from general_robotics_toolbox import *
 import numpy as np
+from robots_def import *
 
 
 def cross(v):
@@ -130,3 +131,28 @@ def orientation_interp(R_init,R_end,steps):
 
 def H_from_RT(R,T):
 	return np.hstack((np.vstack((R,np.zeros(3))),np.append(T,1).reshape(4,1)))
+
+def car2js(robot,q_init,curve_fit,curve_fit_R):
+
+	###calculate corresponding joint configs
+	curve_fit_js=[]
+	if curve_fit.shape==(3,):
+		q_all=np.array(robot.inv(curve_fit,curve_fit_R))
+
+		###choose inv_kin closest to previous joints
+		if len(curve_fit_js)>1:
+			temp_q=unwrapped_angle_check(curve_fit_js[-1],q_all)
+		else:
+			temp_q=unwrapped_angle_check(q_init,q_all)
+		curve_fit_js.append(temp_q)
+	else:
+		for i in range(len(curve_fit)):
+			q_all=np.array(robot.inv(curve_fit[i],curve_fit_R[i]))
+
+			###choose inv_kin closest to previous joints
+			if len(curve_fit_js)>1:
+				temp_q=unwrapped_angle_check(curve_fit_js[-1],q_all)
+			else:
+				temp_q=unwrapped_angle_check(q_init,q_all)
+			curve_fit_js.append(temp_q)
+	return curve_fit_js

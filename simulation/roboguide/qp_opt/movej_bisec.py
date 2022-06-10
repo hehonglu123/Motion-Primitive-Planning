@@ -154,7 +154,7 @@ def run_robot_bisec(robt_all,motion_all,speed_up,speed_low,data_dir):
             break
 
         print('Speed:',speed,',Error:',error_max,',Angle Error:',degrees(angle_error_max),'Max Error Loc:',float(error_max_id)/len(error),'Speed Ave:',speed_ave,'Speed Std:',speed_std)
-        break
+
         if error_max > tolerance or angle_error_max > radians(3) or speed_std>speed_ave*0.05:
             # speed_up=speed
             # speed=ceil((speed_up+speed_low)/2.)

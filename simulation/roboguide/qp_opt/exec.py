@@ -55,9 +55,27 @@ def result_ana(curve_exe_js):
     # lamdot_act=calc_lamdot(curve_exe_js_act,lam_exec,robot,1)
     error,angle_error=calc_all_error_w_normal(curve_exe,curve[:,:3],curve_exe_R[:,:,-1],curve_normal)
 
+    act_speed = np.append(0,act_speed)
+    poly = np.poly1d(np.polyfit(lam_exec,act_speed,deg=40))
+    poly_der = np.polyder(poly)
+    # fit=poly(lam_exec[1:])     
+    start_id=10
+    end_id=-10
+    while True:
+        if poly_der(lam_exec[start_id]) < 0.5:
+            break
+        start_id+=1
+    while True:
+        if poly_der(lam_exec[end_id]) > -0.5:
+            break
+        end_id -= 1
+    act_speed_cut=act_speed[start_id:end_id]
+    print("Ave Speed:",np.mean(act_speed_cut))
+    
+
     fig, ax1 = plt.subplots()
     ax2 = ax1.twinx()
-    ax1.plot(lam_exec[1:],act_speed, 'g-', label='Speed')
+    ax1.plot(lam_exec,act_speed, 'g-', label='Speed')
     ax2.plot(lam_exec, error, 'b-',label='Error')
     ax2.plot(lam_exec, np.degrees(angle_error), 'y-',label='Normal Error')
     ax1.set_xlabel('lambda (mm)')
@@ -84,13 +102,19 @@ with open(data_dir+'Curve_R_in_base_frame.npy','rb') as f:
 curve = np.hstack((curve,curve_normal))
 
 # qp curve js
-with open(data_dir+'Curve_js_qp2.npy','rb') as f:
-    curve_js_qp = np.load(f)
+# with open(data_dir+'Curve_js_qp2.npy','rb') as f:
+#     curve_js_qp = np.load(f)
+curve_js_qp = read_csv(data_dir+'curve_js_qp_20.csv',header=None).values
+curve_js_qp=np.array(curve_js_qp).astype(float)
+# curve_js_qp=curve_js_qp[::10]
+# print(curve_js_qp.shape)
+# exit()
 
-curve_js_cmd = curve_js[::1000]
+curve_js_cmd = curve_js[::100]
 
 # motion parameters
-speed=100
+speed=10
+# speed=1000
 zone=100
 
 # the original curve
@@ -105,8 +129,10 @@ tp = TPMotionProgram()
 for i in range(1,len(curve_js_cmd)-1):
     robt = jointtarget(1,1,utool_num,np.degrees(curve_js_cmd[i]),[0]*6)
     tp.moveJ(robt,speed,'%',zone)
+    # tp.moveL(robt,speed,'mmsec',zone)
 robt_end = jointtarget(1,1,utool_num,np.degrees(curve_js_cmd[-1]),[0]*6)
 tp.moveJ(robt_end,speed,'%',-1)
+# tp.moveL(robt,speed,'mmsec',-1)
 # execute 
 res = client.execute_motion_program(tp)
 
@@ -134,8 +160,10 @@ tp = TPMotionProgram()
 for i in range(1,len(curve_js_qp)-1):
     robt = jointtarget(1,1,utool_num,np.degrees(curve_js_qp[i]),[0]*6)
     tp.moveJ(robt,speed,'%',zone)
+    # tp.moveL(robt,speed,'mmsec',zone)
 robt_end = jointtarget(1,1,utool_num,np.degrees(curve_js_qp[-1]),[0]*6)
 tp.moveJ(robt_end,speed,'%',-1)
+# tp.moveL(robt,speed,'mmsec',-1)
 # execute 
 res = client.execute_motion_program(tp)
 

@@ -370,5 +370,8 @@ simulation/roboguide/data/movec_smooth_ori/*.png
 simulation/roboguide/data/movel_smooth_ori/*.npy
 simulation/roboguide/data/movel_smooth_ori/*.png
 
+simulation/roboguide/ilc_fanuc/data/from_NX/results/*.png
+simulation/roboguide/ilc_fanuc/data/from_NX/results/*.npy
+
 # compile karel
 *.pc
