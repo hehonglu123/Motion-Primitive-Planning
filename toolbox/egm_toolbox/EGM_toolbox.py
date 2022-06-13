@@ -112,9 +112,9 @@ class EGM_toolbox(object):
     def clear_queue(self):
         # # Clear UDP queue
         while True:
-        res_i, state_i = self.egm.receive_from_robot()
-        if not res_i:
-            break
+            res_i, state_i = self.egm.receive_from_robot()
+            if not res_i:
+                break
 
 
 def main():

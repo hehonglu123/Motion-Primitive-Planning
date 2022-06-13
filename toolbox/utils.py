@@ -11,7 +11,7 @@ def replace_outliers2(data):
 		if np.abs(data[i]-rolling_avg)>0.0001*rolling_avg:
 			data[i]=rolling_avg
 	return data
-def replace_outliers(data, m=3):
+def replace_outliers(data, m=2):
 	data[abs(data - np.mean(data)) > m * np.std(data)] = np.mean(data)
 	return data
 

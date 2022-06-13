@@ -48,31 +48,45 @@ class ilc_toolbox(object):
 		de_dp=[]    #de_dp1q1,de_dp1q2,...,de_dp3q6
 		de_ori_dp=[]
 		delta=0.1 	#mm
-		
 
 		###len(primitives)==len(breakpoints)==len(breakpoints_blended)==len(points_list)
 		for m in breakpoint_interp_2tweak_indices:  #3 breakpoints
 			for n in range(3): #3DOF, xyz
 				q_bp_temp=np.array(copy.deepcopy(q_bp))
 				p_bp_temp=copy.deepcopy(p_bp)
-				p_bp_temp[m][n]+=delta
+				p_bp_temp[m][0][n]+=delta
 
-				q_bp_temp[m][0]=car2js(self.robot,q_bp[m][0],np.array(p_bp_temp[m]),self.robot.fwd(q_bp[m][0]).R)[0]###TODO:ADD MOVEC SUPPORT
+				q_bp_temp[m][0]=car2js(self.robot,q_bp[m][0],np.array(p_bp_temp[m][0]),self.robot.fwd(q_bp[m][0]).R)[0]###TODO:ADD MOVEC SUPPORT
 
 				#restore new trajectory, only for adjusted breakpoint, 1-bp change requires traj interp from 5 bp
-				short_version=range(max(m-2,0),min(m+2,len(breakpoints_blended)-1))
+				short_version=range(max(m-2,0),min(m+3,len(breakpoints_blended)))
+				###start & end idx, choose points in the middle of breakpoints to avoid affecting previous/next blending segments, unless at the boundary (star/end of all curve)
+				###guard 5 breakpoints for short blending
+				if short_version[0]==0:
+					short_version=range(0,5)
+					start_idx=breakpoints_blended[short_version[0]]
+				else:
+					start_idx=int((breakpoints_blended[short_version[0]]+breakpoints_blended[short_version[1]])/2)
+				if short_version[-1]==len(breakpoints_blended)-1:
+					short_version=range(len(breakpoints_blended)-5,len(breakpoints_blended))
+					end_idx = breakpoints_blended[short_version[-1]]+1
+				else:
+					end_idx=int((breakpoints_blended[short_version[-1]]+breakpoints_blended[short_version[-2]])/2)+1
+
+
 				curve_interp_temp, curve_R_interp_temp, curve_js_interp_temp, breakpoints_blended_temp=form_traj_from_bp(q_bp_temp[short_version],[self.primitives[i] for i in short_version],self.robot)
 
 				curve_js_blended_temp,curve_blended_temp,curve_R_blended_temp=blend_js_from_primitive(curve_interp_temp, curve_js_interp_temp, breakpoints_blended_temp, [self.primitives[i] for i in short_version],self.robot,zone=10)
 				
 				curve_blended_new=copy.deepcopy(curve_blended)
-				start_idx=int((breakpoints_blended[short_version[0]]+breakpoints_blended[short_version[1]])/2)
-				end_idx=int((breakpoints_blended[short_version[-1]]+breakpoints_blended[short_version[-2]])/2)
 
-				curve_blended_new[start_idx:end_idx]=curve_blended_temp[start_idx-breakpoints_blended[short_version[0]]:-1-(breakpoints_blended[short_version[-1]]-end_idx)]
+				
+
+				curve_blended_new[start_idx:end_idx]=curve_blended_temp[start_idx-breakpoints_blended[short_version[0]]:len(curve_blended_temp)-(breakpoints_blended[short_version[-1]]+1-end_idx)]
 
 				###calculate relative gradient
 				worst_case_point_shift=curve_blended_new[max_error_curve_blended_idx]-curve_blended[max_error_curve_blended_idx]
+
 				###get new error
 				de=np.linalg.norm(worst_point_pose.p+worst_case_point_shift-closest_p)-np.linalg.norm(worst_point_pose.p-closest_p)
 
@@ -93,9 +107,9 @@ class ilc_toolbox(object):
 		point_adjustment=-alpha*np.linalg.pinv(de_dp)*max_error
 
 		for i in range(len(breakpoint_interp_2tweak_indices)):  #3 breakpoints
-			p_bp[breakpoint_interp_2tweak_indices[i]]+=point_adjustment[0][3*i:3*(i+1)]
+			p_bp[breakpoint_interp_2tweak_indices[i]][0]+=point_adjustment[0][3*i:3*(i+1)]
 			###TODO:ADD MOVEC SUPPORT
-			q_bp[breakpoint_interp_2tweak_indices[i]][0]=car2js(self.robot,q_bp[breakpoint_interp_2tweak_indices[i]][0],p_bp[breakpoint_interp_2tweak_indices[i]],self.robot.fwd(q_bp[breakpoint_interp_2tweak_indices[i]][0]).R)[0]
+			q_bp[breakpoint_interp_2tweak_indices[i]][0]=car2js(self.robot,q_bp[breakpoint_interp_2tweak_indices[i]][0],p_bp[breakpoint_interp_2tweak_indices[i]][0],self.robot.fwd(q_bp[breakpoint_interp_2tweak_indices[i]][0]).R)[0]
 
 		return p_bp, q_bp
 

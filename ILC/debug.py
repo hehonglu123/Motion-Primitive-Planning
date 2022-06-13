@@ -24,7 +24,6 @@ def main():
 	# data_dir="fitting_output_new/python_qp_movel/"
 	dataset='from_NX/'
 	data_dir="../data/"+dataset
-	fitting_output="../data/"+dataset+'baseline/100L/'
 
 
 	curve_js=read_csv(data_dir+'Curve_js.csv',header=None).values
@@ -40,32 +39,23 @@ def main():
 
 
 	ms = MotionSend()
-	breakpoints,primitives,p_bp,q_bp=ms.extract_data_from_cmd(fitting_output+'command.csv')
+	breakpoints,primitives,p_bp,q_bp=ms.extract_data_from_cmd('recorded_data/command.csv')
 
-	###extension
-	p_bp,q_bp=ms.extend(robot,q_bp,primitives,breakpoints,p_bp)
 
 	###ilc toolbox def
 	ilc=ilc_toolbox(robot,primitives)
 
-	###TODO: extension fix start point, moveC support
+
 	max_error=999
 	inserted_points=[]
 	i=0
-	iteration=50
+	iteration=0
 	while max_error>max_error_threshold:
 		i+=1
 		ms = MotionSend()
-		###execution with plant
-		logged_data=ms.exec_motions(robot,primitives,breakpoints,p_bp,q_bp,s,z)
-		# Write log csv to file
-		with open("recorded_data/curve_exe_v"+str(v)+"_z10.csv","w") as f:
-			f.write(logged_data)
+		###read recorded data
+		df = read_csv("recorded_data/curve_exe_v"+str(v)+"_z10.csv")
 
-		ms.write_data_to_cmd('recorded_data/command.csv',breakpoints,primitives, p_bp,q_bp)
-
-		StringData=StringIO(logged_data)
-		df = read_csv(StringData, sep =",")
 		##############################data analysis#####################################
 		lam, curve_exe, curve_exe_R,curve_exe_js, speed, timestamp=ms.logged_data_analysis(robot,df,realrobot=True)
 		#############################chop extension off##################################
@@ -106,6 +96,7 @@ def main():
 			ax.plot3D(curve[:,0], curve[:,1], curve[:,2], c='gray',label='original')
 			ax.plot3D(curve_exe[:,0], curve_exe[:,1], curve_exe[:,2], c='red',label='execution')
 			p_bp_np=np.array([item[0] for item in p_bp])      ###np version, avoid first and last extended points
+
 			ax.scatter3D(p_bp_np[:,0], p_bp_np[:,1], p_bp_np[:,2], c=p_bp_np[:,2], cmap='Greens',label='breakpoints')
 			ax.scatter(curve_exe[max_error_idx,0], curve_exe[max_error_idx,1], curve_exe[max_error_idx,2],c='orange',label='worst case')
 		
@@ -127,6 +118,7 @@ def main():
 		breakpoint_interp_2tweak_indices=order[:3]
 
 		de_dp=ilc.get_gradient_from_model_xyz(q_bp,p_bp,breakpoints_blended,curve_blended,max_error_curve_blended_idx,robot.fwd(curve_exe_js[max_error_idx]),curve[max_error_curve_idx,:3],breakpoint_interp_2tweak_indices)
+
 		p_bp, q_bp=ilc.update_bp_xyz(p_bp,q_bp,de_dp,max_error,breakpoint_interp_2tweak_indices)
 
 		if i>iteration:
