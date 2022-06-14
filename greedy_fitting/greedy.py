@@ -204,13 +204,17 @@ def main():
 
 def greedy_execute():
 	###read in points
-	curve_js=read_csv("../data/from_NX/Curve_js.csv",header=None).values
+	# curve_js=read_csv("../data/from_NX/Curve_js.csv",header=None).values
+	curve_js = read_csv("../data/wood/Curve_js.csv", header=None).values
 
 	robot=abb6640(d=50)
 
 	greedy_fit_obj=greedy_fit(robot,curve_js[::50],0.5)
+	# greedy_fit_obj.primitives={'movel_fit':greedy_fit_obj.movel_fit_greedy}
+	greedy_fit_obj.primitives={'movej_fit':greedy_fit_obj.movej_fit_greedy}
+	# greedy_fit_obj.primitives={'movec_fit':greedy_fit_obj.movec_fit_greedy}
 
-	breakpoints,primitives_choices,points=greedy_fit_obj.fit_under_error()
+	breakpoints,primitives_choices,points, q_bp=greedy_fit_obj.fit_under_error()
 
 	############insert initial configuration#################
 	primitives_choices.insert(0,'movej_fit')
@@ -237,5 +241,5 @@ def greedy_execute():
 	print('time: ',timestamp[-1]-timestamp[0],'error: ',max_error,'normal error: ',max_error_angle)
 
 if __name__ == "__main__":
-	# greedy_execute()
-	main()
+	greedy_execute()
+	# main()
