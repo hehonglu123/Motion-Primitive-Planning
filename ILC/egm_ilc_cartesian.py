@@ -48,7 +48,7 @@ def main():
 
 	max_error=999
 	i=0
-	iteration=500
+	iteration=200
 	while max_error>max_error_threshold:
 		i+=1
 		###add extension
@@ -70,7 +70,7 @@ def main():
 		print('worst case error: ',np.max(error_distance))
 		##add weights based on error
 		# weights_p=np.linalg.norm(error,axis=1)
-		# weights_p=(len(error)/2)*weights_p/weights_p.sum()
+		# weights_p=(len(error)/4)*weights_p/weights_p.sum()
 		weights_p=np.ones(len(error))
 
 		error=error*weights_p[:, np.newaxis]
@@ -78,7 +78,7 @@ def main():
 		error_w=curve_exe_w-curve_w_d
 		#add weights based on error_w
 		# weights_w=np.linalg.norm(error_w,axis=1)
-		# weights_w=(len(error)/2)*weights_w/weights_w.sum()
+		# weights_w=(len(error)/4)*weights_w/weights_w.sum()
 		weights_w=np.ones(len(error_w))
 
 		error_w=error_w*weights_w[:, np.newaxis]
@@ -108,8 +108,8 @@ def main():
 		grad=np.flipud(delta_new)
 		grad_w=np.flipud(delta_w_new)
 
-		alpha1=0.5
-		alpha2=1
+		alpha1=1-i/iteration#0.5
+		alpha2=1-i/iteration#1
 		curve_cmd_new=curve_cmd-alpha1*grad
 		curve_cmd_w-=alpha2*grad_w
 		curve_cmd_R=w2R(curve_cmd_w,curve_R_d[0])
