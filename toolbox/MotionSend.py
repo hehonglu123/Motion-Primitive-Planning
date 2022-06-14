@@ -173,14 +173,15 @@ class MotionSend(object):
             R_start_new=rot(k,theta_new)@R_start
 
             #solve invkin for initial point
-            points_list[0]=p_start_new
+            points_list[0][0]=p_start_new
             q_bp[0][0]=car2js(robot,q_bp[0][0],p_start_new,R_start_new)[0]
 
         elif  primitives[1]=='movec_fit':
             #define circle first
-            pose_mid=robot.fwd(q_bp[0][0])
+            pose_mid=robot.fwd(q_bp[1][0])
             p_mid=pose_mid.p
             R_mid=pose_mid.R
+
             center, radius=circle_from_3point(p_start,p_end,p_mid)
 
             #find desired rotation angle
@@ -198,18 +199,17 @@ class MotionSend(object):
             R_start_new=rot(k,theta_new)@R_start
 
             #solve invkin for initial point
-            points_list[0]=p_start_new
+            points_list[0][0]=p_start_new
             q_bp[0][0]=car2js(robot,q_bp[0][0],p_start_new,R_start_new)[0]
 
         else:
             #find new start point
             J_start=robot.jacobian(q_bp[0][0])
             qdot=q_bp[1][0]-q_bp[0][0]
-            v=J_start[3:,:]@qdot
+            v=np.linalg.norm(J_start[3:,:]@qdot)
             t=extension_d/v
-            
             q_bp[0][0]=q_bp[0][0]+qdot*t
-            points_list[0]=robot.fwd(q_bp[0][0]).p
+            points_list[0][0]=robot.fwd(q_bp[0][0]).p
 
         ###end point extension
         pose_start=robot.fwd(q_bp[-2][-1])
@@ -232,7 +232,7 @@ class MotionSend(object):
 
             #solve invkin for end point
             q_bp[-1][-1]=car2js(robot,q_bp[-1][0],p_end_new,R_end_new)[0]
-            points_list[-1]=p_end_new
+            points_list[-1][-1]=p_end_new
 
 
         elif  primitives[1]=='movec_fit':
@@ -264,13 +264,13 @@ class MotionSend(object):
             #find new end point
             J_end=robot.jacobian(q_bp[-1][0])
             qdot=q_bp[-1][0]-q_bp[-2][0]
-            v=J_end[3:,:]@qdot
+            v=np.linalg.norm(J_end[3:,:]@qdot)
             t=extension_d/v
             
-            q_bp[-1][-1]=q_bp[-1]+qdot*t
-            points_list[-1]=robot.fwd(q_bp[-1][-1]).p
+            q_bp[-1][-1]=q_bp[-1][-1]+qdot*t
+            points_list[-1][-1]=robot.fwd(q_bp[-1][-1]).p
 
-        return primitives,points_list,q_bp
+        return points_list,q_bp
 
 
     def extract_data_from_cmd(self,filename):
@@ -285,7 +285,7 @@ class MotionSend(object):
         for i in range(len(breakpoints)):
             if primitives[i]=='movel_fit':
                 point=extract_points(primitives[i],points[i])
-                p_bp.append(point)
+                p_bp.append([point])
                 q=extract_points(primitives[i],qs[i])
                 q_bp.append([q])
 
@@ -298,11 +298,24 @@ class MotionSend(object):
 
             else:
                 point=extract_points(primitives[i],points[i])
-                p_bp.append(point)
+                p_bp.append([point])
                 q=extract_points(primitives[i],qs[i])
                 q_bp.append([q])
 
         return breakpoints,primitives, p_bp,q_bp
+    def write_data_to_cmd(self,filename,breakpoints,primitives, p_bp,q_bp):
+        p_bp_new=[]
+        q_bp_new=[]
+        for i in range(len(breakpoints)):
+            if len(p_bp[i])==2:
+                p_bp_new.append([np.array(p_bp[i][0]),np.array(p_bp[i][1])])
+                q_bp_new.append([np.array(q_bp[i][0]),np.array(q_bp[i][1])])
+            else:
+                p_bp_new.append([np.array(p_bp[i][0])])
+                q_bp_new.append([np.array(q_bp[i][0])])
+        df=DataFrame({'breakpoints':breakpoints,'primitives':primitives,'points':p_bp_new,'q_bp':q_bp_new})
+        df.to_csv(filename,header=True,index=False)
+
 
     def exe_from_file_multimove(self,filename1,filename2,filename_js1,filename_js2,speed1,speed2,zone1,zone2):
         data1 = read_csv(filename1)
@@ -407,7 +420,7 @@ class MotionSend(object):
         speed=replace_outliers(np.array(speed))
         lam=calc_lam_cs(curve_exe)
 
-        return lam, curve_exe, curve_exe_R,curve_exe_js, speed, timestamp
+        return lam, curve_exe, curve_exe_R,curve_exe_js, speed, timestamp[start_idx:end_idx+1]
 
 def main():
     ms = MotionSend()
