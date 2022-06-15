@@ -63,7 +63,7 @@ def main():
 		StringData=StringIO(logged_data)
 		df = read_csv(StringData, sep =",")
 		##############################data analysis#####################################
-		lam, curve_exe, curve_exe_R,curve_exe_js, speed, timestamp=ms.logged_data_analysis(robot,df,filt=True,realrobot=True)
+		lam, curve_exe, curve_exe_R,curve_exe_js, speed, timestamp=ms.logged_data_analysis(robot,df,realrobot=True)
 		#############################chop extension off##################################
 		start_idx=np.argmin(np.linalg.norm(curve[0,:3]-curve_exe,axis=1))
 		end_idx=np.argmin(np.linalg.norm(curve[-1,:3]-curve_exe,axis=1))
