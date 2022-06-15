@@ -4,6 +4,33 @@ import matplotlib.pyplot as plt
 from scipy.interpolate import interp1d
 from scipy import signal
 
+def interplate_timestamp(curve,timestamp,timestamp_d):
+    curve_js_new=[]
+    for i in range(len(curve[0])):
+        curve_js_new.append(np.interp(timestamp_d,timestamp,curve[:,i]))
+
+    return np.array(curve_js_new).T
+
+def average_curve(curve_all,timestamp_all):
+    ###get desired synced timestamp first
+    max_length=[]
+    max_time=[]
+    for i in range(len(timestamp_all)):
+        max_length.append(len(timestamp_all[i]))
+        max_time.append(timestamp_all[i][-1])
+    max_length=np.max(max_length)
+    max_time=np.max(max_time)
+    timestamp_d=np.linspace(0,max_time,num=max_length)
+
+    ###linear interpolate each curve with synced timestamp
+    curve_all_new=[]
+    for i in range(len(timestamp_all)):
+        curve_all_new.append(interplate_timestamp(curve_all[i],timestamp_all[i],timestamp_d))
+
+    curve_all_new=np.array(curve_all_new)
+
+    return curve_all_new, np.average(curve_all_new,axis=0),timestamp_d
+    
 def replace_outliers2(data):
 	rolling_window=30
 	for i in range(len(data)-rolling_window):
