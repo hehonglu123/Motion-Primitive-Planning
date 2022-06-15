@@ -17,8 +17,7 @@ from lambda_calc import *
 from error_check import *
 sys.path.append('../../../circular_fit')
 from toolbox_circular_fit import *
-sys.path.append('../fanuc_toolbox')
-from fanuc_client import *
+from fanuc_motion_program_exec_client import *
 
 def norm_vec(v):
     return v/np.linalg.norm(v)

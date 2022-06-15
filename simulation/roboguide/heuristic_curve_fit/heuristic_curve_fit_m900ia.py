@@ -15,10 +15,8 @@ sys.path.append('../../../toolbox')
 from robots_def import *
 from lambda_calc import *
 from error_check import *
-sys.path.append('../../../circular_fit')
 from toolbox_circular_fit import *
-sys.path.append('../fanuc_toolbox')
-from fanuc_client import *
+from fanuc_motion_program_exec_client import *
 
 def norm_vec(v):
     return v/np.linalg.norm(v)
@@ -70,7 +68,7 @@ def run_robot_bisec(robt_all,motion_all,speed_up,speed_low,data_dir):
         curve_exe_js=np.radians(np.vstack((q1,q2,q3,q4,q5,q6)).T.astype(float))
         timestamp=np.array(data['timestamp'].tolist()[1:]).astype(float)*1e-3 # from msec to sec
 
-        act_speed=[]
+        act_speed=[0]
         lam_exec=[0]
         curve_exe=[]
         curve_exe_R=[]
@@ -154,7 +152,7 @@ def run_robot_bisec(robt_all,motion_all,speed_up,speed_low,data_dir):
             break
 
         print('Speed:',speed,',Error:',error_max,',Angle Error:',degrees(angle_error_max),'Max Error Loc:',float(error_max_id)/len(error),'Speed Ave:',speed_ave,'Speed Std:',speed_std)
-        # break
+        break
         if error_max > 1 or angle_error_max > radians(3) or speed_std>speed_ave*0.05:
             speed_up=speed
             speed=ceil((speed_up+speed_low)/2.)
@@ -287,7 +285,7 @@ mid_id = int((len(curve)+1)/2)
 # this_case='addmid_h'
 
 # all_cases=['do_nothing','exploit_tolerance','add_movel','add_movec','addmid_h']
-all_cases=['do_nothing']
+all_cases=['addmid_h']
 
 for this_case in all_cases:
     print(this_case)
@@ -336,7 +334,7 @@ for this_case in all_cases:
             robt_all,motion_all = addmid_h(h,\
                 Transform(R_all[0],curve[0]),Transform(R_all[mid_id],curve[mid_id]),Transform(R_all[-1],curve[-1]),\
                 curve_js[0],curve_js[mid_id],curve_js[-1],robot,utool_num)
-            speed_up=154
+            speed_up=100
             speed_low=0
             run_robot_bisec(robt_all,motion_all,speed_up,speed_low,data_dir+this_case+'_'+str(h))
 

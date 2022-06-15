@@ -9,8 +9,7 @@ from copy import deepcopy
 from general_robotics_toolbox import *
 import sys
 from matplotlib import pyplot as plt
-sys.path.append('../fanuc_toolbox')
-from fanuc_client import *
+from fanuc_motion_program_exec_client import *
 sys.path.append('../../../toolbox')
 from robots_def import *
 
