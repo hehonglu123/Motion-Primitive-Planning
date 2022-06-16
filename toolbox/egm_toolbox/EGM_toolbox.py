@@ -75,6 +75,7 @@ class EGM_toolbox(object):
                     res_i, state_i = self.egm.receive_from_robot()
                     if res_i:
                         send_res = self.egm.send_to_robot_cart(curve2start[i], quat2start[i])
+                        print(send_res)
                         break
 
             for i in range(500):
