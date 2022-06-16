@@ -18,7 +18,7 @@ def main():
 	et=EGM_toolbox(egm,robot)
 	idx_delay=int(et.delay/et.ts)
 
-	dataset='from_NX/'
+	dataset='wood/'
 	data_dir='../data/'
 	curve_js = read_csv(data_dir+dataset+'Curve_js.csv',header=None).values
 	curve = read_csv(data_dir+dataset+'Curve_in_base_frame.csv',header=None).values
@@ -28,7 +28,7 @@ def main():
 	curve_R=np.array(curve_R)
 
 
-	vd=800
+	vd=250
 	max_error_threshold=0.1
 	
 	lam=calc_lam_cs(curve[:,:3])
@@ -48,7 +48,7 @@ def main():
 
 	max_error=999
 	i=0
-	iteration=200
+	iteration=30
 	while max_error>max_error_threshold:
 		i+=1
 		###add extension
