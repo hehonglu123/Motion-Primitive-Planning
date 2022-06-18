@@ -18,7 +18,7 @@ def main():
 	et=EGM_toolbox(egm,robot)
 	idx_delay=int(et.delay/et.ts)
 
-	dataset='from_NX/'
+	dataset='wood/'
 	data_dir='../data/'
 	curve_js = read_csv(data_dir+dataset+'Curve_js.csv',header=None).values
 	curve = read_csv(data_dir+dataset+'Curve_in_base_frame.csv',header=None).values
@@ -28,7 +28,7 @@ def main():
 	curve_R=np.array(curve_R)
 
 
-	vd=800
+	vd=250
 	max_error_threshold=0.1
 	
 	lam=calc_lam_cs(curve[:,:3])
@@ -38,21 +38,28 @@ def main():
 	curve_cmd_js=curve_js[breakpoints]
 	curve_cmd=curve[breakpoints,:3]
 	curve_cmd_R=curve_R[breakpoints]
+	
+
+	###extend whole tracking trajectory first
+	extension_num1=100
+	curve_cmd,curve_cmd_R=et.add_extension_egm_cartesian(curve_cmd,curve_cmd_R,extension_num=extension_num1)
+
 	curve_cmd_w=R2w(curve_cmd_R)
 
 	curve_d=copy.deepcopy(curve_cmd)
 	curve_R_d=copy.deepcopy(curve_cmd_R)
 	curve_w_d=copy.deepcopy(curve_cmd_w)
 	
-	extension_num=150
+	extension_num=100
 
 	max_error=999
-	i=0
-	iteration=20
-	while max_error>max_error_threshold:
-		i+=1
+
+	iteration=30
+	adjust_weigt_it=30
+	for i in range(iteration):
+
 		###add extension
-		curve_cmd_ext,curve_cmd_R_ext=et.add_extension_egm_cartesian(curve_cmd,curve_cmd_R)
+		curve_cmd_ext,curve_cmd_R_ext=et.add_extension_egm_cartesian(curve_cmd,curve_cmd_R,extension_num=extension_num)
 		###move to start first
 		print('moving to start point')
 		et.jog_joint_cartesian(curve_cmd_ext[0],curve_cmd_R_ext[0])
@@ -67,12 +74,23 @@ def main():
 
 		##############################ILC########################################
 		error=curve_exe-curve_d
+		error_distance=np.linalg.norm(error,axis=1)
 		print('worst case error: ',np.max(error_distance))
+		##add weights based on error
 		weights_p=np.ones(len(error))
+		# weights_p=np.linalg.norm(error,axis=1)
+		# weights_p=(len(error)/4)*weights_p/weights_p.sum()
+		if i>adjust_weigt_it:
+			weights_p[np.where(error_distance>0.5*np.max(error_distance))]=5
+
+			
 
 		error=error*weights_p[:, np.newaxis]
 		error_flip=np.flipud(error)
 		error_w=curve_exe_w-curve_w_d
+		#add weights based on error_w
+		# weights_w=np.linalg.norm(error_w,axis=1)
+		# weights_w=(len(error)/4)*weights_w/weights_w.sum()
 		weights_w=np.ones(len(error_w))
 
 		error_w=error_w*weights_w[:, np.newaxis]
@@ -82,8 +100,11 @@ def main():
 		curve_cmd_w_aug=curve_cmd_w+error_w_flip
 		curve_cmd_R_aug=w2R(curve_cmd_w_aug,curve_R_d[0])
 
+
+		
+
 		###add extension
-		curve_cmd_ext_aug,curve_cmd_R_ext_aug=et.add_extension_egm_cartesian(curve_cmd_aug,curve_cmd_R_aug)
+		curve_cmd_ext_aug,curve_cmd_R_ext_aug=et.add_extension_egm_cartesian(curve_cmd_aug,curve_cmd_R_aug,extension_num=extension_num)
 		###move to start first
 		print('moving to start point')
 		et.jog_joint_cartesian(curve_cmd_ext_aug[0],curve_cmd_R_ext_aug[0])
@@ -99,44 +120,42 @@ def main():
 		grad=np.flipud(delta_new)
 		grad_w=np.flipud(delta_w_new)
 
-		alpha1=0.5
-		alpha2=1
+		alpha1=1-i/iteration#0.5
+		alpha2=1-i/iteration#1
 		curve_cmd_new=curve_cmd-alpha1*grad
 		curve_cmd_w-=alpha2*grad_w
 		curve_cmd_R=w2R(curve_cmd_w,curve_R_d[0])
 
-
-		if i>iteration:
-			##############################plot error#####################################
-			fig, ax1 = plt.subplots()
-			ax2 = ax1.twinx()
-			ax1.plot(lam[1:], speed, 'g-', label='Speed')
-			ax2.plot(lam, error_distance, 'b-',label='Error')
-			ax2.plot(lam, np.degrees(angle_error), 'y-',label='Normal Error')
-
-			ax1.set_xlabel('lambda (mm)')
-			ax1.set_ylabel('Speed/lamdot (mm/s)', color='g')
-			ax2.set_ylabel('Error/Normal Error (mm/deg)', color='b')
-			plt.title("Speed and Error Plot")
-			ax1.legend(loc=0)
-
-			ax2.legend(loc=0)
-
-			plt.legend()
-
-			###########################plot for verification###################################
-			plt.figure()
-			ax = plt.axes(projection='3d')
-			ax.plot3D(curve[:,0], curve[:,1], curve[:,2], c='gray',label='original')
-			ax.plot3D(curve_exe[:,0], curve_exe[:,1], curve_exe[:,2], c='red',label='execution')
-			ax.scatter3D(curve_cmd[:,0], curve_cmd[:,1], curve_cmd[:,2], c=curve_cmd[:,2], cmap='Greens',label='commanded points')
-			ax.scatter3D(curve_cmd_new[:,0], curve_cmd_new[:,1], curve_cmd_new[:,2], c=curve_cmd_new[:,2], cmap='Blues',label='new commanded points')
-
-
-			plt.legend()
-			plt.show()
-
 		curve_cmd=curve_cmd_new
+
+	##############################plot error#####################################
+	fig, ax1 = plt.subplots()
+	ax2 = ax1.twinx()
+	ax1.plot(lam[1:], speed, 'g-', label='Speed')
+	ax2.plot(lam, error_distance, 'b-',label='Error')
+	ax2.plot(lam, np.degrees(angle_error), 'y-',label='Normal Error')
+
+	ax1.set_xlabel('lambda (mm)')
+	ax1.set_ylabel('Speed/lamdot (mm/s)', color='g')
+	ax2.set_ylabel('Error/Normal Error (mm/deg)', color='b')
+	plt.title("Speed and Error Plot")
+	ax1.legend(loc=0)
+
+	ax2.legend(loc=0)
+
+	plt.legend()
+
+	###########################plot for verification###################################
+	plt.figure()
+	ax = plt.axes(projection='3d')
+	ax.plot3D(curve[:,0], curve[:,1], curve[:,2], c='gray',label='original')
+	ax.plot3D(curve_exe[:,0], curve_exe[:,1], curve_exe[:,2], c='red',label='execution')
+	ax.scatter3D(curve_cmd[:,0], curve_cmd[:,1], curve_cmd[:,2], c=curve_cmd[:,2], cmap='Greens',label='commanded points')
+	ax.scatter3D(curve_cmd_new[:,0], curve_cmd_new[:,1], curve_cmd_new[:,2], c=curve_cmd_new[:,2], cmap='Blues',label='new commanded points')
+
+
+	plt.legend()
+	plt.show()
 
 if __name__ == "__main__":
 	main()

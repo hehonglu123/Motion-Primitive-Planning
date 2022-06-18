@@ -47,10 +47,11 @@ def main():
 	extension_num=100
 
 	max_error=999
-	i=0
+
 	iteration=30
-	while max_error>max_error_threshold:
-		i+=1
+	adjust_weigt_it=10
+	for i in range(iteration):
+
 		###add extension
 		curve_cmd_ext,curve_cmd_R_ext=et.add_extension_egm_cartesian(curve_cmd,curve_cmd_R,extension_num=extension_num)
 		###move to start first
@@ -67,11 +68,16 @@ def main():
 
 		##############################ILC########################################
 		error=curve_exe-curve_d
+		error_distance=np.linalg.norm(error,axis=1)
 		print('worst case error: ',np.max(error_distance))
 		##add weights based on error
+		weights_p=np.ones(len(error))
 		# weights_p=np.linalg.norm(error,axis=1)
 		# weights_p=(len(error)/4)*weights_p/weights_p.sum()
-		weights_p=np.ones(len(error))
+		if i>adjust_weigt_it:
+			weights_p[np.where(error_distance>0.5*np.max(error_distance))]=5
+
+			
 
 		error=error*weights_p[:, np.newaxis]
 		error_flip=np.flipud(error)
@@ -114,38 +120,36 @@ def main():
 		curve_cmd_w-=alpha2*grad_w
 		curve_cmd_R=w2R(curve_cmd_w,curve_R_d[0])
 
-
-		if i>iteration:
-			##############################plot error#####################################
-			fig, ax1 = plt.subplots()
-			ax2 = ax1.twinx()
-			ax1.plot(lam[1:], speed, 'g-', label='Speed')
-			ax2.plot(lam, error_distance, 'b-',label='Error')
-			ax2.plot(lam, np.degrees(angle_error), 'y-',label='Normal Error')
-
-			ax1.set_xlabel('lambda (mm)')
-			ax1.set_ylabel('Speed/lamdot (mm/s)', color='g')
-			ax2.set_ylabel('Error/Normal Error (mm/deg)', color='b')
-			plt.title("Speed and Error Plot")
-			ax1.legend(loc=0)
-
-			ax2.legend(loc=0)
-
-			plt.legend()
-
-			###########################plot for verification###################################
-			plt.figure()
-			ax = plt.axes(projection='3d')
-			ax.plot3D(curve[:,0], curve[:,1], curve[:,2], c='gray',label='original')
-			ax.plot3D(curve_exe[:,0], curve_exe[:,1], curve_exe[:,2], c='red',label='execution')
-			ax.scatter3D(curve_cmd[:,0], curve_cmd[:,1], curve_cmd[:,2], c=curve_cmd[:,2], cmap='Greens',label='commanded points')
-			ax.scatter3D(curve_cmd_new[:,0], curve_cmd_new[:,1], curve_cmd_new[:,2], c=curve_cmd_new[:,2], cmap='Blues',label='new commanded points')
-
-
-			plt.legend()
-			plt.show()
-
 		curve_cmd=curve_cmd_new
+
+	##############################plot error#####################################
+	fig, ax1 = plt.subplots()
+	ax2 = ax1.twinx()
+	ax1.plot(lam[1:], speed, 'g-', label='Speed')
+	ax2.plot(lam, error_distance, 'b-',label='Error')
+	ax2.plot(lam, np.degrees(angle_error), 'y-',label='Normal Error')
+
+	ax1.set_xlabel('lambda (mm)')
+	ax1.set_ylabel('Speed/lamdot (mm/s)', color='g')
+	ax2.set_ylabel('Error/Normal Error (mm/deg)', color='b')
+	plt.title("Speed and Error Plot")
+	ax1.legend(loc=0)
+
+	ax2.legend(loc=0)
+
+	plt.legend()
+
+	###########################plot for verification###################################
+	plt.figure()
+	ax = plt.axes(projection='3d')
+	ax.plot3D(curve[:,0], curve[:,1], curve[:,2], c='gray',label='original')
+	ax.plot3D(curve_exe[:,0], curve_exe[:,1], curve_exe[:,2], c='red',label='execution')
+	ax.scatter3D(curve_cmd[:,0], curve_cmd[:,1], curve_cmd[:,2], c=curve_cmd[:,2], cmap='Greens',label='commanded points')
+	ax.scatter3D(curve_cmd_new[:,0], curve_cmd_new[:,1], curve_cmd_new[:,2], c=curve_cmd_new[:,2], cmap='Blues',label='new commanded points')
+
+
+	plt.legend()
+	plt.show()
 
 if __name__ == "__main__":
 	main()

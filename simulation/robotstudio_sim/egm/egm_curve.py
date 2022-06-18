@@ -1,13 +1,15 @@
 import numpy as np
 import time, sys
 from pandas import *
-sys.path.append('egm_toolbox')
-import rpi_abb_irc5
+
 
 sys.path.append('../../../toolbox')
 from robots_def import *
 from error_check import *
 from lambda_calc import *
+sys.path.append('../../../toolbox/egm_toolbox')
+
+import rpi_abb_irc5
 
 egm = rpi_abb_irc5.EGM()
 

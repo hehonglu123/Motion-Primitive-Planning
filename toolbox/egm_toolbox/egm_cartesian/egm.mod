@@ -16,8 +16,8 @@ MODULE egm
         VAR jointtarget joints;
         
         ! "Move" a tiny amount to start EGM
-        !joints:= CJointT();
-        joints:=[[0,0,23,67,-50,0],[0,0,0,0,0,0]];
+        joints:= CJointT();
+        !joints:=[[0,0,23,67,-50,0],[0,0,0,0,0,0]];
         !joints.robax.rax_6 := joints.robax.rax_6 + .0001;
         MoveAbsj joints, v1000, fine, tool0;
     
