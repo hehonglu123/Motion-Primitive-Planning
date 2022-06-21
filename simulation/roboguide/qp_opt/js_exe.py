@@ -1,19 +1,17 @@
 from pandas import read_csv, DataFrame
+import numpy as np
+import matplotlib.pyplot as plt
 import sys, copy
 sys.path.append('../../../toolbox')
-sys.path.append('../../../circular_fit')
 from robots_def import *
 from utils import *
 from toolbox_circular_fit import *
-from robots_def import *
-import matplotlib.pyplot as plt
 from lambda_calc import *
 from error_check import *
-sys.path.append('../fanuc_toolbox')
-from fanuc_client import *
+from fanuc_motion_program_exec_client import *
 
 def result_ana(curve_exe_js):
-    act_speed=[]
+    act_speed=[0]
     lam_exec=[0]
     curve_exe=[]
     curve_exe_R=[]
@@ -54,7 +52,6 @@ def result_ana(curve_exe_js):
     # lamdot_act=calc_lamdot(curve_exe_js_act,lam_exec,robot,1)
     error,angle_error=calc_all_error_w_normal(curve_exe,curve[:,:3],curve_exe_R[:,:,-1],curve_normal)
 
-    act_speed = np.append(0,act_speed)
     poly = np.poly1d(np.polyfit(lam_exec,act_speed,deg=40))
     poly_der = np.polyder(poly)
     # fit=poly(lam_exec[1:])     
@@ -69,8 +66,9 @@ def result_ana(curve_exe_js):
             break
         end_id -= 1
     act_speed_cut=act_speed[start_id:end_id]
-    print("Ave Speed:",np.mean(act_speed_cut))
+    print("Ave Speed:",np.mean(act_speed_cut),'Max Error:',np.max(error))
     
+    # return
 
     fig, ax1 = plt.subplots()
     ax2 = ax1.twinx()
@@ -83,10 +81,21 @@ def result_ana(curve_exe_js):
     plt.title("Execution Result (Speed/Error/Normal Error v.s. Lambda)")
     ax1.legend(loc=0)
     ax2.legend(loc=0)
-    plt.show()
+    # plt.show()
+    plt.savefig(data_dir+'error_speed_'+case_file_name+'.png')
+    plt.clf()
+
+    with open(data_dir+'error_'+case_file_name+'.npy','wb') as f:
+        np.save(f,error)
+    with open(data_dir+'normal_error_'+case_file_name+'.npy','wb') as f:
+        np.save(f,angle_error)
+    with open(data_dir+'speed_'+case_file_name+'.npy','wb') as f:
+        np.save(f,act_speed)
+    with open(data_dir+'lambda_'+case_file_name+'.npy','wb') as f:
+        np.save(f,lam_exec)
 
 robot=m900ia(d=50)
-data_dir = 'data/'
+data_dir = 'data_qp_devel/'
 
 client = FANUCClient()
 utool_num = 2
@@ -100,81 +109,50 @@ with open(data_dir+'Curve_R_in_base_frame.npy','rb') as f:
     curve_normal=R_all[:,:,-1]
 curve = np.hstack((curve,curve_normal))
 
-# qp curve js
-# with open(data_dir+'Curve_js_qp2.npy','rb') as f:
-#     curve_js_qp = np.load(f)
-curve_js_qp = read_csv(data_dir+'curve_js_qp_20.csv',header=None).values
-curve_js_qp=np.array(curve_js_qp).astype(float)
-# curve_js_qp=curve_js_qp[::10]
-# print(curve_js_qp.shape)
-# exit()
-
-curve_js_cmd = curve_js[::100]
-
 # motion parameters
-speed=10
-# speed=1000
+# speed=100
+motion_type='movej'
+# speed=300
+# all_speed=[300,1000]
+all_speed=[10,100]
 zone=100
 
-# the original curve
-tp_pre = TPMotionProgram()
-j0 = jointtarget(1,1,utool_num,np.degrees(curve_js_cmd[0]),[0]*6)
-tp_pre.moveJ(j0,50,'%',-1)
-j0 = jointtarget(1,1,utool_num,np.degrees(curve_js_cmd[0]),[0]*6)
-tp_pre.moveJ(j0,5,'%',-1)
-client.execute_motion_program(tp_pre)
+qp_cases=['qp','opt_init','opt','qp_heu','opt_init_heu','opt_heu']
 
-tp = TPMotionProgram()
-for i in range(1,len(curve_js_cmd)-1):
-    robt = jointtarget(1,1,utool_num,np.degrees(curve_js_cmd[i]),[0]*6)
-    tp.moveJ(robt,speed,'%',zone)
-    # tp.moveL(robt,speed,'mmsec',zone)
-robt_end = jointtarget(1,1,utool_num,np.degrees(curve_js_cmd[-1]),[0]*6)
-tp.moveJ(robt_end,speed,'%',-1)
-# tp.moveL(robt,speed,'mmsec',-1)
-# execute 
-res = client.execute_motion_program(tp)
+for speed in all_speed:
+    for case in qp_cases:
+        curve_js_plan = read_csv(data_dir+'curve_js_'+case+'.csv',header=None).values
+        curve_js_plan=np.array(curve_js_plan).astype(float)
 
-# Write log csv to file
-with open(data_dir+"/curve_js_exe.csv","wb") as f:
-    f.write(res)
+        # the original curve
+        tp_pre = TPMotionProgram()
+        j0 = jointtarget(1,1,utool_num,np.degrees(curve_js_plan[0]),[0]*6)
+        tp_pre.moveJ(j0,50,'%',-1)
+        j0 = jointtarget(1,1,utool_num,np.degrees(curve_js_plan[0]),[0]*6)
+        tp_pre.moveJ(j0,5,'%',-1)
+        client.execute_motion_program(tp_pre)
 
-# read execution
-curve_js_exe = read_csv(data_dir+"/curve_js_exe.csv",header=None).values[1:]
-curve_js_exe=np.array(curve_js_exe).astype(float)
-timestamp = curve_js_exe[:,0]*1e-3
-curve_js_exe = np.radians(curve_js_exe[:,1:])
+        tp = TPMotionProgram()
+        for i in range(1,len(curve_js_plan)-1):
+            robt = jointtarget(1,1,utool_num,np.degrees(curve_js_plan[i]),[0]*6)
+            tp.moveJ(robt,speed,'%',zone)
+            # tp.moveL(robt,speed,'mmsec',zone)
+        robt_end = jointtarget(1,1,utool_num,np.degrees(curve_js_plan[-1]),[0]*6)
+        tp.moveJ(robt_end,speed,'%',-1)
+        # tp.moveL(robt,speed,'mmsec',-1)
+        # execute 
+        res = client.execute_motion_program(tp)
 
-result_ana(curve_js_exe)
+        case_file_name = case+'_'+motion_type+'_'+str(speed)
 
-# the qp curve
-tp_pre = TPMotionProgram()
-j0 = jointtarget(1,1,utool_num,np.degrees(curve_js_qp[0]),[0]*6)
-tp_pre.moveJ(j0,50,'%',-1)
-j0 = jointtarget(1,1,utool_num,np.degrees(curve_js_qp[0]),[0]*6)
-tp_pre.moveJ(j0,5,'%',-1)
-client.execute_motion_program(tp_pre)
+        # Write log csv to file
+        with open(data_dir+"curve_js_"+case_file_name+"_exe.csv","wb") as f:
+            f.write(res)
 
-tp = TPMotionProgram()
-for i in range(1,len(curve_js_qp)-1):
-    robt = jointtarget(1,1,utool_num,np.degrees(curve_js_qp[i]),[0]*6)
-    tp.moveJ(robt,speed,'%',zone)
-    # tp.moveL(robt,speed,'mmsec',zone)
-robt_end = jointtarget(1,1,utool_num,np.degrees(curve_js_qp[-1]),[0]*6)
-tp.moveJ(robt_end,speed,'%',-1)
-# tp.moveL(robt,speed,'mmsec',-1)
-# execute 
-res = client.execute_motion_program(tp)
+        # read execution
+        curve_js_exe = read_csv(data_dir+"curve_js_"+case_file_name+"_exe.csv",header=None).values[1:]
+        curve_js_exe=np.array(curve_js_exe).astype(float)
+        timestamp = curve_js_exe[:,0]*1e-3
+        curve_js_exe = np.radians(curve_js_exe[:,1:])
 
-# Write log csv to file
-with open(data_dir+"/curve_js_qp_exe.csv","wb") as f:
-    f.write(res)
-
-# read execution
-curve_js_exe = read_csv(data_dir+"/curve_js_qp_exe.csv",header=None).values[1:]
-curve_js_exe=np.array(curve_js_exe).astype(float)
-timestamp = curve_js_exe[:,0]*1e-3
-curve_js_exe = np.radians(curve_js_exe[:,1:])
-
-result_ana(curve_js_exe)
-
+        result_ana(curve_js_exe)
