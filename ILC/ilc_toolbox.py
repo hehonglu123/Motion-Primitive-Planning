@@ -197,12 +197,38 @@ class ilc_toolbox(object):
 		###calculate error excluding start & end
 		for i in range(1,len(p_bp)-1):
 			###get output y index by finding closest on curve_exe
-			exe_bp_idx.append(calc_error(p_bp[i],curve_exe)[1])
+			exe_bp_idx.append(calc_error(p_bp[i][0],curve_exe)[1])
 			###find error y-y_d
-			ep.append(curve_exe[exe_bp_idx[-1]]-curve_bp[i])
+			ep.append(curve_exe[exe_bp_idx[-1]]-curve_bp[i][0])
 			# eR.append(curve_exe_R[exe_bp_idx[-1]]@self.robot.fwd(q_bp[i][0]).R.T)
 
-		return ep, eR, curve_exe[exe_bp_idx],curve_exe_R[exe_bp_idx]
+		return np.array(ep), np.array(eR), curve_exe[exe_bp_idx],curve_exe_R[exe_bp_idx]
+
+	def get_error_bp2(self,p_bp,q_bp,curve_exe,curve_exe_R,curve,curve_R):
+		###p_bp:								xyz of breakpoints, u
+		###q_bp:								joint configs of breakpoints, u
+		###curve_exe:							execution curve
+		###curve_exe_R:							execution curve R
+		###curve:								original curve
+		###curve:								original curve_R
+
+
+		exe_bp_idx=[]
+		ep=[]
+		eR=[]
+		###calculate error excluding start & end
+		for i in range(1,len(p_bp)-1):
+			###get output y index by finding closest on curve_exe
+			exe_bp_idx.append(calc_error(p_bp[i][0],curve_exe)[1])
+			###get y_d by finding closest on original curve
+			y_d=curve[calc_error(curve_exe[exe_bp_idx[-1]],curve)[1]]
+
+			ep.append(curve_exe[exe_bp_idx[-1]]-y_d)
+			# eR.append(curve_exe_R[exe_bp_idx[-1]]@self.robot.fwd(q_bp[i][0]).R.T)
+
+		return np.array(ep), np.array(eR), curve_exe[exe_bp_idx],curve_exe_R[exe_bp_idx]
+
+
 
 	def update_bp_ilc(self,p_bp,q_bp,exe_bp_p,exe_bp_R,exe_bp_p_new, exe_bp_R_new,alpha1=0.5,alpha2=0.5):
 		###fixing initial and end breakpoint
@@ -223,10 +249,10 @@ class ilc_toolbox(object):
 			p_bp[reverse_idx]-=alpha1*grad_ep
 
 
-			q_bp[reverse_idx][0]=car2js(self.robot,q_bp[reverse_idx][0],p_bp[reverse_idx],self.robot.fwd(q_bp[reverse_idx][0]).R)[0]
+			q_bp[reverse_idx][0]=car2js(self.robot,q_bp[reverse_idx][0],p_bp[reverse_idx][0],self.robot.fwd(q_bp[reverse_idx][0]).R)[0]
 		return p_bp,q_bp
 
-	def sto_gradient_from_model(self,p_bp,q_bp):
+	def sto_gradient_from_model(self,p_bp,q_bp,total_points=100,K=20):
 		p_bp=np.array(p_bp)
 		now=time.time()
 		curve_interp, curve_R_interp, curve_js_interp, breakpoints_blended=form_traj_from_bp(q_bp,self.primitives,self.robot)
@@ -234,15 +260,13 @@ class ilc_toolbox(object):
 		print('time for 1 interpolation: ',time.time()-now)
 
 		###downsample model interploated curve
-		total_points=300
 		step_size=int(len(curve_blended)/total_points)
 		curve_blended_downsampled=curve_blended[::step_size]
 		#### runs to get stochastic gradient
-		K=100
 		dp_model_all=[]
 		d_bp_p_all=[]
 		for k in range(K):
-			print(k,'th iteration')
+			# print(k,'th iteration')
 			d_bp_p=np.random.uniform(low=-0.1,high=0.1,size=p_bp.shape)	#changes in position of breakpoints
 
 			p_bp_new=p_bp+d_bp_p
@@ -270,4 +294,4 @@ class ilc_toolbox(object):
 
 		G=dp_model_all.T@np.linalg.pinv(d_bp_p_all.T)
 
-		return G
+		return curve_blended_downsampled,G

@@ -153,19 +153,19 @@ class greedy_fit(fitting_toolbox):
 
 def main():
 	###read in points
-	curve_js = read_csv("../data/wood/Curve_js.csv",header=None).values
-	# curve_js = read_csv("../data/from_NX/Curve_js.csv",header=None).values
+	# curve_js = read_csv("../data/wood/Curve_js.csv",header=None).values
+	curve_js = read_csv("../data/from_NX/Curve_js.csv",header=None).values
 	# curve_js = read_csv("../constraint_solver/dual_arm/trajectory/arm2.csv",header=None).values
 
 	robot=abb6640(d=50)
 
-	greedy_fit_obj=greedy_fit(robot,curve_js,0.5)
+	greedy_fit_obj=greedy_fit(robot,curve_js,0.1)
 
 
 	###set primitive choices, defaults are all 3
 	# greedy_fit_obj.primitives={'movel_fit':greedy_fit_obj.movel_fit_greedy,'movec_fit':greedy_fit_obj.movec_fit_greedy}
 
-	# greedy_fit_obj.primitives={'movel_fit':greedy_fit_obj.movel_fit_greedy}
+	greedy_fit_obj.primitives={'movel_fit':greedy_fit_obj.movel_fit_greedy}
 	# greedy_fit_obj.primitives={'movej_fit':greedy_fit_obj.movej_fit_greedy}
 	# greedy_fit_obj.primitives={'movec_fit':greedy_fit_obj.movec_fit_greedy}
 
@@ -242,5 +242,5 @@ def greedy_execute():
 	print('time: ',timestamp[-1]-timestamp[0],'error: ',np.max(error),'normal error: ',np.max(angle_error))
 
 if __name__ == "__main__":
-	greedy_execute()
-	# main()
+	# greedy_execute()
+	main()

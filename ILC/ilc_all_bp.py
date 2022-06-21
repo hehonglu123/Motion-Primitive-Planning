@@ -50,7 +50,7 @@ def main():
 	curve_bp=copy.deepcopy(p_bp)
 
 	###extension
-	primitives,p_bp,q_bp=ms.extend(robot,q_bp,primitives,breakpoints,p_bp)
+	p_bp,q_bp=ms.extend(robot,q_bp,primitives,breakpoints,p_bp)
 
 	###ilc toolbox def
 	ilc=ilc_toolbox(robot,primitives)
@@ -58,10 +58,8 @@ def main():
 	###TODO: extension fix start point, moveC support
 	max_error=999
 	inserted_points=[]
-	i=0
-	iteration=0
-	while max_error>max_error_threshold:
-		i+=1
+	iteration=10
+	for i in range(iteration):
 		ms = MotionSend()
 		###execute,curve_fit_js only used for orientation
 		logged_data=ms.exec_motions(robot,primitives,breakpoints,p_bp,q_bp,s,z)
@@ -78,9 +76,14 @@ def main():
 		
 		#######################################ILC######################################
 		###calcualte error at each breakpoints
-		ep_flip, eR_flip, exe_bp_p, exe_bp_R=ilc.get_error_bp(p_bp,q_bp,curve_exe,curve_exe_R,curve_bp,None)
-		ep_flip.reverse()
-		eR_flip.reverse()
+		# ep, eR, exe_bp_p, exe_bp_R=ilc.get_error_bp(p_bp,q_bp,curve_exe,curve_exe_R,curve_bp,None)
+		ep, eR, exe_bp_p, exe_bp_R=ilc.get_error_bp2(p_bp,q_bp,curve_exe,curve_exe_R,curve[:,:3],None)
+
+
+		plt.figure()
+		plt.plot(np.linalg.norm(ep,axis=-1))
+		ep_flip=np.flip(ep)
+		eR_flip=np.flip(eR)
 
 		###ILC, add flipped error to current u
 		p_bp_temp=copy.deepcopy(p_bp)
@@ -88,7 +91,7 @@ def main():
 		for m in range(1,len(p_bp)-1):
 			p_bp_temp[m]=p_bp_temp[m]+ep_flip[m-1]
 
-			q_bp_temp[m][0]=car2js(robot,q_bp_temp[m][0],p_bp_temp[m],robot.fwd(q_bp[m][0]).R)[0]
+			q_bp_temp[m][0]=car2js(robot,q_bp_temp[m][0],p_bp_temp[m][0],robot.fwd(q_bp[m][0]).R)[0]
 
 		###execute augmented input
 		logged_data=ms.exec_motions(robot,primitives,breakpoints,p_bp_temp,q_bp_temp,s,z)
@@ -97,43 +100,41 @@ def main():
 		df = read_csv(StringData, sep =",")
 		###get new tracking error
 		_, curve_exe_temp, curve_exe_R_temp,_, _, _=ms.logged_data_analysis(robot,df)
-		_, _,exe_bp_p_new, exe_bp_R_new=ilc.get_error_bp(p_bp_temp,q_bp_temp,curve_exe_temp,curve_exe_R_temp,curve_bp,None)
-
+		# _, _,exe_bp_p_new, exe_bp_R_new=ilc.get_error_bp(p_bp_temp,q_bp_temp,curve_exe_temp,curve_exe_R_temp,curve_bp,None)
+		_, _,exe_bp_p_new, exe_bp_R_new=ilc.get_error_bp2(p_bp_temp,q_bp_temp,curve_exe_temp,curve_exe_R_temp,curve[:,:3],None)
 
 
 		##############################plot error#####################################
-		if i>iteration:
-			fig, ax1 = plt.subplots()
-			ax2 = ax1.twinx()
-			ax1.plot(lam, speed, 'g-', label='Speed')
-			ax2.plot(lam, error, 'b-',label='Error')
-			ax2.plot(lam, np.degrees(angle_error), 'y-',label='Normal Error')
+		fig, ax1 = plt.subplots()
+		ax2 = ax1.twinx()
+		ax1.plot(lam, speed, 'g-', label='Speed')
+		ax2.plot(lam, error, 'b-',label='Error')
+		ax2.plot(lam, np.degrees(angle_error), 'y-',label='Normal Error')
 
-			ax1.set_xlabel('lambda (mm)')
-			ax1.set_ylabel('Speed/lamdot (mm/s)', color='g')
-			ax2.set_ylabel('Error/Normal Error (mm/deg)', color='b')
-			plt.title("Speed and Error Plot")
-			ax1.legend(loc=0)
+		ax1.set_xlabel('lambda (mm)')
+		ax1.set_ylabel('Speed/lamdot (mm/s)', color='g')
+		ax2.set_ylabel('Error/Normal Error (mm/deg)', color='b')
+		plt.title("Speed and Error Plot")
+		ax1.legend(loc=0)
 
-			ax2.legend(loc=0)
+		ax2.legend(loc=0)
 
-			###visualize breakpoints
-			for l in lam_bp:
-				ax1.axvline(x=l)
+		###visualize breakpoints
+		# for l in lam_bp:
+		# 	ax1.axvline(x=l)
 
-			plt.legend()
+		plt.legend()
 
 
 		###update all breakpoints
 		p_bp, q_bp=ilc.update_bp_ilc(p_bp,q_bp,exe_bp_p,exe_bp_R,exe_bp_p_new, exe_bp_R_new)
 
 
-		if i>iteration:
-			# p_bp_np=np.array(p_bp[1:-1])      ###np version, avoid first and last extended points
-			# ax.scatter3D(p_bp_np[:,0], p_bp_np[:,1], p_bp_np[:,2], c=p_bp_np[:,2], cmap='Blues',label='new breakpoints')
-			# plt.legend()
-			# plt.savefig('iteration '+str(i))
-			plt.show()
+		# p_bp_np=np.array(p_bp[1:-1])      ###np version, avoid first and last extended points
+		# ax.scatter3D(p_bp_np[:,0], p_bp_np[:,1], p_bp_np[:,2], c=p_bp_np[:,2], cmap='Blues',label='new breakpoints')
+		# plt.legend()
+		# plt.savefig('iteration '+str(i))
+		plt.show()
 
 
 if __name__ == "__main__":

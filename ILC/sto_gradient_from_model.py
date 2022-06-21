@@ -48,8 +48,8 @@ def main():
 	###ilc toolbox def
 	ilc=ilc_toolbox(robot,primitives)
 
-	G=ilc.sto_gradient_from_model(p_bp,q_bp)
-	print(G)
+	_,G=ilc.sto_gradient_from_model(p_bp,q_bp,100)
+
 	im=plt.imshow(G, cmap='hot', interpolation='nearest')
 	plt.colorbar(im)
 	plt.title("Stochastic Gradient from Analytical Model")
