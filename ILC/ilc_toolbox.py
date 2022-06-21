@@ -226,3 +226,48 @@ class ilc_toolbox(object):
 			q_bp[reverse_idx][0]=car2js(self.robot,q_bp[reverse_idx][0],p_bp[reverse_idx],self.robot.fwd(q_bp[reverse_idx][0]).R)[0]
 		return p_bp,q_bp
 
+	def sto_gradient_from_model(self,p_bp,q_bp):
+		p_bp=np.array(p_bp)
+		now=time.time()
+		curve_interp, curve_R_interp, curve_js_interp, breakpoints_blended=form_traj_from_bp(q_bp,self.primitives,self.robot)
+		curve_js_blended,curve_blended,curve_R_blended=blend_js_from_primitive(curve_interp, curve_js_interp, breakpoints_blended, self.primitives,self.robot,zone=10)
+		print('time for 1 interpolation: ',time.time()-now)
+
+		###downsample model interploated curve
+		total_points=300
+		step_size=int(len(curve_blended)/total_points)
+		curve_blended_downsampled=curve_blended[::step_size]
+		#### runs to get stochastic gradient
+		K=100
+		dp_model_all=[]
+		d_bp_p_all=[]
+		for k in range(K):
+			print(k,'th iteration')
+			d_bp_p=np.random.uniform(low=-0.1,high=0.1,size=p_bp.shape)	#changes in position of breakpoints
+
+			p_bp_new=p_bp+d_bp_p
+
+			###find inv of new bp's
+			q_bp_new=[]
+			for i in range(len(p_bp)):
+				q_bp_new.append(car2js(self.robot,q_bp[i][0],p_bp_new[i][0],self.robot.fwd(q_bp[i][0]).R))
+
+
+			###use model to get new interpolated curve
+			curve_interp_new, curve_R_interp_new, curve_js_interp_new, breakpoints_blended_new=form_traj_from_bp(q_bp_new,self.primitives,self.robot)
+			_,curve_blended_new,_=blend_js_from_primitive(curve_interp_new, curve_js_interp_new, breakpoints_blended_new, self.primitives,self.robot,zone=10)
+
+			###downsample
+			curve_blended_new_downsampled=curve_blended_new[::step_size]
+			dp_model=curve_blended_new_downsampled-curve_blended_downsampled
+
+			###store delta's
+			dp_model_all.append(dp_model.flatten())
+			d_bp_p_all.append(d_bp_p.flatten())
+
+		dp_model_all=np.array(dp_model_all)
+		d_bp_p_all=np.array(d_bp_p_all)
+
+		G=dp_model_all.T@np.linalg.pinv(d_bp_p_all.T)
+
+		return G

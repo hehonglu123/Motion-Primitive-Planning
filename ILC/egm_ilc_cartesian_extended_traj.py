@@ -38,6 +38,12 @@ def main():
 	curve_cmd_js=curve_js[breakpoints]
 	curve_cmd=curve[breakpoints,:3]
 	curve_cmd_R=curve_R[breakpoints]
+	
+
+	###extend whole tracking trajectory first
+	extension_num1=100
+	curve_cmd,curve_cmd_R=et.add_extension_egm_cartesian(curve_cmd,curve_cmd_R,extension_num=extension_num1)
+
 	curve_cmd_w=R2w(curve_cmd_R)
 
 	curve_d=copy.deepcopy(curve_cmd)
@@ -49,7 +55,7 @@ def main():
 	max_error=999
 
 	iteration=30
-	adjust_weigt_it=10
+	adjust_weigt_it=30
 	for i in range(iteration):
 
 		###add extension

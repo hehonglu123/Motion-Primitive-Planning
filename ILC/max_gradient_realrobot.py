@@ -21,8 +21,10 @@ from lambda_calc import *
 from blending import *
 
 def main():
+	ms = MotionSend(url='http://192.168.55.1:80')
+
 	# data_dir="fitting_output_new/python_qp_movel/"
-	dataset='wood/'
+	dataset='from_NX/'
 	data_dir="../data/"+dataset
 	fitting_output="../data/"+dataset+'baseline/100L/'
 
@@ -34,17 +36,16 @@ def main():
 	max_error_threshold=0.5
 	robot=abb6640(d=50)
 
-	s = speeddata(150,9999999,9999999,999999)
+	s = speeddata(1100,9999999,9999999,999999)
 	z = z10
 
 
-	curve_fit_js=read_csv(fitting_output+'curve_fit_js.csv',header=None).values
-
-	ms = MotionSend(url='http://192.168.55.1:80')
-	breakpoints,primitives,p_bp,q_bp=ms.extract_data_from_cmd(fitting_output+'command.csv')
-
-	###extension
-	primitives,p_bp,q_bp=ms.extend(robot,q_bp,primitives,breakpoints,p_bp)
+	###########################################get cmd from original cmd################################
+	# breakpoints,primitives,p_bp,q_bp=ms.extract_data_from_cmd(fitting_output+'command.csv')
+	# ###extension
+	# primitives,p_bp,q_bp=ms.extend(robot,q_bp,primitives,breakpoints,p_bp)
+	###########################################get cmd from simulation improved cmd################################
+	breakpoints,primitives,p_bp,q_bp=ms.extract_data_from_cmd('recorded_data/curve2_1100/command.csv')
 
 	###ilc toolbox def
 	ilc=ilc_toolbox(robot,primitives)
@@ -53,36 +54,41 @@ def main():
 	max_error=999
 	inserted_points=[]
 	i=0
-	iteration=10
+	iteration=0
 	while max_error>max_error_threshold:
 		i+=1
 		ms = MotionSend(url='http://192.168.55.1:80')
-		###execute,curve_fit_js only used for orientation
-		logged_data=ms.exec_motions(robot,primitives,breakpoints,p_bp,q_bp,s,z)
+		###5 run execute
+		curve_exe_all=[]
+		curve_exe_js_all=[]
+		timestamp_all=[]
+		for r in range(5):
+			logged_data=ms.exec_motions(robot,primitives,breakpoints,p_bp,q_bp,s,z)
 
-		StringData=StringIO(logged_data)
-		df = read_csv(StringData, sep =",")
-		##############################data analysis#####################################
-		lam, curve_exe, curve_exe_R,curve_exe_js, speed, timestamp=ms.logged_data_analysis(robot,df,filt=True,realrobot=True)
+			StringData=StringIO(logged_data)
+			df = read_csv(StringData, sep =",")
+			##############################data analysis#####################################
+			lam, curve_exe, curve_exe_R,curve_exe_js, speed, timestamp=ms.logged_data_analysis(robot,df,realrobot=True)
+			
+			timestamp=timestamp-timestamp[0]
+
+			curve_exe_all.append(curve_exe)
+			curve_exe_js_all.append(curve_exe_js)
+			timestamp_all.append(timestamp)
+
+
+			# ax.plot3D(curve_exe[:,0], curve_exe[:,1], curve_exe[:,2], c=np.random.rand(3,),label=str(i+1)+'th trajectory')
+
+		###infer average curve from linear interplateion
+		curve_js_all_new, avg_curve_js, timestamp_d=average_curve(curve_exe_js_all,timestamp_all)
+		###calculat error with average curve
+		lam, curve_exe, curve_exe_R, speed=logged_data_analysis(robot,timestamp_d,avg_curve_js)
 		#############################chop extension off##################################
-		start_idx=np.argmin(np.linalg.norm(curve[0,:3]-curve_exe,axis=1))
-		end_idx=np.argmin(np.linalg.norm(curve[-1,:3]-curve_exe,axis=1))
+		lam, curve_exe, curve_exe_R,curve_exe_js, speed, timestamp=ms.chop_extension(curve_exe, curve_exe_R,curve_exe_js, speed, timestamp_d,curve[0,:3],curve[-1,:3])
 
-		#make sure extension doesn't introduce error
-		if np.linalg.norm(curve_exe[start_idx]-curve[0,:3])>0.5:
-			start_idx+=1
-		if np.linalg.norm(curve_exe[end_idx]-curve[-1,:3])>0.5:
-			end_idx-=1
-
-		curve_exe=curve_exe[start_idx:end_idx+1]
-		curve_exe_js=curve_exe_js[start_idx:end_idx+1]
-		curve_exe_R=curve_exe_R[start_idx:end_idx+1]
-		speed=speed[start_idx:end_idx+1]
-		speed=replace_outliers(np.array(speed))
-		lam=calc_lam_cs(curve_exe)
-
-		##############################calcualte error########################################
 		error,angle_error=calc_all_error_w_normal(curve_exe,curve[:,:3],curve_exe_R[:,:,-1],curve[:,3:])
+
+
 		max_error=max(error)
 		print(max_error)
 		max_angle_error=max(angle_error)
@@ -115,7 +121,7 @@ def main():
 			ax.plot3D(curve[:,0], curve[:,1], curve[:,2], c='gray',label='original')
 			ax.plot3D(curve_exe[:,0], curve_exe[:,1], curve_exe[:,2], c='red',label='execution')
 			p_bp_np=np.array(p_bp[1:-1])      ###np version, avoid first and last extended points
-			ax.scatter3D(p_bp_np[:,0], p_bp_np[:,1], p_bp_np[:,2], c=p_bp_np[:,2], cmap='Greens',label='breakpoints')
+			ax.scatter3D(p_bp_np[:,0,0], p_bp_np[:,0,1], p_bp_np[:,0,2], c=p_bp_np[:,0,2], cmap='Greens',label='breakpoints')
 			ax.scatter(curve_exe[max_error_idx,0], curve_exe[max_error_idx,1], curve_exe[max_error_idx,2],c='orange',label='worst case')
 		
 		
@@ -140,7 +146,7 @@ def main():
 
 		if i>iteration:
 			for m in breakpoint_interp_2tweak_indices:
-				ax.scatter(p_bp[m][0], p_bp[m][1], p_bp[m][2],c='blue',label='adjusted breakpoints')
+				ax.scatter(p_bp[m][0][0], p_bp[m][0][1], p_bp[m][0][2],c='blue',label='adjusted breakpoints')
 			plt.legend()
 			plt.show()
 
