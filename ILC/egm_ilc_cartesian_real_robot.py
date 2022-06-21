@@ -49,20 +49,34 @@ def main():
 	max_error=999
 
 	iteration=30
-	adjust_weigt_it=10
+	adjust_weigt_it=2
+	weight_adjusted=False
 	for i in range(iteration):
 
 		###add extension
 		curve_cmd_ext,curve_cmd_R_ext=et.add_extension_egm_cartesian(curve_cmd,curve_cmd_R,extension_num=extension_num)
-		###move to start first
-		print('moving to start point')
-		et.jog_joint_cartesian(curve_cmd_ext[0],curve_cmd_R_ext[0])
-		
-		###traverse the curve
-		timestamp,curve_exe_js=et.traverse_curve_cartesian(curve_cmd_ext,curve_cmd_R_ext)
+
+		###5 run execute
+		curve_exe_js_all=[]
+		timestamp_all=[]
+		for r in range(5):
+			###move to start first
+			print('moving to start point')
+			et.jog_joint_cartesian(curve_cmd_ext[0],curve_cmd_R_ext[0])
+			
+			###traverse the curve
+			timestamp,curve_exe_js=et.traverse_curve_cartesian(curve_cmd_ext,curve_cmd_R_ext)
+
+			timestamp=timestamp-timestamp[0]
+			curve_exe_js_all.append(curve_exe_js)
+			timestamp_all.append(timestamp)
+			time.sleep(0.5)
+
+		###infer average curve from linear interplateion
+		curve_js_all_new, avg_curve_js, timestamp_d=average_curve(curve_exe_js_all,timestamp_all)
 
 
-		lam, curve_exe, curve_exe_R, speed=logged_data_analysis(robot,timestamp[extension_num+idx_delay:-extension_num+idx_delay],curve_exe_js[extension_num+idx_delay:-extension_num+idx_delay])
+		lam, curve_exe, curve_exe_R, speed=logged_data_analysis(robot,timestamp_d[extension_num+idx_delay:-extension_num+idx_delay],avg_curve_js[extension_num+idx_delay:-extension_num+idx_delay])
 		curve_exe_w=R2w(curve_exe_R,curve_R_d[0])
 		error_distance,angle_error=calc_all_error_w_normal(curve_exe,curve[:,:3],curve_exe_R[:,:,-1],curve[:,3:])
 
@@ -71,11 +85,16 @@ def main():
 		error_distance=np.linalg.norm(error,axis=1)
 		print('worst case error: ',np.max(error_distance))
 		##add weights based on error
-		weights_p=np.ones(len(error))
+		if i==0:
+			weights_p=np.ones(len(error))
 		# weights_p=np.linalg.norm(error,axis=1)
 		# weights_p=(len(error)/4)*weights_p/weights_p.sum()
-		if i>adjust_weigt_it:
+		
+
+		if i>adjust_weigt_it and not weight_adjusted:
 			weights_p[np.where(error_distance>0.5*np.max(error_distance))]=5
+			weight_adjusted=True
+			print('weight adjusted')
 
 			
 
@@ -114,8 +133,8 @@ def main():
 		grad=np.flipud(delta_new)
 		grad_w=np.flipud(delta_w_new)
 
-		alpha1=1-i/iteration#0.5
-		alpha2=1-i/iteration#1
+		alpha1=1/np.sqrt(i+1)#0.5
+		alpha2=1/np.sqrt(i+1)#1
 		curve_cmd_new=curve_cmd-alpha1*grad
 		curve_cmd_w-=alpha2*grad_w
 		curve_cmd_R=w2R(curve_cmd_w,curve_R_d[0])
@@ -140,15 +159,15 @@ def main():
 		plt.legend()
 
 		###########################plot for verification###################################
-		plt.figure()
-		ax = plt.axes(projection='3d')
-		ax.plot3D(curve[:,0], curve[:,1], curve[:,2], c='gray',label='original')
-		ax.plot3D(curve_exe[:,0], curve_exe[:,1], curve_exe[:,2], c='red',label='execution')
-		ax.scatter3D(curve_cmd[:,0], curve_cmd[:,1], curve_cmd[:,2], c=curve_cmd[:,2], cmap='Greens',label='commanded points')
-		ax.scatter3D(curve_cmd_new[:,0], curve_cmd_new[:,1], curve_cmd_new[:,2], c=curve_cmd_new[:,2], cmap='Blues',label='new commanded points')
+		# plt.figure()
+		# ax = plt.axes(projection='3d')
+		# ax.plot3D(curve[:,0], curve[:,1], curve[:,2], c='gray',label='original')
+		# ax.plot3D(curve_exe[:,0], curve_exe[:,1], curve_exe[:,2], c='red',label='execution')
+		# ax.scatter3D(curve_cmd[:,0], curve_cmd[:,1], curve_cmd[:,2], c=curve_cmd[:,2], cmap='Greens',label='commanded points')
+		# ax.scatter3D(curve_cmd_new[:,0], curve_cmd_new[:,1], curve_cmd_new[:,2], c=curve_cmd_new[:,2], cmap='Blues',label='new commanded points')
+		# plt.legend()
 
 
-		plt.legend()
 		# plt.show()
 		plt.savefig('iteration_ '+str(i))
 		plt.clf()
