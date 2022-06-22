@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
 
-from trajectory_utils import running_reward
+from rl_fit.archive.trajectory_utils import running_reward
 
 
 def plot_evaluation(eval_data_file, greedy_steps, show=True, save=True):
