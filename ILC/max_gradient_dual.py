@@ -21,14 +21,14 @@ from lambda_calc import *
 from blending import *
 
 def main():
+	robot1=abb1200(d=50)
+	robot2=abb6640()
+
 	dataset='wood/'
 	data_dir="../data/"+dataset
-	fitting_output="../data/"+dataset+'baseline/100L/'
-	# fitting_output="../greedy_fitting/greedy_output/curve1_movel_0.1/"
-	# fitting_output="../greedy_fitting/greedy_output/curve2_movel_0.1/"
+	fitting_output="../data/"+dataset+'dualarm/'
+	relative_path=read_csv(data_dir+"relative_path_tool_frame.csv",header=None).values
 
-
-	curve = read_csv(data_dir+"Curve_in_base_frame.csv",header=None).values
 
 
 	multi_peak_threshold=0.2
@@ -39,11 +39,13 @@ def main():
 	z = z10
 
 
-	ms = MotionSend()
-	breakpoints,primitives,p_bp,q_bp=ms.extract_data_from_cmd(fitting_output+'command.csv')
+	ms = MotionSend(robot1=robot1,robot2=robot2,tool1=tooldata(True,pose([75,0,493.30127019],[quatR[0],quatR[1],quatR[2],quatR[3]]),loaddata(1,[0,0,0.001],[1,0,0,0],0,0,0)),tool2=tooldata(True,pose([50,0,450],[quatR[0],quatR[1],quatR[2],quatR[3]]),loaddata(1,[0,0,0.001],[1,0,0,0],0,0,0)))
+	breakpoints1,primitives1,p_bp1,q_bp1=ms.extract_data_from_cmd(data_dir+'command1.csv')
+    breakpoints2,primitives2,p_bp2,q_bp2=ms.extract_data_from_cmd(data_dir+'command2.csv')
 
 	###extension
-	p_bp,q_bp=ms.extend(robot,q_bp,primitives,breakpoints,p_bp)
+	p_bp1,q_bp1=ms.extend(robot1,q_bp1,primitives1,breakpoints1,p_bp1)
+	p_bp2,q_bp2=ms.extend(robot2,q_bp2,primitives2,breakpoints2,p_bp2)
 
 	###ilc toolbox def
 	ilc=ilc_toolbox(robot,primitives)
