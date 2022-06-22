@@ -353,6 +353,67 @@ class MotionSend(object):
 
         return lam, np.array(curve_exe), np.array(curve_exe_R),curve_exe_js, act_speed, timestamp
 
+    def logged_data_analysis_multimove(self,df,base2_R,base2_p,realrobot=False):
+        q1_1=df[' J1'].tolist()[1:]
+        q1_2=df[' J2'].tolist()[1:]
+        q1_3=df[' J3'].tolist()[1:]
+        q1_4=df[' J4'].tolist()[1:]
+        q1_5=df[' J5'].tolist()[1:]
+        q1_6=df[' J6'].tolist()[1:]
+        q2_1=df[' J1_2'].tolist()[1:]
+        q2_2=df[' J2_2'].tolist()[1:]
+        q2_3=df[' J3_2'].tolist()[1:]
+        q2_4=df[' J4_2'].tolist()[1:]
+        q2_5=df[' J5_2'].tolist()[1:]
+        q2_6=df[' J6_2'].tolist()[1:]
+
+        cmd_num=np.array(df[' cmd_num'].tolist()[1:]).astype(float)
+        start_idx=np.where(cmd_num==5)[0][0]
+        curve_exe_js1=np.radians(np.vstack((q1_1,q1_2,q1_3,q1_4,q1_5,q1_6)).T.astype(float)[start_idx:])
+        curve_exe_js2=np.radians(np.vstack((q2_1,q2_2,q2_3,q2_4,q2_5,q2_6)).T.astype(float)[start_idx:])
+        timestamp=np.array(df['timestamp'].tolist()[start_idx:]).astype(float)
+
+        timestep=np.average(timestamp[1:]-timestamp[:-1])
+
+        
+
+        act_speed=[]
+        lam=[0]
+        relative_path_exe=[]
+        relative_path_exe_R=[]
+        curve_exe1=[]
+        curve_exe2=[]
+        curve_exe_R1=[]
+        curve_exe_R2=[]
+        for i in range(len(curve_exe_js1)):
+            pose1_now=self.robot1.fwd(curve_exe_js1[i])
+            pose2_now=self.robot2.fwd(curve_exe_js2[i])
+
+            curve_exe1.append(pose1_now.p)
+            curve_exe2.append(pose2_now.p)
+            curve_exe_R1.append(pose1_now.R)
+            curve_exe_R2.append(pose2_now.R)
+
+            pose2_world_now=self.robot2.fwd(curve_exe_js2[i],base2_R,base2_p)
+
+
+            relative_path_exe.append(np.dot(pose2_world_now.R.T,pose1_now.p-pose2_world_now.p))
+            relative_path_exe_R.append(pose2_world_now.R.T@pose1_now.R)
+            if i>0:
+                lam.append(lam[-1]+np.linalg.norm(relative_path_exe[i]-relative_path_exe[i-1]))
+            try:
+                if timestamp[i-1]!=timestamp[i] and np.linalg.norm(relative_path_exe[-1]-relative_path_exe[-2])!=0:
+                    act_speed.append(np.linalg.norm(relative_path_exe[-1]-relative_path_exe[-2])/(timestamp[i]-timestamp[i-1]))
+                else:
+                    act_speed.append(act_speed[-1])
+                    
+            except IndexError:
+                pass
+        relative_path_exe=np.array(relative_path_exe)
+
+        return lam, np.array(curve_exe1),np.array(curve_exe2), np.array(curve_exe_R1),np.array(curve_exe_R2),curve_exe_js1,curve_exe_js2, act_speed, timestamp, relative_path_exe
+
+
     def chop_extension(self,curve_exe, curve_exe_R,curve_exe_js, speed, timestamp,p_start,p_end):
         start_idx=np.argmin(np.linalg.norm(p_start-curve_exe,axis=1))
         end_idx=np.argmin(np.linalg.norm(p_end-curve_exe,axis=1))
