@@ -17,17 +17,18 @@ from MotionSend import *
 
 def main():
     ms = MotionSend(robot1=abb1200(d=50),robot2=abb6640(),tool1=tooldata(True,pose([75,0,493.30127019],[quatR[0],quatR[1],quatR[2],quatR[3]]),loaddata(1,[0,0,0.001],[1,0,0,0],0,0,0)),tool2=tooldata(True,pose([50,0,450],[quatR[0],quatR[1],quatR[2],quatR[3]]),loaddata(1,[0,0,0.001],[1,0,0,0],0,0,0)))
-    data_dir="from_NX/greedy_dual_output/"
+    data_dir="../../../data/wood/dual_arm/"
 
-    vmax = speeddata(10000,9999999,9999999,999999)
-    v680 = speeddata(680,9999999,9999999,999999)
+    v = speeddata(250,9999999,9999999,999999)
     speed={'v1000':v1000}
     # speed={'v50':v50,'v100':v100,'v200':v200,'v400':v400,'v500':v500,'vmax':vmax}
     zone={'z10':z10}
 
     for s in speed:
         for z in zone: 
-            curve_exe_js=ms.exe_from_file_multimove(data_dir+"command1.csv",data_dir+"command2.csv",data_dir+"curve_fit_js1.csv",data_dir+"curve_fit_js2.csv",speed[s],speed[s],zone[z],zone[z])
+            breakpoints1,primitives1,p_bp1,q_bp1=ms.extract_data_from_cmd(data_dir+'command1.csv')
+            breakpoints2,primitives2,p_bp2,q_bp2=ms.extract_data_from_cmd(data_dir+'command2.csv')
+            logged_data=ms.exec_motions_multimove(breakpoints1,primitives1,primitives2,p_bp1,p_bp2,q_bp1,q_bp2,v,v,z10,z10)
    
 
             f = open(data_dir+"curve_exe"+"_"+s+"_"+z+".csv", "w")

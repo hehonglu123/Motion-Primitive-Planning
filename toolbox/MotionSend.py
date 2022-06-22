@@ -44,24 +44,18 @@ class MotionSend(object):
         jointt = jointtarget([q[0],q[1],q[2],q[3],q[4],q[5]],[0]*6)
         return jointt
 
-    def exec_motions(self,robot,primitives,breakpoints,points,q_bp,speed,zone):
+    def exec_motions(self,robot,primitives,breakpoints,p_bp,q_bp,speed,zone):
         mp = MotionProgram(tool=self.tool2)
         
         for i in range(len(primitives)):
-            ###force last point to be fine
-            # if i==len(primitives)-1:
-            #     zone=fine
             motion = primitives[i]
             if motion == 'movel_fit':
-                if len(points[i])==1:
-                    p=points[i][0]
-                else:
-                    p=points[i]
-                robt = self.moveL_target(robot,q_bp[i][0],p)
+
+                robt = self.moveL_target(robot,q_bp[i][0],p_bp[i][0])
                 mp.MoveL(robt,speed,zone)
 
             elif motion == 'movec_fit':
-                robt1, robt2 = self.moveC_target(robot,q_bp[i][0],q_bp[i][1],points[i][0],points[i][1])
+                robt1, robt2 = self.moveC_target(robot,q_bp[i][0],q_bp[i][1],p_bp[i][0],p_bp[i][1])
                 mp.MoveC(robt1,robt2,speed,zone)
 
             else: # movej_fit
@@ -81,25 +75,22 @@ class MotionSend(object):
         log_results_str = log_results.decode('ascii')
         return log_results_str
 
-    def exec_motions_multimove(self,breakpoints,primitives1,primitives2,points1,points2,curve_js1,curve_js2,speed1,speed2,zone1,zone2):
+    def exec_motions_multimove(self,breakpoints,primitives1,primitives2,p_bp1,p_bp2,q_bp1,q_bp2,speed1,speed2,zone1,zone2):
         mp1 = MotionProgram(tool=self.tool1)
         mp2 = MotionProgram(tool=self.tool2)
         
         for i in range(len(primitives1)):
-            ###force last point to be fine
-            # if i==len(primitives1)-1:
-            #     zone1=fine
             motion = primitives1[i]
             if motion == 'movel_fit':
-                robt = self.moveL_target(self.robot1,curve_js1[breakpoints[i]],points1[i])
+                robt = self.moveL_target(self.robot1,q_bp1[i][0],p_bp1[i][0])
                 mp1.MoveL(robt,speed1,zone1)
 
             elif motion == 'movec_fit':
-                robt1, robt2 = self.moveC_target(self.robot1,curve_js1[breakpoints[i-1]],curve_js1[breakpoints[i]],points1[i][0],points1[i][1])
+                robt1, robt2 = self.moveC_target(self.robot1,q_bp1[i][0],q_bp1[i][1],p_bp1[i][0],p_bp1[i][1])
                 mp1.MoveC(robt1,robt2,speed1,zone1)
 
             else: # movej_fit
-                jointt = self.moveJ_target(points1[i])
+                jointt = self.moveJ_target(q_bp1[i][0])
                 if i==0:
                     mp1.MoveAbsJ(jointt,v500,fine)
                     mp1.WaitTime(1)
@@ -109,20 +100,17 @@ class MotionSend(object):
                     mp1.MoveAbsJ(jointt,speed1,zone1)
 
         for i in range(len(primitives2)):
-            ###force last point to be fine
-            # if i==len(primitives2)-1:
-            #     zone2=fine
             motion = primitives2[i]
             if motion == 'movel_fit':
-                robt = self.moveL_target(self.robot2,curve_js2[breakpoints[i]],points2[i])
+                robt = self.moveL_target(self.robot2,q_bp2[i][0],p_bp2[i][0])
                 mp2.MoveL(robt,speed2,zone2)
 
             elif motion == 'movec_fit':
-                robt1, robt2 = self.moveC_target(self.robot2,curve_js2[breakpoints[i-1]],curve_js2[breakpoints[i]],points2[i][0],points2[i][1])
+                robt1, robt2 = self.moveC_target(self.robot2,q_bp2[i][0],q_bp2[i][1],p_bp2[i][0],p_bp2[i][1])
                 mp2.MoveC(robt1,robt2,speed2,zone2)
 
             else: # movej_fit
-                jointt = self.moveJ_target(points2[i])
+                jointt = self.moveJ_target(q_bp2[i][0])
                 if i==0:
                     mp2.MoveAbsJ(jointt,v500,fine)
                     mp2.WaitTime(1)
@@ -316,48 +304,11 @@ class MotionSend(object):
         df.to_csv(filename,header=True,index=False)
 
 
-    def exe_from_file_multimove(self,filename1,filename2,filename_js1,filename_js2,speed1,speed2,zone1,zone2):
-        data1 = read_csv(filename1)
-        breakpoints=np.array(data1['breakpoints'].tolist())
-        primitives1=data1['primitives'].tolist()
-        points1=data1['points'].tolist()
+    def exe_from_file_multimove(self,filename1,filename2,speed1,speed2,zone1,zone2):
+        breakpoints1,primitives1,p_bp1,q_bp1=ms.extract_data_from_cmd(filename1)
+        breakpoints2,primitives2,p_bp2,q_bp2=ms.extract_data_from_cmd(filename2)
 
-        data2 = read_csv(filename2)
-        primitives2=data2['primitives'].tolist()
-        points2=data2['points'].tolist()
-        
-        breakpoints[1:]=breakpoints[1:]-1
-        
-
-        points_list1=[]
-        for i in range(len(breakpoints)):
-            if primitives1[i]=='movel_fit':
-                point=extract_points(primitives1[i],points1[i])
-                points_list1.append(point)
-            elif primitives1[i]=='movec_fit':
-                point1,point2=extract_points(primitives1[i],points1[i])
-                points_list1.append([point1,point2])
-            else:
-                point=extract_points(primitives1[i],points1[i])
-                points_list1.append(point)
-
-        points_list2=[]
-        for i in range(len(breakpoints)):
-            if primitives2[i]=='movel_fit':
-                point=extract_points(primitives2[i],points2[i])
-                points_list2.append(point)
-            elif primitives2[i]=='movec_fit':
-                point1,point2=extract_points(primitives2[i],points2[i])
-                points_list2.append([point1,point2])
-            else:
-                point=extract_points(primitives2[i],points2[i])
-                points_list2.append(point)
-
-
-
-        curve_js1=read_csv(filename_js1,header=None).values
-        curve_js2=read_csv(filename_js2,header=None).values
-        return self.exec_motions_multimove(breakpoints,primitives1,primitives2,points_list1,points_list2,curve_js1,curve_js2,speed1,speed2,zone1,zone2)
+        return ms.exec_motions_multimove(breakpoints1,primitives1,primitives2,p_bp1,p_bp2,q_bp1,q_bp2,speed1,speed2,zone1,zone2)
 
 
     def logged_data_analysis(self,robot,df,realrobot=False):
