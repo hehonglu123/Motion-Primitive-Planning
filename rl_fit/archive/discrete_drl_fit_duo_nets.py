@@ -3,29 +3,28 @@ import sys
 import numpy as np
 import pandas as pd
 import random
-import matplotlib.pyplot as plt
 import os
 import time
 
 from collections import namedtuple, deque
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 import torch.optim as optim
 
 from trajectory_utils import Primitive, BreakPoint, read_base_data, read_js_data
-from curve_normalization import PCA_normalization, fft_feature
+from rl_fit.utils.curve_normalization import PCA_normalization
+from rl_fit.archive.cnn_encoder import load_encoder
 
-sys.path.append('../greedy_fitting/')
+sys.path.append('../../greedy_fitting/')
 from greedy_simplified import greedy_fit
 
-sys.path.append('../toolbox')
+sys.path.append('../../toolbox')
 from robots_def import *
 
 Curve_Error = namedtuple("Curve_Error", ('primitive', 'max_error'))
 State = namedtuple("State", ("longest_type", "curve_features"))
-Action = namedtuple("Action", ("Type", "Length"))
-Memory = namedtuple('Memory', ('state', 'action', 'reward', 'next_state', 'next_action'))
+Action = namedtuple("Action", ("Type", "Length", "Code"))
+Memory = namedtuple('Memory', ('state', 'action', 'reward', 'next_state', 'done'))
 primitive_type_code = {"L": 0, "C": 1, "J": 2}
 
 torch.manual_seed(1234)
@@ -35,10 +34,14 @@ random.seed(1234)
 ERROR_THRESHOLD = 1.0
 MAX_GREEDY_STEP = 10
 
+EPS_START = 0.5
+EPS_END = 0.01
+EPS_DECAY = 10
+
 TAU_START = 10
 TAU_END = 0.01
 MAX_TAU_EPISODE = 0.6
-LEARNING_RATE = 0.0001
+LEARNING_RATE = 0.001
 GAMMA = 0.99
 BATCH_SIZE = 16
 
@@ -137,25 +140,17 @@ class ReplayMemory(object):
         self.memory = deque([], maxlen=capacity)
 
     def push(self, memory):
-        state = memory.state
-        type_encode = primitive_type_code[state.longest_type]
-        state_encode = np.hstack([state.curve_features, type_encode])
-        state_tensor = torch.tensor(state_encode)
 
-        next_state = memory.next_state
-        next_state_tensor = None
-        if next_state is not None:
-            next_type_encode = primitive_type_code[next_state.longest_type]
-            next_state_encode = np.hstack([next_state.curve_features, next_type_encode])
-            next_state_tensor = torch.tensor(next_state_encode)
-
-        new_memory = Memory(state=state_tensor, action=memory.action, reward=memory.reward,
-                            next_state=next_state_tensor, next_action=memory.next_action)
+        action = memory.action
+        action_type_encode = action.Code
+        new_memory = Memory(state=memory.state, action=action_type_encode, reward=memory.reward,
+                            next_state=memory.next_state, done=memory.done)
 
         self.memory.append(new_memory)
 
     def sample(self, batch_size):
-        return random.sample(self.memory, batch_size)
+        sample_batch = random.sample(self.memory, batch_size)
+        return sample_batch
 
     def __len__(self):
         return len(self.memory)
@@ -165,109 +160,160 @@ class DQN(nn.Module):
     def __init__(self, input_dim, output_dim):
         super(DQN, self).__init__()
 
-        self.input = nn.Linear(input_dim, 128)
-        self.hidden1 = nn.Linear(128, 128)
-        self.hidden2 = nn.Linear(128, 128)
-        self.hidden3 = nn.Linear(128, 128)
-        self.hidden4 = nn.Linear(128, 128)
-        self.output = nn.Linear(128, output_dim)
+        self.conv1 = nn.Conv1d(in_channels=3, out_channels=32, kernel_size=200, stride=50)
+        self.linear1 = nn.Linear(544, 256)
+        self.linear2 = nn.Linear(256, 256)
+        self.linear3 = nn.Linear(256, 256)
+        self.linear4 = nn.Linear(256, 256)
+        self.output = nn.Linear(256, output_dim)
 
-        self.drop_out = nn.Dropout(p=0.25)
         self.relu = nn.ReLU()
 
     def forward(self, x):
-        x = self.relu(self.input(x))
-        x = self.relu(self.hidden1(x))
-        x = self.relu(self.hidden2(x))
-        x = self.relu(self.hidden3(x))
-        x = self.relu(self.hidden4(x))
+        x = self.relu(self.conv1(x))
+        # x = self.relu(self.conv2(x))
+        x = torch.flatten(x, 1)
+        x = self.relu(self.linear1(x))
+        x = self.relu(self.linear2(x))
+        x = self.relu(self.linear3(x))
+        x = self.relu(self.linear4(x))
         x = self.output(x)
         return x
 
 
 class RL_Agent(object):
 
-    def __init__(self, n_curve_feature: int, n_length: int, lr: float = LEARNING_RATE):
-        self.input_dim = n_curve_feature * 3 * 2 + 1
-        self.output_dim = 3
+    def __init__(self, n_curve_feature: int, n_action: int, lr: float = LEARNING_RATE):
+        self.input_dim = n_curve_feature + 1
+        # self.input_dim = n_curve_feature * 3 * 2 + 1
+        self.output_dim = n_action * 2
         self.n_curve_feature = n_curve_feature
-        self._n_length = n_length
+        self.n_action = n_action
         self.lr = lr
         self.gamma = GAMMA
         self.memory = ReplayMemory()
         self.batch_size = BATCH_SIZE
 
-        self.target_net = DQN(input_dim=self.input_dim, output_dim=self.output_dim)
-        self.policy_net = DQN(input_dim=self.input_dim, output_dim=self.output_dim)
-        self.target_net.load_state_dict(self.policy_net.state_dict())
-        self.optimizer = optim.RMSprop(self.policy_net.parameters(), lr=self.lr)
+        self.target_net_L = DQN(input_dim=self.input_dim, output_dim=self.output_dim)
+        self.target_net_C = DQN(input_dim=self.input_dim, output_dim=self.output_dim)
+        self.policy_net_L = DQN(input_dim=self.input_dim, output_dim=self.output_dim)
+        self.policy_net_C = DQN(input_dim=self.input_dim, output_dim=self.output_dim)
+        self.target_net_L.load_state_dict(self.policy_net_L.state_dict())
+        self.target_net_C.load_state_dict(self.policy_net_C.state_dict())
+        self.optimizer_L = optim.RMSprop(self.policy_net_L.parameters(), lr=self.lr)
+        self.optimizer_C = optim.RMSprop(self.policy_net_C.parameters(), lr=self.lr)
+        # self.scheduler_L = optim.lr_scheduler.StepLR(self.optimizer_L, step_size=500, gamma=0.5)
+        # self.scheduler_C = optim.lr_scheduler.StepLR(self.optimizer_C, step_size=500, gamma=0.5)
 
         self.criterion = nn.SmoothL1Loss()
 
-    def get_action(self, state: State, valid_types: dict = None, tau=0.01):
+    def get_action(self, state: State, valid_types: dict = None, tau=0.01, epsilon=0.):
+        self.policy_net_L.eval()
+        self.policy_net_C.eval()
         with torch.no_grad():
             type_code = primitive_type_code[state.longest_type]
+            policy_net = self.policy_net_C
+            if type_code == 0:
+                policy_net = self.policy_net_L
             curve_feature_tensor = torch.tensor(state.curve_features)
-            x_tensor = torch.hstack((curve_feature_tensor, torch.tensor(type_code)))
+            x_tensor = curve_feature_tensor
 
-            output = self.policy_net(x_tensor.float())
-            length = torch.sigmoid(output[0])
-            # primitive_probs = torch.softmax(output[1:], 0)
-            primitive_probs = F.gumbel_softmax(output[1:], dim=0, tau=tau)
-            primitive_type_encode = np.random.choice(2, p=primitive_probs.detach().numpy())
-            primitive_type = 'C' if primitive_type_encode == 1 and valid_types['C'] else 'L'
+            # action_softmax = torch.softmax(output, dim=0)
 
-            action = Action(Type=primitive_type, Length=length.detach().numpy())
+            # action_code = torch.argmax(action_softmax)
+            # action_softmax = F.gumbel_softmax(output, tau=tau, dim=0)
+            # action_code = np.random.choice(self.output_dim, p=action_softmax.detach().numpy())
+
+            eps_sample = np.random.rand()
+            if eps_sample < epsilon:
+                action_code = np.random.randint(0, self.output_dim)
+            else:
+                output = policy_net(x_tensor.float())
+                action_code = torch.argmax(output).data.detach().numpy()
+
+            primitive_type = 'C' if action_code >= self.n_action and valid_types['C'] else 'L'
+
+            length = ((action_code % self.n_action) + 1) * (1 / self.n_action)
+
+            action = Action(Type=primitive_type, Length=length, Code=action_code)
 
             return action
 
-    def memory_save(self, state, action, reward, next_state, next_action):
-        memory = Memory(state=state, action=action, reward=reward, next_state=next_state, next_action=next_action)
+    def memory_save(self, state, action, reward, next_state, done):
+        memory = Memory(state=state, action=action, reward=reward, next_state=next_state, done=done)
         self.memory.push(memory)
+
+    def td_estimate(self, state, action):
+        state_tensor = torch.from_numpy(state.curve_features).float()
+        type_code = primitive_type_code[state.longest_type]
+        policy_net = self.policy_net_C
+        if type_code == 0:
+            policy_net = self.policy_net_L
+        q_value = policy_net(state_tensor)
+        state_action_value = q_value[:, action]
+        return state_action_value
+
+    def td_target(self, reward, next_state, done):
+
+        with torch.no_grad():
+            next_state_tensor = torch.from_numpy(next_state).float()
+            type_code = primitive_type_code[next_state.longest_type]
+            policy_net = self.policy_net_C
+            if type_code == 0:
+                policy_net = self.policy_net_L
+
+            reward_tensor = torch.from_numpy(reward).float()
+            done_tensor = torch.from_numpy(done).float()
+            next_q_value = policy_net(next_state_tensor)
+            best_action = torch.argmax(next_q_value, dim=1)
+            next_q_target = policy_net(next_state_tensor)
+            next_state_action_value = next_q_target[:, best_action]
+            expected_reward = reward_tensor + (1 - done_tensor) * self.gamma * next_state_action_value
+            return expected_reward
 
     def learn(self):
         if len(self.memory) < self.batch_size:
             return
-        memory_batch = self.memory.sample(self.batch_size)
+        batch = self.memory.sample(self.batch_size)
 
-        for memory in memory_batch:
-            state = memory.state
-            action = memory.action
-            reward = memory.reward
-            next_state = memory.next_state
-            next_action = memory.next_action
+        self.policy_net_C.train()
+        self.policy_net_L.train()
 
-            x_tensor = state
-            q_value = self.policy_net(x_tensor.float())
+        for state, action, reward, next_state, done in batch:
+            td_est = self.td_estimate(state, action)
+            td_tgt = self.td_target(reward, next_state, done)
 
-            q_next = torch.tensor([0., 0., 0.])
-            if next_state is not None:
-                next_x_tensor = next_state
-                q_next = self.target_net(next_x_tensor.float())
+            self.optimizer_L.zero_grad()
+            self.optimizer_C.zero_grad()
 
-            expected_q = q_next * self.gamma + reward
-            if type(expected_q) is float:
-                expected_q = torch.tensor(expected_q).reshape(1)
-            self.optimizer.zero_grad()
-            loss = -self.criterion(q_value, expected_q)
+            type_code = primitive_type_code[state.longest_type]
+            optimizer = self.optimizer_C
+            if type_code == 0:
+                optimizer = self.optimizer_L
+            loss = self.criterion(td_est, td_tgt)
             loss.backward()
-            self.optimizer.step()
+            optimizer.step()
 
     def update_target_nets(self):
-        self.target_net.load_state_dict(self.policy_net.state_dict())
+        self.target_net_L.load_state_dict(self.policy_net_L.state_dict())
+        self.target_net_C.load_state_dict(self.policy_net_C.state_dict())
 
     def save_model(self, path):
-        torch.save(self.policy_net.state_dict(), path + os.sep + 'DQN_policy_net.pth')
+        torch.save(self.policy_net_C.state_dict(), path + os.sep + 'DQN_policy_net_C.pth')
+        torch.save(self.policy_net_L.state_dict(), path + os.sep + 'DQN_policy_net_L.pth')
 
 
 class RL_Env(object):
-    def __init__(self, target_curve, target_curve_normal, target_curve_js, greedy_obj, n_feature=10, n_action=10):
+    def __init__(self, target_curve, target_curve_normal, target_curve_js, greedy_obj, feature_encoder,
+                 n_feature=10, n_action=10):
         self.target_curve = target_curve
         self.target_curve_normal = target_curve_normal
         self.target_curve_js = target_curve_js
         self.greedy_obj = greedy_obj
         self.fit_curve = [target_curve[0]]
         self.last_bp = 0
+
+        self.encoder = feature_encoder
 
         self.primitives = []
         self.n_feature = n_feature
@@ -291,13 +337,16 @@ class RL_Env(object):
 
         remaining_curve = self.target_curve[self.last_bp:, :]
         normalized_curve = PCA_normalization(remaining_curve)
-        curve_features, _ = fft_feature(normalized_curve, self.n_feature)
+        # curve_features, _ = fft_feature(normalized_curve, self.n_feature)
+        # normalized_curve_tensor = torch.from_numpy(np.array([normalized_curve.T])).float()
+        # curve_features = self.encoder(normalized_curve_tensor)
+        # curve_features = curve_features.detach().numpy().flatten()
 
         self.longest_primitives, longest_type = greedy_fit_primitive(last_bp=self.last_bp, curve=self.target_curve,
                                                                      p=self.fit_curve[-1])
         valid_types = {"L": self.longest_primitives['L'] is not None,
                        "C": self.longest_primitives['C'] is not None}
-        state = State(longest_type=longest_type, curve_features=curve_features)
+        state = State(longest_type=longest_type, curve_features=normalized_curve)
         done = False
         return state, done, valid_types
 
@@ -322,8 +371,12 @@ class RL_Env(object):
                        "C": self.longest_primitives['C'] is not None}
         remaining_curve = self.target_curve[self.last_bp:, :]
         normalized_curve = PCA_normalization(remaining_curve)
-        curve_features, _ = fft_feature(normalized_curve, self.n_feature)
-        state = State(longest_type=longest_type, curve_features=curve_features)
+        # curve_features, _ = fft_feature(normalized_curve, self.n_feature)
+        # normalized_curve_tensor = torch.from_numpy(np.array([normalized_curve.T])).float()
+        # curve_features = self.encoder(normalized_curve_tensor)
+        # curve_features = curve_features.detach().numpy().flatten()
+
+        state = State(longest_type=longest_type, curve_features=normalized_curve)
         # done = len(self.fit_curve) >= len(self.target_curve)
         # reward = reward_function(i_step, done)
 
@@ -341,10 +394,18 @@ def train_rl(agent: RL_Agent, curve_base_data, curve_js_data, n_episode=10000):
     episode_steps = []
     episode_target_curve = []
 
+    feature_encoder = load_encoder('cnn_model/cnn_model.pth')
+    feature_encoder.eval()
+
+    epsilon = EPS_START
+
     for i_episode in range(n_episode):
         timer = time.time_ns()
 
         tau = episode_tau(i_episode, n_episode)
+        # epsilon = EPS_START - i_episode * (EPS_START - EPS_END) / n_episode
+        if i_episode % EPS_DECAY == 0:
+            epsilon = epsilon * 0.999
 
         episode_reward = 0
 
@@ -353,16 +414,15 @@ def train_rl(agent: RL_Agent, curve_base_data, curve_js_data, n_episode=10000):
         curve_js = curve_js_data[random_curve_idx]
 
         greedy_fit_obj = greedy_fit(robot, curve_base, curve_normal, curve_js, d=50)
-        greedy_fit_obj.primitives = {'movel_fit':greedy_fit_obj.movel_fit_greedy,
-                                     'movec_fit':greedy_fit_obj.movec_fit_greedy}
+        greedy_fit_obj.primitives = {'movel_fit': greedy_fit_obj.movel_fit_greedy,
+                                     'movec_fit': greedy_fit_obj.movec_fit_greedy}
 
         env = RL_Env(target_curve=curve_base, target_curve_normal=curve_normal, target_curve_js=curve_js,
-                     greedy_obj=greedy_fit_obj, n_feature=agent.n_curve_feature)
+                     greedy_obj=greedy_fit_obj, n_feature=agent.n_curve_feature, feature_encoder=feature_encoder)
 
         # print("Episode Start")
 
         state, done, valid_actions = env.reset()
-        action = agent.get_action(state, valid_types=valid_actions, tau=tau)
 
         i_step = 0
         while not done:
@@ -370,17 +430,19 @@ def train_rl(agent: RL_Agent, curve_base_data, curve_js_data, n_episode=10000):
             # print("{}/{}".format(len(env.fit_curve), len(env.target_curve)))
             # print("Action:", action, valid_actions)
 
-            next_state, reward, done, valid_actions = env.step(action, i_step)
-            next_action = None
-            if not done:
-                next_action = agent.get_action(next_state, valid_types=valid_actions, tau=tau)
+            action = agent.get_action(state, valid_types=valid_actions, tau=tau, epsilon=epsilon)
+            # print(action)
 
-            agent.memory_save(state=state, action=action, reward=reward, next_state=next_state, next_action=next_action)
+            next_state, reward, done, valid_actions = env.step(action, i_step)
+
+            agent.memory_save(state=state, action=action, reward=reward, next_state=next_state, done=done)
             agent.learn()
             episode_reward += reward
 
             state = next_state
-            action = next_action
+
+            if done:
+                break
 
             # print("Step: {} END {}".format(i_step, reward))
 
@@ -395,7 +457,7 @@ def train_rl(agent: RL_Agent, curve_base_data, curve_js_data, n_episode=10000):
         if (i_episode + 1) % SAVE_MODEL == 0:
             print("=== Saving Model ===")
             save_data(episode_rewards, episode_steps, episode_target_curve)
-            agent.save_model('model')
+            agent.save_model('../model')
             print("DQNs saved at '{}'".format('model/'))
             print("======")
 
@@ -410,7 +472,7 @@ def save_data(episode_rewards, episode_steps, episode_target_curve):
 
 
 def rl_fit(curve_base_data, curve_js_data):
-    n_feature = 20
+    n_feature = 128
     n_action = 10
     agent = RL_Agent(n_feature, n_action)
     train_rl(agent, curve_base_data, curve_js_data)

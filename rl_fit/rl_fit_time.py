@@ -1,6 +1,3 @@
-import sys
-
-import numpy as np
 import pandas as pd
 import random
 import matplotlib.pyplot as plt
@@ -10,10 +7,9 @@ import time
 from collections import namedtuple, deque
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 import torch.optim as optim
 
-from curve_normalization import PCA_normalization, fft_feature
+from rl_fit.archive.rl_fit import PCA_normalization
 
 from general_robotics_toolbox import *
 

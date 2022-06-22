@@ -2,7 +2,7 @@ import os
 import numpy as np
 import sys
 
-sys.path.append('../circular_fit')
+sys.path.append('../../circular_fit')
 from toolbox_circular_fit import *
 import pandas as pd
 

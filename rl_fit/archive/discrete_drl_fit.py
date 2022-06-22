@@ -3,24 +3,22 @@ import sys
 import numpy as np
 import pandas as pd
 import random
-import matplotlib.pyplot as plt
 import os
 import time
 
 from collections import namedtuple, deque
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 import torch.optim as optim
 
 from trajectory_utils import Primitive, BreakPoint, read_base_data, read_js_data
-from curve_normalization import PCA_normalization, fft_feature
-from cnn_encoder import load_encoder
+from rl_fit.utils.curve_normalization import PCA_normalization
+from rl_fit.archive.cnn_encoder import load_encoder
 
-sys.path.append('../greedy_fitting/')
+sys.path.append('../../greedy_fitting/')
 from greedy_simplified import greedy_fit
 
-sys.path.append('../toolbox')
+sys.path.append('../../toolbox')
 from robots_def import *
 
 Curve_Error = namedtuple("Curve_Error", ('primitive', 'max_error'))
@@ -450,7 +448,7 @@ def train_rl(agent: RL_Agent, curve_base_data, curve_js_data, n_episode=10000):
         if (i_episode + 1) % SAVE_MODEL == 0:
             print("=== Saving Model ===")
             save_data(episode_rewards, episode_steps, episode_target_curve)
-            agent.save_model('model')
+            agent.save_model('../model')
             print("DQNs saved at '{}'".format('model/'))
             print("======")
 

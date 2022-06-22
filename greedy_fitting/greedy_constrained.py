@@ -66,12 +66,14 @@ class greedy_fit(fitting_toolbox):
             ###end condition
             if next_point == prev_point:
                 if max_error < self.max_error_threshold and max_ori_error < self.max_ori_threshold:
+                    print("Bi-sec: 111")
                     return curve_fit, curve_fit_R, curve_fit_js, max_error, max_ori_error
                 else:
                     next_point = max(prev_possible_point, 2)
                     print(cur_idx, next_point)
                     slope_next = [] if cur_idx + next_point >= len(self.curve) else (self.curve_js[cur_idx + next_point] -
                                                                                      self.curve_js[cur_idx + next_point - 1]) / (self.lam[cur_idx + next_point] -self.lam[cur_idx + next_point - 1])
+                    print("Bi-sec: 222")
                     return primitive(self.curve[cur_idx:cur_idx + next_point],
                                      self.curve_js[cur_idx:cur_idx + next_point],
                                      self.curve_R[cur_idx:cur_idx + next_point], slope_next=slope_next)
@@ -100,6 +102,7 @@ class greedy_fit(fitting_toolbox):
         self.breakpoints = [0]
         primitives_choices = []
         points = []
+        q_bp = []
 
         self.curve_fit = []
         self.curve_fit_R = []
@@ -119,7 +122,6 @@ class greedy_fit(fitting_toolbox):
                 curve_fit[key], curve_fit_R[key], curve_fit_js[key], max_errors[key], max_ori_errors[key] = self.bisect(
                     self.primitives[key], self.breakpoints[-1])
                 length[key] = len(curve_fit[key])
-            print(max_errors, max_ori_errors)
             ###find best primitive
             key = max(length, key=length.get)
 
@@ -127,13 +129,6 @@ class greedy_fit(fitting_toolbox):
             if key == 'movec_fit' and np.linalg.norm(
                     curve_fit['movec_fit'][-1] - curve_fit['movec_fit'][0]) < self.c_min_length:
                 key = 'movel_fit'
-
-            if key == 'movec_fit':
-                points.append([curve_fit[key][int(len(curve_fit[key]) / 2)], curve_fit[key][-1]])
-            elif key == 'movel_fit':
-                points.append([curve_fit[key][-1]])
-            else:
-                points.append([curve_fit_js[key][-1]])
 
             primitives_choices.append(key)
             self.breakpoints.append(min(self.breakpoints[-1] + len(curve_fit[key]), len(self.curve)))
@@ -144,7 +139,19 @@ class greedy_fit(fitting_toolbox):
                 self.curve_fit_js.extend(curve_fit_js[key])
             else:
                 ###inv here to save time
-                self.curve_fit_js.extend(self.car2js(curve_fit[key], curve_fit_R[key]))
+                curve_fit_js = self.car2js(curve_fit[key], curve_fit_R[key])
+
+                self.curve_fit_js.extend(curve_fit_js)
+
+            if key == 'movec_fit':
+                points.append([curve_fit[key][int(len(curve_fit[key]) / 2)], curve_fit[key][-1]])
+                q_bp.append([curve_fit_js[int(len(curve_fit_R[key]) / 2)], curve_fit_js[-1]])
+            elif key == 'movel_fit':
+                points.append([curve_fit[key][-1]])
+                q_bp.append([curve_fit_js[-1]])
+            else:
+                points.append([curve_fit[key][-1]])
+                q_bp.append([curve_fit_js[key][-1]])
 
             print(self.breakpoints)
             print(primitives_choices)
@@ -159,7 +166,7 @@ class greedy_fit(fitting_toolbox):
         self.curve_fit_R = np.array(self.curve_fit_R)
         self.curve_fit_js = np.array(self.curve_fit_js)
 
-        return self.breakpoints, primitives_choices, points
+        return self.breakpoints, primitives_choices, points, q_bp
 
 
 def main():
@@ -171,7 +178,7 @@ def main():
 
     robot = abb6640(d=50)
 
-    greedy_fit_obj = greedy_fit(robot, curve_js[::50], 0.5)
+    greedy_fit_obj = greedy_fit(robot, curve_js[::10], 0.5)
 
     ###set primitive choices, defaults are all 3
     # greedy_fit_obj.primitives = {'movel_fit': greedy_fit_obj.movel_fit_greedy,
@@ -181,7 +188,7 @@ def main():
     greedy_fit_obj.primitives={'movej_fit':greedy_fit_obj.movej_fit_greedy}
     # greedy_fit_obj.primitives={'movec_fit':greedy_fit_obj.movec_fit_greedy}
 
-    breakpoints, primitives_choices, points = greedy_fit_obj.fit_under_error()
+    breakpoints, primitives_choices, points, q_bp = greedy_fit_obj.fit_under_error()
     # breakpoints,primitives_choices,points=greedy_fit_obj.smooth_slope(greedy_fit_obj.curve_fit,greedy_fit_obj.curve_fit_R,breakpoints,primitives_choices,points)
 
     print('slope diff js (deg): ', greedy_fit_obj.get_slope_js(greedy_fit_obj.curve_fit_js, breakpoints))
@@ -221,44 +228,46 @@ def main():
 
 
 def greedy_execute():
+    ms = MotionSend()
     ###read in points
-    # curve_js = read_csv("../data/from_NX/Curve_js.csv", header=None).values
+    # curve_js=read_csv("../data/from_NX/Curve_js.csv",header=None).values
     curve_js = read_csv("../data/wood/Curve_js.csv", header=None).values
 
     robot = abb6640(d=50)
 
-    greedy_fit_obj = greedy_fit(robot, curve_js[::50], 0.5)
+    greedy_fit_obj = greedy_fit(robot, curve_js[::10], 0.5)
+    # greedy_fit_obj.primitives={'movel_fit':greedy_fit_obj.movel_fit_greedy}
     greedy_fit_obj.primitives = {'movej_fit': greedy_fit_obj.movej_fit_greedy}
+    # greedy_fit_obj.primitives={'movec_fit':greedy_fit_obj.movec_fit_greedy}
 
-    breakpoints, primitives_choices, points = greedy_fit_obj.fit_under_error()
-    print('slope diff js (deg): ', greedy_fit_obj.get_slope_js(greedy_fit_obj.curve_fit_js, breakpoints))
+    ###greedy fitting
+    breakpoints, primitives_choices, points, q_bp = greedy_fit_obj.fit_under_error()
 
     ############insert initial configuration#################
     primitives_choices.insert(0, 'movej_fit')
-    q_all = np.array(robot.inv(greedy_fit_obj.curve_fit[0], greedy_fit_obj.curve_fit_R[0]))
-    ###choose inv_kin closest to previous joints
-    temp_q = q_all - curve_js[0]
-    order = np.argsort(np.linalg.norm(temp_q, axis=1))
-    q_init = q_all[order[0]]
-    points.insert(0, [q_init])
+    points.insert(0, [greedy_fit_obj.curve_fit[0]])
+    q_bp.insert(0, [greedy_fit_obj.curve_fit_js[0]])
 
-    act_breakpoints = np.array(breakpoints)
-
-    act_breakpoints[1:] = act_breakpoints[1:] - 1
+    ###extension
+    points, q_bp = ms.extend(robot, q_bp, primitives_choices, breakpoints, points)
 
     #######################RS execution################################
     from io import StringIO
-    ms = MotionSend()
-    StringData = StringIO(
-        ms.exec_motions(robot, primitives_choices, act_breakpoints, points, greedy_fit_obj.curve_fit_js, v500, z10))
+
+    logged_data = ms.exec_motions(robot, primitives_choices, breakpoints, points, q_bp, v500, z10)
+    StringData = StringIO(logged_data)
     df = read_csv(StringData, sep=",")
     ##############################data analysis#####################################
-    lam, curve_exe, curve_exe_R, curve_exe_js, speed, timestamp = ms.logged_data_analysis(robot, df)
-    max_error, max_error_angle, max_error_idx = calc_max_error_w_normal(curve_exe, greedy_fit_obj.curve,
-                                                                        curve_exe_R[:, :, -1],
-                                                                        greedy_fit_obj.curve_R[:, :, -1])
+    lam, curve_exe, curve_exe_R, curve_exe_js, speed, timestamp = ms.logged_data_analysis(robot, df, realrobot=False)
+    #############################chop extension off##################################
+    lam, curve_exe, curve_exe_R, curve_exe_js, speed, timestamp = ms.chop_extension(curve_exe, curve_exe_R,
+                                                                                    curve_exe_js, speed, timestamp,
+                                                                                    greedy_fit_obj.curve[0, :3],
+                                                                                    greedy_fit_obj.curve[-1, :3])
+    error, angle_error = calc_all_error_w_normal(curve_exe, greedy_fit_obj.curve, curve_exe_R[:, :, -1],
+                                                 greedy_fit_obj.curve_R[:, :, -1])
 
-    print('time: ', timestamp[-1] - timestamp[0], 'error: ', max_error, 'normal error: ', max_error_angle)
+    print('time: ', timestamp[-1] - timestamp[0], 'error: ', np.max(error), 'normal error: ', np.max(angle_error))
 
 
 if __name__ == "__main__":
