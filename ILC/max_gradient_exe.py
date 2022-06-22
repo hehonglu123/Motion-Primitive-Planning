@@ -9,7 +9,7 @@ from general_robotics_toolbox import *
 from pandas import read_csv
 import sys
 from io import StringIO
-
+from scipy.signal import find_peaks
 # sys.path.append('../abb_motion_program_exec')
 from abb_motion_program_exec_client import *
 from ilc_toolbox import *
@@ -21,21 +21,21 @@ from lambda_calc import *
 from blending import *
 
 def main():
-	dataset='from_NX/'
+	dataset='wood/'
 	data_dir="../data/"+dataset
-	# fitting_output="../data/"+dataset+'baseline/100L/'
+	fitting_output="../data/"+dataset+'baseline/100L/'
 	# fitting_output="../greedy_fitting/greedy_output/curve1_movel_0.1/"
-	fitting_output="../greedy_fitting/greedy_output/curve2_movel_0.1/"
+	# fitting_output="../greedy_fitting/greedy_output/curve2_movel_0.1/"
 
 
 	curve_js=read_csv(data_dir+'Curve_js.csv',header=None).values
 	curve = read_csv(data_dir+"Curve_in_base_frame.csv",header=None).values
 
 
-	max_error_threshold=0.1
+	multi_peak_threshold=0.2
 	robot=abb6640(d=50)
 
-	v=1100
+	v=250
 	s = speeddata(v,9999999,9999999,999999)
 	z = z10
 
@@ -75,19 +75,21 @@ def main():
 
 		##############################calcualte error########################################
 		error,angle_error=calc_all_error_w_normal(curve_exe,curve[:,:3],curve_exe_R[:,:,-1],curve[:,3:])
-		max_error=max(error)
-		print(max_error)
-		max_angle_error=max(angle_error)
-		max_error_idx=np.argmax(error)#index of exe curve with max error
-		_,max_error_curve_idx=calc_error(curve_exe[max_error_idx],curve[:,:3])  # index of original curve closest to max error point
+		print(max(error))
+		#############################error peak detection###############################
+		peaks,_=find_peaks(error,height=multi_peak_threshold,prominence=0.05,distance=20/(lam[int(len(lam)/2)]-lam[int(len(lam)/2)-1]))		###only push down peaks higher than height, distance between each peak is 20mm, threshold to filter noisy peaks
 		
+		if len(peaks)==0 or np.argmax(error) not in peaks:
+			peaks=np.append(peaks,np.argmax(error))
 		##############################plot error#####################################
 
 		fig, ax1 = plt.subplots()
 		ax2 = ax1.twinx()
 		ax1.plot(lam, speed, 'g-', label='Speed')
 		ax2.plot(lam, error, 'b-',label='Error')
+		ax2.scatter(lam[peaks],error[peaks],label='peaks')
 		ax2.plot(lam, np.degrees(angle_error), 'y-',label='Normal Error')
+		ax2.axis(ymin=0,ymax=2)
 
 		ax1.set_xlabel('lambda (mm)')
 		ax1.set_ylabel('Speed/lamdot (mm/s)', color='g')
@@ -100,8 +102,8 @@ def main():
 		plt.legend()
 		plt.savefig('iteration_ '+str(i))
 		plt.clf()
-		###########################find closest bp####################################
-		bp_idx=np.absolute(breakpoints-max_error_curve_idx).argmin()
+		# plt.show()
+
 		###########################plot for verification###################################
 		# plt.figure()
 		# ax = plt.axes(projection='3d')
@@ -112,24 +114,27 @@ def main():
 		# ax.scatter(curve_exe[max_error_idx,0], curve_exe[max_error_idx,1], curve_exe[max_error_idx,2],c='orange',label='worst case')
 		
 		
-		##########################################calculate gradient######################################
-		######gradient calculation related to nearest 3 points from primitive blended trajectory, not actual one
+		##########################################calculate gradient for peaks######################################
 		###restore trajectory from primitives
 		curve_interp, curve_R_interp, curve_js_interp, breakpoints_blended=form_traj_from_bp(q_bp,primitives,robot)
 
 		curve_js_blended,curve_blended,curve_R_blended=blend_js_from_primitive(curve_interp, curve_js_interp, breakpoints_blended, primitives,robot,zone=10)
 
-		###get closest to worst case point on blended trajectory
-		_,max_error_curve_blended_idx=calc_error(curve_exe[max_error_idx],curve_blended)
-		curve_blended_point=copy.deepcopy(curve_blended[max_error_curve_blended_idx])
+		for peak in peaks:
+			######gradient calculation related to nearest 3 points from primitive blended trajectory, not actual one
+			_,peak_error_curve_idx=calc_error(curve_exe[peak],curve[:,:3])  # index of original curve closest to max error point
 
-		###############get numerical gradient#####
-		###find closest 3 breakpoints
-		order=np.argsort(np.abs(breakpoints_blended-max_error_curve_blended_idx))
-		breakpoint_interp_2tweak_indices=order[:3]
+			###get closest to worst case point on blended trajectory
+			_,peak_error_curve_blended_idx=calc_error(curve_exe[peak],curve_blended)
+			curve_blended_point=copy.deepcopy(curve_blended[peak_error_curve_blended_idx])
 
-		de_dp=ilc.get_gradient_from_model_xyz(q_bp,p_bp,breakpoints_blended,curve_blended,max_error_curve_blended_idx,robot.fwd(curve_exe_js[max_error_idx]),curve[max_error_curve_idx,:3],breakpoint_interp_2tweak_indices)
-		p_bp, q_bp=ilc.update_bp_xyz(p_bp,q_bp,de_dp,max_error,breakpoint_interp_2tweak_indices)
+			###############get numerical gradient#####
+			###find closest 3 breakpoints
+			order=np.argsort(np.abs(breakpoints_blended-peak_error_curve_blended_idx))
+			breakpoint_interp_2tweak_indices=order[:3]
+
+			de_dp=ilc.get_gradient_from_model_xyz(q_bp,p_bp,breakpoints_blended,curve_blended,peak_error_curve_blended_idx,robot.fwd(curve_exe_js[peak]),curve[peak_error_curve_idx,:3],breakpoint_interp_2tweak_indices)
+			p_bp, q_bp=ilc.update_bp_xyz(p_bp,q_bp,de_dp,error[peak],breakpoint_interp_2tweak_indices)
 
 		# for m in breakpoint_interp_2tweak_indices:
 		# 	ax.scatter(p_bp[m][0][0], p_bp[m][0][1], p_bp[m][0][2],c='blue',label='adjusted breakpoints')

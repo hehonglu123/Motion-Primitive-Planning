@@ -221,18 +221,17 @@ class MotionSend(object):
 
         if primitives[-1]=='movel_fit':
             #find new end point
-            slope_p=p_end-p_start
-            slope_p=slope_p/np.linalg.norm(slope_p)
+            slope_p=(p_end-p_start)/np.linalg.norm(p_end-p_start)
             p_end_new=p_end+extension_d*slope_p        ###extend 5cm backward
 
             #find new end orientation
             k,theta=R2rot(R_end@R_start.T)
-            theta_new=extension_d*theta/np.linalg.norm(p_end-p_start)
-            R_end_new=rot(k,theta_new)@R_end
+            slope_theta=theta/np.linalg.norm(p_end-p_start)
+            R_end_new=rot(k,extension_d*slope_theta)@R_end
 
             #solve invkin for end point
-            q_bp[-1][-1]=car2js(robot,q_bp[-1][0],p_end_new,R_end_new)[0]
-            points_list[-1][-1]=p_end_new
+            q_bp[-1][0]=car2js(robot,q_bp[-1][0],p_end_new,R_end_new)[0]
+            points_list[-1][0]=p_end_new
 
 
         elif  primitives[1]=='movec_fit':
@@ -267,8 +266,8 @@ class MotionSend(object):
             v=np.linalg.norm(J_end[3:,:]@qdot)
             t=extension_d/v
             
-            q_bp[-1][-1]=q_bp[-1][-1]+qdot*t
-            points_list[-1][-1]=robot.fwd(q_bp[-1][-1]).p
+            q_bp[-1][0]=q_bp[-1][-1]+qdot*t
+            points_list[-1][0]=robot.fwd(q_bp[-1][-1]).p
 
         return points_list,q_bp
 
