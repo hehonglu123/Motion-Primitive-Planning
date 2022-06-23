@@ -167,7 +167,6 @@ class ilc_toolbox(object):
 
 					###get new error - prev error
 					de=np.linalg.norm(worst_point_relative_p+worst_case_point_shift-closest_p)-np.linalg.norm(worst_point_relative_p-closest_p)
-					print(de)
 					de_dp.append(de/delta)
 
 		de_dp=np.reshape(de_dp,(-1,1))
@@ -191,20 +190,24 @@ class ilc_toolbox(object):
 
 		return p_bp, q_bp
 
-	def update_bp_xyz_dual(self,p_bp,q_bp,de_dp,max_error,breakpoint_interp_2tweak_indices,alpha=0.5):
+	def update_bp_xyz_dual(self,p_bp,q_bp,de_dp,max_error,breakpoint_interp_2tweak_indices,alpha=1.):
 		###q_bp:								[q_bp1,q_bp2],joint configs at breakpoints
 		###p_bp:								[p_bp1,p_bp2],xyz configs at breakpoints
 		###de_dp；								gradient of error and each breakpoints
 		###max_error:							worst case error value
 		###breakpoint_interp_2tweak_indices:	closest N breakpoints
 		###alpha:								stepsize
-
+		p_bp_old=copy.deepcopy(p_bp)
 		point_adjustment=-alpha*np.linalg.pinv(de_dp)*max_error
 		for r in range(2):
 			for i in range(len(breakpoint_interp_2tweak_indices)):  #3 breakpoints
 				p_bp[r][breakpoint_interp_2tweak_indices[i]][0]+=point_adjustment[0][len(breakpoint_interp_2tweak_indices)*3*r+3*i:len(breakpoint_interp_2tweak_indices)*3*r+3*(i+1)]
 				###TODO:ADD MOVEC SUPPORT
 				q_bp[r][breakpoint_interp_2tweak_indices[i]][0]=car2js(self.robot[r],q_bp[r][breakpoint_interp_2tweak_indices[i]][0],p_bp[r][breakpoint_interp_2tweak_indices[i]][0],self.robot[r].fwd(q_bp[r][breakpoint_interp_2tweak_indices[i]][0]).R)[0]
+
+		for m in breakpoint_interp_2tweak_indices:
+			print(p_bp[0][m][0]-p_bp_old[0][m][0])
+			print(p_bp[1][m][0]-p_bp_old[1][m][0])
 
 		return p_bp[0], q_bp[0], p_bp[1], q_bp[1]
 

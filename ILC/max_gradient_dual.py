@@ -48,7 +48,6 @@ def main():
 
 	###extension
 	p_bp1,q_bp1,p_bp2,q_bp2=ms.extend_dual(robot1,p_bp1,q_bp1,primitives1,robot2,p_bp2,q_bp2,primitives2,breakpoints1)
-
 	###ilc toolbox def
 	ilc=ilc_toolbox([robot1,robot2],[primitives1,primitives2],base2_R,base2_p)
 
@@ -102,6 +101,17 @@ def main():
 		# plt.clf()
 		plt.show()
 
+		###########################plot for verification###################################
+		p_bp_relative,_=ms.form_relative_path(np.squeeze(q_bp1),np.squeeze(q_bp2),base2_R,base2_p)
+		plt.figure()
+		ax = plt.axes(projection='3d')
+		ax.plot3D(relative_path[:,0], relative_path[:,1], relative_path[:,2], c='gray',label='original')
+		ax.plot3D(relative_path_exe[:,0], relative_path_exe[:,1], relative_path_exe[:,2], c='red',label='execution')
+		ax.scatter3D(p_bp_relative[:,0], p_bp_relative[:,1], p_bp_relative[:,2], c=p_bp_relative[:,2], cmap='Greens',label='breakpoints')
+		ax.scatter(relative_path_exe[peaks,0], relative_path_exe[peaks,1], relative_path_exe[peaks,2],c='orange',label='worst case')
+		
+		# plt.show()
+
 		##########################################calculate gradient for peaks######################################
 		###restore trajectory from primitives
 		curve_interp1, curve_R_interp1, curve_js_interp1, breakpoints_blended=form_traj_from_bp(q_bp1,primitives1,robot1)
@@ -132,7 +142,17 @@ def main():
 
 
 
-			p_bp1, q_bp1,p_bp2,q_bp2=ilc.update_bp_xyz_dual([p_bp1,p_bp2],[q_bp1,q_bp2],de_dp,error[peak],breakpoint_interp_2tweak_indices)
+			p_bp1_new, q_bp1_new,p_bp2_new,q_bp2_new=ilc.update_bp_xyz_dual([p_bp1,p_bp2],[q_bp1,q_bp2],de_dp,error[peak],breakpoint_interp_2tweak_indices)
+			# for m in breakpoint_interp_2tweak_indices:
+				# print(p_bp1_new[m][0]-p_bp1[m][0])
+				# print(p_bp2_new[m][0]-p_bp2[m][0])
+
+			#########plot adjusted breakpoints
+			p_bp_relative_new,_=ms.form_relative_path(np.squeeze(q_bp1),np.squeeze(q_bp2),base2_R,base2_p)
+			ax.scatter3D(p_bp_relative[breakpoint_interp_2tweak_indices,0], p_bp_relative[breakpoint_interp_2tweak_indices,1], p_bp_relative[breakpoint_interp_2tweak_indices,2], c='blue',label='new breakpoints')
+			plt.legend()
+			plt.show()
+
 
 
 if __name__ == "__main__":
