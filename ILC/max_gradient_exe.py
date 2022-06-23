@@ -69,8 +69,6 @@ def main():
 		lam, curve_exe, curve_exe_R,curve_exe_js, speed, timestamp=ms.logged_data_analysis(robot,df,realrobot=True)
 		#############################chop extension off##################################
 		lam, curve_exe, curve_exe_R,curve_exe_js, speed, timestamp=ms.chop_extension(curve_exe, curve_exe_R,curve_exe_js, speed, timestamp,curve[0,:3],curve[-1,:3])
-		speed=replace_outliers(np.array(speed))
-		speed=replace_outliers2(speed)
 
 		##############################calcualte error########################################
 		error,angle_error=calc_all_error_w_normal(curve_exe,curve[:,:3],curve_exe_R[:,:,-1],curve[:,3:])
@@ -125,14 +123,13 @@ def main():
 
 			###get closest to worst case point on blended trajectory
 			_,peak_error_curve_blended_idx=calc_error(curve_exe[peak],curve_blended)
-			curve_blended_point=copy.deepcopy(curve_blended[peak_error_curve_blended_idx])
 
 			###############get numerical gradient#####
 			###find closest 3 breakpoints
 			order=np.argsort(np.abs(breakpoints_blended-peak_error_curve_blended_idx))
 			breakpoint_interp_2tweak_indices=order[:3]
 
-			de_dp=ilc.get_gradient_from_model_xyz(q_bp,p_bp,breakpoints_blended,curve_blended,peak_error_curve_blended_idx,robot.fwd(curve_exe_js[peak]),curve[peak_error_curve_idx,:3],breakpoint_interp_2tweak_indices)
+			de_dp=ilc.get_gradient_from_model_xyz(p_bp,q_bp,breakpoints_blended,curve_blended,peak_error_curve_blended_idx,robot.fwd(curve_exe_js[peak]),curve[peak_error_curve_idx,:3],breakpoint_interp_2tweak_indices)
 			p_bp, q_bp=ilc.update_bp_xyz(p_bp,q_bp,de_dp,error[peak],breakpoint_interp_2tweak_indices)
 
 		# for m in breakpoint_interp_2tweak_indices:

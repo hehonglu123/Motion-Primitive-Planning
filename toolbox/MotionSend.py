@@ -129,19 +129,7 @@ class MotionSend(object):
         log_results_str = log_results.decode('ascii')
         return log_results_str
 
-        
-    def extract_points(self,primitive_type,points):
-        if primitive_type=='movec_fit':
-            endpoints=points[8:-3].split('array')
-            endpoint1=endpoints[0][:-4].split(',')
-            endpoint2=endpoints[1][2:].split(',')
-
-            return list(map(float, endpoint1)),list(map(float, endpoint2))
-        else:
-            endpoint=points[8:-3].split(',')
-            return list(map(float, endpoint))   
-
-    def extend(self,robot,q_bp,primitives,breakpoints,points_list,extension_d=100):
+    def extend(self,robot,q_bp,primitives,breakpoints,points_list,extension_start=100,extension_end=100):
         ###initial point extension
         pose_start=robot.fwd(q_bp[0][-1])
         p_start=pose_start.p
@@ -153,11 +141,11 @@ class MotionSend(object):
             #find new start point
             slope_p=p_end-p_start
             slope_p=slope_p/np.linalg.norm(slope_p)
-            p_start_new=p_start-extension_d*slope_p        ###extend 5cm backward
+            p_start_new=p_start-extension_start*slope_p        ###extend 5cm backward
 
             #find new start orientation
             k,theta=R2rot(R_end@R_start.T)
-            theta_new=-extension_d*theta/np.linalg.norm(p_end-p_start)
+            theta_new=-extension_start*theta/np.linalg.norm(p_end-p_start)
             R_start_new=rot(k,theta_new)@R_start
 
             #solve invkin for initial point
@@ -173,7 +161,7 @@ class MotionSend(object):
             center, radius=circle_from_3point(p_start,p_end,p_mid)
 
             #find desired rotation angle
-            angle=extension_d/radius
+            angle=extension_start/radius
 
             #find new start point
             plane_N=np.cross(p_end-center,p_start-center)
@@ -183,7 +171,7 @@ class MotionSend(object):
 
             #find new start orientation
             k,theta=R2rot(R_end@R_start.T)
-            theta_new=-extension_d*theta/np.linalg.norm(p_end-p_start)
+            theta_new=-extension_start*theta/np.linalg.norm(p_end-p_start)
             R_start_new=rot(k,theta_new)@R_start
 
             #solve invkin for initial point
@@ -195,7 +183,7 @@ class MotionSend(object):
             J_start=robot.jacobian(q_bp[0][0])
             qdot=q_bp[1][0]-q_bp[0][0]
             v=np.linalg.norm(J_start[3:,:]@qdot)
-            t=extension_d/v
+            t=extension_start/v
             q_bp[0][0]=q_bp[0][0]+qdot*t
             points_list[0][0]=robot.fwd(q_bp[0][0]).p
 
@@ -210,12 +198,12 @@ class MotionSend(object):
         if primitives[-1]=='movel_fit':
             #find new end point
             slope_p=(p_end-p_start)/np.linalg.norm(p_end-p_start)
-            p_end_new=p_end+extension_d*slope_p        ###extend 5cm backward
+            p_end_new=p_end+extension_end*slope_p        ###extend 5cm backward
 
             #find new end orientation
             k,theta=R2rot(R_end@R_start.T)
             slope_theta=theta/np.linalg.norm(p_end-p_start)
-            R_end_new=rot(k,extension_d*slope_theta)@R_end
+            R_end_new=rot(k,extension_end*slope_theta)@R_end
 
             #solve invkin for end point
             q_bp[-1][0]=car2js(robot,q_bp[-1][0],p_end_new,R_end_new)[0]
@@ -230,7 +218,7 @@ class MotionSend(object):
             center, radius=circle_from_3point(p_start,p_end,p_mid)
 
             #find desired rotation angle
-            angle=extension_d/radius
+            angle=extension_end/radius
 
             #find new end point
             plane_N=np.cross(p_start-center,p_end-center)
@@ -240,7 +228,7 @@ class MotionSend(object):
 
             #find new end orientation
             k,theta=R2rot(R_end@R_start.T)
-            theta_new=extension_d*theta/np.linalg.norm(p_end-p_start)
+            theta_new=extension_end*theta/np.linalg.norm(p_end-p_start)
             R_end_new=rot(k,theta_new)@R_end
 
             #solve invkin for end point
@@ -252,14 +240,24 @@ class MotionSend(object):
             J_end=robot.jacobian(q_bp[-1][0])
             qdot=q_bp[-1][0]-q_bp[-2][0]
             v=np.linalg.norm(J_end[3:,:]@qdot)
-            t=extension_d/v
+            t=extension_end/v
             
             q_bp[-1][0]=q_bp[-1][-1]+qdot*t
             points_list[-1][0]=robot.fwd(q_bp[-1][-1]).p
 
         return points_list,q_bp
 
+    def extend_dual(self,robot1,p_bp1,q_bp1,primitives1,robot2,p_bp2,q_bp2,primitives2,breakpoints):
+        #extend porpotionally
+        d1_start=np.linalg.norm(p_bp1[1][-1]-p_bp1[0][-1])
+        d2_start=np.linalg.norm(p_bp2[1][-1]-p_bp2[0][-1])
+        d1_end=np.linalg.norm(p_bp1[-1][-1]-p_bp1[-2][-1])
+        d2_end=np.linalg.norm(p_bp2[-1][-1]-p_bp2[-2][-1])
 
+        p_bp1,q_bp1=self.extend(robot1,q_bp1,primitives1,breakpoints,p_bp1,extension_start=100*d1_start/d2_start,extension_end=100*d1_end/d2_end)
+        p_bp2,q_bp2=self.extend(robot2,q_bp2,primitives2,breakpoints,p_bp2)
+
+        return p_bp1,q_bp1,p_bp2,q_bp2
     def extract_data_from_cmd(self,filename):
         data = read_csv(filename)
         breakpoints=np.array(data['breakpoints'].tolist())
@@ -342,14 +340,15 @@ class MotionSend(object):
                 lam.append(lam[-1]+np.linalg.norm(curve_exe[i]-curve_exe[i-1]))
             try:
                 if timestamp[i-1]!=timestamp[i] and np.linalg.norm(curve_exe_js[i-1]-curve_exe_js[i])!=0:
-                    if not realrobot:
-                        act_speed.append(np.linalg.norm(curve_exe[-1]-curve_exe[-2])/timestep)
-                    else:
-                        act_speed.append(np.linalg.norm(curve_exe[-1]-curve_exe[-2])/(timestamp[i]-timestamp[i-1]))
+                    act_speed.append(np.linalg.norm(curve_exe[-1]-curve_exe[-2])/(timestamp[i]-timestamp[i-1]))
                 else:
                     act_speed.append(act_speed[-1])      
             except IndexError:
                 pass
+
+        ###speed filter
+        act_speed=replace_outliers(np.array(act_speed))
+        act_speed=replace_outliers2(act_speed)
 
         return lam, np.array(curve_exe), np.array(curve_exe_R),curve_exe_js, act_speed, timestamp
 
@@ -409,9 +408,35 @@ class MotionSend(object):
                     
             except IndexError:
                 pass
-        relative_path_exe=np.array(relative_path_exe)
 
-        return lam, np.array(curve_exe1),np.array(curve_exe2), np.array(curve_exe_R1),np.array(curve_exe_R2),curve_exe_js1,curve_exe_js2, act_speed, timestamp, relative_path_exe
+        ###speed filter
+        act_speed=replace_outliers(np.array(act_speed))
+        act_speed=replace_outliers2(act_speed)
+
+        return np.array(lam), np.array(curve_exe1),np.array(curve_exe2), np.array(curve_exe_R1),np.array(curve_exe_R2),curve_exe_js1,curve_exe_js2, act_speed, timestamp, np.array(relative_path_exe), np.array(relative_path_exe_R)
+
+    def form_relative_path(self,curve_js1,curve_js2,base2_R,base2_p):
+        relative_path_exe=[]
+        relative_path_exe_R=[]
+        curve_exe1=[]
+        curve_exe2=[]
+        curve_exe_R1=[]
+        curve_exe_R2=[]
+        for i in range(len(curve_js1)):
+            pose1_now=self.robot1.fwd(curve_js1[i])
+            pose2_now=self.robot2.fwd(curve_js2[i])
+
+            curve_exe1.append(pose1_now.p)
+            curve_exe2.append(pose2_now.p)
+            curve_exe_R1.append(pose1_now.R)
+            curve_exe_R2.append(pose2_now.R)
+
+            pose2_world_now=self.robot2.fwd(curve_js2[i],base2_R,base2_p)
+
+
+            relative_path_exe.append(np.dot(pose2_world_now.R.T,pose1_now.p-pose2_world_now.p))
+            relative_path_exe_R.append(pose2_world_now.R.T@pose1_now.R)
+        return np.array(relative_path_exe),np.array(relative_path_exe_R)
 
 
     def chop_extension(self,curve_exe, curve_exe_R,curve_exe_js, speed, timestamp,p_start,p_end):
@@ -428,10 +453,35 @@ class MotionSend(object):
         curve_exe_js=curve_exe_js[start_idx:end_idx+1]
         curve_exe_R=curve_exe_R[start_idx:end_idx+1]
         speed=speed[start_idx:end_idx+1]
-        speed=replace_outliers(np.array(speed))
         lam=calc_lam_cs(curve_exe)
 
         return lam, curve_exe, curve_exe_R,curve_exe_js, speed, timestamp[start_idx:end_idx+1]
+
+    def chop_extension_dual(self,lam, curve_exe1,curve_exe2,curve_exe_R1,curve_exe_R2,curve_exe_js1,curve_exe_js2, speed, timestamp, relative_path_exe,relative_path_exe_R,p_start,p_end):
+        start_idx=np.argmin(np.linalg.norm(p_start-relative_path_exe,axis=1))
+        end_idx=np.argmin(np.linalg.norm(p_end-relative_path_exe,axis=1))
+
+        #make sure extension doesn't introduce error
+        if np.linalg.norm(relative_path_exe[start_idx]-p_start)>0.5:
+            start_idx+=1
+        if np.linalg.norm(relative_path_exe[end_idx]-p_end)>0.5:
+            end_idx-=1
+
+        curve_exe1=curve_exe1[start_idx:end_idx+1]
+        curve_exe2=curve_exe2[start_idx:end_idx+1]
+        curve_exe_R1=curve_exe_R1[start_idx:end_idx+1]
+        curve_exe_R2=curve_exe_R2[start_idx:end_idx+1]
+        curve_exe_js1=curve_exe_js1[start_idx:end_idx+1]
+        curve_exe_js2=curve_exe_js2[start_idx:end_idx+1]
+
+        relative_path_exe=relative_path_exe[start_idx:end_idx+1]
+        relative_path_exe_R=relative_path_exe_R[start_idx:end_idx+1]
+
+        speed=speed[start_idx:end_idx+1]
+        lam=calc_lam_cs(relative_path_exe)
+
+        return lam, curve_exe1,curve_exe2,curve_exe_R1,curve_exe_R2,curve_exe_js1,curve_exe_js2, speed, timestamp, relative_path_exe,relative_path_exe_R
+
 
 def main():
     ms = MotionSend()
