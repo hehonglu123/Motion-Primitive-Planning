@@ -206,7 +206,7 @@ class fitting_toolbox(object):
 
 		return (q2-q1)/np.linalg.norm(q2-q1)
 
-	def movel_fit(self,curve,curve_js,curve_R,p_constraint=[],R_constraint=[],dqdlam_prev=[]):	###unit vector slope
+	def movel_fit(self,curve,curve_js,curve_R,p_constraint=[],R_constraint=[],dqdlam_prev=[], rl=False):	###unit vector slope
 		###convert orientation to w first
 		curve_w=self.R2w(curve_R,R_constraint)
 
@@ -284,12 +284,15 @@ class fitting_toolbox(object):
 				ori_error=[]
 				for i in range(len(curve)):
 					ori_error.append(get_angle(curve_R[i,:,-1],curve_fit_R[i,:,-1]))
-		
+
+		if rl:
+			return curve_fit,curve_fit_R,[], p_error, ori_error
+
 		return curve_fit,curve_fit_R,[],np.max(p_error), np.max(ori_error)
 		
 
 
-	def movej_fit(self,curve,curve_js,curve_R,p_constraint=[],R_constraint=[],dqdlam_prev=[]):
+	def movej_fit(self,curve,curve_js,curve_R,p_constraint=[],R_constraint=[],dqdlam_prev=[], rl=False):
 		###convert orientation to w first
 		curve_w=self.R2w(curve_R,R_constraint)
 
@@ -371,10 +374,13 @@ class fitting_toolbox(object):
 				for i in range(len(curve)):
 					ori_error.append(get_angle(curve_R[i,:,-1],curve_fit_R[i,:,-1]))
 
+		if rl:
+			return curve_fit,curve_fit_R,[], p_error, ori_error
+
 		return curve_fit,curve_fit_R,curve_fit_js,np.max(p_error), np.max(ori_error)
 
 
-	def movec_fit(self,curve,curve_js,curve_R,p_constraint=[],R_constraint=[],dqdlam_prev=[]):
+	def movec_fit(self,curve,curve_js,curve_R,p_constraint=[],R_constraint=[],dqdlam_prev=[], rl=False):
 		curve_w=self.R2w(curve_R,R_constraint)	
 
 		curve_fit,curve_fit_circle=circle_fit(curve,[] if len(R_constraint)==0 else p_constraint)
@@ -439,6 +445,9 @@ class fitting_toolbox(object):
 				ori_error=[]
 				for i in range(len(curve)):
 					ori_error.append(get_angle(curve_R[i,:,-1],curve_fit_R[i,:,-1]))
+
+		if rl:
+			return curve_fit,curve_fit_R,[], p_error, ori_error
 
 		return curve_fit,curve_fit_R,[],np.max(p_error), np.max(ori_error)
 
