@@ -19,7 +19,7 @@ from MotionSend import *
 
 def main():
     dataset='wood'
-    relative_path = read_csv("../../../data/"+dataset+"/relative_path_tool_frame.csv", header=None).values[:,:3]
+    relative_path = read_csv("../../../data/"+dataset+"/relative_path_tool_frame.csv", header=None).values
 
     #kin def
     robot1=abb1200(d=50)
@@ -42,17 +42,17 @@ def main():
             logged_data=ms.exec_motions_multimove(breakpoints1,primitives1,primitives2,p_bp1,p_bp2,q_bp1,q_bp2,v,v,z10,z10)
             StringData=StringIO(logged_data)
             df = read_csv(StringData, sep =",")
-            lam, curve_exe1,curve_exe2,curve_exe_R1,curve_exe_R2,curve_exe_js1,curve_exe_js2, act_speed, timestamp, relative_path_exe = ms.logged_data_analysis_multimove(df,base2_R,base2_p)
+            lam, curve_exe1,curve_exe2,curve_exe_R1,curve_exe_R2,curve_exe_js1,curve_exe_js2, act_speed, timestamp, relative_path_exe,relative_path_exe_R = ms.logged_data_analysis_multimove(df,base2_R,base2_p)
 
             ###calculate error
-            error=calc_all_error(relative_path_exe,relative_path)
+            error,angle_error=calc_all_error_w_normal(relative_path_exe,relative_path[:,:3],relative_path_exe_R[:,:,-1],relative_path[:,3:])
 
             fig, ax1 = plt.subplots()
 
             ax2 = ax1.twinx()
             ax1.plot(lam[1:],act_speed, 'g-', label='Speed')
             ax2.plot(lam, error, 'b-',label='Error')
-            # ax1.plot(lam[2:],lamdot_act[2:], 'r-',label='Lamdot Constraint')
+            ax2.plot(lam, np.degrees(angle_error), 'y-',label='Normal Error')
 
             ax1.set_xlabel('lambda (mm)')
             ax1.set_ylabel('Speed/lamdot (mm/s)', color='g')

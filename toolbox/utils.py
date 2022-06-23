@@ -118,10 +118,10 @@ def extract_points(primitive_type,points):
 		endpoint1=endpoints[0][:-4].split(',')
 		endpoint2=endpoints[1][2:].split(',')
 
-		return list(map(float, endpoint1)),list(map(float, endpoint2))
+		return np.array(list(map(float, endpoint1))),np.array(list(map(float, endpoint2)))
 	else:
 		endpoint=points[8:-3].split(',')
-		return list(map(float, endpoint))
+		return np.array(list(map(float, endpoint)))
 
 
 def visualize_curve_w_normal(curve,curve_normal,stepsize=500,equal_axis=False):
