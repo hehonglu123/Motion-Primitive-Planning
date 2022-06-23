@@ -9,6 +9,7 @@ from general_robotics_toolbox import *
 from pandas import read_csv
 import sys
 from io import StringIO
+from scipy.signal import find_peaks
 
 # sys.path.append('../abb_motion_program_exec')
 from abb_motion_program_exec_client import *
@@ -33,10 +34,10 @@ def main():
 	curve = read_csv(data_dir+"Curve_in_base_frame.csv",header=None).values
 
 
-	max_error_threshold=0.5
+	multi_peak_threshold=0.2
 	robot=abb6640(d=50)
 
-	v=250
+	v=1100
 	s = speeddata(v,9999999,9999999,999999)
 	z = z10
 
@@ -46,7 +47,7 @@ def main():
 	# ###extension
 	# primitives,p_bp,q_bp=ms.extend(robot,q_bp,primitives,breakpoints,p_bp)
 	###########################################get cmd from simulation improved cmd################################
-	breakpoints,primitives,p_bp,q_bp=ms.extract_data_from_cmd('max_gradient/curve1_250_100L_multipeak/command.csv')
+	breakpoints,primitives,p_bp,q_bp=ms.extract_data_from_cmd('max_gradient/curve2_1100_100L_multipeak/command.csv')
 
 	###ilc toolbox def
 	ilc=ilc_toolbox(robot,primitives)
@@ -55,7 +56,7 @@ def main():
 	max_error=999
 	inserted_points=[]
 
-	iteration=5
+	iteration=50
 	for i in range(iteration):
 
 		ms = MotionSend(url='http://192.168.55.1:80')
@@ -63,19 +64,31 @@ def main():
 		curve_exe_all=[]
 		curve_exe_js_all=[]
 		timestamp_all=[]
+
+		keep_run_idx=[]
 		for r in range(5):
 			logged_data=ms.exec_motions(robot,primitives,breakpoints,p_bp,q_bp,s,z)
+			ms.write_data_to_cmd('recorded_data/command.csv',breakpoints,primitives, p_bp,q_bp)
 
 			StringData=StringIO(logged_data)
 			df = read_csv(StringData, sep =",")
 			##############################data analysis#####################################
 			lam, curve_exe, curve_exe_R,curve_exe_js, speed, timestamp=ms.logged_data_analysis(robot,df,realrobot=True)
-			
-			timestamp=timestamp-timestamp[0]
 
-			curve_exe_all.append(curve_exe)
-			curve_exe_js_all.append(curve_exe_js)
-			timestamp_all.append(timestamp)
+			###throw bad curves
+			_, curve_exe_temp, _,_, _, _=ms.chop_extension(curve_exe, curve_exe_R,curve_exe_js, speed, timestamp,curve[0,:3],curve[-1,:3])
+			error_temp=calc_all_error(curve_exe_temp,curve[:,:3])
+			print('individual traj error: ',np.max(error_temp))
+			###TODO, avoid corner path failure
+			if np.max(error_temp)<5 and np.min(speed)>v/2:
+
+				timestamp=timestamp-timestamp[0]
+
+				curve_exe_all.append(curve_exe)
+				curve_exe_js_all.append(curve_exe_js)
+				timestamp_all.append(timestamp)
+			else:
+				print('trajectory thrown: iteration'+str(i)+'run '+str(r))
 
 
 			# ax.plot3D(curve_exe[:,0], curve_exe[:,1], curve_exe[:,2], c=np.random.rand(3,),label=str(i+1)+'th trajectory')
@@ -92,7 +105,7 @@ def main():
 
 		##############################calcualte error########################################
 		error,angle_error=calc_all_error_w_normal(curve_exe,curve[:,:3],curve_exe_R[:,:,-1],curve[:,3:])
-		print(max(error))
+		print('avg traj worst error: ',max(error))
 		#############################error peak detection###############################
 		peaks,_=find_peaks(error,height=multi_peak_threshold,prominence=0.05,distance=20/(lam[int(len(lam)/2)]-lam[int(len(lam)/2)-1]))		###only push down peaks higher than height, distance between each peak is 20mm, threshold to filter noisy peaks
 		
@@ -104,7 +117,9 @@ def main():
 		ax2 = ax1.twinx()
 		ax1.plot(lam, speed, 'g-', label='Speed')
 		ax2.plot(lam, error, 'b-',label='Error')
+		ax2.scatter(lam[peaks],error[peaks],label='peaks')
 		ax2.plot(lam, np.degrees(angle_error), 'y-',label='Normal Error')
+		ax2.axis(ymin=0,ymax=2)
 
 		ax1.set_xlabel('lambda (mm)')
 		ax1.set_ylabel('Speed/lamdot (mm/s)', color='g')
@@ -115,9 +130,9 @@ def main():
 		ax2.legend(loc=0)
 
 		plt.legend()
-		# plt.savefig('iteration_ '+str(i))
-		# plt.clf()
-		plt.show()
+		plt.savefig('recorded_data/iteration_ '+str(i))
+		plt.clf()
+		# plt.show()
 		
 		
 		##########################################calculate gradient######################################
@@ -140,7 +155,7 @@ def main():
 			order=np.argsort(np.abs(breakpoints_blended-peak_error_curve_blended_idx))
 			breakpoint_interp_2tweak_indices=order[:3]
 
-			de_dp=ilc.get_gradient_from_model_xyz(q_bp,p_bp,breakpoints_blended,curve_blended,peak_error_curve_blended_idx,robot.fwd(curve_exe_js[peak]),curve[peak_error_curve_idx,:3],breakpoint_interp_2tweak_indices)
+			de_dp=ilc.get_gradient_from_model_xyz(p_bp,q_bp,breakpoints_blended,curve_blended,peak_error_curve_blended_idx,robot.fwd(curve_exe_js[peak]),curve[peak_error_curve_idx,:3],breakpoint_interp_2tweak_indices)
 			p_bp, q_bp=ilc.update_bp_xyz(p_bp,q_bp,de_dp,error[peak],breakpoint_interp_2tweak_indices)
 
 		if i>iteration:

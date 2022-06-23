@@ -97,7 +97,7 @@ def main():
 		ax2.legend(loc=0)
 
 		plt.legend()
-		plt.savefig('iteration_ '+str(i))
+		plt.savefig('recorded_data/iteration_ '+str(i))
 		plt.clf()
 		# plt.show()
 
