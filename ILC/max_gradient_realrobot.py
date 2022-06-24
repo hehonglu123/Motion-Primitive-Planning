@@ -7,7 +7,7 @@
 import numpy as np
 from general_robotics_toolbox import *
 from pandas import read_csv
-import sys
+import sys, os
 from io import StringIO
 from scipy.signal import find_peaks
 
@@ -62,7 +62,9 @@ def main():
 		ms = MotionSend(url='http://192.168.55.1:80')
 		#write current command
 		ms.write_data_to_cmd('recorded_data/command.csv',breakpoints,primitives, p_bp,q_bp)
-		os.mkdir('recorded_data/iteration_'+str(i))
+		path='recorded_data/iteration_'+str(i)
+		if not os.path.isdir(path):
+			os.mkdir(path)
 		###5 run execute
 		curve_exe_all=[]
 		curve_exe_js_all=[]
@@ -73,7 +75,7 @@ def main():
 			logged_data=ms.exec_motions(robot,primitives,breakpoints,p_bp,q_bp,s,z)
 			###save 5 runs
 			# Write log csv to file
-			with open('recorded_data/iteration_'+str(i)+'/run_'+str(r)+'.csv',"w") as f:
+			with open(path+'/run_'+str(r)+'.csv',"w") as f:
 			    f.write(logged_data)
 
 			StringData=StringIO(logged_data)
@@ -86,16 +88,12 @@ def main():
 			error_temp=calc_all_error(curve_exe_temp,curve[:,:3])
 			print('individual traj error: ',np.max(error_temp))
 			###TODO, avoid corner path failure
-			if np.max(error_temp)<5 and np.min(speed)>v/2:
 
-				timestamp=timestamp-timestamp[0]
+			timestamp=timestamp-timestamp[0]
 
-				curve_exe_all.append(curve_exe)
-				curve_exe_js_all.append(curve_exe_js)
-				timestamp_all.append(timestamp)
-			else:
-				print('trajectory thrown: iteration'+str(i)+'run '+str(r))
-
+			curve_exe_all.append(curve_exe)
+			curve_exe_js_all.append(curve_exe_js)
+			timestamp_all.append(timestamp)
 
 			# ax.plot3D(curve_exe[:,0], curve_exe[:,1], curve_exe[:,2], c=np.random.rand(3,),label=str(i+1)+'th trajectory')
 
