@@ -60,6 +60,9 @@ def main():
 	for i in range(iteration):
 
 		ms = MotionSend(url='http://192.168.55.1:80')
+		#write current command
+		ms.write_data_to_cmd('recorded_data/command.csv',breakpoints,primitives, p_bp,q_bp)
+		os.mkdir('recorded_data/iteration_'+str(i))
 		###5 run execute
 		curve_exe_all=[]
 		curve_exe_js_all=[]
@@ -68,7 +71,10 @@ def main():
 		keep_run_idx=[]
 		for r in range(5):
 			logged_data=ms.exec_motions(robot,primitives,breakpoints,p_bp,q_bp,s,z)
-			ms.write_data_to_cmd('recorded_data/command.csv',breakpoints,primitives, p_bp,q_bp)
+			###save 5 runs
+			# Write log csv to file
+			with open('recorded_data/iteration_'+str(i)+'/run_'+str(r)+'.csv',"w") as f:
+			    f.write(logged_data)
 
 			StringData=StringIO(logged_data)
 			df = read_csv(StringData, sep =",")
