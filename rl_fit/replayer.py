@@ -19,12 +19,12 @@ class Replayer(object):
         self.done = np.zeros((self.max_size, 1))
 
     def store(self, state, action, reward, next_state, done):
-        self.state_curve[self.pointer] = state[0]
+        self.state_curve[self.pointer] = state[0].flatten()
         self.state_feature[self.pointer] = state[1]
         self.action[self.pointer] = action
         self.reward[self.pointer] = reward
-        self.next_state_curve[self.pointer] = next_state[0]
-        self.next_state_feature[self.pointer] = next_state[1]
+        self.next_state_curve[self.pointer] = next_state[0].flatten() if next_state is not None else 0
+        self.next_state_feature[self.pointer] = next_state[1] if next_state is not None else 0
         self.done[self.pointer] = float(done)
 
         self.pointer = (self.pointer + 1) % self.max_size

@@ -156,7 +156,7 @@ class MotionSend(object):
             points_list[0][0]=p_start_new
             q_bp[0][0]=car2js(robot,q_bp[0][0],p_start_new,R_start_new)[0]
 
-        elif  primitives[1]=='movec_fit':
+        elif primitives[1]=='movec_fit':
             #define circle first
             pose_mid=robot.fwd(q_bp[1][0])
             p_mid=pose_mid.p
