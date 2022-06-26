@@ -12,6 +12,9 @@ from replayer import Replayer
 from toolbox.robots_def import *
 from general_robotics_toolbox import *
 
+import warnings
+warnings.filterwarnings("ignore")
+
 
 class IndexLoader(object):
     def __init__(self, max_idx):
@@ -67,9 +70,7 @@ def get_args():
     parser.add_argument("--gamma", type=float, default=0.99)
     parser.add_argument("--max_train_episode", type=int, default=int(1e5))
     parser.add_argument("--warm_up", type=int, default=500)
-    parser.add_argument("--batch-size", type=int, default=256)
     parser.add_argument("--tau", type=float, default=0.005)
-    parser.add_argument("--gamma", type=float, default=0.99)
     parser.add_argument("--hidden_width", type=int, default=256)
     parser.add_argument("--feature_dim", type=int, default=21)
     parser.add_argument("--discrete_actions", type=int, default=10)
@@ -98,10 +99,10 @@ def train(curve_js_data, args):
             epsilon -= args.eps_decay
 
         state, done = env.reset(), False
-        step = 0
+        i_step = 0
         episode_memory = []
         while not done:
-            step += 1
+            i_step += 1
             if is_warm_up:
                 action = np.random.randint(args.action_dim)
             else:
@@ -109,7 +110,7 @@ def train(curve_js_data, args):
                     action = np.random.randint(args.action_dim)
                 else:
                     action = agent.choose_action(state)
-            next_state, reward, done = env.step(action)
+            next_state, reward, done = env.rl_step(action)
             episode_memory.append((state, action, reward, next_state, done))
             episode_reward += reward
             state = next_state
@@ -119,7 +120,7 @@ def train(curve_js_data, args):
             new_reward = episode_reward * (1 - step_length)
             replayer.store(state, action, new_reward, next_state, done)
 
-        if not is_warm_up:
+        if not is_warm_up and replayer.size > args.batch_size:
             for i in range(args.learn_epochs):
                 agent.learn(replayer)
 
@@ -147,7 +148,7 @@ def evaluation(agent: DQNAgent, curve_js_data, args):
         while not done:
             step += 1
             action = agent.evaluate(state)
-            next_state, reward, done = env.step(action)
+            next_state, reward, done = env.rl_step(action)
             episode_reward += reward
             state = next_state
 
@@ -172,6 +173,9 @@ def main():
     args.curve_dim = args.num_normalize_points * 3
     args.device = torch.device('cpu')
     args.eps_decay = 0.5 / (args.max_train_episode - args.warm_up)
+
+    torch.manual_seed(args.seed)
+    np.random.seed(args.seed)
 
     train(curve_js_data, args)
 

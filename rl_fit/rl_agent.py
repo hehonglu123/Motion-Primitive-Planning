@@ -4,6 +4,7 @@ import os
 import numpy as np
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 from torch.distributions import Categorical
 
 from replayer import Replayer
@@ -64,7 +65,7 @@ class DQNPolicy(nn.Module):
         x = self.activation(self.linear1(x))
         x = self.activation(self.linear2(x))
         x = self.linear3(x)
-        return x
+        return F.softmax(x, dim=-1)
 
 
 class Critic(nn.Module):
@@ -100,8 +101,8 @@ class DQNAgent(object):
         self.policy.eval()
         with torch.no_grad():
             curve, primitive_feature = state
-            curve_tensor = torch.tensor(curve).flatten().unsqueeze(0)
-            feature_tensor = torch.tensor(primitive_feature).flatten().unsqueeze(0)
+            curve_tensor = torch.FloatTensor(curve).flatten().unsqueeze(0)
+            feature_tensor = torch.FloatTensor(primitive_feature).flatten().unsqueeze(0)
             action_probs = self.policy(feature_tensor, curve_tensor).cpu().numpy().flatten()
             action = np.argmax(action_probs)
             return action
@@ -110,8 +111,8 @@ class DQNAgent(object):
         self.policy.eval()
         with torch.no_grad():
             curve, primitive_feature = state
-            curve_tensor = torch.tensor(curve).flatten().unsqueeze(0)
-            feature_tensor = torch.tensor(primitive_feature).flatten().unsqueeze(0)
+            curve_tensor = torch.FloatTensor(curve).flatten().unsqueeze(0)
+            feature_tensor = torch.FloatTensor(primitive_feature).flatten().unsqueeze(0)
             action_probs = self.policy(feature_tensor, curve_tensor)
             dist = Categorical(probs=action_probs)
             action = dist.sample()

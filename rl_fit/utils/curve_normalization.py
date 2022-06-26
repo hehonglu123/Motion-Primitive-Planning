@@ -3,9 +3,6 @@ from scipy.fft import fft
 from scipy.interpolate import interp1d
 
 from sklearn.decomposition import PCA
-from trajectory_utils import read_base_curve
-
-from plot_functions import plot_curve
 
 
 def reduce_interpolate(curve, n_points):
@@ -110,15 +107,15 @@ def fft_feature(curve, n_feature):
     return features, fft_curve
 
 
-def main():
-    curve, curve_normal = read_base_curve("data/Curve_in_base_frame.csv")
-    curve = curve[:, :]
-    curve_normalized = PCA_normalization(curve)
-    curve_fft_features, fft_all = fft_feature(curve_normalized, 5)
-    print(curve_fft_features)
-    print(fft_all)
-    print(fft_all.shape)
-
-
-if __name__ == '__main__':
-    main()
+# def main():
+#     curve, curve_normal = read_base_curve("data/Curve_in_base_frame.csv")
+#     curve = curve[:, :]
+#     curve_normalized = PCA_normalization(curve)
+#     curve_fft_features, fft_all = fft_feature(curve_normalized, 5)
+#     print(curve_fft_features)
+#     print(fft_all)
+#     print(fft_all.shape)
+#
+#
+# if __name__ == '__main__':
+#     main()
