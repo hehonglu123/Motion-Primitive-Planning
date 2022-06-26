@@ -219,7 +219,7 @@ class MotionSend(object):
             points_list[-1][0]=p_end_new
 
 
-        elif  primitives[1]=='movec_fit':
+        elif  primitives[-1]=='movec_fit':
             #define circle first
             pose_mid=robot.fwd(q_bp[-1][0])
             p_mid=pose_mid.p
@@ -237,7 +237,7 @@ class MotionSend(object):
 
             #modify mid point to be in the middle of new end and old start (to avoid RS circle uncertain error)
             modified_bp=arc_from_3point(p_start,p_end_new,p_mid,N=3)
-            points_list[-2][0]=modified_bp[1]
+            points_list[-1][0]=modified_bp[1]
 
             #find new end orientation
             k,theta=R2rot(R_end@R_start.T)
