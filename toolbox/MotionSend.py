@@ -75,6 +75,10 @@ class MotionSend(object):
         log_results_str = log_results.decode('ascii')
         return log_results_str
 
+    def exe_from_file(self,robot,filename,speed,zone):
+        breakpoints,primitives, p_bp,q_bp=self.extract_data_from_cmd(filename)
+        return self.exec_motions(robot,primitives,breakpoints,p_bp,q_bp,speed,zone)
+
     def exec_motions_multimove(self,breakpoints,primitives1,primitives2,p_bp1,p_bp2,q_bp1,q_bp2,speed1,speed2,zone1,zone2):
         mp1 = MotionProgram(tool=self.tool1)
         mp2 = MotionProgram(tool=self.tool2)
@@ -350,7 +354,7 @@ class MotionSend(object):
         act_speed=replace_outliers(np.array(act_speed))
         act_speed=replace_outliers2(act_speed)
 
-        return lam, np.array(curve_exe), np.array(curve_exe_R),curve_exe_js, act_speed, timestamp
+        return lam, np.array(curve_exe), np.array(curve_exe_R),curve_exe_js, act_speed, timestamp-timestamp[0]
 
     def logged_data_analysis_multimove(self,df,base2_R,base2_p,realrobot=False):
         q1_1=df[' J1'].tolist()[1:]
@@ -455,7 +459,7 @@ class MotionSend(object):
         speed=speed[start_idx:end_idx+1]
         lam=calc_lam_cs(curve_exe)
 
-        return lam, curve_exe, curve_exe_R,curve_exe_js, speed, timestamp[start_idx:end_idx+1]
+        return lam, curve_exe, curve_exe_R,curve_exe_js, speed, timestamp[start_idx:end_idx+1]-timestamp[start_idx]
 
     def chop_extension_dual(self,lam, curve_exe1,curve_exe2,curve_exe_R1,curve_exe_R2,curve_exe_js1,curve_exe_js2, speed, timestamp, relative_path_exe,relative_path_exe_R,p_start,p_end):
         start_idx=np.argmin(np.linalg.norm(p_start-relative_path_exe,axis=1))

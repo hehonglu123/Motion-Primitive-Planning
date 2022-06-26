@@ -3,13 +3,32 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.interpolate import interp1d
 from scipy import signal
+import scipy
+from sklearn.cluster import KMeans
+
+def remove_traj_outlier(curve_exe_all,curve_exe_js_all,timestamp_all,total_time_all):
+
+	km = KMeans(n_clusters=2)
+	index=km.fit_predict(np.array(total_time_all).reshape(-1,1))
+	cluster=km.cluster_centers_
+	major_index=scipy.stats.mode(index)[0][0]       ###mostly appeared index
+	major_indices=np.where(index==major_index)[0]
+	time_mode_avg=cluster[major_index]
+
+	if abs(cluster[0][0]-cluster[1][0])>0.02*time_mode_avg:
+	    curve_exe_all=[curve_exe_all[iii] for iii in major_indices]
+	    curve_exe_js_all=[curve_exe_js_all[iii] for iii in major_indices]
+	    timestamp_all=[timestamp_all[iii] for iii in major_indices]
+	    print('outlier traj detected')
+
+	return curve_exe_all,curve_exe_js_all,timestamp_all
 
 def interplate_timestamp(curve,timestamp,timestamp_d):
-    curve_js_new=[]
+    curve_new=[]
     for i in range(len(curve[0])):
-        curve_js_new.append(np.interp(timestamp_d,timestamp,curve[:,i]))
+        curve_new.append(np.interp(timestamp_d,timestamp,curve[:,i]))
 
-    return np.array(curve_js_new).T
+    return np.array(curve_new).T
 
 def average_curve(curve_all,timestamp_all):
     ###get desired synced timestamp first

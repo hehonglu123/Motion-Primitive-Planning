@@ -21,7 +21,7 @@ def main():
     # data_dir="../../../data/from_NX/baseline/0.1/"
     data_dir="debug/"
 
-    robot=abb1200(d=50)
+    robot=abb6640(d=50)
 
     vmax = speeddata(10000,9999999,9999999,999999)
     v680 = speeddata(680,9999999,9999999,999999)
@@ -30,7 +30,7 @@ def main():
 
     for s in speed:
         for z in zone: 
-            curve_exe_js=ms.exe_from_file(robot,data_dir+"command1.csv",data_dir+"curve_fit_js1.csv",speed[s],zone[z])
+            curve_exe_js=ms.exe_from_file(robot,data_dir+"circle_uncertain_commands.csv",speed[s],zone[z])
    
 
             f = open(data_dir+"curve_exe"+"_"+s+"_"+z+".csv", "w")
