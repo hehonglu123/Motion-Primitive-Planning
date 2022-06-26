@@ -1,24 +1,19 @@
-import numpy as np
-import torch
 from io import StringIO
 
-
 from greedy_fitting.greedy import greedy_fit
-from toolbox.robots_def import *
-from general_robotics_toolbox import *
 from toolbox.MotionSend import *
 from rl_fit.utils.curve_normalization import PCA_normalization
 
 
 class MotionPrimitiveEnv(greedy_fit):
-    def __init__(self, args):
-        super(MotionPrimitiveEnv, self).__init__(args.robot, args.curve_js, args.max_error_threshold, args.max_ori_threshold)
+    def __init__(self, curve_js, args):
+        super(MotionPrimitiveEnv, self).__init__(args.robot, curve_js, args.max_error_threshold, args.max_ori_threshold)
 
-        self.action_dim = args.discrete_actions * 3
+        self.action_dim = args.action_dim
         self.action_key = ['movel_fit'] * args.discrete_actions + ['movej_fit'] * args.discrete_actions + ['movec_fit'] * args.discrete_actions
         self.action_length = [(i+1)/args.discrete_actions for i in range(args.discrete_actions)] * 3
         self.robot = args.robot
-        self.curve_js = args.curve_js
+        self.curve_js = curve_js
 
         self.step_curve_fit = {}
         self.step_curve_fit_R = {}
