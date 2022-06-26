@@ -173,6 +173,10 @@ class MotionSend(object):
             R_temp=rot(plane_N,angle)
             p_start_new=center+R_temp@(p_start-center)
 
+            #modify mid point to be in the middle of new start and old end (to avoid RS circle uncertain error)
+            modified_bp=arc_from_3point(p_start_new,p_end,p_mid,N=3)
+            points_list[1][0]=modified_bp[1]
+
             #find new start orientation
             k,theta=R2rot(R_end@R_start.T)
             theta_new=-extension_start*theta/np.linalg.norm(p_end-p_start)
@@ -181,6 +185,7 @@ class MotionSend(object):
             #solve invkin for initial point
             points_list[0][0]=p_start_new
             q_bp[0][0]=car2js(robot,q_bp[0][0],p_start_new,R_start_new)[0]
+
 
         else:
             #find new start point
@@ -229,6 +234,10 @@ class MotionSend(object):
             plane_N=plane_N/np.linalg.norm(plane_N)
             R_temp=rot(plane_N,angle)
             p_end_new=center+R_temp@(p_end-center)
+
+            #modify mid point to be in the middle of new end and old start (to avoid RS circle uncertain error)
+            modified_bp=arc_from_3point(p_start,p_end_new,p_mid,N=3)
+            points_list[-2][0]=modified_bp[1]
 
             #find new end orientation
             k,theta=R2rot(R_end@R_start.T)
