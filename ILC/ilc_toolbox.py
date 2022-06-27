@@ -137,19 +137,24 @@ class ilc_toolbox(object):
 					q_bp_temp[m][0]=car2js(self.robot[r],q_bp[r][m][0],np.array(p_bp_temp[m][0]),self.robot[r].fwd(q_bp[r][m][0]).R)[0]###TODO:ADD MOVEC SUPPORT
 
 					#restore new trajectory, only for adjusted breakpoint, 1-bp change requires traj interp from 5 bp
-					short_version=range(max(m-2,0),min(m+3,len(breakpoints_blended)))
+					short_version=range(max(m-3,0),min(m+4,len(breakpoints_blended)))
 					###start & end idx, choose points in the middle of breakpoints to avoid affecting previous/next blending segments, unless at the boundary (star/end of all curve)
-					###guard 5 breakpoints for short blending
+					###guard 7 breakpoints for short blending, minimum is 7 instead of 5 if adjusting 1 bp and check changes of surrunding 3 bp region due to blending
+					start_included=False
+					end_included=False
+
 					if short_version[0]==0:
-						short_version=range(0,5)
+						short_version=range(0,7)
 						start_idx=breakpoints_blended[short_version[0]]
+						start_included=True
 					else:
-						start_idx=int((breakpoints_blended[short_version[0]]+breakpoints_blended[short_version[1]])/2)
+						start_idx=int((breakpoints_blended[short_version[1]]+breakpoints_blended[short_version[2]])/2)
 					if short_version[-1]==len(breakpoints_blended)-1:
-						short_version=range(len(breakpoints_blended)-5,len(breakpoints_blended))
+						short_version=range(len(breakpoints_blended)-7,len(breakpoints_blended))
 						end_idx = breakpoints_blended[short_version[-1]]+1
+						end_included=True
 					else:
-						end_idx=int((breakpoints_blended[short_version[-1]]+breakpoints_blended[short_version[-2]])/2)+1
+						end_idx=int((breakpoints_blended[short_version[-2]]+breakpoints_blended[short_version[-3]])/2)+1
 
 
 					curve_interp_temp, curve_R_interp_temp, curve_js_interp_temp, breakpoints_blended_temp=form_traj_from_bp(q_bp_temp[short_version],[self.primitives[r][i] for i in short_version],self.robot[r])
@@ -157,7 +162,6 @@ class ilc_toolbox(object):
 					curve_js_blended_temp,curve_blended_temp,curve_R_blended_temp=blend_js_from_primitive(curve_interp_temp, curve_js_interp_temp, breakpoints_blended_temp, [self.primitives[r][i] for i in short_version],self.robot[r],zone=10)
 					
 					curve_blended_new=copy.deepcopy(curve_blended[r])
-
 
 					curve_blended_new[start_idx:end_idx]=curve_blended_temp[start_idx-breakpoints_blended[short_version[0]]:len(curve_blended_temp)-(breakpoints_blended[short_version[-1]]+1-end_idx)]
 
