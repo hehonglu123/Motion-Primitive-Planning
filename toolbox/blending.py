@@ -83,7 +83,7 @@ def blend_js_from_primitive(curve, curve_js, breakpoints, primitives,robot,zone=
 	###determine actual blending zone to avoid overlapping
 	for i in range(1,len(breakpoints)-1):
 		if lam[breakpoints[i]] - zone < lam[blending_end_idx[-1]]:	#if start overlap
-			blending_start_idx.append(blending_end_idx[-1]+2)
+			blending_start_idx.append(blending_end_idx[-1]+1)
 		else:
 			blending_start_idx.append(np.argmin(np.abs(lam-lam[breakpoints[i]]+zone)))
 
