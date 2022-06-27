@@ -66,7 +66,7 @@ def result_ana(curve_exe_js):
             break
         end_id -= 1
     act_speed_cut=act_speed[start_id:end_id]
-    print("Ave Speed:",np.mean(act_speed_cut),'Max Error:',np.max(error))
+    print("Ave Speed:",np.mean(act_speed_cut),'Max Error:',np.max(error),"Min Speed:",np.min(act_speed_cut))
     
     # return
 
@@ -81,9 +81,24 @@ def result_ana(curve_exe_js):
     plt.title("Execution Result (Speed/Error/Normal Error v.s. Lambda)")
     ax1.legend(loc=0)
     ax2.legend(loc=0)
-    # plt.show()
-    plt.savefig(data_dir+'error_speed_'+case_file_name+'.png')
-    plt.clf()
+    plt.show()
+    # plt.savefig(data_dir+'error_speed_'+case_file_name+'.png')
+    # plt.clf()
+
+    curve_plan = []
+    for i in range(len(curve_js_plan)):
+        this_q = curve_js_plan[i]
+        robot_pose=robot.fwd(this_q)
+        curve_plan.append(robot_pose.p)
+    curve_plan=np.array(curve_plan)
+
+    plt.plot(curve[:,0],curve[:,1])
+    plt.plot(curve_plan[:,0],curve_plan[:,1])
+    plt.plot(curve_exe[:,0],curve_exe[:,1])
+    plt.axis('equal')
+    plt.show()
+
+    return
 
     with open(data_dir+'error_'+case_file_name+'.npy','wb') as f:
         np.save(f,error)
@@ -95,7 +110,7 @@ def result_ana(curve_exe_js):
         np.save(f,lam_exec)
 
 robot=m900ia(d=50)
-data_dir = 'data_qp_devel/'
+data_dir = 'data_opt_point_basis/'
 
 client = FANUCClient()
 utool_num = 2
@@ -111,18 +126,36 @@ curve = np.hstack((curve,curve_normal))
 
 # motion parameters
 # speed=100
-motion_type='movej'
+# motion_type='movel'
+motion_type='movel'
 # speed=300
 # all_speed=[300,1000]
-all_speed=[10,100]
+# all_speed=[10,100]
+# all_speed=[270]
+all_speed=[200]
 zone=100
 
-qp_cases=['qp','opt_init','opt','qp_heu','opt_init_heu','opt_heu']
+# qp_cases=['qp','opt_init','opt','qp_heu','opt_init_heu','opt_heu']
+# qp_cases=['nothing','init_10_200','opt_10_200']
+# qp_cases=['qp_10_200_lowqddot']
+# qp_cases=['qp_10_200_jerk','qp_10_250_jerk']
+# qp_cases=['qp_10_200_jerk']
+qp_cases=['nothing']
 
 for speed in all_speed:
     for case in qp_cases:
-        curve_js_plan = read_csv(data_dir+'curve_js_'+case+'.csv',header=None).values
-        curve_js_plan=np.array(curve_js_plan).astype(float)
+        print(case)
+        if case == 'nothing':
+            total_seg = 10
+            step = int((len(curve_js)-1)/total_seg)
+            curve_js_plan = curve_js[::step]
+        else:
+            curve_js_plan = read_csv(data_dir+'curve_js_'+case+'.csv',header=None).values
+            curve_js_plan=np.array(curve_js_plan).astype(float)
+
+            # total_seg = 200
+            # step = int((len(curve_js_plan)-1)/total_seg)
+            # curve_js_plan = curve_js_plan[::step]
 
         # the original curve
         tp_pre = TPMotionProgram()
@@ -134,12 +167,25 @@ for speed in all_speed:
 
         tp = TPMotionProgram()
         for i in range(1,len(curve_js_plan)-1):
+            this_zone = zone
+            # if i==(len(curve_js_plan)-1)/2:
+            #     this_zone = 40
+            
             robt = jointtarget(1,1,utool_num,np.degrees(curve_js_plan[i]),[0]*6)
-            tp.moveJ(robt,speed,'%',zone)
-            # tp.moveL(robt,speed,'mmsec',zone)
+            if motion_type == 'movej':
+                # tp.moveJ(robt,speed,'%',this_zone)
+                tp.moveJ(robt,speed,'msec',this_zone)
+            elif motion_type == 'movel':
+                tp.moveL(robt,speed,'mmsec',this_zone)
+                # tp.moveL(robt,speed,'msec',this_zone)
+
         robt_end = jointtarget(1,1,utool_num,np.degrees(curve_js_plan[-1]),[0]*6)
-        tp.moveJ(robt_end,speed,'%',-1)
-        # tp.moveL(robt,speed,'mmsec',-1)
+        if motion_type == 'movej':
+            # tp.moveJ(robt_end,speed,'%',-1)
+            tp.moveJ(robt_end,speed,'msec',-1)
+        elif motion_type == 'movel':
+            tp.moveL(robt_end,speed,'mmsec',-1)
+            # tp.moveL(robt_end,speed,'msec',-1)
         # execute 
         res = client.execute_motion_program(tp)
 
