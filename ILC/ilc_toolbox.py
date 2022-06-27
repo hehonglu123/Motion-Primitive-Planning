@@ -140,19 +140,15 @@ class ilc_toolbox(object):
 					short_version=range(max(m-3,0),min(m+4,len(breakpoints_blended)))
 					###start & end idx, choose points in the middle of breakpoints to avoid affecting previous/next blending segments, unless at the boundary (star/end of all curve)
 					###guard 7 breakpoints for short blending, minimum is 7 instead of 5 if adjusting 1 bp and check changes of surrunding 3 bp region due to blending
-					start_included=False
-					end_included=False
 
 					if short_version[0]==0:
 						short_version=range(0,7)
 						start_idx=breakpoints_blended[short_version[0]]
-						start_included=True
 					else:
 						start_idx=int((breakpoints_blended[short_version[1]]+breakpoints_blended[short_version[2]])/2)
 					if short_version[-1]==len(breakpoints_blended)-1:
 						short_version=range(len(breakpoints_blended)-7,len(breakpoints_blended))
 						end_idx = breakpoints_blended[short_version[-1]]+1
-						end_included=True
 					else:
 						end_idx=int((breakpoints_blended[short_version[-2]]+breakpoints_blended[short_version[-3]])/2)+1
 
@@ -168,33 +164,7 @@ class ilc_toolbox(object):
 					###calculate relative gradient
 					worst_case_point_shift=curve_blended_new[max_error_curve_blended_idx]-curve_blended[r][max_error_curve_blended_idx]
 					
-					if m==breakpoint_interp_2tweak_indices[-1]:
-						print(curve_blended[r][start_idx]-curve_blended_new[start_idx])
 
-
-						p_bp_temp_np=np.squeeze(p_bp_temp)
-						p_bp_np=np.squeeze(p_bp[r])
-
-						plt.figure()
-						ax = plt.axes(projection='3d')
-						# ax.plot3D(curve_blended[r][start_idx:end_idx,0], curve_blended[r][start_idx:end_idx,1], curve_blended[r][start_idx:end_idx,2], c='gray',label='original')
-						# ax.plot3D(curve_blended_new[start_idx:end_idx,0], curve_blended_new[start_idx:end_idx,1], curve_blended_new[start_idx:end_idx,2], c='green',label='new')
-
-						ax.plot3D(curve_blended_temp[:,0], curve_blended_temp[:,1], curve_blended_temp[:,2], c='red',label='blended')	
-						
-						ax.scatter(p_bp_temp_np[short_version,0],p_bp_temp_np[short_version,1],p_bp_temp_np[short_version,2],c='gray',label='original')
-						ax.scatter(p_bp_np[short_version,0],p_bp_np[short_version,1],p_bp_np[short_version,2],c='green',label='new')
-
-						ax.plot3D(curve_blended[r][:,0], curve_blended[r][:,1], curve_blended[r][:,2], c='gray',label='original')
-						ax.plot3D(curve_blended_new[:,0], curve_blended_new[:,1], curve_blended_new[:,2], c='green',label='new')	
-						
-						# ax.scatter(p_bp_temp_np[:,0],p_bp_temp_np[:,1],p_bp_temp_np[:,2],c='gray',label='original')
-						# ax.scatter(p_bp_np[:,0],p_bp_np[:,1],p_bp_np[:,2],c='green',label='new')
-
-						plt.legend()
-						plt.show()
-
-						print(curve_blended_new[0]-curve_blended[r][0])
 
 					###convert shifted delta in robot2 tool frame
 					if r==0:	#for robot 1, curve is in global frame
@@ -229,7 +199,7 @@ class ilc_toolbox(object):
 
 		return p_bp, q_bp
 
-	def update_bp_xyz_dual(self,p_bp,q_bp,de_dp,max_error,breakpoint_interp_2tweak_indices,alpha=1.):
+	def update_bp_xyz_dual(self,p_bp,q_bp,de_dp,max_error,breakpoint_interp_2tweak_indices,alpha=0.5):
 		###q_bp:								[q_bp1,q_bp2],joint configs at breakpoints
 		###p_bp:								[p_bp1,p_bp2],xyz configs at breakpoints
 		###de_dp；								gradient of error and each breakpoints
