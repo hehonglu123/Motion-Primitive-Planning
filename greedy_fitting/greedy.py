@@ -44,7 +44,7 @@ class greedy_fit(fitting_toolbox):
 		return self.movec_fit(curve,curve_js,curve_R,self.curve_fit[-1] if len(self.curve_fit)>0 else [],self.curve_fit_R[-1] if len(self.curve_fit_R)>0 else [], dqdlam_prev=(self.curve_fit_js[-1]-self.curve_fit_js[-2])/(self.lam[len(self.curve_fit_js)-1]-self.lam[len(self.curve_fit_js)-2]) if len(self.curve_fit_js)>1 else [])
 
 	##TODO: guard moveC longer than 50mm
-	def bisect(self,primitive,cur_idx):
+	def bisect(self,primitive,cur_idx, rl=False):
 
 		next_point = min(self.step,len(self.curve)-self.breakpoints[-1])
 		prev_point=0
@@ -57,9 +57,9 @@ class greedy_fit(fitting_toolbox):
 					return curve_fit,curve_fit_R,curve_fit_js,max_error,max_ori_error
 				else:
 					next_point=max(prev_possible_point,2)
-					return primitive(self.curve[cur_idx:cur_idx+next_point],self.curve_js[cur_idx:cur_idx+next_point],self.curve_R[cur_idx:cur_idx+next_point])
+					return primitive(self.curve[cur_idx:cur_idx+next_point],self.curve_js[cur_idx:cur_idx+next_point],self.curve_R[cur_idx:cur_idx+next_point], rl=rl)
 			###fitting
-			curve_fit,curve_fit_R,curve_fit_js,max_error,max_ori_error=primitive(self.curve[cur_idx:cur_idx+next_point],self.curve_js[cur_idx:cur_idx+next_point],self.curve_R[cur_idx:cur_idx+next_point])
+			curve_fit,curve_fit_R,curve_fit_js,max_error,max_ori_error=primitive(self.curve[cur_idx:cur_idx+next_point],self.curve_js[cur_idx:cur_idx+next_point],self.curve_R[cur_idx:cur_idx+next_point], rl=rl)
 
 			###bp going backward to meet threshold
 			if max_error>self.max_error_threshold or max_ori_error>self.max_ori_threshold:
@@ -153,19 +153,19 @@ class greedy_fit(fitting_toolbox):
 
 def main():
 	###read in points
-	curve_js = read_csv("../data/wood/Curve_js.csv",header=None).values
-	# curve_js = read_csv("../data/from_NX/Curve_js.csv",header=None).values
+	# curve_js = read_csv("../data/wood/Curve_js.csv",header=None).values
+	curve_js = read_csv("../data/from_NX/Curve_js.csv",header=None).values
 	# curve_js = read_csv("../constraint_solver/dual_arm/trajectory/arm2.csv",header=None).values
 
 	robot=abb6640(d=50)
 
-	greedy_fit_obj=greedy_fit(robot,curve_js,0.5)
+	greedy_fit_obj=greedy_fit(robot,curve_js,0.1)
 
 
 	###set primitive choices, defaults are all 3
 	# greedy_fit_obj.primitives={'movel_fit':greedy_fit_obj.movel_fit_greedy,'movec_fit':greedy_fit_obj.movec_fit_greedy}
 
-	# greedy_fit_obj.primitives={'movel_fit':greedy_fit_obj.movel_fit_greedy}
+	greedy_fit_obj.primitives={'movel_fit':greedy_fit_obj.movel_fit_greedy}
 	# greedy_fit_obj.primitives={'movej_fit':greedy_fit_obj.movej_fit_greedy}
 	# greedy_fit_obj.primitives={'movec_fit':greedy_fit_obj.movec_fit_greedy}
 
@@ -242,5 +242,5 @@ def greedy_execute():
 	print('time: ',timestamp[-1]-timestamp[0],'error: ',np.max(error),'normal error: ',np.max(angle_error))
 
 if __name__ == "__main__":
-	greedy_execute()
-	# main()
+	# greedy_execute()
+	main()

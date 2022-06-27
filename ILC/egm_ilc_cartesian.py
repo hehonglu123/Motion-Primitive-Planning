@@ -122,34 +122,35 @@ def main():
 
 		curve_cmd=curve_cmd_new
 
-	##############################plot error#####################################
-	fig, ax1 = plt.subplots()
-	ax2 = ax1.twinx()
-	ax1.plot(lam[1:], speed, 'g-', label='Speed')
-	ax2.plot(lam, error_distance, 'b-',label='Error')
-	ax2.plot(lam, np.degrees(angle_error), 'y-',label='Normal Error')
+		##############################plot error#####################################
+		fig, ax1 = plt.subplots()
+		ax2 = ax1.twinx()
+		ax1.plot(lam[1:], speed, 'g-', label='Speed')
+		ax2.plot(lam, error_distance, 'b-',label='Error')
+		ax2.plot(lam, np.degrees(angle_error), 'y-',label='Normal Error')
 
-	ax1.set_xlabel('lambda (mm)')
-	ax1.set_ylabel('Speed/lamdot (mm/s)', color='g')
-	ax2.set_ylabel('Error/Normal Error (mm/deg)', color='b')
-	plt.title("Speed and Error Plot")
-	ax1.legend(loc=0)
+		ax1.set_xlabel('lambda (mm)')
+		ax1.set_ylabel('Speed/lamdot (mm/s)', color='g')
+		ax2.set_ylabel('Error/Normal Error (mm/deg)', color='b')
+		plt.title("Speed and Error Plot")
+		ax1.legend(loc=0)
 
-	ax2.legend(loc=0)
+		ax2.legend(loc=0)
 
-	plt.legend()
+		plt.legend()
 
-	###########################plot for verification###################################
-	plt.figure()
-	ax = plt.axes(projection='3d')
-	ax.plot3D(curve[:,0], curve[:,1], curve[:,2], c='gray',label='original')
-	ax.plot3D(curve_exe[:,0], curve_exe[:,1], curve_exe[:,2], c='red',label='execution')
-	ax.scatter3D(curve_cmd[:,0], curve_cmd[:,1], curve_cmd[:,2], c=curve_cmd[:,2], cmap='Greens',label='commanded points')
-	ax.scatter3D(curve_cmd_new[:,0], curve_cmd_new[:,1], curve_cmd_new[:,2], c=curve_cmd_new[:,2], cmap='Blues',label='new commanded points')
+		###########################plot for verification###################################
+		plt.figure()
+		ax = plt.axes(projection='3d')
+		ax.plot3D(curve[:,0], curve[:,1], curve[:,2], c='gray',label='original')
+		ax.plot3D(curve_exe[:,0], curve_exe[:,1], curve_exe[:,2], c='red',label='execution')
+		ax.scatter3D(curve_cmd[:,0], curve_cmd[:,1], curve_cmd[:,2], c=curve_cmd[:,2], cmap='Greens',label='commanded points')
+		ax.scatter3D(curve_cmd_new[:,0], curve_cmd_new[:,1], curve_cmd_new[:,2], c=curve_cmd_new[:,2], cmap='Blues',label='new commanded points')
 
 
-	plt.legend()
-	plt.show()
-
+		plt.legend()
+		# plt.show()
+		plt.savefig('iteration_ '+str(i))
+		plt.clf()
 if __name__ == "__main__":
 	main()

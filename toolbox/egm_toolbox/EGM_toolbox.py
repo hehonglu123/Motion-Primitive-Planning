@@ -108,7 +108,7 @@ class EGM_toolbox(object):
         
         timestamp=np.array(timestamp)/1000
 
-        return timestamp,curve_exe_js
+        return timestamp,np.array(curve_exe_js)
 
     def clear_queue(self):
         # # Clear UDP queue

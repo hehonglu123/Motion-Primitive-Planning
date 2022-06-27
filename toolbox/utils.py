@@ -3,34 +3,55 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.interpolate import interp1d
 from scipy import signal
+import scipy
+from sklearn.cluster import KMeans
+
+def remove_traj_outlier(curve_exe_all,curve_exe_js_all,timestamp_all,total_time_all):
+
+	km = KMeans(n_clusters=2)
+	index=km.fit_predict(np.array(total_time_all).reshape(-1,1))
+	cluster=km.cluster_centers_
+	major_index=scipy.stats.mode(index)[0][0]       ###mostly appeared index
+	major_indices=np.where(index==major_index)[0]
+	time_mode_avg=cluster[major_index]
+
+	if abs(cluster[0][0]-cluster[1][0])>0.02*time_mode_avg:
+		curve_exe_all=[curve_exe_all[iii] for iii in major_indices]
+		curve_exe_js_all=[curve_exe_js_all[iii] for iii in major_indices]
+		timestamp_all=[timestamp_all[iii] for iii in major_indices]
+		print('outlier traj detected')
+
+	return curve_exe_all,curve_exe_js_all,timestamp_all
 
 def interplate_timestamp(curve,timestamp,timestamp_d):
-    curve_js_new=[]
-    for i in range(len(curve[0])):
-        curve_js_new.append(np.interp(timestamp_d,timestamp,curve[:,i]))
 
-    return np.array(curve_js_new).T
+	curve_new=[]
+	for i in range(len(curve[0])):
+		# curve_new.append(np.interp(timestamp_d,timestamp,curve[:,i]))
+		curve_new.append(scipy.interpolate.CubicSpline(timestamp, curve[:,i])(timestamp_d))
+
+	return np.array(curve_new).T
 
 def average_curve(curve_all,timestamp_all):
-    ###get desired synced timestamp first
-    max_length=[]
-    max_time=[]
-    for i in range(len(timestamp_all)):
-        max_length.append(len(timestamp_all[i]))
-        max_time.append(timestamp_all[i][-1])
-    max_length=np.max(max_length)
-    max_time=np.max(max_time)
-    timestamp_d=np.linspace(0,max_time,num=max_length)
+	###get desired synced timestamp first
+	max_length=[]
+	max_time=[]
+	for i in range(len(timestamp_all)):
+		max_length.append(len(timestamp_all[i]))
+		max_time.append(timestamp_all[i][-1])
+	max_length=np.max(max_length)
+	max_time=np.max(max_time)
+	timestamp_d=np.linspace(0,max_time,num=max_length)
 
-    ###linear interpolate each curve with synced timestamp
-    curve_all_new=[]
-    for i in range(len(timestamp_all)):
-        curve_all_new.append(interplate_timestamp(curve_all[i],timestamp_all[i],timestamp_d))
+	###linear interpolate each curve with synced timestamp
+	curve_all_new=[]
+	for i in range(len(timestamp_all)):
+		curve_all_new.append(interplate_timestamp(curve_all[i],timestamp_all[i],timestamp_d))
 
-    curve_all_new=np.array(curve_all_new)
+	curve_all_new=np.array(curve_all_new)
 
-    return curve_all_new, np.average(curve_all_new,axis=0),timestamp_d
-    
+	return curve_all_new, np.average(curve_all_new,axis=0),timestamp_d
+	
 def replace_outliers2(data):
 	rolling_window=30
 	for i in range(len(data)-rolling_window):
@@ -118,10 +139,10 @@ def extract_points(primitive_type,points):
 		endpoint1=endpoints[0][:-4].split(',')
 		endpoint2=endpoints[1][2:].split(',')
 
-		return list(map(float, endpoint1)),list(map(float, endpoint2))
+		return np.array(list(map(float, endpoint1))),np.array(list(map(float, endpoint2)))
 	else:
 		endpoint=points[8:-3].split(',')
-		return list(map(float, endpoint))
+		return np.array(list(map(float, endpoint)))
 
 
 def visualize_curve_w_normal(curve,curve_normal,stepsize=500,equal_axis=False):

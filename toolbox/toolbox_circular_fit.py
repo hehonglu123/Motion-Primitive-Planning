@@ -22,7 +22,7 @@ def circle_from_3point(p_start,p_end,p_mid):
 
     return center, radius
     
-def arc_from_3point(p_start,p_end,p_mid,N):
+def arc_from_3point(p_start,p_end,p_mid,N=100):
     v1=np.cross(p_mid-p_start,p_end-p_mid)
     v1=v1/np.linalg.norm(v1)
     center, radius=circle_from_3point(p_start,p_end,p_mid)

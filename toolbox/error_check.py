@@ -108,7 +108,7 @@ def calc_all_error_w_normal(fit,curve,fit_normal,curve_normal,extension=False):
 		normal_angle=get_angle(fit_normal[i],curve_normal[idx])
 		error.append(error_temp)
 		angle_error.append(normal_angle)
-	return error, angle_error
+	return np.array(error), np.array(angle_error)
 
 def calc_all_error_ex_blending(fit,curve,zone,lam,breakpoints_lam):
 	for breakpoint_lam in breakpoints_lam:

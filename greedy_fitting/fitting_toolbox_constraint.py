@@ -207,6 +207,7 @@ class fitting_toolbox(object):
         prob = cp.Problem(objective, constraints)
         # result = prob.solve(solver=cp.SCS, verbose=False, max_iters=1000, use_indirect=True)
         prob.solve(solver='GUROBI', verbose=True)
+        # prob.solve(solver='CVXOPT')
         # if x.value is None:
         # 	print(result)
         return x.value
@@ -220,6 +221,7 @@ class fitting_toolbox(object):
                        x[-1, :] - slope_next >= lb, x[-1, :] - slope_next <= ub]
         prob = cp.Problem(objective, constraints)
         prob.solve(solver='GUROBI', verbose=False)
+        # prob.solve(solver='CVXOPT', verbose=True)
         return x.value
 
     # A = np.hstack([A for _ in range(b.shape[1])])
@@ -251,8 +253,8 @@ class fitting_toolbox(object):
                 slope_lb = np.ones(data.shape[1]) * np.tan(- np.pi / 18) * 0.01
                 slope_ub = np.ones_likes(data.shape[1]) * np.tan(np.pi / 18) * 0.01
             else:
-                slope_lb = np.ones(data.shape[1]) * np.tan(- np.pi / 72)
-                slope_ub = np.ones(data.shape[1]) * np.tan(np.pi / 72)
+                slope_lb = np.ones(data.shape[1]) * -0.01
+                slope_ub = np.ones(data.shape[1]) * 0.01
         # if key == 'L':
         # 	for i in range(data.shape[1]):
         # 		slope_lb[i] = np.tan(- np.pi / 36)
@@ -375,7 +377,7 @@ class fitting_toolbox(object):
 
         curve_fit_js = self.linear_fit(curve_js, p_constraint, slope_prev=slope_prev, slope_next=slope_next, key='J')
         if curve_fit_js is None:
-            print(slope_prev, slope_next)
+            print("MoveJ: infeasible constraints", slope_prev, slope_next)
             return [], [], [], 999, 999
 
         ###necessary to fwd every point search to get error calculation
@@ -489,8 +491,8 @@ class fitting_toolbox(object):
         for i in range(1, len(breakpoints) - 1):
             slope1 = curve_fit_js[breakpoints[i] - 1] - curve_fit_js[breakpoints[i] - 2]
             slope2 = curve_fit_js[breakpoints[i]] - curve_fit_js[breakpoints[i] - 1]
-            slope_diff = np.abs(np.arctan(slope1) - np.arctan(slope2))
-            slope_diff = np.degrees(slope_diff)
+            slope_diff = np.abs(slope1 - slope2)
+            # slope_diff = np.degrees(slope_diff)
             slope_diff = ["{:.3f}".format(slope_diff[i]) for i in range(len(slope_diff))]
             slope_diff_js.append("\t".join(slope_diff))
         ret = "\n".join(slope_diff_js)
