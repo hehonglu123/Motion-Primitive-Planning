@@ -69,8 +69,8 @@ def main():
 		curve_exe_all=[]
 		curve_exe_js_all=[]
 		timestamp_all=[]
+		total_time_all=[]
 
-		keep_run_idx=[]
 		for r in range(5):
 			logged_data=ms.exec_motions(robot,primitives,breakpoints,p_bp,q_bp,s,z)
 			###save 5 runs
@@ -84,9 +84,9 @@ def main():
 			lam, curve_exe, curve_exe_R,curve_exe_js, speed, timestamp=ms.logged_data_analysis(robot,df,realrobot=True)
 
 			###throw bad curves
-			_, curve_exe_temp, _,_, _, _=ms.chop_extension(curve_exe, curve_exe_R,curve_exe_js, speed, timestamp,curve[0,:3],curve[-1,:3])
-			error_temp=calc_all_error(curve_exe_temp,curve[:,:3])
-			print('individual traj error: ',np.max(error_temp))
+			_, _, _,_, _, timestamp_temp=ms.chop_extension(curve_exe, curve_exe_R,curve_exe_js, speed, timestamp,curve[0,:3],curve[-1,:3])
+			total_time_all.append(timestamp_temp[-1]-timestamp_temp[0])
+
 			###TODO, avoid corner path failure
 
 			timestamp=timestamp-timestamp[0]
@@ -95,11 +95,12 @@ def main():
 			curve_exe_js_all.append(curve_exe_js)
 			timestamp_all.append(timestamp)
 
-			# ax.plot3D(curve_exe[:,0], curve_exe[:,1], curve_exe[:,2], c=np.random.rand(3,),label=str(i+1)+'th trajectory')
+		###trajectory outlier detection, based on chopped time
+		curve_exe_all,curve_exe_js_all,timestamp_all=remove_traj_outlier(curve_exe_all,curve_exe_js_all,timestamp_all,total_time_all)
 
 		###infer average curve from linear interplateion
 		curve_js_all_new, avg_curve_js, timestamp_d=average_curve(curve_exe_js_all,timestamp_all)
-		###calculat error with average curve
+		###calculat data with average curve
 		lam, curve_exe, curve_exe_R, speed=logged_data_analysis(robot,timestamp_d,avg_curve_js)
 		#############################chop extension off##################################
 		lam, curve_exe, curve_exe_R,curve_exe_js, speed, timestamp=ms.chop_extension(curve_exe, curve_exe_R,curve_exe_js, speed, timestamp_d,curve[0,:3],curve[-1,:3])

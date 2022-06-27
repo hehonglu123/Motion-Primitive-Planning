@@ -359,9 +359,7 @@ class MotionSend(object):
             except IndexError:
                 pass
 
-        ###speed filter
-        act_speed=replace_outliers(np.array(act_speed))
-        act_speed=replace_outliers2(act_speed)
+        ###speed filter, only for simulation
 
         return lam, np.array(curve_exe), np.array(curve_exe_R),curve_exe_js, act_speed, timestamp-timestamp[0]
 
