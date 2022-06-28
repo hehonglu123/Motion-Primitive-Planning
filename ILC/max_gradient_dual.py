@@ -80,35 +80,35 @@ def main():
 		peaks=np.array([np.argmax(error)])
 		##############################plot error#####################################
 
-		fig, ax1 = plt.subplots()
-		ax2 = ax1.twinx()
-		ax1.plot(lam, speed, 'g-', label='Speed')
-		ax2.plot(lam, error, 'b-',label='Error')
-		ax2.scatter(lam[peaks],error[peaks],label='peaks')
-		ax2.plot(lam, np.degrees(angle_error), 'y-',label='Normal Error')
-		ax2.axis(ymin=0,ymax=2)
+		# fig, ax1 = plt.subplots()
+		# ax2 = ax1.twinx()
+		# ax1.plot(lam, speed, 'g-', label='Speed')
+		# ax2.plot(lam, error, 'b-',label='Error')
+		# ax2.scatter(lam[peaks],error[peaks],label='peaks')
+		# ax2.plot(lam, np.degrees(angle_error), 'y-',label='Normal Error')
+		# ax2.axis(ymin=0,ymax=2)
 
-		ax1.set_xlabel('lambda (mm)')
-		ax1.set_ylabel('Speed/lamdot (mm/s)', color='g')
-		ax2.set_ylabel('Error/Normal Error (mm/deg)', color='b')
-		plt.title("Speed and Error Plot")
-		ax1.legend(loc=0)
+		# ax1.set_xlabel('lambda (mm)')
+		# ax1.set_ylabel('Speed/lamdot (mm/s)', color='g')
+		# ax2.set_ylabel('Error/Normal Error (mm/deg)', color='b')
+		# plt.title("Speed and Error Plot")
+		# ax1.legend(loc=0)
 
-		ax2.legend(loc=0)
+		# ax2.legend(loc=0)
 
-		plt.legend()
-		# plt.savefig('iteration_ '+str(i))
-		# plt.clf()
-		plt.show()
+		# plt.legend()
+		# # plt.savefig('iteration_ '+str(i))
+		# # plt.clf()
+		# plt.show()
 
 		###########################plot for verification###################################
-		p_bp_relative,_=ms.form_relative_path(np.squeeze(q_bp1),np.squeeze(q_bp2),base2_R,base2_p)
-		plt.figure()
-		ax = plt.axes(projection='3d')
-		ax.plot3D(relative_path[:,0], relative_path[:,1], relative_path[:,2], c='gray',label='original')
-		ax.plot3D(relative_path_exe[:,0], relative_path_exe[:,1], relative_path_exe[:,2], c='red',label='execution')
-		ax.scatter3D(p_bp_relative[:,0], p_bp_relative[:,1], p_bp_relative[:,2], c=p_bp_relative[:,2], cmap='Greens',label='breakpoints')
-		ax.scatter(relative_path_exe[peaks,0], relative_path_exe[peaks,1], relative_path_exe[peaks,2],c='orange',label='worst case')
+		# p_bp_relative,_=ms.form_relative_path(np.squeeze(q_bp1),np.squeeze(q_bp2),base2_R,base2_p)
+		# plt.figure()
+		# ax = plt.axes(projection='3d')
+		# ax.plot3D(relative_path[:,0], relative_path[:,1], relative_path[:,2], c='gray',label='original')
+		# ax.plot3D(relative_path_exe[:,0], relative_path_exe[:,1], relative_path_exe[:,2], c='red',label='execution')
+		# ax.scatter3D(p_bp_relative[:,0], p_bp_relative[:,1], p_bp_relative[:,2], c=p_bp_relative[:,2], cmap='Greens',label='breakpoints')
+		# ax.scatter(relative_path_exe[peaks,0], relative_path_exe[peaks,1], relative_path_exe[peaks,2],c='orange',label='worst case')
 		
 		# plt.show()
 
@@ -135,23 +135,26 @@ def main():
 			breakpoint_interp_2tweak_indices=order[:3]
 
 			de_dp=ilc.get_gradient_from_model_xyz_dual(\
-											[p_bp1,p_bp2],[q_bp1,q_bp2],breakpoints_blended,[curve_blended1,curve_blended2],peak_error_curve_blended_idx,[curve_exe_js1[peak],curve_exe_js2[peak]],relative_path[peak_error_curve_idx,:3],breakpoint_interp_2tweak_indices)
-
-
-			print(de_dp)
-
+				[p_bp1,p_bp2],[q_bp1,q_bp2],breakpoints_blended,[curve_blended1,curve_blended2],peak_error_curve_blended_idx,[curve_exe_js1[peak],curve_exe_js2[peak]],relative_path[peak_error_curve_idx,:3],breakpoint_interp_2tweak_indices)
 
 
 			p_bp1_new, q_bp1_new,p_bp2_new,q_bp2_new=ilc.update_bp_xyz_dual([p_bp1,p_bp2],[q_bp1,q_bp2],de_dp,error[peak],breakpoint_interp_2tweak_indices)
-			# for m in breakpoint_interp_2tweak_indices:
-				# print(p_bp1_new[m][0]-p_bp1[m][0])
-				# print(p_bp2_new[m][0]-p_bp2[m][0])
+			
+
 
 			#########plot adjusted breakpoints
-			p_bp_relative_new,_=ms.form_relative_path(np.squeeze(q_bp1),np.squeeze(q_bp2),base2_R,base2_p)
-			ax.scatter3D(p_bp_relative[breakpoint_interp_2tweak_indices,0], p_bp_relative[breakpoint_interp_2tweak_indices,1], p_bp_relative[breakpoint_interp_2tweak_indices,2], c='blue',label='new breakpoints')
-			plt.legend()
-			plt.show()
+			p_bp_relative_new,_=ms.form_relative_path(np.squeeze(q_bp1_new),np.squeeze(q_bp2_new),base2_R,base2_p)
+
+
+			# ax.scatter3D(p_bp_relative_new[breakpoint_interp_2tweak_indices,0], p_bp_relative_new[breakpoint_interp_2tweak_indices,1], p_bp_relative_new[breakpoint_interp_2tweak_indices,2], c='blue',label='new breakpoints')
+			# plt.legend()
+			# plt.show()
+
+			###update
+			p_bp1=p_bp1_new
+			q_bp1=q_bp1_new
+			p_bp2=p_bp2_new
+			q_bp2=q_bp2_new
 
 
 
