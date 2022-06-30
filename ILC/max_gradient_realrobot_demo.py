@@ -10,6 +10,7 @@ from pandas import read_csv
 import sys, os
 from io import StringIO
 from scipy.signal import find_peaks
+import matplotlib.animation as animation
 
 # sys.path.append('../abb_motion_program_exec')
 from abb_motion_program_exec_client import *
@@ -20,6 +21,26 @@ from error_check import *
 from MotionSend import *
 from lambda_calc import *
 from blending import *
+
+
+fig = plt.figure()
+#creating a subplot 
+ax1 = fig.add_subplot(1,1,1)
+start=time.time()
+def animate(i):
+	global lam_temp_all,error_temp_all,angle_error_temp_all,error, lam
+	ax1.clear()
+	if len(error)==0:
+		for traj_i in range(len(lam_temp_all)):
+			ax1.plot(lam_temp_all[traj_i],error_temp_all[traj_i],label='traj_'+str(traj_i+1))
+	else:
+		ax1.plot(lam,error,label='Averaged Trajectory')
+
+	plt.legend()
+	plt.xlabel('lambda (mm)')
+	plt.ylabel('Error/Normal Error (mm/deg)')
+	plt.title("Speed and Error Plot")	
+
 
 def main():
 	ms = MotionSend(url='http://192.168.55.1:80')
@@ -41,6 +62,14 @@ def main():
 	s = speeddata(v,9999999,9999999,999999)
 	z = z10
 
+	global lam_temp_all,error_temp_all,angle_error_temp_all, error, lam
+	lam_temp_all=[]
+	error_temp_all=[]
+	angle_error_temp_all=[]
+	error=[]
+	lam=[]
+	ani = animation.FuncAnimation(fig, animate, interval=1000) 
+	plt.show(block=False)	
 
 	###########################################get cmd from original cmd################################
 	# breakpoints,primitives,p_bp,q_bp=ms.extract_data_from_cmd(fitting_output+'command.csv')
@@ -71,20 +100,32 @@ def main():
 		timestamp_all=[]
 		total_time_all=[]
 
+		###clear globals
+		lam_temp_all=[]
+		error_temp_all=[]
+		angle_error_temp_all=[]
+		error=[]
+		lam=[]
+
 		for r in range(5):
 			logged_data=ms.exec_motions(robot,primitives,breakpoints,p_bp,q_bp,s,z)
 			###save 5 runs
 			# Write log csv to file
 			with open(path+'/run_'+str(r)+'.csv',"w") as f:
-			    f.write(logged_data)
+				f.write(logged_data)
 
 			StringData=StringIO(logged_data)
 			df = read_csv(StringData, sep =",")
 			##############################data analysis#####################################
 			lam, curve_exe, curve_exe_R,curve_exe_js, speed, timestamp=ms.logged_data_analysis(robot,df,realrobot=True)
 
-			###throw bad curves
-			_, _, _,_, _, timestamp_temp=ms.chop_extension(curve_exe, curve_exe_R,curve_exe_js, speed, timestamp,curve[0,:3],curve[-1,:3])
+			###throw bad curves, error calc for individual traj for demo
+			lam_temp, curve_exe_temp, curve_exe_R_temp,curve_exe_js_temp, speed_temp, timestamp_temp=ms.chop_extension(curve_exe, curve_exe_R,curve_exe_js, speed, timestamp,curve[0,:3],curve[-1,:3])
+			error_temp,angle_error_temp=calc_all_error_w_normal(curve_exe_temp,curve[:,:3],curve_exe_R_temp[:,:,-1],curve[:,3:])
+			lam_temp_all.append(lam_temp)
+			error_temp_all.append(error_temp_all)
+			angle_error_temp_all.append(angle_error_temp_all)
+
 			total_time_all.append(timestamp_temp[-1]-timestamp_temp[0])
 
 			###TODO, avoid corner path failure
@@ -114,28 +155,6 @@ def main():
 		
 		if len(peaks)==0 or np.argmax(error) not in peaks:
 			peaks=np.append(peaks,np.argmax(error))
-		
-		##############################plot error#####################################
-		fig, ax1 = plt.subplots()
-		ax2 = ax1.twinx()
-		ax1.plot(lam, speed, 'g-', label='Speed')
-		ax2.plot(lam, error, 'b-',label='Error')
-		ax2.scatter(lam[peaks],error[peaks],label='peaks')
-		ax2.plot(lam, np.degrees(angle_error), 'y-',label='Normal Error')
-		ax2.axis(ymin=0,ymax=2)
-
-		ax1.set_xlabel('lambda (mm)')
-		ax1.set_ylabel('Speed/lamdot (mm/s)', color='g')
-		ax2.set_ylabel('Error/Normal Error (mm/deg)', color='b')
-		plt.title("Speed and Error Plot")
-		ax1.legend(loc=0)
-
-		ax2.legend(loc=0)
-
-		plt.legend()
-		plt.savefig(path+'/iteration_ '+str(i))
-		plt.clf()
-		# plt.show()
 		
 		
 		##########################################calculate gradient######################################
