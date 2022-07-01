@@ -137,9 +137,17 @@ def blend_cart_from_primitive(curve,curve_R, curve_js, breakpoints, primitives,r
 	lam = np.append(0,lam)
 	zone_size = ldot/100*25 # zone size of fanuc is propotional to speed
 
+	if lam[-1]/(len(breakpoints)-1) < zone_size:
+		zone_size=lam[-1]/(len(breakpoints)-1)
+
 	for i in range(1,len(breakpoints)-1):
 		zone_start_id=breakpoints[i]-ceil(zone_size/(lam[breakpoints[i]]-lam[breakpoints[i]-1]))
 		zone_end_id=breakpoints[i]+ceil(zone_size/(lam[breakpoints[i]+1]-lam[breakpoints[i]]))
+
+		if zone_start_id < 1:
+			zone_start_id=1
+		if zone_end_id > len(lam)-2:
+			zone_end_id=len(lam)-2
 
 		blending=[]
 		for j in range(3):
@@ -155,8 +163,8 @@ def blend_cart_from_primitive(curve,curve_R, curve_js, breakpoints, primitives,r
 		blending=blending.T
 		curve_blend[zone_start_id:zone_end_id+1,:]=blending
 
-		for j in range(zone_start_id,zone_end_id+1):
-			curve_js_blend[j] = car2js(robot,curve_js_blend[j],curve_blend[j],curve_R[j])[0]
+		# for j in range(zone_start_id,zone_end_id+1):
+		# 	curve_js_blend[j] = car2js(robot,curve_js_blend[j],curve_blend[j],curve_R[j])[0]
 
 	return curve_js_blend,curve_blend,curve_R
 

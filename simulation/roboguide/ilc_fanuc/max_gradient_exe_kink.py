@@ -11,8 +11,6 @@ from pandas import read_csv,DataFrame
 import sys
 from io import StringIO
 from matplotlib import pyplot as plt
-from pathlib import Path
-import os
 from fanuc_motion_program_exec_client import *
 
 # sys.path.append('../abb_motion_program_exec')
@@ -29,46 +27,67 @@ from blending import *
 
 def main():
     # data_dir="fitting_output_new/python_qp_movel/"
-    # dataset='blade/'
-    dataset='wood/'
+    # dataset='from_NX/'
+    dataset='kink_30/'
     data_dir="data/"+dataset
     fitting_output='data/'+dataset
     
 
-    curve_js=read_csv(data_dir+'Curve_js.csv',header=None).values
-    curve = read_csv(data_dir+"Curve_in_base_frame.csv",header=None).values
-    curve_normal=curve[:,3:]
+    # curve_js=read_csv(data_dir+'Curve_js.csv',header=None).values
+    # curve = read_csv(data_dir+"Curve_in_base_frame.csv",header=None).values
+    with open('../Curve_js.npy','rb') as f:
+        curve_js = np.load(f)
+    with open('../Curve_in_base_frame.npy','rb') as f:
+        curve = np.load(f)
+    with open('../Curve_R_in_base_frame.npy','rb') as f:
+        R_all = np.load(f)
+        curve_normal=R_all[:,:,-1]
+    curve = np.hstack((curve,curve_normal))
     
     multi_peak_threshold=0.2
-    robot=m710ic(d=50)
+    # robot=m710ic(d=50)
+    robot=m900ia(d=50)
 
-    s = 500
+    s = 41
     z = 100
-    alpha = 0.5 # for gradient descent
     ilc_output=fitting_output+'results_'+str(s)+'/'
-    Path(ilc_output).mkdir(exist_ok=True)
+
+    # curve_fit_js=read_csv(fitting_output+'curve_fit_js.csv',header=None).values
+    # ms = MotionSend()
+    # breakpoints,primitives,p_bp,q_bp=ms.extract_data_from_cmd(fitting_output+'command.csv')
+    ###extension
+    # primitives,p_bp,q_bp=ms.extend(robot,q_bp,primitives,breakpoints,p_bp)
 
     try:
-        breakpoints,primitives,p_bp,q_bp=extract_data_from_cmd(os.getcwd()+'/'+fitting_output+'command.csv')
+        breakpoints,primitives,p_bp,q_bp=extract_data_from_cmd(fitting_output+'command.csv')
     except:
         print("Convert bp to command")
+        # curve_js_plan = read_csv(fitting_output+'bp_plan.csv',header=None).values
+        # curve_js_plan=np.array(curve_js_plan).astype(float)
+        # curve_js_plan=np.reshape(curve_js_plan,(int(len(curve_js_plan)/6),6))
 
-        total_seg = 100
+        total_seg = 10
         step=int((len(curve_js)-1)/total_seg)
         breakpoints = [0]
         primitives = ['movej_fit']
         q_bp = [[curve_js[0]]]
-        p_bp = [[robot.fwd(curve_js[0]).p]]
+        p_bp = [robot.fwd(curve_js[0]).p]
         for i in range(step,len(curve_js),step):
             breakpoints.append(i)
             primitives.append('movel_fit')
             q_bp.append([curve_js[i]])
-            p_bp.append([robot.fwd(curve_js[i]).p])
+            p_bp.append(robot.fwd(curve_js[i]).p)
         
         df=DataFrame({'breakpoints':breakpoints,'primitives':primitives,'points':p_bp,'q_bp':q_bp})
         df.to_csv(fitting_output+'command.csv',header=True,index=False)
 
-    primitives,p_bp,q_bp=extend_start_end(robot,q_bp,primitives,breakpoints,p_bp,extension_d=60)
+    primitives,p_bp,q_bp=extend_start_end(robot,q_bp,primitives,breakpoints,p_bp,extension_d=0)
+
+    # print(p_bp)
+    # print(q_bp)
+    # print(primitives)
+    # print(breakpoints)
+    # exit()
 
     ###ilc toolbox def
     ilc=ilc_toolbox(robot,primitives)
@@ -91,7 +110,6 @@ def main():
 
         #############################chop extension off##################################
         lam, curve_exe, curve_exe_R,curve_exe_js, speed, timestamp=ms.chop_extension(curve_exe, curve_exe_R,curve_exe_js, speed, timestamp,curve[:,:3],curve[:,3:])
-        ave_speed=np.mean(speed)
 
         ##############################calcualte error########################################
         error,angle_error=calc_all_error_w_normal(curve_exe,curve[:,:3],curve_exe_R[:,:,-1],curve[:,3:])
@@ -127,17 +145,24 @@ def main():
         plt.clf()
         # plt.show()
         # save bp
-        df=DataFrame({'primitives':primitives,'points':p_bp,'q_bp':q_bp})
-        df.to_csv(ilc_output+'command_'+str(i)+'.csv',header=True,index=False)
+        q_bp_save = []
+        for q in q_bp:
+            q_bp_save.append(q[0])
+        q_bp_save=np.array(q_bp_save)
+        # q_bp_save=np.reshape(q_bp_save,(1,-1))
+        # np.savetxt(ilc_output+"bp_grad_"+str(s)+"_iter_"+str(i)+".csv",q_bp_save,delimiter="\n")
+        with open(ilc_output+"bp_grad_"+str(s)+"_iter_"+str(i)+".npy",'wb') as f:
+            np.save(f,q_bp_save)
+        
         
         ##########################################calculate gradient######################################
         ######gradient calculation related to nearest 3 points from primitive blended trajectory, not actual one
         ###restore trajectory from primitives
         curve_interp, curve_R_interp, curve_js_interp, breakpoints_blended=form_traj_from_bp(q_bp,primitives,robot)
 
-        curve_js_blended,curve_blended,curve_R_blended=blend_js_from_primitive(curve_interp, curve_js_interp, breakpoints_blended, primitives,robot,zone=10)
+        # curve_js_blended,curve_blended,curve_R_blended=blend_js_from_primitive(curve_interp, curve_js_interp, breakpoints_blended, primitives,robot,zone=10)
         # fanuc blend in cart space
-        # curve_js_blended,curve_blended,curve_R_blended=blend_cart_from_primitive(curve_interp,curve_R_interp,curve_js_interp,breakpoints_blended,primitives,robot,ave_speed)
+        curve_js_blended,curve_blended,curve_R_blended=blend_cart_from_primitive(curve_interp,curve_R_interp,curve_js_interp,breakpoints_blended,primitives,robot,s)
 
         # plt.plot(curve_interp[:,0],curve_interp[:,1])
         # plt.plot(curve_blended[:,0],curve_blended[:,1])
@@ -157,8 +182,37 @@ def main():
             order=np.argsort(np.abs(breakpoints_blended-peak_error_curve_blended_idx))
             breakpoint_interp_2tweak_indices=order[:3]
 
-            de_dp=ilc.get_gradient_from_model_xyz_fanuc(p_bp,q_bp,breakpoints_blended,curve_blended,peak_error_curve_blended_idx,robot.fwd(curve_exe_js[peak]),curve[peak_error_curve_idx,:3],breakpoint_interp_2tweak_indices,ave_speed)
-            p_bp, q_bp=ilc.update_bp_xyz(p_bp,q_bp,de_dp,error[peak],breakpoint_interp_2tweak_indices,alpha=alpha)
+            p_bp_dummy = []
+            for j in range(len(p_bp)):
+                p_bp_dummy.append([p_bp[j]])
+            de_dp=ilc.get_gradient_from_model_xyz(p_bp_dummy,q_bp,breakpoints_blended,curve_blended,peak_error_curve_blended_idx,robot.fwd(curve_exe_js[peak]),curve[peak_error_curve_idx,:3],breakpoint_interp_2tweak_indices)
+            
+            alpha=0.2
+            p_bp_dummy, q_bp=ilc.update_bp_xyz(p_bp_dummy,q_bp,de_dp,error[peak],breakpoint_interp_2tweak_indices,alpha=alpha)
+
+            # backtracking line search
+            # zho=0.9
+            # termination=0.01
+            # while True:
+            #     p_bp_dummy_search, q_bp_search=ilc.update_bp_xyz(p_bp_dummy,q_bp,de_dp,error[peak],breakpoint_interp_2tweak_indices,alpha=alpha)
+            #     curve_interp_search, curve_R_interp_search, curve_js_interp_search, breakpoints_blended_search=form_traj_from_bp(q_bp_search,primitives,robot)
+            #     curve_js_blended_search,curve_blended_search,curve_R_blended_search=blend_cart_from_primitive(curve_interp_search,curve_R_interp_search,curve_js_interp_search,breakpoints_blended_search,primitives,robot,s)
+
+            #     backtrack_error=calc_all_error(curve_blended_search,curve[:,:3])
+            #     if max(backtrack_error) < error[peak]:
+            #         # find alpha that decrease the objective
+            #         print("Find alpha:",alpha)
+            #         break
+
+            #     alpha = zho*alpha
+            #     if alpha < termination:
+            #         print('alpha',alpha,'smaller than',termination,'. Use Alpha')
+            #         break
+            # p_bp_dummy=copy.deepcopy(p_bp_dummy_search)
+            # q_bp=copy.deepcopy(q_bp_search)
+
+            for j in range(len(p_bp)):
+                p_bp[j]=p_bp_dummy[j][0]
 
 if __name__ == "__main__":
     main()

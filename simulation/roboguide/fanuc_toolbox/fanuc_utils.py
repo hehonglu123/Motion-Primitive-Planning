@@ -119,6 +119,13 @@ class MotionSendFANUC(object):
         return lam, curve_exe, curve_exe_R,curve_exe_js, speed, timestamp
 
 def extend_start_end(robot,q_bp,primitives,breakpoints,points_list,extension_d=100):
+    
+    dist_bp = np.linalg.norm(np.array(points_list[0][0])-np.array(points_list[1][0]))
+    if dist_bp > extension_d:
+        dist_bp=extension_d
+    step_to_extend=round(extension_d/dist_bp)
+    extend_step_d=float(extension_d)/step_to_extend
+    
     ###initial point extension
     pose_start=robot.fwd(q_bp[0][-1])
     p_start=pose_start.p
@@ -135,11 +142,20 @@ def extend_start_end(robot,q_bp,primitives,breakpoints,points_list,extension_d=1
         #find new start orientation
         k,theta=R2rot(R_end@R_start.T)
         theta_new=-extension_d*theta/np.linalg.norm(p_end-p_start)
-        R_start_new=rot(k,theta_new)@R_start
+        # R_start_new=rot(k,theta_new)@R_start
+
+        # adding extension with uniform space
+        for i in range(1,step_to_extend+1):
+            p_extend=p_start-i*extend_step_d*slope_p
+            theta_extend=-np.linalg.norm(p_extend-p_start)*theta/np.linalg.norm(p_end-p_start)
+            R_extend=rot(k,theta_extend)@R_start
+            points_list.insert(0,[p_extend])
+            q_bp.insert(0,[car2js(robot,q_bp[0][0],p_extend,R_extend)[0]])
+            primitives.insert(1,'movel_fit')
 
         #solve invkin for initial point
-        points_list[0]=p_start_new
-        q_bp[0][0]=car2js(robot,q_bp[0][0],p_start_new,R_start_new)[0]
+        # points_list[0][0]=p_start_new
+        # q_bp[0][0]=car2js(robot,q_bp[0][0],p_start_new,R_start_new)[0]
 
     elif  primitives[1]=='movec_fit':
         #define circle first
@@ -163,7 +179,7 @@ def extend_start_end(robot,q_bp,primitives,breakpoints,points_list,extension_d=1
         R_start_new=rot(k,theta_new)@R_start
 
         #solve invkin for initial point
-        points_list[0]=p_start_new
+        points_list[0][0]=p_start_new
         q_bp[0][0]=car2js(robot,q_bp[0][0],p_start_new,R_start_new)[0]
 
     else:
@@ -174,7 +190,7 @@ def extend_start_end(robot,q_bp,primitives,breakpoints,points_list,extension_d=1
         t=extension_d/v
         
         q_bp[0][0]=q_bp[0][0]+qdot*t
-        points_list[0]=robot.fwd(q_bp[0][0]).p
+        points_list[0][0]=robot.fwd(q_bp[0][0]).p
 
     ###end point extension
     pose_start=robot.fwd(q_bp[-2][-1])
@@ -188,16 +204,25 @@ def extend_start_end(robot,q_bp,primitives,breakpoints,points_list,extension_d=1
         #find new end point
         slope_p=p_end-p_start
         slope_p=slope_p/np.linalg.norm(slope_p)
-        p_end_new=p_end+extension_d*slope_p        ###extend 5cm backward
+        # p_end_new=p_end+extension_d*slope_p        ###extend 5cm backward
 
         #find new end orientation
         k,theta=R2rot(R_end@R_start.T)
-        theta_new=extension_d*theta/np.linalg.norm(p_end-p_start)
-        R_end_new=rot(k,theta_new)@R_end
+        # theta_new=extension_d*theta/np.linalg.norm(p_end-p_start)
+        # R_end_new=rot(k,theta_new)@R_end
+
+        # adding extension with uniform space
+        for i in range(1,step_to_extend+1):
+            p_extend=p_end+i*extend_step_d*slope_p
+            theta_extend=np.linalg.norm(p_extend-p_end)*theta/np.linalg.norm(p_end-p_start)
+            R_extend=rot(k,theta_extend)@R_end
+            points_list.append([p_extend])
+            q_bp.append([car2js(robot,q_bp[0][0],p_extend,R_extend)[0]])
+            primitives.append('movel_fit')
 
         #solve invkin for end point
-        q_bp[-1][-1]=car2js(robot,q_bp[-1][0],p_end_new,R_end_new)[0]
-        points_list[-1]=p_end_new
+        # q_bp[-1][-1]=car2js(robot,q_bp[-1][0],p_end_new,R_end_new)[0]
+        # points_list[-1][0]=p_end_new
 
 
     elif  primitives[1]=='movec_fit':
@@ -233,7 +258,7 @@ def extend_start_end(robot,q_bp,primitives,breakpoints,points_list,extension_d=1
         t=extension_d/v
         
         q_bp[-1][-1]=q_bp[-1]+qdot*t
-        points_list[-1]=robot.fwd(q_bp[-1][-1]).p
+        points_list[-1][0]=robot.fwd(q_bp[-1][-1]).p
 
     return primitives,points_list,q_bp
 
@@ -248,7 +273,7 @@ def extract_data_from_cmd(filename):
     for i in range(len(breakpoints)):
         if primitives[i]=='movel_fit':
             point=extract_points(primitives[i],points[i])
-            p_bp.append(point)
+            p_bp.append([point])
             q=extract_points(primitives[i],qs[i])
             q_bp.append([q])
 
@@ -261,7 +286,7 @@ def extract_data_from_cmd(filename):
 
         else:
             point=extract_points(primitives[i],points[i])
-            p_bp.append(point)
+            p_bp.append([point])
             q=extract_points(primitives[i],qs[i])
             q_bp.append([q])
 
