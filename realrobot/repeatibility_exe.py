@@ -20,13 +20,13 @@ from lambda_calc import *
 def main():
     robot=abb6640(d=50)
 
-    dataset="../data/from_NX/"
+    dataset="../data/wood/"
     data_dir=dataset+'baseline/100L/'
 
     curve = read_csv(dataset+"Curve_in_base_frame.csv",header=None).values
 
-    # speed=[123.046875]
-    speed=[402.83203125]
+    speed=[123.046875]
+    # speed=[402.83203125]
     iterations=5
     for v in speed:
         for i in range(iterations):
@@ -38,14 +38,14 @@ def main():
             ###read data
             breakpoints,primitives,p_bp,q_bp=ms.extract_data_from_cmd(data_dir+'command.csv')
             ###extension
-            p_bp,q_bp=ms.extend(robot,q_bp,primitives,breakpoints,p_bp,extension_d=150)
+            p_bp,q_bp=ms.extend(robot,q_bp,primitives,breakpoints,p_bp)
 
             logged_data=ms.exec_motions(robot,primitives,breakpoints,p_bp,q_bp,v_cmd,z10)
 
 
             # Write log csv to file
-            with open("recorded_data/repeatibility/v"+str(v)+'_iteration'+str(i)+".csv","w") as f:
-                f.write(logged_data)
+            # with open("recorded_data/repeatibility/v"+str(v)+'_iteration'+str(i)+".csv","w") as f:
+            #     f.write(logged_data)
 
 if __name__ == "__main__":
     main()
