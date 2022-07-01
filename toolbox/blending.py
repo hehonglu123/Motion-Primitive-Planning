@@ -8,6 +8,7 @@ from robots_def import *
 import matplotlib.pyplot as plt
 from scipy.interpolate import UnivariateSpline, BPoly
 from lambda_calc import *
+from math import ceil
 
 def form_traj_from_bp(q_bp,primitives,robot):
 	###TODO: generate equally spaced curve
@@ -127,6 +128,37 @@ def blend_js2(curve_js,breakpoints,lam,blending_start_idx,blending_end_idx):
 			curve_js_blended[start_idx:end_idx,j]=poly(lam[start_idx:end_idx])
 
 	return curve_js_blended
+
+def blend_cart_from_primitive(curve,curve_R, curve_js, breakpoints, primitives,robot,ldot):
+
+	curve_blend = copy.deepcopy(curve)
+	curve_js_blend = copy.deepcopy(curve_js)
+	lam = np.cumsum(np.linalg.norm(np.diff(curve_blend,1,axis=0),2,1))
+	lam = np.append(0,lam)
+	zone_size = ldot/100*25 # zone size of fanuc is propotional to speed
+
+	for i in range(1,len(breakpoints)-1):
+		zone_start_id=breakpoints[i]-ceil(zone_size/(lam[breakpoints[i]]-lam[breakpoints[i]-1]))
+		zone_end_id=breakpoints[i]+ceil(zone_size/(lam[breakpoints[i]+1]-lam[breakpoints[i]]))
+
+		blending=[]
+		for j in range(3):
+			xs=0
+			xe=lam[zone_end_id]-lam[zone_start_id]
+			A=[[xs**5,xs**4,xs**3,xs**2,xs,1],[5*xs**4,4*xs**3,3*xs**2,2*xs,1,0],[20*xs**3,12*xs**2,6*xs,2,0,0],\
+				[xe**5,xe**4,xe**3,xe**2,xe,1],[5*xe**4,4*xe**3,3*xe**2,2*xe,1,0],[20*xe**3,12*xe**2,6*xe,2,0,0]]
+			b=[curve_blend[zone_start_id,j],(curve_blend[zone_start_id,j]-curve_blend[zone_start_id-1,j])/(lam[zone_start_id]-lam[zone_start_id-1]),0,\
+				curve_blend[zone_end_id,j],(curve_blend[zone_end_id+1,j]-curve_blend[zone_end_id,j])/(lam[zone_end_id+1]-lam[zone_end_id]),0]
+			pp=np.matmul(np.linalg.pinv(A),b)
+			blending.append(np.polyval(pp,lam[zone_start_id:zone_end_id+1]-lam[zone_start_id]))
+		blending=np.array(blending)
+		blending=blending.T
+		curve_blend[zone_start_id:zone_end_id+1,:]=blending
+
+		for j in range(zone_start_id,zone_end_id+1):
+			curve_js_blend[j] = car2js(robot,curve_js_blend[j],curve_blend[j],curve_R[j])[0]
+
+	return curve_js_blend,curve_blend,curve_R
 
 def blend_js(q,breakpoints,lam,bp_exe_start_idx,bp_exe_end_idx):
 	#q: 			full 50,000 joints

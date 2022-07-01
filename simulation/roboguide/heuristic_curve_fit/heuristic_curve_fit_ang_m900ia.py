@@ -168,10 +168,26 @@ def run_robot_bisec(robt_all,motion_all,speed_up,speed_low,data_dir):
             speed=speed_low
             speed_found=True
         
-        if speed_up <= 16:
+        if speed_up <= 10:
             print("No solution")
             break
         
+
+    act_speed=np.append(0,act_speed)
+    fig, ax1 = plt.subplots()
+    ax2 = ax1.twinx()
+    ax1.plot(lam_exec,act_speed, 'g-', label='Speed')
+    ax2.plot(lam_exec, error, 'b-',label='Error')
+    ax2.plot(lam_exec, np.degrees(angle_error), 'y-',label='Normal Error')
+    ax1.set_xlabel('lambda (mm)')
+    ax1.set_ylabel('Speed/lamdot (mm/s)', color='g')
+    ax2.set_ylabel('Error/Normal Error (mm/deg)', color='b')
+    plt.title("Execution Result (Speed/Error/Normal Error v.s. Lambda)")
+    ax1.legend(loc=0)
+    ax2.legend(loc=0)
+    # plt.show()
+    plt.savefig(data_dir+'/error_speed_'+str(speed)+'.png')
+    plt.clf()
 
     with open(data_dir+"/curve_js_exe_"+str(speed)+".csv","wb") as f:
         f.write(res)
@@ -202,8 +218,8 @@ zone=100
 # tolerance=1
 tolerance=0.5
 
-all_ang=[1,2.5,5,10,20,30]
-# all_ang=[30]
+# all_ang=[1,2.5,5,10,20,30]
+all_ang=[30]
 
 for ang in all_ang:
     print("========================")
@@ -294,7 +310,7 @@ for ang in all_ang:
     # this_case='addmid_h'
 
     # all_cases=['do_nothing','exploit_tolerance','add_movel','add_movec','addmid_h']
-    all_cases=['addmid_h']
+    all_cases=['do_nothing','addmid_h']
     # all_cases=['exploit_tolerance','add_movel','add_movec','addmid_h']
 
     for this_case in all_cases:
@@ -304,8 +320,8 @@ for ang in all_ang:
         if this_case=='do_nothing':
             robt_all,motion_all = do_nothing(Transform(R_all[0],curve[0]),Transform(R_all[mid_id],curve[mid_id]),Transform(R_all[-1],curve[-1]),\
                 curve_js[0],curve_js[mid_id],curve_js[-1],robot,utool_num)
-            speed_up=2000
-            speed_low=0
+            speed_up=22
+            speed_low=20
             run_robot_bisec(robt_all,motion_all,speed_up,speed_low,data_dir+this_case)
         ### exploit tolerance
         elif this_case=='exploit_tolerance':
@@ -345,8 +361,8 @@ for ang in all_ang:
                 robt_all,motion_all = addmid_h(h*tolerance,\
                     Transform(R_all[0],curve[0]),Transform(R_all[mid_id],curve[mid_id]),Transform(R_all[-1],curve[-1]),\
                     curve_js[0],curve_js[mid_id],curve_js[-1],robot,utool_num)
-                speed_up=2000
-                speed_low=0
+                speed_up=50
+                speed_low=30
                 run_robot_bisec(robt_all,motion_all,speed_up,speed_low,data_dir+this_case+'_'+str(h))
 
         ##########################

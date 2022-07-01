@@ -9,7 +9,18 @@ from toolbox_circular_fit import *
 from lambda_calc import *
 from error_check import *
 from fanuc_motion_program_exec_client import *
-from scipy.interpolate import UnivariateSpline, BPoly
+
+from pandas import read_csv, DataFrame
+import numpy as np
+import matplotlib.pyplot as plt
+import sys, copy
+sys.path.append('../../../toolbox')
+from robots_def import *
+from utils import *
+from toolbox_circular_fit import *
+from lambda_calc import *
+from error_check import *
+from fanuc_motion_program_exec_client import *
 
 def result_ana(curve_exe_js):
     act_speed=[0]
@@ -95,9 +106,17 @@ def result_ana(curve_exe_js):
 
     plt.plot(curve[:,0],curve[:,1])
     plt.plot(curve_plan[:,0],curve_plan[:,1])
-    plt.scatter(curve_plan[:,0],curve_plan[:,1])
     plt.plot(curve_exe[:,0],curve_exe[:,1])
     plt.axis('equal')
+    plt.show()
+
+    ###plot original curve
+    plt.figure()
+    ax = plt.axes(projection='3d')
+    ax.plot3D(curve[:,0], curve[:,1],curve[:,2], 'red',label='original')
+    ax.scatter3D(curve_plan[:,0], curve_plan[:,1],curve_plan[:,2], 'blue')
+    #plot execution curve
+    ax.plot3D(curve_exe[:,0], curve_exe[:,1],curve_exe[:,2], 'green',label='execution')
     plt.show()
 
     return
@@ -112,95 +131,68 @@ def result_ana(curve_exe_js):
         np.save(f,lam_exec)
 
 robot=m900ia(d=50)
-data_dir = 'data_opt_point_basis/'
+data_dir = 'data/'
 
 client = FANUCClient()
 utool_num = 2
 
-with open(data_dir+'Curve_js.npy','rb') as f:
+with open('../Curve_js.npy','rb') as f:
     curve_js = np.load(f)
-with open(data_dir+'Curve_in_base_frame.npy','rb') as f:
+with open('../Curve_in_base_frame.npy','rb') as f:
     curve = np.load(f)
-with open(data_dir+'Curve_R_in_base_frame.npy','rb') as f:
+with open('../Curve_R_in_base_frame.npy','rb') as f:
     R_all = np.load(f)
     curve_normal=R_all[:,:,-1]
 curve = np.hstack((curve,curve_normal))
 
 # motion parameters
-# speed=100
-# motion_type='movel'
-motion_type='movel'
-# speed=300
-# all_speed=[300,1000]
-# all_speed=[10,100]
-# all_speed=[270]
-all_speed=[100]
+speed=100
 zone=100
 
-# qp_cases=['qp','opt_init','opt','qp_heu','opt_init_heu','opt_heu']
-# qp_cases=['nothing','init_10_200','opt_10_200']
-# qp_cases=['qp_10_200_lowqddot']
-# qp_cases=['qp_10_200_jerk','qp_10_250_jerk']
-qp_cases=['qp_10_200_jerk']
-# qp_cases=['nothing']
+origin_N = len(curve_js)
+mid_id = int((origin_N-1)/2)
+curve_js_plan=curve_js[::int((origin_N-1)/200)]
 
-for speed in all_speed:
-    for case in qp_cases:
-        print(case)
-        if case == 'nothing':
-            total_seg = 10
-            step = int((len(curve_js)-1)/total_seg)
-            curve_js_plan = curve_js[::step]
-        else:
-            curve_js_plan = read_csv(data_dir+'curve_js_'+case+'.csv',header=None).values
-            curve_js_plan=np.array(curve_js_plan).astype(float)
+# the original curve
+tp_pre = TPMotionProgram()
+j0=joint2robtarget(curve_js_plan[0],robot,1,1,utool_num)
+tp_pre.moveJ(j0,50,'%',-1)
+tp_pre.moveJ(j0,5,'%',-1)
+client.execute_motion_program(tp_pre)
 
-            total_seg = 10
-            step = int((len(curve_js_plan)-1)/total_seg)
-            curve_js_plan = curve_js_plan[::step]
+tp = TPMotionProgram()
 
-        # the original curve
-        tp_pre = TPMotionProgram()
-        j0 = jointtarget(1,1,utool_num,np.degrees(curve_js_plan[0]),[0]*6)
-        tp_pre.moveJ(j0,50,'%',-1)
-        j0 = jointtarget(1,1,utool_num,np.degrees(curve_js_plan[0]),[0]*6)
-        tp_pre.moveJ(j0,5,'%',-1)
-        client.execute_motion_program(tp_pre)
+# for i in range(1,len(curve_js_plan)-1):
+#     robt = joint2robtarget(curve_js_plan[i],robot,1,1,utool_num)
+#     tp.moveL(robt,speed,'mmsec',zone)
+# robt = joint2robtarget(curve_js_plan[-1],robot,1,1,utool_num)
+# tp.moveL(robt,speed,'mmsec',-1)
 
-        tp = TPMotionProgram()
-        for i in range(1,len(curve_js_plan)-1):
-            this_zone = zone
-            # if i==(len(curve_js_plan)-1)/2:
-            #     this_zone = 40
-            
-            robt = jointtarget(1,1,utool_num,np.degrees(curve_js_plan[i]),[0]*6)
-            if motion_type == 'movej':
-                # tp.moveJ(robt,speed,'%',this_zone)
-                tp.moveJ(robt,speed,'msec',this_zone)
-            elif motion_type == 'movel':
-                tp.moveL(robt,speed,'mmsec',this_zone)
-                # tp.moveL(robt,speed,'msec',this_zone)
+test_dist=25
+# robt = joint2robtarget(curve_js[int(mid_id-1250)],robot,1,1,utool_num)
+# tp.moveL(robt,speed,'mmsec',zone)
+# robt = joint2robtarget(curve_js[int(mid_id+1250)],robot,1,1,utool_num)
+# tp.moveL(robt,speed,'mmsec',zone)
+# robt = joint2robtarget(curve_js[int(mid_id-(test_dist/(1000/(origin_N-1))))],robot,1,1,utool_num)
+# tp.moveL(robt,speed,'mmsec',zone)
+robt = joint2robtarget(curve_js[mid_id],robot,1,1,utool_num)
+tp.moveL(robt,speed,'mmsec',zone)
+robt = joint2robtarget(curve_js[-1],robot,1,1,utool_num)
+tp.moveL(robt,speed,'mmsec',-1)
 
-        robt_end = jointtarget(1,1,utool_num,np.degrees(curve_js_plan[-1]),[0]*6)
-        if motion_type == 'movej':
-            # tp.moveJ(robt_end,speed,'%',-1)
-            tp.moveJ(robt_end,speed,'msec',-1)
-        elif motion_type == 'movel':
-            tp.moveL(robt_end,speed,'mmsec',-1)
-            # tp.moveL(robt_end,speed,'msec',-1)
-        # execute 
-        res = client.execute_motion_program(tp)
+# execute 
+res = client.execute_motion_program(tp)
 
-        case_file_name = case+'_'+motion_type+'_'+str(speed)
+case_file_name = 'blend_js'
 
-        # Write log csv to file
-        with open(data_dir+"curve_js_"+case_file_name+"_exe.csv","wb") as f:
-            f.write(res)
+# Write log csv to file
+with open(data_dir+"curve_js_"+case_file_name+"_exe.csv","wb") as f:
+    f.write(res)
 
-        # read execution
-        curve_js_exe = read_csv(data_dir+"curve_js_"+case_file_name+"_exe.csv",header=None).values[1:]
-        curve_js_exe=np.array(curve_js_exe).astype(float)
-        timestamp = curve_js_exe[:,0]*1e-3
-        curve_js_exe = np.radians(curve_js_exe[:,1:])
+# read execution
+curve_js_exe = read_csv(data_dir+"curve_js_"+case_file_name+"_exe.csv",header=None).values[1:]
+curve_js_exe=np.array(curve_js_exe).astype(float)
+timestamp = curve_js_exe[:,0]*1e-3
+curve_js_exe = np.radians(curve_js_exe[:,1:])
 
-        result_ana(curve_js_exe)
+result_ana(curve_js_exe)

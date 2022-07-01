@@ -5,6 +5,7 @@ from general_robotics_toolbox import *
 
 sys.path.append('../../../toolbox/')
 from utils import *
+from lambda_calc import *
 
 class MotionSendFANUC(object):
     def __init__(self,group=1,uframe=1,utool=2,robot_ip='127.0.0.2') -> None:
@@ -19,9 +20,8 @@ class MotionSendFANUC(object):
         tp_pre = TPMotionProgram()
 
         # move to start
-        j0 = jointtarget(self.group,self.uframe,self.utool,np.degrees(q_bp[0][0]),[0]*6)
+        j0 = joint2robtarget(q_bp[0][0],robot,self.group,self.uframe,self.utool)
         tp_pre.moveJ(j0,50,'%',-1)
-        j0 = jointtarget(self.group,self.uframe,self.utool,np.degrees(q_bp[0][0]),[0]*6)
         tp_pre.moveJ(j0,5,'%',-1)
         self.client.execute_motion_program(tp_pre)
 
@@ -99,6 +99,24 @@ class MotionSendFANUC(object):
         act_speed = np.array(act_speed)
 
         return lam_exec, curve_exe, curve_exe_R,curve_exe_js_act, act_speed, timestamp
+    
+    def chop_extension(self,curve_exe, curve_exe_R,curve_exe_js, speed, timestamp,curve,curve_normal):
+        start_idx=np.argmin(np.linalg.norm(curve[0,:]-curve_exe,axis=1))+1
+        end_idx=np.argmin(np.linalg.norm(curve[-1,:]-curve_exe,axis=1))
+
+        #make sure extension doesn't introduce error
+        if np.linalg.norm(curve_exe[start_idx]-curve[0,:])>0.05:
+            start_idx+=1
+        if np.linalg.norm(curve_exe[end_idx]-curve[-1,:])>0.05:
+            end_idx-=1
+
+        curve_exe=curve_exe[start_idx:end_idx+1]
+        curve_exe_js=curve_exe_js[start_idx:end_idx+1]
+        curve_exe_R=curve_exe_R[start_idx:end_idx+1]
+        speed=speed[start_idx:end_idx+1]
+        timestamp=timestamp[start_idx:end_idx+1]
+        lam=calc_lam_cs(curve_exe)
+        return lam, curve_exe, curve_exe_R,curve_exe_js, speed, timestamp
 
 def extend_start_end(robot,q_bp,primitives,breakpoints,points_list,extension_d=100):
     ###initial point extension
@@ -249,7 +267,7 @@ def extract_data_from_cmd(filename):
 
     return breakpoints,primitives, p_bp,q_bp
 
-def extract_points(self,primitive_type,points):
+def extract_points(primitive_type,points):
     if primitive_type=='movec_fit':
         endpoints=points[8:-3].split('array')
         endpoint1=endpoints[0][:-4].split(',')
