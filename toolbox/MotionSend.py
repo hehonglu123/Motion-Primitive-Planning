@@ -10,7 +10,7 @@ from toolbox_circular_fit import *
 from lambda_calc import *
 quatR = R2q(rot([0,1,0],math.radians(30)))
 class MotionSend(object):
-    def __init__(self,robot1=abb1200(),robot2=abb6640(d=50),tool1=tooldata(True,pose([50,0,450],[quatR[0],quatR[1],quatR[2],quatR[3]]),loaddata(1,[0,0,0.001],[1,0,0,0],0,0,0)),tool2=tooldata(True,pose([75,0,493.30127019],[quatR[0],quatR[1],quatR[2],quatR[3]]),loaddata(1,[0,0,0.001],[1,0,0,0],0,0,0)),url='http://127.0.0.1:80') -> None:
+    def __init__(self,robot1=abb6640(d=50),robot2=abb1200(),tool1=tooldata(True,pose([75,0,493.30127019],[quatR[0],quatR[1],quatR[2],quatR[3]]),loaddata(1,[0,0,0.001],[1,0,0,0],0,0,0)),tool2=tool0,url='http://127.0.0.1:80',base2_R=np.array([[-1,0,0],[0,-1,0],[0,0,1]]),base2_p=np.array([1500,-500,000])) -> None:
         ###robot1: 1200
         ###robot2: 6640 with d=50 fake link
         
@@ -376,16 +376,22 @@ class MotionSend(object):
         q2_4=df[' J4_2'].tolist()[1:]
         q2_5=df[' J5_2'].tolist()[1:]
         q2_6=df[' J6_2'].tolist()[1:]
+        timestamp=df['timestamp'].tolist()[1:]
 
         cmd_num=np.array(df[' cmd_num'].tolist()[1:]).astype(float)
         start_idx=np.where(cmd_num==5)[0][0]
         curve_exe_js1=np.radians(np.vstack((q1_1,q1_2,q1_3,q1_4,q1_5,q1_6)).T.astype(float)[start_idx:])
         curve_exe_js2=np.radians(np.vstack((q2_1,q2_2,q2_3,q2_4,q2_5,q2_6)).T.astype(float)[start_idx:])
-        timestamp=np.array(df['timestamp'].tolist()[start_idx:]).astype(float)
+        timestamp=np.array(timestamp[start_idx:]).astype(float)
 
         timestep=np.average(timestamp[1:]-timestamp[:-1])
 
-        
+
+        if realrobot:
+            
+            timestamp, curve_exe_js_all=lfilter(timestamp, np.hstack((curve_exe_js1,curve_exe_js2)))
+            curve_exe_js1=curve_exe_js_all[:,:6]
+            curve_exe_js2=curve_exe_js_all[:,6:]
 
         act_speed=[]
         lam=[0]
@@ -492,6 +498,12 @@ class MotionSend(object):
         lam=calc_lam_cs(relative_path_exe)
 
         return lam, curve_exe1,curve_exe2,curve_exe_R1,curve_exe_R2,curve_exe_js1,curve_exe_js2, speed, timestamp, relative_path_exe,relative_path_exe_R
+
+    def calc_robot2_q_from_blade_pose(self,blade_pose,base2_R,base2_p):
+        R2=base2_R.T@blade_pose[:3,:3]
+        p2=-base2_R.T@(base2_p-blade_pose[:3,-1])
+
+        return self.robot2.inv(p2,R2)[0]
 
 
 def main():

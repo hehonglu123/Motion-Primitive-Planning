@@ -38,8 +38,13 @@ def main():
     for s in speed:
         for z in zone: 
             breakpoints1,primitives1,p_bp1,q_bp1=ms.extract_data_from_cmd(data_dir+'command1.csv')
+            for i in range(2,len(primitives1)):
+                p_bp1[i][0]=p_bp1[1][0]+(i-1)*np.ones(3)
+                q_bp1[i][0]=q_bp1[1][0]+0.001*(i-1)
+                primitives1[i]=primitives1[1]
             breakpoints2,primitives2,p_bp2,q_bp2=ms.extract_data_from_cmd(data_dir+'command2.csv')
             logged_data=ms.exec_motions_multimove(breakpoints1,primitives1,primitives2,p_bp1,p_bp2,q_bp1,q_bp2,v,v,z10,z10)
+            print(logged_data)
             StringData=StringIO(logged_data)
             df = read_csv(StringData, sep =",")
             lam, curve_exe1,curve_exe2,curve_exe_R1,curve_exe_R2,curve_exe_js1,curve_exe_js2, act_speed, timestamp, relative_path_exe,relative_path_exe_R = ms.logged_data_analysis_multimove(df,base2_R,base2_p)

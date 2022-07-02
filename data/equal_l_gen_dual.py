@@ -14,7 +14,7 @@ from lambda_calc import *
 from utils import *
 
 
-data_dir='wood/dual_arm/'
+data_dir='from_NX/dual_arm/'
 num_ls=[50]
 robot=abb6640()
 curve_js = read_csv(data_dir+'arm2.csv',header=None).values

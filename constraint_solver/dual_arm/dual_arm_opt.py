@@ -2,7 +2,7 @@ import sys
 sys.path.append('../')
 from constraint_solver import *
 
-data_dir='../../data/wood/'
+data_dir='../../data/from_NX/'
 relative_path=read_csv(data_dir+"relative_path_tool_frame.csv",header=None).values
 
 robot1=abb1200(d=50)

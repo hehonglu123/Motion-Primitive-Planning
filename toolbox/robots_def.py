@@ -68,7 +68,7 @@ class abb6640(object):
 
 class abb1200(object):
 	#default tool paintgun
-	def __init__(self,R_tool=Ry(np.radians(120)),p_tool=np.array([0.45,0,-0.05])*1000.,d=0):
+	def __init__(self,R_tool=Ry(np.radians(90)),p_tool=np.zeros(3),d=0):
 		###ABB IRB 1200 5/0.9 Robot Definition
 		self.H=np.concatenate((ez,ey,ey,ex,ey,ex),axis=1)
 		p0=np.array([[0],[0],[0.3991]])
