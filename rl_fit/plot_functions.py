@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
 
-from rl_fit.archive.trajectory_utils import running_reward
+# from rl_fit.archive.trajectory_utils import running_reward
 
 
 def plot_evaluation(eval_data_file, greedy_steps, show=True, save=True):
@@ -35,16 +35,16 @@ def plot_evaluation(eval_data_file, greedy_steps, show=True, save=True):
         plt.show()
 
 
-def plot_time_evaluation(eval_data_file, greedy_data_file, show=True, save=True):
-    greedy_df = pd.read_csv(greedy_data_file)
-    eval_df = pd.read_csv(eval_data_file)
+def plot_time_evaluation(eval_df, greedy_df, show=True, save=True):
+    # greedy_df = pd.read_csv(greedy_data_file)
+    # eval_df = pd.read_csv(eval_data_file)
 
     # eval_df = eval_df.loc[eval_df['episode'] == 6000]
 
-    curve_idx = eval_df["id"].values
-    exec_time = eval_df["time"].values
+    curve_idx = eval_df["idx"].values
+    exec_time = eval_df["exec_time"].values
     error = eval_df["error"].values
-    error_normal = eval_df["error_normal"].values
+    error_normal = eval_df["ori_error"].values
 
     time_ratio = []
     error_ratio = []
@@ -56,7 +56,7 @@ def plot_time_evaluation(eval_data_file, greedy_data_file, show=True, save=True)
         error_normal_ratio.append(greedy_df['normal_error'].values[curve_idx[i]] / error_normal[i])
     eval_df['time_ratio'] = time_ratio
     eval_df['error_ratio'] = error_ratio
-    eval_df['error_normal_ratio'] = error_normal_ratio
+    eval_df['ori_error_ratio'] = error_normal_ratio
 
     fig1 = sns.boxplot(x='episode', y='reward', data=eval_df, color='royalblue')
     plt.title("Evaluation - Reward")
@@ -66,7 +66,7 @@ def plot_time_evaluation(eval_data_file, greedy_data_file, show=True, save=True)
     if show:
         plt.show()
 
-    fig2 = sns.boxplot(x='episode', y='time', data=eval_df, color='royalblue')
+    fig2 = sns.boxplot(x='episode', y='exec_time', data=eval_df, color='royalblue')
     plt.title("Evaluation - Time")
     # plt.grid()
     if save:
@@ -82,7 +82,7 @@ def plot_time_evaluation(eval_data_file, greedy_data_file, show=True, save=True)
     if show:
         plt.show()
 
-    fig4 = sns.boxplot(x='episode', y='error_normal', data=eval_df, color='royalblue')
+    fig4 = sns.boxplot(x='episode', y='ori_error', data=eval_df, color='royalblue')
     plt.title("Evaluation - Normal Error")
     # plt.grid()
     if save:
@@ -108,8 +108,8 @@ def plot_time_evaluation(eval_data_file, greedy_data_file, show=True, save=True)
     if show:
         plt.show()
 
-    fig7 = sns.boxplot(x='episode', y='error_normal_ratio', data=eval_df, color='orangered')
-    plt.title("Evaluation - Error Normal Ratio")
+    fig7 = sns.boxplot(x='episode', y='ori_error_ratio', data=eval_df, color='orangered')
+    plt.title("Evaluation - Ori Error Ratio")
     # plt.ylim([0.5, 2.0])
     # plt.grid()
     if save:
@@ -120,19 +120,19 @@ def plot_time_evaluation(eval_data_file, greedy_data_file, show=True, save=True)
 
 
 
-def plot_running_reward(episode_rewards, n=200, show=True, save=True):
-    rewards = running_reward(episode_rewards, n)
-    fig = plt.figure()
-    x = np.linspace(1, len(rewards), len(rewards))
-    plt.plot(x, rewards)
-    plt.grid()
-    plt.xlabel("Episode")
-    plt.ylabel("Reward")
-    plt.title('Training Rewards')
-    if save:
-        plt.savefig('plots/running_reward.jpg', dpi=300)
-    if show:
-        plt.show()
+# def plot_running_reward(episode_rewards, n=200, show=True, save=True):
+#     rewards = running_reward(episode_rewards, n)
+#     fig = plt.figure()
+#     x = np.linspace(1, len(rewards), len(rewards))
+#     plt.plot(x, rewards)
+#     plt.grid()
+#     plt.xlabel("Episode")
+#     plt.ylabel("Reward")
+#     plt.title('Training Rewards')
+#     if save:
+#         plt.savefig('plots/running_reward.jpg', dpi=300)
+#     if show:
+#         plt.show()
 
 
 def plot_training_curve(episode_data, label, n=200, show=True, save=True):
@@ -215,18 +215,18 @@ if __name__ == '__main__':
     #
     # plot_evaluation("Train Eval Result.csv", greedy_steps_data, show=True, save=True)
 
-    data = "Training Curve data.csv"
-    df = pd.read_csv(data)
-    rewards = df['episode_rewards']
-    times = df['episode_times']
-    errors = df['episode_errors']
-    error_angle = df['episode_error_angles']
-    steps = df['steps']
-    plot_training_curve(rewards, 'Reward', save=True, show=True)
-    plot_training_curve(times, 'Execution Time', save=True, show=True)
-    plot_training_curve(errors, 'Max Error', save=True, show=True)
-    plot_training_curve(error_angle, 'Max Error Angle', save=True, show=True)
-    plot_training_curve(steps, 'Steps', save=True, show=True)
+    # data = "Training Curve data.csv"
+    # df = pd.read_csv(data)
+    # rewards = df['episode_rewards']
+    # times = df['episode_times']
+    # errors = df['episode_errors']
+    # error_angle = df['episode_error_angles']
+    # steps = df['steps']
+    # plot_training_curve(rewards, 'Reward', save=True, show=True)
+    # plot_training_curve(times, 'Execution Time', save=True, show=True)
+    # plot_training_curve(errors, 'Max Error', save=True, show=True)
+    # plot_training_curve(error_angle, 'Max Error Angle', save=True, show=True)
+    # plot_training_curve(steps, 'Steps', save=True, show=True)
 
-    plot_time_evaluation("Train Eval Result.csv", "data/greedy_time_data.csv", show=True, save=True)
+    plot_time_evaluation("DQN_result/eval_4000.csv", "data/greedy_time_data.csv", show=True, save=True)
 
