@@ -1,9 +1,3 @@
-########
-# This module utilized https://github.com/johnwason/abb_motion_program_exec
-# and send whatever the motion primitives that algorithms generate
-# to RobotStudio
-########
-
 import numpy as np
 from scipy.signal import find_peaks
 from general_robotics_toolbox import *
