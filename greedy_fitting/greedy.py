@@ -3,7 +3,7 @@ from matplotlib.pyplot import *
 from mpl_toolkits.mplot3d.axes3d import Axes3D
 import matplotlib.pyplot as plt
 from pandas import *
-from greedy_fitting.fitting_toolbox import *
+from fitting_toolbox import *
 import sys
 sys.path.append('../toolbox')
 from toolbox_circular_fit import *

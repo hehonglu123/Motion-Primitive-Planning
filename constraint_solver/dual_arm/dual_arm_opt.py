@@ -2,18 +2,28 @@ import sys
 sys.path.append('../')
 from constraint_solver import *
 
-data_dir='../../data/from_NX/'
+from MotionSend import *
+
+data_dir='../../data/wood/'
 relative_path=read_csv(data_dir+"relative_path_tool_frame.csv",header=None).values
 
-robot1=abb1200(d=50)
-robot2=abb6640()
+ms = MotionSend()
+
+#read in initial curve pose
+with open(data_dir+'blade_pose.yaml') as file:
+	blade_pose = np.array(yaml.safe_load(file)['H'],dtype=np.float64)
+
+curve_js1=read_csv(data_dir+"Curve_js.csv",header=None).values
+
+robot1=abb6640(d=50)
+robot2=abb1200()
 base2_R=np.array([[-1,0,0],[0,-1,0],[0,0,1]])
-base2_p=np.array([3000,1000,0])
+base2_p=np.array([1500,-500,000])
 opt=lambda_opt(relative_path[:,:3],relative_path[:,3:],robot1=robot1,robot2=robot2,base2_R=base2_R,base2_p=base2_p,steps=50000)
 
 
-q_init1=np.array([1.001043036,	0.117102871,	0.238506285,	0.888767966,	-1.224797607,	-1.039746248])
-q_init2=np.array([0.124940222,	0.621755233,	0.461322728,	-0.32124382,	-1.58550511,	0.119284092])
+q_init1=curve_js1[0]
+q_init2=ms.calc_robot2_q_from_blade_pose(blade_pose,base2_R,base2_p)
 
 q_out1, q_out2=opt.dual_arm_stepwise_optimize(q_init1,q_init2)
 
