@@ -62,6 +62,7 @@ def main():
 	p_bp_np=np.array([item[0] for item in p_bp])      ###np version, avoid first and last extended points
 	ax.scatter3D(p_bp_np[:,0], p_bp_np[:,1], p_bp_np[:,2], c=p_bp_np[:,2], cmap='Greens',label='breakpoints')
 	plt.legend()
+	plt.title("Spatial Curve and Simulation Tuned Breakpoints")
 	plt.show(block=False)
 	fig_3d.canvas.manager.window.move(888,0)
 	plt.pause(0.1)
@@ -135,7 +136,7 @@ def main():
 			ax1.set_xlabel('lambda (mm)')
 			ax1.set_ylabel('Speed/lamdot (mm/s)', color='g')
 			ax2.set_ylabel('Error/Normal Error (mm/deg)', color='b')
-			plt.title("Individual-Run Speed and Error Plot")
+			plt.title("Iteration "+str(i+1)+": Individual-Run Speed and Error Plot")
 			ax1.legend(loc=0)
 
 			ax2.legend(loc=0)
@@ -184,7 +185,7 @@ def main():
 		ax1.set_xlabel('lambda (mm)')
 		ax1.set_ylabel('Speed/lamdot (mm/s)', color='g')
 		ax2.set_ylabel('Error/Normal Error (mm/deg)', color='b')
-		plt.title("Trajectory-Average Speed and Error Plot")
+		plt.title("Iteration "+str(i+1)+": Trajectory-Average Speed and Error Plot")
 		ax1.legend(loc=0)
 		ax2.legend(loc=0)
 		plt.legend()
@@ -203,6 +204,7 @@ def main():
 		curve_exe_peaks=curve_exe[peaks]
 		ax.scatter(curve_exe_peaks[:,0], curve_exe_peaks[:,1], curve_exe_peaks[:,2],c='orange',label='peaks')
 		plt.legend()
+		plt.title("Iteration "+str(i+1)+": 3D Plot")
 		fig_3d.canvas.manager.window.move(888,0)
 		plt.show(block=False)
 		plt.pause(0.1)
@@ -242,6 +244,7 @@ def main():
 		for m in adjusted_bp_idx:
 			ax.scatter(p_bp[m][0][0], p_bp[m][0][1], p_bp[m][0][2],c='blue',label='adjusted breakpoints' if m==breakpoint_interp_2tweak_indices[0] else None)
 		ax.scatter(curve_exe_peaks[:,0], curve_exe_peaks[:,1], curve_exe_peaks[:,2],c='orange',label='peaks')
+		plt.title("Iteration "+str(i+1)+": 3D Plot")
 		fig_3d.canvas.manager.window.move(888,0)
 		plt.legend()
 		plt.show(block=False)

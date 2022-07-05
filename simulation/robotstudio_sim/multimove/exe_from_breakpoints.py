@@ -29,7 +29,7 @@ def main():
     base2_p=1000*H_6640[:-1,-1]
     ms = MotionSend()
 
-    s=1000
+    s=400
     z=10
     v = speeddata(s,9999999,9999999,999999)
 
@@ -37,19 +37,25 @@ def main():
     breakpoints1,primitives1,p_bp1,q_bp1=ms.extract_data_from_cmd(data_dir+'/dual_arm/command1.csv')
     breakpoints2,primitives2,p_bp2,q_bp2=ms.extract_data_from_cmd(data_dir+'/dual_arm/command2.csv')
 
+    ###extension
+    p_bp1,q_bp1,p_bp2,q_bp2=ms.extend_dual(ms.robot1,p_bp1,q_bp1,primitives1,ms.robot2,p_bp2,q_bp2,primitives2,breakpoints1)
+
     logged_data=ms.exec_motions_multimove(breakpoints1,primitives1,primitives2,p_bp1,p_bp2,q_bp1,q_bp2,v,v,z10,z10)
 
     StringData=StringIO(logged_data)
     df = read_csv(StringData, sep =",")
-    lam, curve_exe1,curve_exe2,curve_exe_R1,curve_exe_R2,curve_exe_js1,curve_exe_js2, act_speed, timestamp, relative_path_exe,relative_path_exe_R = ms.logged_data_analysis_multimove(df,base2_R,base2_p)
-    print(np.degrees(curve_exe_js2))
+    lam, curve_exe1,curve_exe2,curve_exe_R1,curve_exe_R2,curve_exe_js1,curve_exe_js2, speed, timestamp, relative_path_exe,relative_path_exe_R = ms.logged_data_analysis_multimove(df,base2_R,base2_p)
+    #############################chop extension off##################################
+    lam, curve_exe1,curve_exe2,curve_exe_R1,curve_exe_R2,curve_exe_js1,curve_exe_js2, speed, timestamp, relative_path_exe, relative_path_exe_R=\
+        ms.chop_extension_dual(lam, curve_exe1,curve_exe2,curve_exe_R1,curve_exe_R2,curve_exe_js1,curve_exe_js2, speed, timestamp, relative_path_exe,relative_path_exe_R,relative_path[0,:3],relative_path[-1,:3])
+    
     ###calculate error
     error,angle_error=calc_all_error_w_normal(relative_path_exe,relative_path[:,:3],relative_path_exe_R[:,:,-1],relative_path[:,3:])
 
     fig, ax1 = plt.subplots()
 
     ax2 = ax1.twinx()
-    ax1.plot(lam[1:],act_speed, 'g-', label='Speed')
+    ax1.plot(lam,speed, 'g-', label='Speed')
     ax2.plot(lam, error, 'b-',label='Error')
     ax2.plot(lam, np.degrees(angle_error), 'y-',label='Normal Error')
 
