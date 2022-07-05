@@ -375,7 +375,7 @@ class fitting_toolbox(object):
 					ori_error.append(get_angle(curve_R[i,:,-1],curve_fit_R[i,:,-1]))
 
 		if rl:
-			return curve_fit,curve_fit_R,[], p_error, ori_error
+			return curve_fit,curve_fit_R,curve_fit_js, p_error, ori_error
 
 		return curve_fit,curve_fit_R,curve_fit_js,np.max(p_error), np.max(ori_error)
 
@@ -472,6 +472,22 @@ class fitting_toolbox(object):
 			slope_diff_js.append(get_angle(curve_fit_js[breakpoints[i]-1]-curve_fit_js[breakpoints[i]-2],curve_fit_js[breakpoints[i]]-curve_fit_js[breakpoints[i]-1]))
 
 		return slope_diff_js
+
+	# def get_slope_js(self, curve_fit_js, breakpoints):
+	# 	slope_diff_js = []
+	#
+	# 	for i in range(1, len(breakpoints) - 1):
+	# 		slope1 = curve_fit_js[breakpoints[i] - 1] - curve_fit_js[breakpoints[i] - 2]
+	# 		slope2 = curve_fit_js[breakpoints[i]] - curve_fit_js[breakpoints[i] - 1]
+	# 		slope_diff = np.abs(slope1 - slope2)
+	# 		# slope_diff = np.degrees(slope_diff)
+	# 		# slope_diff = ["{:.3f}".format(slope_diff[i]) for i in range(len(slope_diff))]
+	# 		# slope_diff_js.append("\t".join(slope_diff))
+	# 		slope_diff_js.append(slope_diff)
+	# 	# ret = "\n".join(slope_diff_js)
+	# 	ret = np.array(slope_diff_js)
+	# 	return ret
+
 
 def main():
 	###read in points
