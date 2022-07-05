@@ -42,10 +42,10 @@ breakpoints2=copy.deepcopy(breakpoints1)
 primitives2=['movej_fit']*len(primitives1)
 p_bp2=[[p_init2]]*len(primitives1)
 q_bp2=[[q_init2]]*len(primitives1)
-
+print(q_init2)
 
 logged_data=ms.exec_motions_multimove(breakpoints1,primitives1,primitives2,p_bp1,p_bp2,q_bp1,q_bp2,v,v,z10,z10)
-print(logged_data)
+
 StringData=StringIO(logged_data)
 df = read_csv(StringData, sep =",")
 ##############################data analysis#####################################

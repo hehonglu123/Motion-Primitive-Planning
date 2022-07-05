@@ -45,7 +45,7 @@ class MotionSend(object):
         return jointt
 
     def exec_motions(self,robot,primitives,breakpoints,p_bp,q_bp,speed,zone):
-        mp = MotionProgram(tool=self.tool2)
+        mp = MotionProgram(tool=self.tool1)
         
         for i in range(len(primitives)):
             motion = primitives[i]
