@@ -15,7 +15,6 @@ sys.path.append('../../../toolbox')
 from robots_def import *
 from lambda_calc import *
 from error_check import *
-sys.path.append('../../../circular_fit')
 from toolbox_circular_fit import *
 from fanuc_motion_program_exec_client import *
 
