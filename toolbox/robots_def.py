@@ -29,7 +29,9 @@ class abb6640(object):
 
 		###fake link for fitting
 		tcp_new=p_tool+np.dot(R_tool,np.array([0,0,d]))
-		# print(tcp_new)
+		
+		self.R_tool=R_tool
+		self.p_tool=tcp_new
 
 
 		self.P=np.concatenate((p0,p1,p2,p3,p4,p5,p6),axis=1)*1000.
@@ -82,6 +84,9 @@ class abb1200(object):
 		###fake link for fitting
 		tcp_new=p_tool+np.dot(R_tool,np.array([0,0,d]))
 
+		self.R_tool=R_tool
+		self.p_tool=tcp_new
+
 		###updated range&vel limit
 		self.P=np.concatenate((p0,p1,p2,p3,p4,p5,p6),axis=1)*1000.
 		self.joint_type=np.zeros(6)
@@ -123,6 +128,9 @@ class arb_robot(object):
 
 		###fake link for fitting
 		tcp_new=p_tool+np.dot(R_tool,np.array([0,0,d]))
+
+		self.R_tool=R_tool
+		self.p_tool=tcp_new
 
 		###updated range&vel limit
 		self.joint_type=joint_type

@@ -22,16 +22,23 @@ def main():
     data_dir="../../../data/"+dataset
     relative_path = read_csv(data_dir+"/relative_path_tool_frame.csv", header=None).values
 
-    with open(data_dir+'dual_arm/abb6640.yaml') as file:
-        H_6640 = np.array(yaml.safe_load(file)['H'],dtype=np.float64)
+    with open(data_dir+'dual_arm/abb1200.yaml') as file:
+        H_1200 = np.array(yaml.safe_load(file)['H'],dtype=np.float64)
 
-    base2_R=H_6640[:3,:3]
-    base2_p=1000*H_6640[:-1,-1]
-    ms = MotionSend()
+    base2_R=H_1200[:3,:3]
+    base2_p=1000*H_1200[:-1,-1]
 
-    s=400
+    with open(data_dir+'dual_arm/tcp.yaml') as file:
+        H_tcp = np.array(yaml.safe_load(file)['H'],dtype=np.float64)
+    robot2=abb1200(R_tool=H_tcp[:3,:3],p_tool=H_tcp[:-1,-1])
+
+    ms = MotionSend(robot2=robot2,base2_R=base2_R,base2_p=base2_p)
+
+    s1=400
+    s2=400
     z=10
-    v = speeddata(s,9999999,9999999,999999)
+    v1 = speeddata(s1,9999999,9999999,999999)
+    v2 = speeddata(s2,9999999,9999999,999999)
 
 
     breakpoints1,primitives1,p_bp1,q_bp1=ms.extract_data_from_cmd(data_dir+'/dual_arm/command1.csv')
@@ -40,7 +47,7 @@ def main():
     ###extension
     p_bp1,q_bp1,p_bp2,q_bp2=ms.extend_dual(ms.robot1,p_bp1,q_bp1,primitives1,ms.robot2,p_bp2,q_bp2,primitives2,breakpoints1)
 
-    logged_data=ms.exec_motions_multimove(breakpoints1,primitives1,primitives2,p_bp1,p_bp2,q_bp1,q_bp2,v,v,z10,z10)
+    logged_data=ms.exec_motions_multimove(breakpoints1,primitives1,primitives2,p_bp1,p_bp2,q_bp1,q_bp2,v1,v2,z10,z10)
 
     StringData=StringIO(logged_data)
     df = read_csv(StringData, sep =",")
@@ -62,7 +69,7 @@ def main():
     ax1.set_xlabel('lambda (mm)')
     ax1.set_ylabel('Speed/lamdot (mm/s)', color='g')
     ax2.set_ylabel('Error (mm)', color='b')
-    plt.title("Speed: "+dataset+str(s)+'_z'+str(z))
+    plt.title("Speed: "+dataset+str(s1)+'_z'+str(z))
     ax1.legend(loc=0)
 
     ax2.legend(loc=0)

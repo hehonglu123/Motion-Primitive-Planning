@@ -11,11 +11,23 @@ from robots_def import *
 from error_check import *
 from MotionSend import *
 
-ms = MotionSend()
+data_dir='../../../data/wood/'
+
+with open(data_dir+'dual_arm/abb1200.yaml') as file:
+    H_1200 = np.array(yaml.safe_load(file)['H'],dtype=np.float64)
+
+base2_R=H_1200[:3,:3]
+base2_p=1000*H_1200[:-1,-1]
+
+with open(data_dir+'dual_arm/tcp.yaml') as file:
+    H_tcp = np.array(yaml.safe_load(file)['H'],dtype=np.float64)
+robot2=abb1200(R_tool=H_tcp[:3,:3],p_tool=H_tcp[:-1,-1])
+
+ms = MotionSend(robot2=robot2,base2_R=base2_R,base2_p=base2_p)
 s=250
 v = speeddata(s,9999999,9999999,999999)
 
-data_dir='../../../data/wood/'
+
 cmd_dir='../../../ILC/max_gradient/curve1_250_100L_multipeak/'
 relative_path=read_csv(data_dir+"relative_path_tool_frame.csv",header=None).values
 
@@ -25,24 +37,18 @@ with open(data_dir+'blade_pose.yaml') as file:
 
 curve_js1=read_csv(data_dir+"Curve_js.csv",header=None).values
 
-robot1=abb6640(d=50)
-robot2=abb1200()
-base2_R=np.array([[-1,0,0],[0,-1,0],[0,0,1]])
-base2_p=np.array([1500,-500,000])
+
 
 
 q_init1=curve_js1[0]
 q_init2=ms.calc_robot2_q_from_blade_pose(blade_pose,base2_R,base2_p)
 p_init2=robot2.fwd(q_init2).p
-
-
    
 breakpoints1,primitives1,p_bp1,q_bp1=ms.extract_data_from_cmd(cmd_dir+'command.csv')
 breakpoints2=copy.deepcopy(breakpoints1)
 primitives2=['movej_fit']*len(primitives1)
 p_bp2=[[p_init2]]*len(primitives1)
 q_bp2=[[q_init2]]*len(primitives1)
-print(q_init2)
 
 logged_data=ms.exec_motions_multimove(breakpoints1,primitives1,primitives2,p_bp1,p_bp2,q_bp1,q_bp2,v,v,z10,z10)
 

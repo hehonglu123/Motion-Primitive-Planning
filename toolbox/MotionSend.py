@@ -8,9 +8,9 @@ from error_check import *
 sys.path.append('../toolbox')
 from toolbox_circular_fit import *
 from lambda_calc import *
-quatR = R2q(rot([0,1,0],math.radians(30)))
+
 class MotionSend(object):
-    def __init__(self,robot1=abb6640(d=50),robot2=abb1200(),tool1=tooldata(True,pose([75,0,493.30127019],[quatR[0],quatR[1],quatR[2],quatR[3]]),loaddata(1,[0,0,0.001],[1,0,0,0],0,0,0)),tool2=tool0,url='http://127.0.0.1:80',base2_R=np.array([[-1,0,0],[0,-1,0],[0,0,1]]),base2_p=np.array([1500,-500,000])) -> None:
+    def __init__(self,robot1=abb6640(d=50),robot2=abb1200(),url='http://127.0.0.1:80',base2_R=np.array([[-1,0,0],[0,-1,0],[0,0,1]]),base2_p=np.array([1500,-500,000])) -> None:
         ###robot1: 1200
         ###robot2: 6640 with d=50 fake link
         
@@ -20,9 +20,11 @@ class MotionSend(object):
         self.robot1=robot1
         self.robot2=robot2
         
-        self.tool1 = tool1
-        self.tool2 = tool2
-        
+        R90=rot([0,1,0],np.pi/2)    ###rotation to align z to global x
+
+        self.tool1 = tooldata(True,pose(R90.T@self.robot1.p_tool,R2q(self.robot1.R_tool@R90.T)),loaddata(1,[0,0,0.001],[1,0,0,0],0,0,0))
+        self.tool2 = tooldata(True,pose(R90.T@self.robot2.p_tool,R2q(self.robot2.R_tool@R90.T)),loaddata(1,[0,0,0.001],[1,0,0,0],0,0,0))
+
 
     def moveL_target(self,robot,q,point):
         quat=R2q(robot.fwd(q).R)

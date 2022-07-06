@@ -7,7 +7,17 @@ from MotionSend import *
 data_dir='../../data/wood/'
 relative_path=read_csv(data_dir+"relative_path_tool_frame.csv",header=None).values
 
-ms = MotionSend()
+with open(data_dir+'dual_arm/abb1200.yaml') as file:
+    H_1200 = np.array(yaml.safe_load(file)['H'],dtype=np.float64)
+
+base2_R=H_1200[:3,:3]
+base2_p=1000*H_1200[:-1,-1]
+
+with open(data_dir+'dual_arm/tcp.yaml') as file:
+    H_tcp = np.array(yaml.safe_load(file)['H'],dtype=np.float64)
+robot2=abb1200(R_tool=H_tcp[:3,:3],p_tool=H_tcp[:-1,-1])
+
+ms = MotionSend(robot2=robot2,base2_R=base2_R,base2_p=base2_p)
 
 #read in initial curve pose
 with open(data_dir+'blade_pose.yaml') as file:
@@ -16,8 +26,6 @@ with open(data_dir+'blade_pose.yaml') as file:
 curve_js1=read_csv(data_dir+"Curve_js.csv",header=None).values
 
 
-base2_R=np.array([[-1,0,0],[0,-1,0],[0,0,1]])
-base2_p=np.array([1500,-500,000])
 opt=lambda_opt(relative_path[:,:3],relative_path[:,3:],robot1=ms.robot1,robot2=ms.robot2,base2_R=base2_R,base2_p=base2_p,steps=50000)
 
 
@@ -25,6 +33,12 @@ q_init1=curve_js1[0]
 q_init2=ms.calc_robot2_q_from_blade_pose(blade_pose,base2_R,base2_p)
 
 q_out1, q_out2=opt.dual_arm_stepwise_optimize(q_init1,q_init2)
+##########path verification####################
+ms = MotionSend(robot2=robot2,base2_R=base2_R,base2_p=base2_p)
+relative_path_out,relative_path_out_R=ms.form_relative_path(q_out1,q_out2,base2_R,base2_p)
+plt.plot(np.linalg.norm(relative_path[:,:3]-relative_path_out,axis=1))
+plt.title('error plot')
+plt.show()
 
 ####output to trajectory csv
 df=DataFrame({'q0':q_out1[:,0],'q1':q_out1[:,1],'q2':q_out1[:,2],'q3':q_out1[:,3],'q4':q_out1[:,4],'q5':q_out1[:,5]})

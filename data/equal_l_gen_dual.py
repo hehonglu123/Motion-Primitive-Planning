@@ -61,7 +61,11 @@ for num_l in num_ls:
 
 
 
-robot=abb1200()
+with open(data_dir+'tcp.yaml') as file:
+    H_tcp = np.array(yaml.safe_load(file)['H'],dtype=np.float64)
+
+robot=abb1200(R_tool=H_tcp[:3,:3],p_tool=H_tcp[:-1,-1])
+
 curve_js = read_csv(data_dir+'arm2.csv',header=None).values
 
 curve = []
