@@ -1,6 +1,6 @@
 import numpy as np
 from pandas import read_csv
-from fanuc_client import *
+from fanuc_motion_program_exec_client import *
 from general_robotics_toolbox import *
 
 sys.path.append('../../../toolbox/')
