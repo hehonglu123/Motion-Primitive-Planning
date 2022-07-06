@@ -54,7 +54,7 @@ def main():
 
 	max_error=999
 
-	iteration=30
+	iteration=50
 	adjust_weigt_it=2
 	weight_adjusted=False
 	for i in range(iteration):

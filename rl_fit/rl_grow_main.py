@@ -42,7 +42,7 @@ def read_data():
 
     for i in range(201):
         # base_file = "data/poly/base/curve_base_poly_{}.csv".format(i)
-        js_file = "data/js_new_500/traj_{}_js_new.csv".format(i)
+        js_file = "data/curve2/js_new_500/traj_{}_js_new.csv".format(i)
 
         col_names=['q1', 'q2', 'q3','q4', 'q5', 'q6']
         data = pd.read_csv(js_file, names=col_names)
@@ -60,26 +60,27 @@ def read_data():
     return all_js
 
 
-def get_args():
+def get_args(message=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--max_error_threshold", type=int, default=0.5)
     parser.add_argument("--max_ori_threshold", type=float, default=np.radians(3))
     parser.add_argument("--replayer_capacity", type=int, default=int(1e6))
-    parser.add_argument("--lr", type=float, default=0.0001)
+    parser.add_argument("--lr", type=float, default=1e-3)
     parser.add_argument("--gamma", type=float, default=0.99)
-    parser.add_argument("--max_train_episode", type=int, default=int(1e5))
-    parser.add_argument("--warm_up", type=int, default=500)
-    parser.add_argument("--tau", type=float, default=0.005)
+    parser.add_argument("--max_train_episode", type=int, default=int(2e4))
+    parser.add_argument("--warm_up", type=int, default=100)
+    parser.add_argument("--tau", type=float, default=0.05)
     parser.add_argument("--hidden_width", type=int, default=256)
     parser.add_argument("--feature_dim", type=int, default=21)
-    parser.add_argument("--discrete_actions", type=int, default=10)
+    parser.add_argument("--discrete_actions", type=int, default=100)
     parser.add_argument("--batch-size", type=int, default=256)
     parser.add_argument("--num_normalize_points", type=int, default=1000)
     parser.add_argument("--learn_epochs", type=int, default=10)
-    parser.add_argument("--eval_freq", type=int, default=2000)
+    parser.add_argument("--eval_freq", type=int, default=100)
+    parser.add_argument("--eval_size", type=int, default=10)
 
-    args = parser.parse_args()
+    args = parser.parse_args() if message is None else parser.parse_args(message)
     return args
 
 
@@ -124,7 +125,7 @@ def train(curve_js_data, args):
             for i in range(args.learn_epochs):
                 agent.learn(replayer)
 
-        print("[Train]\t{:>7}/{:>7}\tAvg Time {:.2f}".format(episode+1, args.max_train_episode, (time.time()-timer)/(episode+1)))
+        print("[Train]\t{:>7}/{:>7}\tAvg Time {:.2f} |\tReward {:.2f}\tEps {:.3f}\tExec Time {:.2f}".format(episode+1, args.max_train_episode, (time.time()-timer)/(episode+1), episode_reward, epsilon, env.exec_time))
 
         if (episode + 1) % args.eval_freq == 0:
             eval_df = evaluation(agent, curve_js_data, args)
@@ -137,9 +138,12 @@ def train(curve_js_data, args):
 
 
 def evaluation(agent: DQNAgent, curve_js_data, args):
-    eval_df = {'idx': [], 'reward':[], 'num_primitive': [], 'exec_time': [], 'error': [], 'ori_error': []}
+    eval_df = {'idx': [], 'reward': [], 'num_primitive': [], 'exec_time': [], 'error': [], 'ori_error': [],
+               'js_slope_diff_sum': [], 'js_slope_diff_mean': [], 'js_slope_diff_max': []}
+    eval_curve_idx = np.random.randint(len(curve_js_data), size=args.eval_size)
 
-    for i, curve_js in curve_js_data:
+    for i in eval_curve_idx:
+        curve_js = curve_js_data[i]
         env = MotionPrimitiveEnv(curve_js, args)
         episode_reward = 0
         state, done = env.reset(), False
@@ -152,14 +156,19 @@ def evaluation(agent: DQNAgent, curve_js_data, args):
             episode_reward += reward
             state = next_state
 
-        print("[Eval]\t{:>5}/{:>5}\tReward {:>5}\tExec Time {:.3f>7}\tError {:.3f>7}".format(i, len(curve_js_data), episode_reward, env.exec_time, env.max_error))
+        print("[Eval]\t{:>5}/{:>5}\tReward {:>5.2f}\tExec Time {:>8.3f}\tError {:>8.3f}".format(i, len(curve_js_data), episode_reward, env.exec_time, env.exec_max_error))
 
-        eval_df['idx'] = i
-        eval_df['reward'] = episode_reward
-        eval_df['num_primitive'] = step
-        eval_df['exec_time'] = env.exec_time
-        eval_df['error'] = env.max_error
-        eval_df['ori_error'] = env.max_ori_error
+        joint_slope_diff = env.get_slope_js(env.curve_fit_js, env.breakpoints)
+
+        eval_df['idx'].append(i)
+        eval_df['reward'].append(episode_reward)
+        eval_df['num_primitive'].append(step)
+        eval_df['exec_time'].append(env.exec_time)
+        eval_df['error'].append(env.exec_max_error)
+        eval_df['ori_error'].append(env.exec_max_normal_error)
+        eval_df['js_slope_diff_sum'].append(np.sum(joint_slope_diff))
+        eval_df['js_slope_diff_mean'].append(np.mean(joint_slope_diff))
+        eval_df['js_slope_diff_max'].append(np.max(joint_slope_diff))
 
     return pd.DataFrame(eval_df)
 

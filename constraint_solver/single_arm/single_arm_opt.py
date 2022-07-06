@@ -9,19 +9,11 @@ from constraint_solver import *
 
 
 def main():
-	col_names=['X', 'Y', 'Z','direction_x','direction_y','direction_z'] 
-	data = read_csv("../../data/from_ge/Curve_in_base_frame2.csv", names=col_names)
-	curve_x=data['X'].tolist()
-	curve_y=data['Y'].tolist()
-	curve_z=data['Z'].tolist()
-	curve_direction_x=data['direction_x'].tolist()
-	curve_direction_y=data['direction_y'].tolist()
-	curve_direction_z=data['direction_z'].tolist()
-	curve=np.vstack((curve_x, curve_y, curve_z)).T
-	curve_normal=np.vstack((curve_direction_x, curve_direction_y, curve_direction_z)).T
+	dataset='from_NX/'
+	curve = read_csv("../../data/"+dataset+"Curve_in_base_frame.csv",header=None).values
 
 
-	opt=lambda_opt(curve,curve_normal,robot1=abb6640(d=50),steps=50)
+	opt=lambda_opt(curve[:,:3],curve[:,3:],robot1=abb6640(d=50),steps=50)
 
 	###path constraints, position constraint and curve normal constraint
 	lowerer_limit=[-np.pi]
@@ -106,7 +98,7 @@ def main():
 	plt.plot(opt.lam,dlam_out,label="lambda_dot_max")
 	plt.xlabel("lambda")
 	plt.ylabel("lambda_dot")
-	plt.ylim([500,2000])
+	plt.ylim([0,2000])
 	plt.title("max lambda_dot vs lambda (path index)")
 	plt.savefig("trajectory/all_theta_opt/results.png")
 	plt.show()

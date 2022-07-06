@@ -29,7 +29,9 @@ class abb6640(object):
 
 		###fake link for fitting
 		tcp_new=p_tool+np.dot(R_tool,np.array([0,0,d]))
-		# print(tcp_new)
+		
+		self.R_tool=R_tool
+		self.p_tool=tcp_new
 
 
 		self.P=np.concatenate((p0,p1,p2,p3,p4,p5,p6),axis=1)*1000.
@@ -68,7 +70,7 @@ class abb6640(object):
 
 class abb1200(object):
 	#default tool paintgun
-	def __init__(self,R_tool=Ry(np.radians(120)),p_tool=np.array([0.45,0,-0.05])*1000.,d=0):
+	def __init__(self,R_tool=Ry(np.radians(90)),p_tool=np.zeros(3),d=0):
 		###ABB IRB 1200 5/0.9 Robot Definition
 		self.H=np.concatenate((ez,ey,ey,ex,ey,ex),axis=1)
 		p0=np.array([[0],[0],[0.3991]])
@@ -81,6 +83,9 @@ class abb1200(object):
 
 		###fake link for fitting
 		tcp_new=p_tool+np.dot(R_tool,np.array([0,0,d]))
+
+		self.R_tool=R_tool
+		self.p_tool=tcp_new
 
 		###updated range&vel limit
 		self.P=np.concatenate((p0,p1,p2,p3,p4,p5,p6),axis=1)*1000.
@@ -249,6 +254,9 @@ class arb_robot(object):
 
 		###fake link for fitting
 		tcp_new=p_tool+np.dot(R_tool,np.array([0,0,d]))
+
+		self.R_tool=R_tool
+		self.p_tool=tcp_new
 
 		###updated range&vel limit
 		self.joint_type=joint_type

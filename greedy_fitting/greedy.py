@@ -29,19 +29,19 @@ class greedy_fit(fitting_toolbox):
 		###initial primitive candidates
 		self.primitives={'movel_fit':self.movel_fit_greedy,'movej_fit':self.movej_fit_greedy,'movec_fit':self.movec_fit_greedy}
 
-	def movel_fit_greedy(self,curve,curve_js,curve_R):	###unit vector slope
+	def movel_fit_greedy(self,curve,curve_js,curve_R, rl=False):	###unit vector slope
 		
-		return self.movel_fit(curve,curve_js,curve_R,self.curve_fit[-1] if len(self.curve_fit)>0 else [],self.curve_fit_R[-1] if len(self.curve_fit_R)>0 else [], dqdlam_prev=(self.curve_fit_js[-1]-self.curve_fit_js[-2])/(self.lam[len(self.curve_fit_js)-1]-self.lam[len(self.curve_fit_js)-2]) if len(self.curve_fit_js)>1 else [])
+		return self.movel_fit(curve,curve_js,curve_R,self.curve_fit[-1] if len(self.curve_fit)>0 else [],self.curve_fit_R[-1] if len(self.curve_fit_R)>0 else [], dqdlam_prev=(self.curve_fit_js[-1]-self.curve_fit_js[-2])/(self.lam[len(self.curve_fit_js)-1]-self.lam[len(self.curve_fit_js)-2]) if len(self.curve_fit_js)>1 else [], rl=rl)
 	
 
 
-	def movej_fit_greedy(self,curve,curve_js,curve_R):
+	def movej_fit_greedy(self,curve,curve_js,curve_R, rl=False):
 
-		return self.movej_fit(curve,curve_js,curve_R,self.curve_fit_js[-1] if len(self.curve_fit_js)>0 else [], dqdlam_prev=(self.curve_fit_js[-1]-self.curve_fit_js[-2])/(self.lam[len(self.curve_fit_js)-1]-self.lam[len(self.curve_fit_js)-2]) if len(self.curve_fit_js)>1 else [])
+		return self.movej_fit(curve,curve_js,curve_R,self.curve_fit_js[-1] if len(self.curve_fit_js)>0 else [], dqdlam_prev=(self.curve_fit_js[-1]-self.curve_fit_js[-2])/(self.lam[len(self.curve_fit_js)-1]-self.lam[len(self.curve_fit_js)-2]) if len(self.curve_fit_js)>1 else [], rl=rl)
 
 
-	def movec_fit_greedy(self,curve,curve_js,curve_R):
-		return self.movec_fit(curve,curve_js,curve_R,self.curve_fit[-1] if len(self.curve_fit)>0 else [],self.curve_fit_R[-1] if len(self.curve_fit_R)>0 else [], dqdlam_prev=(self.curve_fit_js[-1]-self.curve_fit_js[-2])/(self.lam[len(self.curve_fit_js)-1]-self.lam[len(self.curve_fit_js)-2]) if len(self.curve_fit_js)>1 else [])
+	def movec_fit_greedy(self,curve,curve_js,curve_R, rl=False):
+		return self.movec_fit(curve,curve_js,curve_R,self.curve_fit[-1] if len(self.curve_fit)>0 else [],self.curve_fit_R[-1] if len(self.curve_fit_R)>0 else [], dqdlam_prev=(self.curve_fit_js[-1]-self.curve_fit_js[-2])/(self.lam[len(self.curve_fit_js)-1]-self.lam[len(self.curve_fit_js)-2]) if len(self.curve_fit_js)>1 else [], rl=rl)
 
 	##TODO: guard moveC longer than 50mm
 	def bisect(self,primitive,cur_idx, rl=False):
@@ -53,26 +53,46 @@ class greedy_fit(fitting_toolbox):
 		while True:
 			###end condition
 			if next_point==prev_point:
-				if max_error<self.max_error_threshold and max_ori_error<self.max_ori_threshold:
-					return curve_fit,curve_fit_R,curve_fit_js,max_error,max_ori_error
+				if rl:
+					if np.max(max_error)<self.max_error_threshold and np.max(max_ori_error)<self.max_ori_threshold:
+						return curve_fit,curve_fit_R,curve_fit_js,max_error,max_ori_error
+					else:
+						next_point=max(prev_possible_point,2)
+						return primitive(self.curve[cur_idx:cur_idx+next_point],self.curve_js[cur_idx:cur_idx+next_point],self.curve_R[cur_idx:cur_idx+next_point], rl=rl)
 				else:
-					next_point=max(prev_possible_point,2)
-					return primitive(self.curve[cur_idx:cur_idx+next_point],self.curve_js[cur_idx:cur_idx+next_point],self.curve_R[cur_idx:cur_idx+next_point], rl=rl)
+					if max_error<self.max_error_threshold and max_ori_error<self.max_ori_threshold:
+						return curve_fit,curve_fit_R,curve_fit_js,max_error,max_ori_error
+					else:
+						next_point=max(prev_possible_point,2)
+						return primitive(self.curve[cur_idx:cur_idx+next_point],self.curve_js[cur_idx:cur_idx+next_point],self.curve_R[cur_idx:cur_idx+next_point], rl=rl)
 			###fitting
 			curve_fit,curve_fit_R,curve_fit_js,max_error,max_ori_error=primitive(self.curve[cur_idx:cur_idx+next_point],self.curve_js[cur_idx:cur_idx+next_point],self.curve_R[cur_idx:cur_idx+next_point], rl=rl)
 
 			###bp going backward to meet threshold
-			if max_error>self.max_error_threshold or max_ori_error>self.max_ori_threshold:
-				prev_point_temp=next_point
-				next_point-=int(np.abs(next_point-prev_point)/2)
-				prev_point=prev_point_temp
+			if rl:
+				if np.max(max_error) > self.max_error_threshold or np.max(max_ori_error) > self.max_ori_threshold:
+					prev_point_temp = next_point
+					next_point -= int(np.abs(next_point - prev_point) / 2)
+					prev_point = prev_point_temp
 
-			###bp going forward to get close to threshold
+				###bp going forward to get close to threshold
+				else:
+					prev_possible_point = next_point
+					prev_point_temp = next_point
+					next_point = min(next_point + int(np.abs(next_point - prev_point)), len(self.curve) - cur_idx)
+					prev_point = prev_point_temp
 			else:
-				prev_possible_point=next_point
-				prev_point_temp=next_point
-				next_point= min(next_point + int(np.abs(next_point-prev_point)),len(self.curve)-cur_idx)
-				prev_point=prev_point_temp
+				if max_error>self.max_error_threshold or max_ori_error>self.max_ori_threshold:
+					prev_point_temp=next_point
+					next_point-=int(np.abs(next_point-prev_point)/2)
+					prev_point=prev_point_temp
+
+				###bp going forward to get close to threshold
+				else:
+					prev_possible_point=next_point
+					prev_point_temp=next_point
+					next_point= min(next_point + int(np.abs(next_point-prev_point)),len(self.curve)-cur_idx)
+					prev_point=prev_point_temp
 
 
 	def fit_under_error(self):
@@ -160,6 +180,7 @@ def main():
 	robot=abb6640(d=50)
 
 	greedy_fit_obj=greedy_fit(robot,curve_js,0.1)
+	greedy_fit_obj=greedy_fit(robot,curve_js[::10],0.5)
 
 
 	###set primitive choices, defaults are all 3
@@ -167,12 +188,14 @@ def main():
 
 	greedy_fit_obj.primitives={'movel_fit':greedy_fit_obj.movel_fit_greedy}
 	# greedy_fit_obj.primitives={'movej_fit':greedy_fit_obj.movej_fit_greedy}
+	# greedy_fit_obj.primitives={'movel_fit':greedy_fit_obj.movel_fit_greedy}
+	greedy_fit_obj.primitives={'movej_fit':greedy_fit_obj.movej_fit_greedy}
 	# greedy_fit_obj.primitives={'movec_fit':greedy_fit_obj.movec_fit_greedy}
 
 	breakpoints,primitives_choices,points,q_bp=greedy_fit_obj.fit_under_error()
 	# breakpoints,primitives_choices,points=greedy_fit_obj.smooth_slope(greedy_fit_obj.curve_fit,greedy_fit_obj.curve_fit_R,breakpoints,primitives_choices,points)
 
-	print('slope diff js (deg): ',np.degrees(greedy_fit_obj.get_slope_js(greedy_fit_obj.curve_fit_js,breakpoints)))
+	print('slope diff js (deg): ', greedy_fit_obj.get_slope_js(greedy_fit_obj.curve_fit_js,breakpoints))
 
 	###plt
 	###3D plot
@@ -211,7 +234,7 @@ def greedy_execute():
 
 	robot=abb6640(d=50)
 
-	greedy_fit_obj=greedy_fit(robot,curve_js[::50],0.5)
+	greedy_fit_obj=greedy_fit(robot,curve_js[::10],0.5)
 	# greedy_fit_obj.primitives={'movel_fit':greedy_fit_obj.movel_fit_greedy}
 	greedy_fit_obj.primitives={'movej_fit':greedy_fit_obj.movej_fit_greedy}
 	# greedy_fit_obj.primitives={'movec_fit':greedy_fit_obj.movec_fit_greedy}

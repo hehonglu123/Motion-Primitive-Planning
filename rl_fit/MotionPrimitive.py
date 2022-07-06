@@ -25,8 +25,8 @@ class MotionPrimitiveEnv(greedy_fit):
         self.step_max_error_place = {}
         self.step_slope_diff_js = {}
 
-        self.max_error = 999
-        self.max_ori_error = 999
+        self.max_error = -1
+        self.max_ori_error = -1
         self.primitive_choices = []
         self.primitive_fits = []
         self.points = []
@@ -74,15 +74,15 @@ class MotionPrimitiveEnv(greedy_fit):
         # Calculate the chosen primitive
         new_primitive_length = np.ceil(len(old_primitive_fit) * primitive_length).astype(int)
         new_primitive_length = max(new_primitive_length, 2)
-        # if primitive_key == 'movec_fit' and np.linalg.norm(self.step_curve_fit['movec_fit'][-1] - self.step_curve_fit['movec_fit'][0]) < 100:
-        #     primitive_key = 'movel_fit'
-        if primitive_key == 'movec_fit' and len(self.step_curve_fit[primitive_key]) < 5:
-            primitive_key = 'movel_fit'
 
         # Re-fit
         cur_idx = self.breakpoints[-1]
         next_idx = cur_idx + new_primitive_length
         new_curve_fit, new_curve_fit_R, new_curve_fit_js, max_error, max_ori_error = self.primitives[primitive_key](self.curve[cur_idx:next_idx], self.curve_js[cur_idx:next_idx], self.curve_R[cur_idx:next_idx])
+        if primitive_key == 'movec_fit' and np.linalg.norm(new_curve_fit[-1] - new_curve_fit[0]) < 50:
+            primitive_key = 'movel_fit'
+        # if primitive_key == 'movec_fit' and len(self.step_curve_fit[primitive_key]) < 5:
+        #     primitive_key = 'movel_fit'
 
         # Add the new primitive to curve fit
         self.primitive_choices.append(primitive_key)
@@ -135,7 +135,7 @@ class MotionPrimitiveEnv(greedy_fit):
 
     def reward_function(self, done):
         if not done:
-            return -1
+            return 0
         else:
             self.exec_time, self.exec_max_error, self.exec_max_normal_error = self.robot_studio_execute()
             reward = 10 * (3 - self.exec_time)
@@ -161,7 +161,7 @@ class MotionPrimitiveEnv(greedy_fit):
 
 
         ###extension
-        # points, q_bp = ms.extend(self.robot, q_bp, primitives_choices, breakpoints, points)
+        points, q_bp = ms.extend(self.robot, q_bp, primitives_choices, breakpoints, points)
 
         logged_data = ms.exec_motions(self.robot, primitives_choices, breakpoints, points, q_bp, v500, z10)
         StringData = StringIO(logged_data)

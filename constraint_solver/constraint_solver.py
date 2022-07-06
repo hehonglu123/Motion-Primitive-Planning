@@ -15,9 +15,8 @@ from blending import *
 from utils import *
 
 class lambda_opt(object):
-	###robot1 hold paint gun for single arm
-	###robot1 hold paint gun, robot2 hold blade for dual arm
-	def __init__(self,curve,curve_normal,robot1=abb6640(),robot2=abb1200(),base2_R=np.eye(3),base2_p=np.zeros(3),steps=50,breakpoints=[],primitives=[]):
+	###robot1 hold paint gun, robot2 hold part
+	def __init__(self,curve,curve_normal,robot1=abb6640(d=50),robot2=abb1200(),base2_R=np.eye(3),base2_p=np.zeros(3),steps=50,breakpoints=[],primitives=[]):
 
 		self.curve_original=curve
 		self.curve_normal_original=curve_normal
@@ -25,7 +24,7 @@ class lambda_opt(object):
 		self.robot2=robot2
 		self.base2_R=base2_R
 		self.base2_p=base2_p
-		self.joint_vel_limit=np.radians([110,90,90,150,120,235])
+
 		self.steps=steps
 
 		self.lim_factor=0.0000001###avoid fwd error on joint limit
@@ -69,7 +68,7 @@ class lambda_opt(object):
 		q_out=[q_init]
 		Kw=1
 		for i in range(len(curve)):
-			# print(i)
+			print(i)
 			try:
 				error_fb=999
 				error_fb_prev=999
@@ -650,35 +649,7 @@ class lambda_opt(object):
 		print(lamdot_min)
 		return -lamdot_min	
 
-
-	def calc_js_from_theta(self,theta,curve,curve_normal):
-		###solve inv given 6th dof constraint theta
-		for i in range(len(curve)):
-			if i==0:
-				R_temp=direction2R(curve_normal[i],-curve[i+1]+curve[i])
-				R=np.dot(R_temp,Rz(theta[i]))
-				try:
-					q_out=[self.robot1.inv(curve[i],R)[0]]
-				except:
-					traceback.print_exc()
-					return 999
-
-			else:
-				R_temp=direction2R(curve_normal[i],-curve[i]+curve[i-1])
-				R=np.dot(R_temp,Rz(theta[i]))
-				try:
-					###get closet config to previous one
-					q_inv_all=self.robot1inv(curve[i],R)
-					temp_q=q_inv_all-q_out[-1]
-					order=np.argsort(np.linalg.norm(temp_q,axis=1))
-					q_out.append(q_inv_all[order[0]])
-				except:
-					# traceback.print_exc()
-					return 999
-
-
-		return calc_lamdot(q_out,self.lam,self.robot_1,1)
-
+	
 
 def main():
 	return 
