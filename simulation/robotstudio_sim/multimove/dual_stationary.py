@@ -11,7 +11,7 @@ from robots_def import *
 from error_check import *
 from MotionSend import *
 
-data_dir='../../../data/wood/'
+data_dir='../../../data/from_NX/'
 
 with open(data_dir+'dual_arm/abb1200.yaml') as file:
     H_1200 = np.array(yaml.safe_load(file)['H'],dtype=np.float64)
@@ -24,12 +24,13 @@ with open(data_dir+'dual_arm/tcp.yaml') as file:
 robot2=abb1200(R_tool=H_tcp[:3,:3],p_tool=H_tcp[:-1,-1])
 
 ms = MotionSend(robot2=robot2,base2_R=base2_R,base2_p=base2_p)
-s=250
+s=1100
 v = speeddata(s,9999999,9999999,999999)
 
 
-cmd_dir='../../../ILC/max_gradient/curve1_250_100L_multipeak/'
-relative_path=read_csv(data_dir+"relative_path_tool_frame.csv",header=None).values
+# cmd_dir='../../../ILC/max_gradient/curve1_250_100L_multipeak/'
+cmd_dir='../../../ILC/max_gradient/curve2_1100_100L_multipeak/'
+relative_path=read_csv(data_dir+"Curve_dense.csv",header=None).values
 
 #read in initial curve pose
 with open(data_dir+'blade_pose.yaml') as file:
@@ -56,6 +57,7 @@ StringData=StringIO(logged_data)
 df = read_csv(StringData, sep =",")
 ##############################data analysis#####################################
 lam, curve_exe1,curve_exe2,curve_exe_R1,curve_exe_R2,curve_exe_js1,curve_exe_js2, speed, timestamp, relative_path_exe, relative_path_exe_R = ms.logged_data_analysis_multimove(df,base2_R,base2_p,realrobot=True)
+
 #############################chop extension off##################################
 lam, curve_exe1,curve_exe2,curve_exe_R1,curve_exe_R2,curve_exe_js1,curve_exe_js2, speed, timestamp, relative_path_exe, relative_path_exe_R=\
 	ms.chop_extension_dual(lam, curve_exe1,curve_exe2,curve_exe_R1,curve_exe_R2,curve_exe_js1,curve_exe_js2, speed, timestamp, relative_path_exe,relative_path_exe_R,relative_path[0,:3],relative_path[-1,:3])
