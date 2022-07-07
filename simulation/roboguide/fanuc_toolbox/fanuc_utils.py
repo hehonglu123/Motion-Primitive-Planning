@@ -264,13 +264,17 @@ def extend_start_end(robot,q_bp,primitives,breakpoints,points_list,extension_d=1
 
 def extract_data_from_cmd(filename):
     data = read_csv(filename)
-    breakpoints=np.array(data['breakpoints'].tolist())
+
+    if 'breakpoints' in data.keys():
+        breakpoints=np.array(data['breakpoints'].tolist())
+    else:
+        breakpoints=[]
     primitives=data['primitives'].tolist()
     points=data['points'].tolist()
     qs=data['q_bp'].tolist()
     p_bp=[]
     q_bp=[]
-    for i in range(len(breakpoints)):
+    for i in range(len(primitives)):
         if primitives[i]=='movel_fit':
             point=extract_points(primitives[i],points[i])
             p_bp.append([point])

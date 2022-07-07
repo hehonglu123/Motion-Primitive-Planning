@@ -36,7 +36,7 @@ def main():
     multi_peak_threshold=0.2
     robot=m710ic(d=50)
 
-    s = 500
+    s = 515
     z = 100
     alpha = 0.5 # for gradient descent
     ilc_output=fitting_output+'results_'+str(s)+'/'
@@ -44,8 +44,10 @@ def main():
 
     try:
         breakpoints,primitives,p_bp,q_bp=extract_data_from_cmd(os.getcwd()+'/'+fitting_output+'command.csv')
+        # breakpoints,primitives,p_bp,q_bp=extract_data_from_cmd(os.getcwd()+'/'+ilc_output+'command_25.csv')
     except:
         print("Convert bp to command")
+        # exit()
 
         total_seg = 100
         step=int((len(curve_js)-1)/total_seg)
@@ -62,19 +64,24 @@ def main():
         df=DataFrame({'breakpoints':breakpoints,'primitives':primitives,'points':p_bp,'q_bp':q_bp})
         df.to_csv(fitting_output+'command.csv',header=True,index=False)
 
-    primitives,p_bp,q_bp=extend_start_end(robot,q_bp,primitives,breakpoints,p_bp,extension_d=60)
+    # primitives,p_bp,q_bp=extend_start_end(robot,q_bp,primitives,breakpoints,p_bp,extension_d=60)
 
     ###ilc toolbox def
     ilc=ilc_toolbox(robot,primitives)
 
     ###TODO: extension fix start point, moveC support
     ms = MotionSendFANUC()
-    iteration=20
+    iteration=200
     draw_y_max=None
+    max_error_tolerance = 0.5
     for i in range(iteration):
         
         ###execute,curve_fit_js only used for orientation
         logged_data=ms.exec_motions(robot,primitives,breakpoints,p_bp,q_bp,s,z)
+
+        # with open(data_dir+"curve_js_iter0_exe.csv","wb") as f:
+        #     f.write(logged_data)
+        # exit()
 
         # print(logged_data)
         StringData=StringIO(logged_data.decode('utf-8'))
@@ -89,9 +96,15 @@ def main():
 
         ##############################calcualte error########################################
         error,angle_error=calc_all_error_w_normal(curve_exe,curve[:,:3],curve_exe_R[:,:,-1],curve[:,3:])
-        print('Iteration:',i,', Max Error:',max(error))
+        print('Iteration:',i,', Max Error:',max(error),'Ave. Speed:',ave_speed,'Std. Speed:',np.std(speed),'Std/Ave (%):',np.std(speed)/ave_speed*100)
+        print('Max Speed:',max(speed),'Min Speed:',np.min(speed),'Ave. Error:',np.mean(error),'Min Error:',np.min(error),"Std. Error:",np.std(error))
+        print('Max Ang Error:',max(np.degrees(angle_error)),'Min Ang Error:',np.min(np.degrees(angle_error)),'Ave. Ang Error:',np.mean(np.degrees(angle_error)),"Std. Ang Error:",np.std(np.degrees(angle_error)))
+        print("===========================================")
         #############################error peak detection###############################
-        peaks,_=find_peaks(error,height=multi_peak_threshold,prominence=0.05,distance=20/(lam[int(len(lam)/2)]-lam[int(len(lam)/2)-1]))		###only push down peaks higher than height, distance between each peak is 20mm, threshold to filter noisy peaks
+        find_peak_dist = 20/(lam[int(len(lam)/2)]-lam[int(len(lam)/2)-1])
+        if find_peak_dist<1:
+            find_peak_dist=1
+        peaks,_=find_peaks(error,height=multi_peak_threshold,prominence=0.05,distance=find_peak_dist)		###only push down peaks higher than height, distance between each peak is 20mm, threshold to filter noisy peaks
 
         if len(peaks)==0 or np.argmax(error) not in peaks:
             peaks=np.append(peaks,np.argmax(error))
@@ -105,6 +118,7 @@ def main():
         ax2.plot(lam, np.degrees(angle_error), 'y-',label='Normal Error')
         if draw_y_max is None:
             draw_y_max=max(error)*1.05
+        draw_y_max=2
         ax2.axis(ymin=0,ymax=draw_y_max)
 
         ax1.set_xlabel('lambda (mm)')
@@ -120,9 +134,12 @@ def main():
         plt.savefig(ilc_output+'iteration_'+str(i))
         plt.clf()
         # plt.show()
+        # exit()
         # save bp
         df=DataFrame({'primitives':primitives,'points':p_bp,'q_bp':q_bp})
         df.to_csv(ilc_output+'command_'+str(i)+'.csv',header=True,index=False)
+        if max(error) < max_error_tolerance:
+            break
         
         ##########################################calculate gradient######################################
         ######gradient calculation related to nearest 3 points from primitive blended trajectory, not actual one

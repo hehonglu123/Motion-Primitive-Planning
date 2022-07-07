@@ -214,7 +214,7 @@ except OSError as e:
     with open('../Curve_R_in_base_frame_m710ic.npy','wb') as f:
         np.save(f,R_all)
 
-total_seg = 200
+total_seg = 10
 step = int((len(curve_js)-1)/total_seg)
 curve_js_plan = curve_js[::step]
 
