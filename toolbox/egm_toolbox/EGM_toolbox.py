@@ -73,7 +73,9 @@ class EGM_toolbox(object):
             for i in range(len(curve2start)):
                 while True:
                     res_i, state_i = self.egm.receive_from_robot()
+
                     if res_i:
+                        # print(state_i)
                         send_res = self.egm.send_to_robot_cart(curve2start[i], quat2start[i])
                         # print(send_res)
                         break
@@ -87,6 +89,36 @@ class EGM_toolbox(object):
 
         except KeyboardInterrupt:
             raise
+
+    def jog_joint(self,q):
+        self.clear_queue()
+        res, state = self.egm.receive_from_robot(.1)
+        q_cur=np.radians(state.joint_angles)
+        num=2*int(np.linalg.norm(q-q_cur)/(1000*self.ts))
+        q2start=np.linspace(q_cur,q,num=num)
+
+        
+        try:
+            for i in range(len(q2start)):
+                while True:
+                    res_i, state_i = self.egm.receive_from_robot()
+
+                    if res_i:
+                        # print(state_i)
+                        send_res = self.egm.send_to_robot(q2start[i])
+                        # print(send_res)
+                        break
+
+            for i in range(500):
+                while True:
+                    res_i, state_i = self.egm.receive_from_robot()
+                    if res_i:
+                        send_res = self.egm.send_to_robot(q)
+                        break
+
+        except KeyboardInterrupt:
+            raise
+
     def traverse_curve_cartesian(self,curve,curve_R):
         curve_exe_js=[]
         timestamp=[]
