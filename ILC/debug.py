@@ -39,7 +39,8 @@ def main():
 
 
 	ms = MotionSend()
-	breakpoints,primitives,p_bp,q_bp=ms.extract_data_from_cmd('recorded_data/command.csv')
+	# breakpoints,primitives,p_bp,q_bp=ms.extract_data_from_cmd('recorded_data/command.csv')
+	breakpoints,primitives,p_bp,q_bp=ms.extract_data_from_cmd('max_gradient/curve2_1100_100L_multipeak/command.csv')
 
 
 	###ilc toolbox def
@@ -54,7 +55,12 @@ def main():
 		i+=1
 		ms = MotionSend()
 		###read recorded data
-		df = read_csv("recorded_data/curve_exe_v"+str(v)+"_z10.csv")
+		# df = read_csv("recorded_data/curve_exe_v"+str(v)+"_z10.csv")
+
+		logged_data=ms.exec_motions(robot,primitives,breakpoints,p_bp,q_bp,s,z10)
+
+		StringData=StringIO(logged_data)
+		df = read_csv(StringData, sep =",")
 
 		##############################data analysis#####################################
 		lam, curve_exe, curve_exe_R,curve_exe_js, speed, timestamp=ms.logged_data_analysis(robot,df,realrobot=True)
