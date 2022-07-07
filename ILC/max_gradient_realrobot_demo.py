@@ -26,7 +26,7 @@ def main():
 	ms = MotionSend(url='http://192.168.55.1:80')
 
 	# data_dir="fitting_output_new/python_qp_movel/"
-	dataset='wood/'
+	dataset='wood/'		####ADJUST COMMAND & SPEED AS WELL!!!!!!!!!!
 	data_dir="../data/"+dataset
 	fitting_output="../data/"+dataset+'baseline/100L/'
 
@@ -54,9 +54,9 @@ def main():
 	# primitives,p_bp,q_bp=ms.extend(robot,q_bp,primitives,breakpoints,p_bp)
 	###########################################get cmd from simulation improved cmd################################
 	breakpoints,primitives,p_bp,q_bp=ms.extract_data_from_cmd('max_gradient/curve1_250_100L_multipeak/command.csv')
-
+	# breakpoints,primitives,p_bp,q_bp=ms.extract_data_from_cmd('max_gradient/curve2_1100_100L_multipeak/command.csv')
 	###########################3D plot###################################
-	fig_3d=plt.figure()
+	fig_3d=plt.figure(figsize=(5.5, 4.4), dpi=80)
 	ax = plt.axes(projection='3d')
 	ax.plot3D(curve[:,0], curve[:,1], curve[:,2], c='gray',label='original')
 	p_bp_np=np.array([item[0] for item in p_bp])      ###np version, avoid first and last extended points
@@ -64,7 +64,7 @@ def main():
 	plt.legend()
 	plt.title("Spatial Curve and Simulation Tuned Breakpoints")
 	plt.show(block=False)
-	fig_3d.canvas.manager.window.move(888,0)
+	fig_3d.canvas.manager.window.move(1111,400)
 	plt.pause(0.1)
 
 	###ilc toolbox def
@@ -124,7 +124,7 @@ def main():
 				plt.close(fig_error_speed)
 			except:
 				pass
-			fig_error_speed, ax1 = plt.subplots()
+			fig_error_speed, ax1 = plt.subplots(figsize=(6,4))
 			ax2 = ax1.twinx()
 			for traj_i in range(len(lam_temp_all)):
 				ax1.plot(lam_temp_all[traj_i], speed_temp_all[traj_i], 'g-',label='Error' if traj_i==0 else None)
@@ -132,6 +132,7 @@ def main():
 				ax2.plot(lam_temp_all[traj_i], np.degrees(angle_error_temp_all[traj_i]), 'y-',label='Normal Error' if traj_i==0 else None)
 
 			ax2.axis(ymin=0,ymax=2)
+			ax1.axis(ymin=0,ymax=1.2*v)
 
 			ax1.set_xlabel('lambda (mm)')
 			ax1.set_ylabel('Speed/lamdot (mm/s)', color='g')
@@ -142,7 +143,7 @@ def main():
 			ax2.legend(loc=0)
 
 			plt.legend()
-			fig_error_speed.canvas.manager.window.move(0,0)
+			fig_error_speed.canvas.manager.window.move(922,-77)
 			plt.show(block=False)
 			plt.pause(0.1)	
 
@@ -174,13 +175,14 @@ def main():
 		
 		##############################plot averaged curve error#####################################
 		plt.close(fig_error_speed)
-		fig_error_speed, ax1 = plt.subplots()
+		fig_error_speed, ax1 = plt.subplots(figsize=(6,4))
 		ax2 = ax1.twinx()
 		ax1.plot(lam, speed, 'g-', label='Speed')
 		ax2.plot(lam, error, 'b-',label='Error')
 		ax2.scatter(lam[peaks],error[peaks],label='peaks')
 		ax2.plot(lam, np.degrees(angle_error), 'y-',label='Normal Error')
 		ax2.axis(ymin=0,ymax=2)
+		ax1.axis(ymin=0,ymax=1.2*v)
 
 		ax1.set_xlabel('lambda (mm)')
 		ax1.set_ylabel('Speed/lamdot (mm/s)', color='g')
@@ -189,13 +191,13 @@ def main():
 		ax1.legend(loc=0)
 		ax2.legend(loc=0)
 		plt.legend()
-		fig_error_speed.canvas.manager.window.move(0,0)
+		fig_error_speed.canvas.manager.window.move(922,-77)
 		plt.show(block=False)
 		plt.pause(0.1)
 		
 		###########################3D plot###################################
 		plt.close(fig_3d)
-		fig_3d=plt.figure()
+		fig_3d=plt.figure(figsize=(5.5, 4.4), dpi=80)
 		ax = plt.axes(projection='3d')
 		ax.plot3D(curve[:,0], curve[:,1], curve[:,2], c='gray',label='original')
 		ax.plot3D(curve_exe[:,0], curve_exe[:,1], curve_exe[:,2], c='red',label='execution')
@@ -205,7 +207,7 @@ def main():
 		ax.scatter(curve_exe_peaks[:,0], curve_exe_peaks[:,1], curve_exe_peaks[:,2],c='orange',label='peaks')
 		plt.legend()
 		plt.title("Iteration "+str(i+1)+": 3D Plot")
-		fig_3d.canvas.manager.window.move(888,0)
+		fig_3d.canvas.manager.window.move(1111,400)
 		plt.show(block=False)
 		plt.pause(0.1)
 		##########################################calculate gradient######################################
@@ -236,7 +238,7 @@ def main():
 		adjusted_bp_idx=np.array(adjusted_bp_idx).flatten()
 		###########################3D plot###################################
 		plt.close(fig_3d)
-		fig_3d=plt.figure()
+		fig_3d=plt.figure(figsize=(5.5, 4.4), dpi=80)
 		ax = plt.axes(projection='3d')
 		ax.plot3D(curve[:,0], curve[:,1], curve[:,2], c='gray',label='original')
 		ax.plot3D(curve_exe[:,0], curve_exe[:,1], curve_exe[:,2], c='red',label='execution')
@@ -245,7 +247,7 @@ def main():
 			ax.scatter(p_bp[m][0][0], p_bp[m][0][1], p_bp[m][0][2],c='blue',label='adjusted breakpoints' if m==breakpoint_interp_2tweak_indices[0] else None)
 		ax.scatter(curve_exe_peaks[:,0], curve_exe_peaks[:,1], curve_exe_peaks[:,2],c='orange',label='peaks')
 		plt.title("Iteration "+str(i+1)+": 3D Plot")
-		fig_3d.canvas.manager.window.move(888,0)
+		fig_3d.canvas.manager.window.move(1111,400)
 		plt.legend()
 		plt.show(block=False)
 		plt.pause(0.1)
