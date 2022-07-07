@@ -18,9 +18,9 @@ from error_check import *
 from MotionSend import *
 
 def main():
-    dataset='wood/'
+    dataset='from_NX/'
     data_dir="../../../data/"+dataset
-    relative_path = read_csv(data_dir+"/relative_path_tool_frame.csv", header=None).values
+    relative_path = read_csv(data_dir+"/Curve_dense.csv", header=None).values
 
     with open(data_dir+'dual_arm/abb1200.yaml') as file:
         H_1200 = np.array(yaml.safe_load(file)['H'],dtype=np.float64)
@@ -34,8 +34,8 @@ def main():
 
     ms = MotionSend(robot2=robot2,base2_R=base2_R,base2_p=base2_p)
 
-    s1=400
-    s2=400
+    s1=1111
+    s2=1111
     z=10
     v1 = speeddata(s1,9999999,9999999,999999)
     v2 = speeddata(s2,9999999,9999999,999999)

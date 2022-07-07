@@ -4,8 +4,8 @@ from constraint_solver import *
 
 from MotionSend import *
 
-data_dir='../../data/wood/'
-relative_path=read_csv(data_dir+"relative_path_tool_frame.csv",header=None).values
+data_dir='../../data/from_NX/'
+relative_path=read_csv(data_dir+"Curve_dense.csv",header=None).values
 
 with open(data_dir+'dual_arm/abb1200.yaml') as file:
     H_1200 = np.array(yaml.safe_load(file)['H'],dtype=np.float64)

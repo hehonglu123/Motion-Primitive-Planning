@@ -23,6 +23,8 @@ def main():
     # thresholds=[0.1,0.2,0.5,0.9]
     num_ls=[150]
 
+    error_threshold=0.5
+    angle_threshold=np.radians(3)
 
     dataset="../../../data/from_NX/"
     
@@ -68,12 +70,12 @@ def main():
             max_error=max(error)
             print('cmd speed: ',v, 'max error: ',max_error, 'max ori error: ', max(angle_error), 'std(speed): ',np.std(speed))
             v_prev_temp=v
-            if max_error>0.5 or np.std(speed)>np.average(speed)/20 or max(angle_error)>np.radians(3):
+            if max_error>error_threshold or np.std(speed)>np.average(speed)/20 or max(angle_error)>angle_threshold:
                 v-=abs(v_prev-v)/2
             else:
                 v_prev_possible=v
                 #stop condition
-                if 1-max_error<0.05:
+                if error_threshold-max_error<0.05:
                     break   
                 v+=abs(v_prev-v)/2
 

@@ -66,8 +66,8 @@ def main():
     ax.plot_surface(xsurf, ysurf, zsurf, cmap=cm.coolwarm,
                            linewidth=0, antialiased=False)
     ax.plot3D(curve[:,0],curve[:,1],curve[:,2],'r.-')
-    ax.quiver(curve[:,0],curve[:,1],curve[:,2],curve_normal[:,0],curve_normal[:,1],curve_normal[:,2],length=1, normalize=True)
-
+    ax.quiver(curve[::20,0],curve[::20,1],curve[::20,2],curve_normal[::20,0],curve_normal[::20,1],curve_normal[::20,2],length=5, normalize=True)
+    plt.title('Curve 1')
     plt.show()
 
     ###################check curve normal##############################

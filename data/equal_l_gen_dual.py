@@ -14,7 +14,7 @@ from lambda_calc import *
 from utils import *
 
 
-data_dir='wood/dual_arm/'
+data_dir='from_NX/dual_arm/'
 num_ls=[50]
 robot=abb6640(d=50)
 curve_js = read_csv(data_dir+'arm1.csv',header=None).values
@@ -55,9 +55,9 @@ for num_l in num_ls:
 	df=DataFrame({'breakpoints':breakpoints,'primitives':primitives_choices,'points':points,'q_bp':q_bp})
 	df.to_csv(data_dir+'command1.csv',header=True,index=False)
 
-	curve_fit_js=car2js(robot,curve_js[0],curve_fit,curve_fit_R)
-	DataFrame(curve_fit_js).to_csv(data_dir+'curve_fit_js1.csv',header=False,index=False)
-	DataFrame(curve_fit).to_csv(data_dir+'curve_fit1.csv',header=False,index=False)
+	# curve_fit_js=car2js(robot,curve_js[0],curve_fit,curve_fit_R)
+	# DataFrame(curve_fit_js).to_csv(data_dir+'curve_fit_js1.csv',header=False,index=False)
+	# DataFrame(curve_fit).to_csv(data_dir+'curve_fit1.csv',header=False,index=False)
 
 
 
@@ -98,11 +98,11 @@ for num_l in num_ls:
 			R_end=robot.fwd(curve_js[breakpoints[i]-1]).R
 			curve_fit_R[breakpoints[i-1]:breakpoints[i]]=orientation_interp(R_init,R_end,breakpoints[i]-breakpoints[i-1]+1)[1:]
 		
-	primitives_choices=['movej_fit']+['movel_fit']*num_l
+	primitives_choices=['movej_fit']+['movej_fit']*num_l
 
 	df=DataFrame({'breakpoints':breakpoints,'primitives':primitives_choices,'points':points,'q_bp':q_bp})
 	df.to_csv(data_dir+'command2.csv',header=True,index=False)
 
-	curve_fit_js=car2js(robot,curve_js[0],curve_fit,curve_fit_R)
-	DataFrame(curve_fit_js).to_csv(data_dir+'curve_fit_js2.csv',header=False,index=False)
-	DataFrame(curve_fit).to_csv(data_dir+'curve_fit2.csv',header=False,index=False)
+	# curve_fit_js=car2js(robot,curve_js[0],curve_fit,curve_fit_R)
+	# DataFrame(curve_fit_js).to_csv(data_dir+'curve_fit_js2.csv',header=False,index=False)
+	# DataFrame(curve_fit).to_csv(data_dir+'curve_fit2.csv',header=False,index=False)
