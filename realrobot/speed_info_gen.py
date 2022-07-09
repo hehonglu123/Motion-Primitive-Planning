@@ -15,11 +15,12 @@ ms=MotionSend()
 robot=abb6640(d=50)
 
 
-dataset='wood/'
+dataset='from_NX/'
 data_dir="../data/"+dataset
 curve = read_csv(data_dir+"Curve_in_base_frame.csv",header=None).values
 
-exe_dir='../ILC/max_gradient/curve1_250_100L_multipeak_real/'
+# exe_dir='../ILC/max_gradient/curve1_250_100L_multipeak_real/'
+exe_dir='../ILC/max_gradient/curve2_1100_100L_multipeak_real/'
 
 ###5 run execute
 curve_exe_all=[]

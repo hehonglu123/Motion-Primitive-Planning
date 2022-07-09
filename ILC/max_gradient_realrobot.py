@@ -25,7 +25,7 @@ def main():
 	ms = MotionSend(url='http://192.168.55.1:80')
 
 	# data_dir="fitting_output_new/python_qp_movel/"
-	dataset='wood/'		####ADJUST COMMAND & SPEED AS WELL!!!!!!!!!!
+	dataset='from_NX/'		####ADJUST COMMAND & SPEED AS WELL!!!!!!!!!!
 	data_dir="../data/"+dataset
 	fitting_output="../data/"+dataset+'baseline/100L/'
 
@@ -37,7 +37,7 @@ def main():
 	multi_peak_threshold=0.2
 	robot=abb6640(d=50)
 
-	v=250
+	v=980
 	s = speeddata(v,9999999,9999999,999999)
 	z = z10
 
@@ -47,7 +47,8 @@ def main():
 	# ###extension
 	# primitives,p_bp,q_bp=ms.extend(robot,q_bp,primitives,breakpoints,p_bp)
 	###########################################get cmd from simulation improved cmd################################
-	breakpoints,primitives,p_bp,q_bp=ms.extract_data_from_cmd('max_gradient/curve1_250_100L_multipeak/command.csv')
+	# breakpoints,primitives,p_bp,q_bp=ms.extract_data_from_cmd('max_gradient/curve1_250_100L_multipeak/command.csv')
+	breakpoints,primitives,p_bp,q_bp=ms.extract_data_from_cmd('max_gradient/curve2_1100_100L_multipeak/command.csv')
 
 	###ilc toolbox def
 	ilc=ilc_toolbox(robot,primitives)
