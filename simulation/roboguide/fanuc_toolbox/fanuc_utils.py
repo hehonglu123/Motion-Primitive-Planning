@@ -304,5 +304,9 @@ def extract_points(primitive_type,points):
 
         return list(map(float, endpoint1)),list(map(float, endpoint2))
     else:
-        endpoint=points[8:-3].split(',')
-        return list(map(float, endpoint))   
+        if points[1] == '[':
+            endpoint=points[2:-2].split(',')
+            return list(map(float, endpoint)) 
+        else:
+            endpoint=points[8:-3].split(',')
+            return list(map(float, endpoint))   
