@@ -334,7 +334,7 @@ class ilc_toolbox(object):
 
 
 
-	def update_bp_ilc(self,p_bp,q_bp,exe_bp_p,exe_bp_R,exe_bp_p_new, exe_bp_R_new,alpha1=0.5,alpha2=0.5):
+	def update_bp_ilc_cart(self,p_bp,q_bp,exe_bp_p,exe_bp_R,exe_bp_p_new, exe_bp_R_new,alpha1=0.5,alpha2=0.5):
 		###fixing initial and end breakpoint
 		###TODO, add rotation gradient
 
@@ -355,6 +355,23 @@ class ilc_toolbox(object):
 
 			q_bp[reverse_idx][0]=car2js(self.robot,q_bp[reverse_idx][0],p_bp[reverse_idx][0],self.robot.fwd(q_bp[reverse_idx][0]).R)[0]
 		return p_bp,q_bp
+
+	def update_bp_ilc_js(self,q_bp,exe_bp_q,exe_bp_q_new,alpha1=0.5,alpha2=0.5):
+
+		###q_bp:								joint configs of breakpoints, u
+		###exe_bp_q:							breakpoints of execution, position, output y
+		###exe_bp_q_new:						breakpoints of execution with augmented input u', position, output y'
+
+		for i in range(1,len(p_bp)-1):
+			###get new ek
+			grad_eq=exe_bp_q_new[i-1]-exe_bp_q[i-1]
+			###time reverse
+			reverse_idx=-1-i
+			q_bp[reverse_idx]-=alpha1*grad_eq
+
+
+		return q_bp
+
 
 	def sto_gradient_from_model(self,p_bp,q_bp,total_points=100,K=20):
 		p_bp=np.array(p_bp)
@@ -399,3 +416,5 @@ class ilc_toolbox(object):
 		G=dp_model_all.T@np.linalg.pinv(d_bp_p_all.T)
 
 		return curve_blended_downsampled,G
+
+	

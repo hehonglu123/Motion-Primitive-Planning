@@ -1,4 +1,5 @@
 import numpy as np
+import scipy
 from pandas import *
 import sys, traceback
 from general_robotics_toolbox import *
@@ -221,7 +222,32 @@ def calc_lamdot_dual(curve_js1,curve_js2,lam,joint_vel_limit1,joint_vel_limit2,s
 
 	return dlam_max
 
+def traj_speed_est(robot,curve_js,lam,vd):
+	###find desired qdot at each step
+	dq=np.gradient(curve_js,axis=0)
+	dlam=np.average(np.gradient(lam))
+	dt=dlam/vd
+	qdot_d=dq/dt
+	###bound desired qdot with qdot constraint
+	qdot_max=np.tile(robot.joint_vel_limit,(len(curve_js),1))
+	coeff=np.divide(np.abs(qdot_d),qdot_max)
+	coeff=np.max(coeff,axis=1)	###get the limiting joint
+	coeff=np.clip(coeff,1,999)	###clip coeff to 1
+	coeff=np.tile(np.array([coeff]).T,(1,6))
+	qdot=np.divide(qdot_d,coeff)	###clip propotionally
+	print(coeff)	
 
+
+
+	# ###iterate a few times to satisfy qddot constraint
+	# for r in range(3):
+
+	speed=[]
+	for i in range(len(curve_js)):
+		J=robot.jacobian(curve_js[i])
+		speed.append(np.linalg.norm((J@qdot[i])[3:]))
+
+	return speed
 def main():
 	robot=abb6640(d=50)
 	curve_js = read_csv("../data/from_NX/Curve_js.csv",header=None).values
@@ -266,7 +292,14 @@ def main2():
 	plt.ylim([0,2000])
 	plt.show()
 
+def main3():
 
+	robot=abb6640(d=50)
+	curve_js = read_csv("../data/from_NX/Curve_js.csv",header=None).values
+	lam=calc_lam_js(curve_js,robot)
+	speed=traj_speed_est(robot,curve_js,lam,250)
+	plt.plot(lam,speed)
+	plt.show()
 
 if __name__ == "__main__":
-	main2()
+	main3()

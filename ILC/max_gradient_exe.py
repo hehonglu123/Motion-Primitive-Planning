@@ -87,14 +87,15 @@ def main():
 		ax2.scatter(lam[peaks],error[peaks],label='peaks')
 		ax2.plot(lam, np.degrees(angle_error), 'y-',label='Normal Error')
 		ax2.axis(ymin=0,ymax=2)
+		ax1.axis(ymin=0,ymax=1.2*v)
 
 		ax1.set_xlabel('lambda (mm)')
 		ax1.set_ylabel('Speed/lamdot (mm/s)', color='g')
 		ax2.set_ylabel('Error/Normal Error (mm/deg)', color='b')
 		plt.title("Speed and Error Plot")
-		ax1.legend(loc=0)
+		ax1.legend(loc="upper right")
 
-		ax2.legend(loc=0)
+		ax2.legend(loc="upper left")
 
 		plt.legend()
 		plt.savefig('recorded_data/iteration_ '+str(i))

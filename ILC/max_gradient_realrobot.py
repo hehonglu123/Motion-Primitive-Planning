@@ -25,9 +25,9 @@ def main():
 	ms = MotionSend(url='http://192.168.55.1:80')
 
 	# data_dir="fitting_output_new/python_qp_movel/"
-	dataset='wood/'
-	data_dir="../train_data/"+dataset
-	fitting_output="../train_data/"+dataset+'baseline/100L/'
+	dataset='from_NX/'		####ADJUST COMMAND & SPEED AS WELL!!!!!!!!!!
+	data_dir="../data/"+dataset
+	fitting_output="../data/"+dataset+'baseline/100L/'
 
 
 	curve_js=read_csv(data_dir+'Curve_js.csv',header=None).values
@@ -37,7 +37,7 @@ def main():
 	multi_peak_threshold=0.2
 	robot=abb6640(d=50)
 
-	v=250
+	v=980
 	s = speeddata(v,9999999,9999999,999999)
 	z = z10
 
@@ -47,7 +47,8 @@ def main():
 	# ###extension
 	# primitives,p_bp,q_bp=ms.extend(robot,q_bp,primitives,breakpoints,p_bp)
 	###########################################get cmd from simulation improved cmd################################
-	breakpoints,primitives,p_bp,q_bp=ms.extract_data_from_cmd('max_gradient/curve1_250_100L_multipeak/command.csv')
+	# breakpoints,primitives,p_bp,q_bp=ms.extract_data_from_cmd('max_gradient/curve1_250_100L_multipeak/command.csv')
+	breakpoints,primitives,p_bp,q_bp=ms.extract_data_from_cmd('max_gradient/curve2_1100_100L_multipeak/command.csv')
 
 	###ilc toolbox def
 	ilc=ilc_toolbox(robot,primitives)
@@ -80,14 +81,12 @@ def main():
 
 			StringData=StringIO(logged_data)
 			df = read_csv(StringData, sep =",")
-			##############################train_data analysis#####################################
+			##############################data analysis#####################################
 			lam, curve_exe, curve_exe_R,curve_exe_js, speed, timestamp=ms.logged_data_analysis(robot,df,realrobot=True)
 
 			###throw bad curves
 			_, _, _,_, _, timestamp_temp=ms.chop_extension(curve_exe, curve_exe_R,curve_exe_js, speed, timestamp,curve[0,:3],curve[-1,:3])
 			total_time_all.append(timestamp_temp[-1]-timestamp_temp[0])
-
-			###TODO, avoid corner path failure
 
 			timestamp=timestamp-timestamp[0]
 
@@ -100,7 +99,7 @@ def main():
 
 		###infer average curve from linear interplateion
 		curve_js_all_new, avg_curve_js, timestamp_d=average_curve(curve_exe_js_all,timestamp_all)
-		###calculat train_data with average curve
+		###calculat data with average curve
 		lam, curve_exe, curve_exe_R, speed=logged_data_analysis(robot,timestamp_d,avg_curve_js)
 		#############################chop extension off##################################
 		lam, curve_exe, curve_exe_R,curve_exe_js, speed, timestamp=ms.chop_extension(curve_exe, curve_exe_R,curve_exe_js, speed, timestamp_d,curve[0,:3],curve[-1,:3])
@@ -123,6 +122,7 @@ def main():
 		ax2.scatter(lam[peaks],error[peaks],label='peaks')
 		ax2.plot(lam, np.degrees(angle_error), 'y-',label='Normal Error')
 		ax2.axis(ymin=0,ymax=2)
+		ax1.axis(ymin=0,ymax=1.2*v)
 
 		ax1.set_xlabel('lambda (mm)')
 		ax1.set_ylabel('Speed/lamdot (mm/s)', color='g')
@@ -133,7 +133,7 @@ def main():
 		ax2.legend(loc=0)
 
 		plt.legend()
-		plt.savefig(path+'/iteration_ '+str(i))
+		plt.savefig('recorded_data/iteration_ '+str(i))
 		plt.clf()
 		# plt.show()
 		

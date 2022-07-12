@@ -21,7 +21,6 @@ from MotionSend import *
 from lambda_calc import *
 from blending import *
 
-
 def main():
 	ms = MotionSend(url='http://192.168.55.1:80')
 
