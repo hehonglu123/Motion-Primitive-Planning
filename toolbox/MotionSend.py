@@ -364,7 +364,7 @@ class MotionSend(object):
 
         ###speed filter, only for simulation
 
-        return lam, np.array(curve_exe), np.array(curve_exe_R),curve_exe_js, act_speed, timestamp-timestamp[0]
+        return lam, np.array(curve_exe), np.array(curve_exe_R),np.array(curve_exe_js), np.array(act_speed), timestamp-timestamp[0]
 
     def logged_data_analysis_multimove(self,df,base2_R,base2_p,realrobot=False):
         q1_1=df[' J1'].tolist()[1:]

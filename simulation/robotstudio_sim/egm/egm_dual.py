@@ -34,15 +34,12 @@ def main():
 	curve_js2=read_csv(data_dir+"dual_arm/arm2.csv",header=None).values
 	relative_path=read_csv(data_dir+"Curve_dense.csv",header=None).values
 
-	vd=2000
+	vd=500
 	idx=EGM_robot1.downsample24ms(relative_path,vd)
 
 	###jog both arm to start pose
-	pose1=robot1.fwd(curve_js1[0])
-	EGM_robot1.jog_joint_cartesian(pose1.p,pose1.R)
+	EGM_robot1.jog_joint(curve_js1[0])
 	EGM_robot2.jog_joint(curve_js2[0])
-	# pose2=robot2.fwd(curve_js2[0])
-	# EGM_robot2.jog_joint_cartesian(pose2.p,pose2.R)
 
 	################################traverse curve for both arms#####################################
 
@@ -55,27 +52,57 @@ def main():
 		for i in idx:
 			while True:
 				res_i1, state_i1 = egm1.receive_from_robot()
-				res_i2, state_i2 = egm2.receive_from_robot()
-				if res_i1 and res_i2:
-					pose1=robot1.fwd(curve_js1[i])
-					send_res1 = egm1.send_to_robot_cart(pose1.p, R2q(pose1.R))
-					#save joint angles
-					curve_exe_js1.append(np.radians(state_i1.joint_angles))
-					timestamp1.append(state_i1.robot_message.header.tm)
+				if res_i1:
+					while True:
+						res_i2, state_i2 = egm2.receive_from_robot()
+						if res_i2:
+							send_res1 = egm1.send_to_robot(curve_js1[i])
+							#save joint angles
+							curve_exe_js1.append(np.radians(state_i1.joint_angles))
+							timestamp1.append(state_i1.robot_message.header.tm)
 
-					
+							
 
-					# pose2=robot2.fwd(curve_js2[i])
-					# send_res2 = egm2.send_to_robot_cart(pose2.p, R2q(pose2.R))
-					send_res2 = egm2.send_to_robot(curve_js2[i])
-					#save joint angles
-					curve_exe_js2.append(np.radians(state_i2.joint_angles))
-					timestamp2.append(state_i2.robot_message.header.tm)
+							# res_i2, state_i2 = egm2.receive_from_robot()
+							send_res2 = egm2.send_to_robot(curve_js2[i])
+							#save joint angles
+							curve_exe_js2.append(np.radians(state_i2.joint_angles))
+							timestamp2.append(state_i2.robot_message.header.tm)
+
+							break
 					break
 	except KeyboardInterrupt:
 		raise
-	
+
 	timestamp1=np.array(timestamp1)/1000
 	timestamp2=np.array(timestamp2)/1000
+
+	##############################calcualte error########################################
+	relative_path_exe,relative_path_exe_R=form_relative_path(robot1,robot2,curve_exe_js1,curve_exe_js2,base2_R,base2_p)
+	lam=calc_lam_cs(relative_path_exe)
+	speed=np.gradient(lam)/np.gradient(timestamp1)
+	error,angle_error=calc_all_error_w_normal(relative_path_exe,relative_path[:,:3],relative_path_exe_R[:,:,-1],relative_path[:,3:])
+	print(max(error))
+
+	##############################plot error#####################################
+
+	fig, ax1 = plt.subplots()
+	ax2 = ax1.twinx()
+	ax1.plot(lam, speed, 'g-', label='Speed')
+	ax2.plot(lam, error, 'b-',label='Error')
+	ax2.plot(lam, np.degrees(angle_error), 'y-',label='Normal Error')
+	ax2.axis(ymin=0,ymax=100)
+
+	ax1.set_xlabel('lambda (mm)')
+	ax1.set_ylabel('Speed/lamdot (mm/s)', color='g')
+	ax2.set_ylabel('Error/Normal Error (mm/deg)', color='b')
+	plt.title("Speed and Error Plot")
+	ax1.legend(loc=0)
+
+	ax2.legend(loc=0)
+
+	plt.legend()
+	plt.show()
+
 if __name__ == '__main__':
 	main()
