@@ -11,7 +11,7 @@ from robot_def import *
 def main():
 	###read actual curve
 	col_names=['X', 'Y', 'Z','direction_x', 'direction_y', 'direction_z'] 
-	data = read_csv("data/Curve_dense.csv", names=col_names)
+	data = read_csv("train_data/Curve_dense.csv", names=col_names)
 	curve_x=data['X'].tolist()
 	curve_y=data['Y'].tolist()
 	curve_z=data['Z'].tolist()
@@ -19,7 +19,7 @@ def main():
 
 	###read interpolated curves in joint space
 	col_names=['q1', 'q2', 'q3','q4', 'q5', 'q6'] 
-	data = read_csv("data/Curve_js.csv", names=col_names)
+	data = read_csv("train_data/Curve_js.csv", names=col_names)
 	curve_q1=data['q1'].tolist()
 	curve_q2=data['q2'].tolist()
 	curve_q3=data['q3'].tolist()
@@ -38,7 +38,7 @@ def main():
 	###fit by error thresholding
 	my_pwlf.fit_under_error_simplified(max_error=0.02,starting_threshold=0.005)
 
-	###predict at every data index
+	###predict at every train_data index
 	xHat = np.arange(len(curve_js))
 	curve_js_pred = my_pwlf.predict_arb(xHat)
 

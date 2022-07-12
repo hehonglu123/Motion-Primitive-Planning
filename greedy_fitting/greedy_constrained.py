@@ -172,8 +172,8 @@ class greedy_fit(fitting_toolbox):
 def main():
     ###read in points
     curve_js = read_csv("../data/wood/Curve_js.csv",header=None).values
-    # curve_js = read_csv("../data/from_ge/Curve_js2.csv", header=None).values
-    # curve_js = read_csv("../data/from_NX/Curve_js.csv",header=None).values
+    # curve_js = read_csv("../train_data/from_ge/Curve_js2.csv", header=None).values
+    # curve_js = read_csv("../train_data/from_NX/Curve_js.csv",header=None).values
     # curve_js = read_csv("../constraint_solver/dual_arm/trajectory/arm2.csv",header=None).values
 
     robot = abb6640(d=50)
@@ -230,7 +230,7 @@ def main():
 def greedy_execute():
     ms = MotionSend()
     ###read in points
-    # curve_js=read_csv("../data/from_NX/Curve_js.csv",header=None).values
+    # curve_js=read_csv("../train_data/from_NX/Curve_js.csv",header=None).values
     curve_js = read_csv("../data/wood/Curve_js.csv", header=None).values
 
     robot = abb6640(d=50)
@@ -257,7 +257,7 @@ def greedy_execute():
     logged_data = ms.exec_motions(robot, primitives_choices, breakpoints, points, q_bp, v500, z10)
     StringData = StringIO(logged_data)
     df = read_csv(StringData, sep=",")
-    ##############################data analysis#####################################
+    ##############################train_data analysis#####################################
     lam, curve_exe, curve_exe_R, curve_exe_js, speed, timestamp = ms.logged_data_analysis(robot, df, realrobot=False)
     #############################chop extension off##################################
     lam, curve_exe, curve_exe_R, curve_exe_js, speed, timestamp = ms.chop_extension(curve_exe, curve_exe_R,

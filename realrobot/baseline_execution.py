@@ -22,9 +22,9 @@ def main():
     robot=abb6640(d=50)
 
     dataset="from_NX/"
-    data_dir='../data/'+dataset+'baseline/100L/'
+    data_dir='../train_data/'+dataset+'baseline/100L/'
 
-    curve = read_csv('../data/'+dataset+"Curve_in_base_frame.csv",header=None).values
+    curve = read_csv('../train_data/'+dataset+"Curve_in_base_frame.csv",header=None).values
     breakpoints,primitives,p_bp,q_bp=ms.extract_data_from_cmd(data_dir+'command.csv')
     p_bp,q_bp=ms.extend(robot,q_bp,primitives,breakpoints,p_bp)
 
@@ -54,7 +54,7 @@ def main():
 
             StringData=StringIO(logged_data)
             df = read_csv(StringData, sep =",")
-            ##############################data analysis#####################################
+            ##############################train_data analysis#####################################
             lam, curve_exe, curve_exe_R,curve_exe_js, speed, timestamp=ms.logged_data_analysis(robot,df,realrobot=True)
 
             ###throw bad curves
@@ -78,7 +78,7 @@ def main():
 
         ###infer average curve from linear interplateion
         curve_js_all_new, avg_curve_js, timestamp_d=average_curve(curve_exe_js_all,timestamp_all)
-        ###calculat data with average curve
+        ###calculat train_data with average curve
         lam, curve_exe, curve_exe_R, speed=logged_data_analysis(robot,timestamp_d,avg_curve_js)
         #############################chop extension off##################################
         lam, curve_exe, curve_exe_R,curve_exe_js, speed, timestamp=ms.chop_extension(curve_exe, curve_exe_R,curve_exe_js, speed, timestamp_d,curve[0,:3],curve[-1,:3])
@@ -118,7 +118,7 @@ def main():
 
                 StringData=StringIO(logged_data)
                 df = read_csv(StringData, sep =",")
-                ##############################data analysis#####################################
+                ##############################train_data analysis#####################################
                 lam, curve_exe, curve_exe_R,curve_exe_js, speed, timestamp=ms.logged_data_analysis(robot,df,realrobot=True)
 
                 ###throw bad curves
@@ -142,7 +142,7 @@ def main():
 
             ###infer average curve from linear interplateion
             curve_js_all_new, avg_curve_js, timestamp_d=average_curve(curve_exe_js_all,timestamp_all)
-            ###calculat data with average curve
+            ###calculat train_data with average curve
             lam, curve_exe, curve_exe_R, speed=logged_data_analysis(robot,timestamp_d,avg_curve_js)
             #############################chop extension off##################################
             lam, curve_exe, curve_exe_R,curve_exe_js, speed, timestamp=ms.chop_extension(curve_exe, curve_exe_R,curve_exe_js, speed, timestamp_d,curve[0,:3],curve[-1,:3])
@@ -153,7 +153,7 @@ def main():
             max_error=max(error)
             break
 
-    ######################################save <1mm logged data##############################################
+    ######################################save <1mm logged train_data##############################################
     df=DataFrame({'cmd speed':v,'average speed':[np.average(speed)],'max speed':[np.amax(speed)],'min speed':[np.amin(speed)],'std speed':[np.std(speed)],\
         'average error':[np.average(error)],'max error':[max_error],'min error':[np.amin(error)],'std error':[np.std(error)],\
         'average angle(rad) error':[np.average(angle_error)],'max angle(rad) error':[max(angle_error)],'min angle(rad) error':[np.amin(angle_error)],'std angle(rad) error':[np.std(angle_error)]})

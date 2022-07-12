@@ -69,7 +69,7 @@ class MotionSend(object):
                     mp.WaitTime(0.1)
                 else:
                     mp.MoveAbsJ(jointt,speed,zone)
-        ###add sleep at the end to wait for data transmission
+        ###add sleep at the end to wait for train_data transmission
         mp.WaitTime(0.1)
         
         # print(mp.get_program_rapid())
@@ -125,7 +125,7 @@ class MotionSend(object):
                 else:
                     mp2.MoveAbsJ(jointt,speed2,zone2)
 
-        ###add sleep at the end to wait for data transmission
+        ###add sleep at the end to wait for train_data transmission
         mp1.WaitTime(0.1)
         mp2.WaitTime(0.1)
         

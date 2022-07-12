@@ -12,8 +12,8 @@ from lambda_calc import *
 from MotionSend import *
 
 dataset='from_NX/'
-data_dir="../data/"+dataset
-fitting_output="../data/"+dataset+'baseline/100L/'
+data_dir="../train_data/"+dataset
+fitting_output="../train_data/"+dataset+'baseline/100L/'
 curve = read_csv(data_dir+"Curve_in_base_frame.csv",header=None).values
 
 ms=MotionSend()

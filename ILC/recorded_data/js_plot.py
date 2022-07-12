@@ -15,7 +15,7 @@ robot=abb6640(d=50)
 
 
 
-###read in recorded joint data
+###read in recorded joint train_data
 data = read_csv("noise_from_RS.csv")
 q1=data[' J1'].tolist()
 q2=data[' J2'].tolist()

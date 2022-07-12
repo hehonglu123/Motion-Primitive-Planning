@@ -41,8 +41,8 @@ def read_data():
     all_js = []
 
     for i in range(201):
-        # base_file = "data/poly/base/curve_base_poly_{}.csv".format(i)
-        js_file = "data/curve2/js_new_500/traj_{}_js_new.csv".format(i)
+        # base_file = "train_data/poly/base/curve_base_poly_{}.csv".format(i)
+        js_file = "train_data/curve2/js_new_500/traj_{}_js_new.csv".format(i)
 
         col_names=['q1', 'q2', 'q3','q4', 'q5', 'q6']
         data = pd.read_csv(js_file, names=col_names)

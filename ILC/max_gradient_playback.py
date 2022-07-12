@@ -31,7 +31,7 @@ def main():
             ###update velocity profile
             v_cmd = speeddata(v,9999999,9999999,999999)
 
-            ###read data, already with extension
+            ###read train_data, already with extension
             breakpoints,primitives,p_bp,q_bp=ms.extract_data_from_cmd(data_dir+'command.csv')
 
             logged_data=ms.exec_motions(robot,primitives,breakpoints,p_bp,q_bp,v_cmd,z10)

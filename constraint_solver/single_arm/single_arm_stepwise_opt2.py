@@ -7,10 +7,10 @@ from error_check import *
 def main():
 
 	col_names=['X', 'Y', 'Z','direction_x','direction_y','direction_z'] 
-	# data = read_csv("../../data/from_ge/Curve_in_base_frame2.csv", names=col_names)
-	# data = read_csv("../../data/wood/Curve_in_base_frame.csv", names=col_names)
-	curve = read_csv("../../data/from_NX/Curve_in_base_frame.csv", names=col_names).values
-	curve_js=read_csv("../../data/from_NX/Curve_js.csv", names=col_names).values
+	# train_data = read_csv("../../train_data/from_ge/Curve_in_base_frame2.csv", names=col_names)
+	# train_data = read_csv("../../train_data/wood/Curve_in_base_frame.csv", names=col_names)
+	curve = read_csv("../../train_data/from_NX/Curve_in_base_frame.csv", names=col_names).values
+	curve_js=read_csv("../../train_data/from_NX/Curve_js.csv", names=col_names).values
 
 	robot=abb6640(d=50)
 	opt=lambda_opt(curve[:,:3],curve[:,3:],robot1=robot,steps=50000)

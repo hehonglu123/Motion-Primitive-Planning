@@ -534,8 +534,8 @@ def rl_fit(curve_base_data, curve_js_data, load_model=False):
 
 
 def main():
-    curve_base_data = read_base_data("data/base")
-    curve_js_data = read_js_data("data/js")
+    curve_base_data = read_base_data("train_data/base")
+    curve_js_data = read_js_data("train_data/js")
     # rl_fit(curve_base_data, curve_js_data)
 
     n_feature = 128

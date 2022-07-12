@@ -28,8 +28,8 @@ def main():
 	base2_p=np.array([3000,1000,0])
 
 	dataset='wood/'
-	data_dir="../data/"+dataset
-	fitting_output="../data/"+dataset+'dual_arm/'
+	data_dir="../train_data/"+dataset
+	fitting_output="../train_data/"+dataset+'dual_arm/'
 	relative_path=read_csv(data_dir+"relative_path_tool_frame.csv",header=None).values
 
 
@@ -65,7 +65,7 @@ def main():
 
 		StringData=StringIO(logged_data)
 		df = read_csv(StringData, sep =",")
-		##############################data analysis#####################################
+		##############################train_data analysis#####################################
 		lam, curve_exe1,curve_exe2,curve_exe_R1,curve_exe_R2,curve_exe_js1,curve_exe_js2, speed, timestamp, relative_path_exe, relative_path_exe_R = ms.logged_data_analysis_multimove(df,base2_R,base2_p,realrobot=True)
 		#############################chop extension off##################################
 		lam, curve_exe1,curve_exe2,curve_exe_R1,curve_exe_R2,curve_exe_js1,curve_exe_js2, speed, timestamp, relative_path_exe, relative_path_exe_R=\

@@ -6,10 +6,10 @@ import pwlf
 x=np.arange(-2,2,0.001)
 y=np.sin(x)
 
-# initialize piecewise linear fit with your x and y data
+# initialize piecewise linear fit with your x and y train_data
 my_pwlf = pwlf.PiecewiseLinFit(x, y)
 
-# fit the data for four line segments
+# fit the train_data for four line segments
 res = my_pwlf.fit(4)
 
 # predict for the determined points

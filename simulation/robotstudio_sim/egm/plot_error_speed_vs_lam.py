@@ -12,8 +12,8 @@ from lambda_calc import *
 from MotionSend import *
 
 dataset='wood/'
-curve = read_csv('../../../data/'+dataset+'Curve_in_base_frame.csv',header=None).values
-# curve = read_csv('../../../data/from_ge/Curve_in_base_frame2.csv',header=None).values
+curve = read_csv('../../../train_data/'+dataset+'Curve_in_base_frame.csv',header=None).values
+# curve = read_csv('../../../train_data/from_ge/Curve_in_base_frame2.csv',header=None).values
 
 speed=['v50','v100','v200','v300']
 # speed=['v100','v200','v500','v1000']

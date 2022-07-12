@@ -23,7 +23,7 @@ from blending import *
 def main():
 	# data_dir="fitting_output_new/python_qp_movel/"
 	dataset='from_NX/'
-	data_dir="../data/"+dataset
+	data_dir="../train_data/"+dataset
 
 
 	curve_js=read_csv(data_dir+'Curve_js.csv',header=None).values
@@ -54,7 +54,7 @@ def main():
 	while max_error>max_error_threshold:
 		i+=1
 		ms = MotionSend()
-		###read recorded data
+		###read recorded train_data
 		# df = read_csv("recorded_data/curve_exe_v"+str(v)+"_z10.csv")
 
 		logged_data=ms.exec_motions(robot,primitives,breakpoints,p_bp,q_bp,s,z10)
@@ -62,7 +62,7 @@ def main():
 		StringData=StringIO(logged_data)
 		df = read_csv(StringData, sep =",")
 
-		##############################data analysis#####################################
+		##############################train_data analysis#####################################
 		lam, curve_exe, curve_exe_R,curve_exe_js, speed, timestamp=ms.logged_data_analysis(robot,df,realrobot=True)
 		#############################chop extension off##################################
 		lam, curve_exe, curve_exe_R,curve_exe_js, speed, timestamp=ms.chop_extension(curve_exe, curve_exe_R,curve_exe_js, speed, timestamp,curve[0,:3],curve[-1,:3])

@@ -256,11 +256,11 @@ class fitting_toolbox(object):
                 slope_lb = np.ones(data.shape[1]) * -0.01
                 slope_ub = np.ones(data.shape[1]) * 0.01
         # if key == 'L':
-        # 	for i in range(data.shape[1]):
+        # 	for i in range(train_data.shape[1]):
         # 		slope_lb[i] = np.tan(- np.pi / 36)
         # 		slope_ub[i] = np.tan(np.pi / 36)
         # else:
-        # 	for i in range(data.shape[1]):
+        # 	for i in range(train_data.shape[1]):
         # 		slope_lb[i] = np.tan(np.arctan(slope_prev[i]) - np.pi / 36)
         # 		slope_ub[i] = np.tan(np.arctan(slope_prev[i]) + np.pi / 36)
 
@@ -290,8 +290,8 @@ class fitting_toolbox(object):
             if key == 'L':
                 res_opt = self.constrained_lstsq(A, b, slope_lb, slope_ub, slope_prev, slope_next)
             elif key == 'J':
-                # res_opt = np.zeros((1, data.shape[1]))
-                # for i in range(data.shape[1]):
+                # res_opt = np.zeros((1, train_data.shape[1]))
+                # for i in range(train_data.shape[1]):
                 # 	slope_bounds = (slope_lb[i], slope_ub[i])
                 # 	lsq_res = lsq_linear(A, b[:, i], bounds=slope_bounds)
                 # 	res_opt[:, i] = lsq_res.x
@@ -503,7 +503,7 @@ class fitting_toolbox(object):
 def main():
     ###read in points
     col_names = ['X', 'Y', 'Z', 'direction_x', 'direction_y', 'direction_z']
-    data = read_csv("../data/from_cad/Curve_in_base_frame.csv", names=col_names)
+    data = read_csv("../train_data/from_cad/Curve_in_base_frame.csv", names=col_names)
     curve_x = data['X'].tolist()
     curve_y = data['Y'].tolist()
     curve_z = data['Z'].tolist()

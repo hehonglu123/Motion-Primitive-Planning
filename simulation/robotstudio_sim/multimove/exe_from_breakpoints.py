@@ -19,7 +19,7 @@ from MotionSend import *
 
 def main():
     dataset='from_NX/'
-    data_dir="../../../data/"+dataset
+    data_dir="../../../train_data/"+dataset
     relative_path = read_csv(data_dir+"/Curve_dense.csv", header=None).values
 
     with open(data_dir+'dual_arm/abb1200.yaml') as file:

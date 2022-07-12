@@ -129,7 +129,7 @@ def load_encoder(model_pth):
 def main():
     cnn_model_path = '../cnn_model/cnn_model.pth'
     cnn_encoder = load_encoder(cnn_model_path)
-    dataset = read_data('../data/base', data_size=1)
+    dataset = read_data('../train_data/base', data_size=1)
 
     for data in dataset:
         cnn_encoder.eval()

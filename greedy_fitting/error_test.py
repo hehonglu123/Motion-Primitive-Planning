@@ -12,7 +12,7 @@ import general_robotics_toolbox as rox
 
 robot=abb6640()
 
-# read Robotstudio logged data
+# read Robotstudio logged train_data
 with open("log.csv","r") as f:
     rows = csv.reader(f, delimiter=',')
 
@@ -30,7 +30,7 @@ with open("log.csv","r") as f:
     cmd_num = log_results_dict['cmd_num']
     joint_angles = log_results_dict['joint_angle']
 
-# read breakpoint data
+# read breakpoint train_data
 with open("command_backproj.csv","r") as f:
     rows = csv.reader(f, delimiter=',')
 

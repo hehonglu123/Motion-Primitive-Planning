@@ -10,7 +10,7 @@ from constraint_solver import *
 
 def main():
 	dataset='from_NX/'
-	curve = read_csv("../../data/"+dataset+"Curve_in_base_frame.csv",header=None).values
+	curve = read_csv("../../train_data/"+dataset+"Curve_in_base_frame.csv",header=None).values
 
 
 	opt=lambda_opt(curve[:,:3],curve[:,3:],robot1=abb6640(d=50),steps=50)

@@ -73,7 +73,7 @@ def main():
 
 def rl_traj_gen():
 	import glob
-	file_list=glob.glob("../rl_fit/data/base/*.csv")
+	file_list=glob.glob("../rl_fit/train_data/base/*.csv")
 	for filename in file_list:
 		col_names=['X', 'Y', 'Z','direction_x','direction_y','direction_z']
 		data = read_csv(filename, names=col_names)

@@ -22,7 +22,7 @@ from blending import *
 def main():
     # data_dir="fitting_output_new/python_qp_movel/"
     dataset='wood/'
-    data_dir="../../../data/"+dataset
+    data_dir="../../../train_data/"+dataset
 
 
     curve_js=read_csv(data_dir+'Curve_js.csv',header=None).values
@@ -35,7 +35,7 @@ def main():
     s = speeddata(150,9999999,9999999,999999)
     z = z10
 
-    fitting_output="../../../data/"+dataset+'baseline/100L/'
+    fitting_output="../../../train_data/"+dataset+'baseline/100L/'
     data = read_csv(fitting_output+'command.csv')
     breakpoints=np.array(data['breakpoints'].tolist())
     primitives=data['primitives'].tolist()
@@ -71,7 +71,7 @@ def main():
 
         StringData=StringIO(logged_data)
         df = read_csv(StringData, sep =",")
-        ##############################data analysis#####################################
+        ##############################train_data analysis#####################################
         lam, curve_exe, curve_exe_R,curve_exe_js, speed, timestamp=ms.logged_data_analysis(robot,df)
         #############################chop extension off##################################
         start_idx=np.argmin(np.linalg.norm(curve[0,:3]-curve_exe,axis=1))

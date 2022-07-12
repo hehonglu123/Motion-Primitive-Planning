@@ -26,7 +26,7 @@ def main():
     error_threshold=0.5
     angle_threshold=np.radians(3)
 
-    dataset="../../../data/from_NX/"
+    dataset="../../../train_data/from_NX/"
     
 
     curve = read_csv(dataset+"Curve_in_base_frame.csv",header=None).values
@@ -51,7 +51,7 @@ def main():
             logged_data=ms.exe_from_file_w_extension(data_dir+"command.csv",dataset+"Curve_js.csv",v_cmd,z10,extension_d=100)
             StringData=StringIO(logged_data)
             df = read_csv(StringData, sep =",")
-            ##############################data analysis#####################################
+            ##############################train_data analysis#####################################
             lam, curve_exe, curve_exe_R,curve_exe_js, speed, timestamp=ms.logged_data_analysis(robot,df,filt=False,realrobot=False)
             error,angle_error=calc_all_error_w_normal(curve_exe,curve[:,:3],curve_exe_R[:,:,-1],curve[:,3:],extension=True)
 
@@ -156,7 +156,7 @@ def main():
         # plt.legend()
         # plt.show()
 
-        ######################################save <1mm logged data##############################################
+        ######################################save <1mm logged train_data##############################################
         speed[start_idx:end_idx+1]
         df=DataFrame({'average speed':[np.average(speed)],'max speed':[np.amax(speed)],'min speed':[np.amin(speed)],'std speed':[np.std(speed)],\
             'average error':[np.average(error)],'max error':[max_error],'min error':[np.amin(error)],'std error':[np.std(error)],\

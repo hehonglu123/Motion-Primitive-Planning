@@ -16,7 +16,7 @@ def main():
 		print("{} / {}".format(i, 201))
 
 		col_names=['q1', 'q2', 'q3','q4', 'q5', 'q6']
-		data = read_csv("data/js_new/traj_{}_js_new.csv".format(i), names=col_names)
+		data = read_csv("train_data/js_new/traj_{}_js_new.csv".format(i), names=col_names)
 		curve_q1=data['q1'].tolist()
 		curve_q2=data['q2'].tolist()
 		curve_q3=data['q3'].tolist()
@@ -42,7 +42,7 @@ def main():
 		print('polyfit error: ',np.max(diff),np.average(diff))
 
 		df=DataFrame({'polyfit_q1':polyfit[:,0],'polyfit_q2':polyfit[:,1],'polyfit_q3':polyfit[:,2],'polyfit_q4':polyfit[:,3],'polyfit_q5':polyfit[:,4],'polyfit_q6':polyfit[:,5]})
-		df.to_csv("data/poly/js/curve_js_poly_{}.csv".format(i),header=False,index=False)
+		df.to_csv("train_data/poly/js/curve_js_poly_{}.csv".format(i),header=False,index=False)
 
 if __name__ == "__main__":
 	main()

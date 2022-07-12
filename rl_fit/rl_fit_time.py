@@ -43,8 +43,8 @@ def read_data():
     all_js = []
 
     for i in range(201):
-        # base_file = "data/poly/base/curve_base_poly_{}.csv".format(i)
-        js_file = "data/js_new_500/traj_{}_js_new.csv".format(i)
+        # base_file = "train_data/poly/base/curve_base_poly_{}.csv".format(i)
+        js_file = "train_data/js_new_500/traj_{}_js_new.csv".format(i)
 
         col_names=['q1', 'q2', 'q3','q4', 'q5', 'q6']
         data = pd.read_csv(js_file, names=col_names)
@@ -446,7 +446,7 @@ class TrajEnv(greedy_fit):
         StringData = StringIO(
             ms.exec_motions(primitives_choices, act_breakpoints, points, self.curve_fit_js, v500, z10))
         df = pd.read_csv(StringData, sep=",")
-        ##############################data analysis#####################################
+        ##############################train_data analysis#####################################
         lam, curve_exe, curve_exe_R, speed, timestamp = ms.logged_data_analysis(df)
 
         if eval_mode:
@@ -812,7 +812,7 @@ def run_greedy():
     all_normal_error = []
 
     for i in range(201):
-        file_path = "data/js_new_500/traj_{}_js_new.csv".format(i)
+        file_path = "train_data/js_new_500/traj_{}_js_new.csv".format(i)
 
         ###read in points
         curve_js = pd.read_csv(file_path, header=None).values
@@ -844,7 +844,7 @@ def run_greedy():
         StringData = StringIO(
             ms.exec_motions(primitives_choices, act_breakpoints, points, greedy_fit_obj.curve_fit_js, v500, z10))
         df = pd.read_csv(StringData, sep=",")
-        ##############################data analysis#####################################
+        ##############################train_data analysis#####################################
         lam, curve_exe, curve_exe_R, speed, timestamp = ms.logged_data_analysis(df)
         max_error, max_error_angle, max_error_idx = calc_max_error_w_normal(curve_exe, greedy_fit_obj.curve,
                                                                             curve_exe_R[:, :, -1],
@@ -857,7 +857,7 @@ def run_greedy():
         all_normal_error.append(max_error_angle)
         # break
         out_df = pd.DataFrame({"id": all_id, "time": all_time, "error": all_error, "normal_error": all_normal_error})
-        out_df.to_csv("data/greedy_time_data.csv", index=False)
+        out_df.to_csv("train_data/greedy_time_data.csv", index=False)
 
 
 def main():

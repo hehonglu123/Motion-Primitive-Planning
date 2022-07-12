@@ -14,7 +14,7 @@ from MotionSend import *
 robot=abb6640(d=50)
 
 dataset='wood/'
-dataset_dir="../data/"+dataset
+dataset_dir="../train_data/"+dataset
 curve = read_csv(dataset_dir+"Curve_in_base_frame.csv",header=None).values
 
 data_dir="recorded_data/repeatibility/"+dataset
@@ -32,7 +32,7 @@ for s in speed:
 
         ###read in curve_exe
         df = read_csv(data_dir+"v"+str(s)+'_iteration0.csv')
-        ##############################data analysis#####################################
+        ##############################train_data analysis#####################################
         lam_it0, curve_exe_it0, curve_exe_R_it0,curve_exe_js_it0, speed_it0, timestamp_it0=ms.logged_data_analysis(robot,df,realrobot=True)
         #############################chop extension off##################################
         lam_it0, curve_exe_it0, curve_exe_R_it0,curve_exe_js_it0, speed_it0, timestamp_it0=ms.chop_extension(curve_exe_it0, curve_exe_R_it0,curve_exe_js_it0, speed_it0, timestamp_it0,curve[0,:3],curve[-1,:3])
@@ -44,7 +44,7 @@ for s in speed:
         for i in range(1,5):
             ##read in curve_exe
             df = read_csv(data_dir+"v"+str(s)+'_iteration'+str(i)+'.csv')
-            ##############################data analysis#####################################
+            ##############################train_data analysis#####################################
             lam, curve_exe, curve_exe_R,curve_exe_js, speed, timestamp=ms.logged_data_analysis(robot,df,realrobot=True)
 
             #############################chop extension off##################################

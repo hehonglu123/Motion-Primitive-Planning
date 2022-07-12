@@ -206,12 +206,12 @@ class greedy_fit(fitting_toolbox):
 def main():
 	###read in points
 	col_names=['q1', 'q2', 'q3','q4', 'q5', 'q6'] 
-	# data = read_csv("../data/from_ge/Curve_js2.csv", names=col_names)
+	# train_data = read_csv("../train_data/from_ge/Curve_js2.csv", names=col_names)
 	data = read_csv("../data/wood/Curve_js.csv", names=col_names)
-	# data = read_csv("../data/from_Jon/qbestcurve_new.csv", names=col_names)
-	# data = read_csv("../constraint_solver/single_arm/trajectory/curve_pose_opt/curve_pose_opt_js.csv", names=col_names)
-	# data = read_csv("../constraint_solver/single_arm/trajectory/all_theta_opt_blended/all_theta_opt_js.csv", names=col_names)
-	# data = read_csv("../constraint_solver/single_arm/trajectory/init_opt/init_opt_js.csv", names=col_names)
+	# train_data = read_csv("../train_data/from_Jon/qbestcurve_new.csv", names=col_names)
+	# train_data = read_csv("../constraint_solver/single_arm/trajectory/curve_pose_opt/curve_pose_opt_js.csv", names=col_names)
+	# train_data = read_csv("../constraint_solver/single_arm/trajectory/all_theta_opt_blended/all_theta_opt_js.csv", names=col_names)
+	# train_data = read_csv("../constraint_solver/single_arm/trajectory/init_opt/init_opt_js.csv", names=col_names)
 	curve_q1=data['q1'].tolist()
 	curve_q2=data['q2'].tolist()
 	curve_q3=data['q3'].tolist()
@@ -295,7 +295,7 @@ def greedy_execute():
 	ms = MotionSend()
 	StringData=StringIO(ms.exec_motions(primitives_choices,act_breakpoints,points,greedy_fit_obj.curve_fit_js,v500,z10))
 	df = read_csv(StringData, sep =",")
-	##############################data analysis#####################################
+	##############################train_data analysis#####################################
 	lam, curve_exe, curve_exe_R, speed, timestamp=ms.logged_data_analysis(df)
 	max_error,max_error_angle, max_error_idx=calc_max_error_w_normal(curve_exe,greedy_fit_obj.curve,curve_exe_R[:,:,-1],greedy_fit_obj.curve_R[:,:,-1])
 
@@ -305,14 +305,14 @@ def greedy_execute():
 def rl_fit_data():
 	import glob, pickle
 	robot=abb6640(d=50)
-	# curve_file_list=sorted(glob.glob("../rl_fit/data/base/*.csv"))
-	# with open("../rl_fit/data/curve_file_list",'wb') as fp:
+	# curve_file_list=sorted(glob.glob("../rl_fit/train_data/base/*.csv"))
+	# with open("../rl_fit/train_data/curve_file_list",'wb') as fp:
 	# 	pickle.dump(curve_file_list,fp)
-	with open("../rl_fit/data/curve_file_list",'rb') as fp:
+	with open("../rl_fit/train_data/curve_file_list",'rb') as fp:
 		curve_file_list=pickle.load(fp)
 
 	for i in range(len(curve_file_list)):
-		curve_js_file='../rl_fit/data/js_new/'+curve_file_list[i][20:-4]+'_js_new.csv'
+		curve_js_file='../rl_fit/train_data/js_new/'+curve_file_list[i][20:-4]+'_js_new.csv'
 		###read in points
 		col_names=['X', 'Y', 'Z','direction_x', 'direction_y', 'direction_z'] 
 		data = read_csv(curve_file_list[i], names=col_names)
@@ -345,7 +345,7 @@ def rl_fit_data():
 		breakpoints[1:]=breakpoints[1:]-1
 
 		df=DataFrame({'breakpoints':breakpoints[1:],'primitives':primitives_choices})
-		df.to_csv('../rl_fit/data/greedy_results/result_traj'+curve_file_list[i][20:-4]+'.csv',header=True,index=False)
+		df.to_csv('../rl_fit/train_data/greedy_results/result_traj'+curve_file_list[i][20:-4]+'.csv',header=True,index=False)
 
 
 

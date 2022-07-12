@@ -253,13 +253,13 @@ class RAPID(object):
         res=self._do_post("rw/iosystem/signals/" + network + "/" + unit + "/" + signal + "?action=set", payload)
     
     def get_rapid_variable(self, var):
-        soup = self._do_get("rw/rapid/symbol/data/RAPID/T_ROB1/" + var)        
+        soup = self._do_get("rw/rapid/symbol/train_data/RAPID/T_ROB1/" + var)
         state = soup.find('span', attrs={'class': 'value'}).text
         return state
     
     def set_rapid_variable(self, var, value):
         payload={'value': value}
-        res=self._do_post("rw/rapid/symbol/data/RAPID/T_ROB1/" + var + "?action=set", payload)
+        res=self._do_post("rw/rapid/symbol/train_data/RAPID/T_ROB1/" + var + "?action=set", payload)
         
     def read_event_log(self, elog=0):
         o=[]
@@ -394,7 +394,7 @@ class RAPID(object):
             msgtype=find_val('dipc-msgtype')
             cmd=int(find_val('dipc-cmd'))
             userdef=int(find_val('dipc-userdef'))
-            data=find_val('dipc-data')
+            data=find_val('dipc-train_data')
             
             o.append(RAPIDIpcMessage(data,userdef,msgtype,cmd))
             
@@ -403,7 +403,7 @@ class RAPID(object):
     
     def send_ipc_message(self, target_queue, data, queue_name="rpi_abb_irc5", cmd=111, userdef=1, msgtype=1 ):
         payload={"dipc-src-queue-name": queue_name, "dipc-cmd": str(cmd), "dipc-userdef": str(userdef), \
-                 "dipc-msgtype": str(msgtype), "dipc-data": data}
+                 "dipc-msgtype": str(msgtype), "dipc-train_data": data}
         res=self._do_post("rw/dipc/" + target_queue + "?action=dipc-send", payload)
     
     def get_ipc_queue(self, queue_name):
@@ -499,7 +499,7 @@ class RAPID(object):
      
     def subscribe_rapid_pers_variable(self, var, callback, closed_callback=None):
         payload = {'resources':['1'],             
-             '1':'/rw/rapid/symbol/data/RAPID/T_ROB1/' + var + ';value',
+             '1':'/rw/rapid/symbol/train_data/RAPID/T_ROB1/' + var + ';value',
              '1-p':'1'}
         
         return self._subscribe(payload, RAPIDPersVarSubscription, callback, closed_callback)
@@ -547,7 +547,7 @@ class RAPID(object):
 
 RAPIDExecutionState=namedtuple('RAPIDExecutionState', ['ctrlexecstate', 'cycle'])
 RAPIDEventLogEntry=namedtuple('RAPIDEventLogEntry', ['msgtype', 'code', 'tstamp', 'args', 'title', 'desc', 'conseqs', 'causes', 'actions'])
-RAPIDIpcMessage=namedtuple('RAPIDIpcMessage',['data','userdef','msgtype','cmd'])
+RAPIDIpcMessage=namedtuple('RAPIDIpcMessage',['train_data','userdef','msgtype','cmd'])
 RAPIDSignal=namedtuple('RAPIDSignal',['name','lvalue'])
 
 
@@ -604,7 +604,7 @@ class RAPIDPersVarSubscription(RAPIDSubscriptionClient):
         
         for li in ul.findAll('li'):
             url=li.find('a')['href']
-            m=re.match('^/rw/rapid/symbol/data/RAPID/T_ROB1/(.+);value$', url)
+            m=re.match('^/rw/rapid/symbol/train_data/RAPID/T_ROB1/(.+);value$', url)
             o.append(m.groups()[0])
         return o
     
@@ -616,7 +616,7 @@ class RAPIDIpcQueueSubscription(RAPIDSubscriptionClient):
         o=[]
         
         for li in ul.findAll('li'):
-            data=li.find('span', attrs={'class': 'dipc-data'}).text
+            data=li.find('span', attrs={'class': 'dipc-train_data'}).text
             
             o.append(data)
         return o

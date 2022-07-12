@@ -27,8 +27,8 @@ def main():
 
 	# data_dir="fitting_output_new/python_qp_movel/"
 	dataset='wood/'		####ADJUST COMMAND & SPEED AS WELL!!!!!!!!!!
-	data_dir="../data/"+dataset
-	fitting_output="../data/"+dataset+'baseline/100L/'
+	data_dir="../train_data/"+dataset
+	fitting_output="../train_data/"+dataset+'baseline/100L/'
 
 
 	curve_js=read_csv(data_dir+'Curve_js.csv',header=None).values
@@ -106,7 +106,7 @@ def main():
 
 			StringData=StringIO(logged_data)
 			df = read_csv(StringData, sep =",")
-			##############################data analysis#####################################
+			##############################train_data analysis#####################################
 			lam, curve_exe, curve_exe_R,curve_exe_js, speed, timestamp=ms.logged_data_analysis(robot,df,realrobot=True)
 
 			###throw bad curves, error calc for individual traj for demo
@@ -158,7 +158,7 @@ def main():
 
 		###infer average curve from linear interplateion
 		curve_js_all_new, avg_curve_js, timestamp_d=average_curve(curve_exe_js_all,timestamp_all)
-		###calculat data with average curve
+		###calculat train_data with average curve
 		lam, curve_exe, curve_exe_R, speed=logged_data_analysis(robot,timestamp_d,avg_curve_js)
 		#############################chop extension off##################################
 		lam, curve_exe, curve_exe_R,curve_exe_js, speed, timestamp=ms.chop_extension(curve_exe, curve_exe_R,curve_exe_js, speed, timestamp_d,curve[0,:3],curve[-1,:3])

@@ -8,10 +8,10 @@ from lambda_calc import *
 
 def main():
 	dataset='wood/'
-	curve = read_csv("../data/"+dataset+"/Curve_in_base_frame.csv",header=None).values[:,:3]
-	curve_js = read_csv("../data/"+dataset+"/Curve_js.csv",header=None).values[:]
+	curve = read_csv("../train_data/"+dataset+"/Curve_in_base_frame.csv",header=None).values[:,:3]
+	curve_js = read_csv("../train_data/"+dataset+"/Curve_js.csv",header=None).values[:]
 	curve_fit_js = read_csv("greedy_output/curve_fit_js.csv",header=None).values
-	# curve_fit_js = read_csv("../data/"+dataset+"greedy_output/0.5/curve_fit_js.csv",header=None).values
+	# curve_fit_js = read_csv("../train_data/"+dataset+"greedy_output/0.5/curve_fit_js.csv",header=None).values
 
 	lam=calc_lam_cs(curve)
 

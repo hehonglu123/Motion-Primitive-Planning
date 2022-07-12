@@ -13,8 +13,8 @@ def main():
 
 	dataset='wood/'
 
-	data_dir="../data/"+dataset
-	fitting_output="../data/"+dataset+'baseline/100L/'
+	data_dir="../train_data/"+dataset
+	fitting_output="../train_data/"+dataset+'baseline/100L/'
 
 
 	curve_js=read_csv(data_dir+'Curve_js.csv',header=None).values

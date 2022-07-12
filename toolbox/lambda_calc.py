@@ -226,9 +226,9 @@ def main():
 	robot=abb6640(d=50)
 	curve_js = read_csv("../data/from_NX/Curve_js.csv",header=None).values
 
-	# data = read_csv("../constraint_solver/single_arm/trajectory/curve_pose_opt/arm1.csv", names=col_names)
-	# data = read_csv("qsol.csv", names=col_names)
-	# data = read_csv("../constraint_solver/single_arm/trajectory/all_theta_opt/all_theta_opt_js.csv", names=col_names)
+	# train_data = read_csv("../constraint_solver/single_arm/trajectory/curve_pose_opt/arm1.csv", names=col_names)
+	# train_data = read_csv("qsol.csv", names=col_names)
+	# train_data = read_csv("../constraint_solver/single_arm/trajectory/all_theta_opt/all_theta_opt_js.csv", names=col_names)
 
 	lam=calc_lam_js(curve_js,robot)
 	

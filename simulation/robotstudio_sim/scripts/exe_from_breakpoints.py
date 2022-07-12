@@ -18,7 +18,7 @@ from MotionSend import *
 def main():
     ms = MotionSend()
     # data_dir="fitting_output_new/python_qp_movel/"
-    # data_dir="../../../data/from_NX/baseline/0.1/"
+    # data_dir="../../../train_data/from_NX/baseline/0.1/"
     data_dir="debug/"
 
     robot=abb6640(d=50)

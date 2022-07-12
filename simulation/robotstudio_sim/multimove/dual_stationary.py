@@ -55,7 +55,7 @@ logged_data=ms.exec_motions_multimove(breakpoints1,primitives1,primitives2,p_bp1
 
 StringData=StringIO(logged_data)
 df = read_csv(StringData, sep =",")
-##############################data analysis#####################################
+##############################train_data analysis#####################################
 lam, curve_exe1,curve_exe2,curve_exe_R1,curve_exe_R2,curve_exe_js1,curve_exe_js2, speed, timestamp, relative_path_exe, relative_path_exe_R = ms.logged_data_analysis_multimove(df,base2_R,base2_p,realrobot=True)
 
 #############################chop extension off##################################

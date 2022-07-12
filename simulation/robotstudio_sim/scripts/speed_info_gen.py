@@ -16,13 +16,13 @@ robot=abb6640(d=50)
 
 
 dataset='from_NX/'
-data_dir="../../../data/"+dataset
+data_dir="../../../train_data/"+dataset
 curve = read_csv(data_dir+"Curve_in_base_frame.csv",header=None).values
 
 fitting_output="fitting_output/"+dataset+"threshold0.02/"
 df = read_csv(fitting_output+"curve_exe_v193.359375_z10.csv")
 
-##############################data analysis#####################################
+##############################train_data analysis#####################################
 lam, curve_exe, curve_exe_R,curve_exe_js, speed, timestamp=ms.logged_data_analysis(robot,df)
 error,angle_error=calc_all_error_w_normal(curve_exe,curve[:,:3],curve_exe_R[:,:,-1],curve[:,3:],extension=True)
 

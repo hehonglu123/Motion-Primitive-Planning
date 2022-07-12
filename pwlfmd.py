@@ -10,7 +10,7 @@ from robot_def import *
 
 ###multi dimension piece-wise linear fit
 class MDFit(object):
-	###input: reference 1-D [] double lam, other dimension N-D [] double data   
+	###input: reference 1-D [] double lam, other dimension N-D [] double train_data
 	def __init__(self, lam, data):
 		self.lam_data=lam
 		self.data=data
