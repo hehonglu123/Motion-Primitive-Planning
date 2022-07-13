@@ -37,6 +37,10 @@ class ILCEnv(object):
         self.state_curve_target = []
         self.state_robot = []
         self.state_error = []
+        self.state_is_start = np.zeros(self.n)
+        self.state_is_end = np.zeros(self.n)
+        self.state_is_start[0] = 1
+        self.state_is_end[-1] = 1
         self.itr = 0
         self.max_itr = 10
 
@@ -73,7 +77,8 @@ class ILCEnv(object):
         self.itr = 0
         error, angle_error, curve_exe, curve_exe_R, curve_target, curve_target_R = self.execute_robot_studio()
         self.state_curve_error, self.state_curve_target, self.state_robot, self.state_error = self.get_state(error, curve_target)
-        return self.state_curve_error, self.state_curve_target, self.state_robot, self.state_error
+        state = (self.state_curve_error, self.state_curve_target, self.state_robot, self.state_is_start, self.state_is_end)
+        return state
 
     def step(self, actions):
         self.itr += 1
@@ -88,9 +93,10 @@ class ILCEnv(object):
         next_state_curve_error, next_state_curve_target, next_state_robot, next_state_error = self.get_state(error, curve_target)
 
         reward, done = self.reward(next_state_curve_error)
-        next_state = (next_state_curve_error, next_state_curve_target, next_state_robot, next_state_error)
 
-        self.state_curve_error, self.state_curve_target, self.state_robot, self.state_error = next_state
+        self.state_curve_error, self.state_curve_target, self.state_robot, self.state_error = next_state_curve_error, next_state_curve_target, next_state_robot, next_state_error
+
+        next_state = (next_state_curve_error, next_state_curve_target, next_state_robot, self.state_is_start, self.state_is_end)
 
         return next_state, reward, done
 

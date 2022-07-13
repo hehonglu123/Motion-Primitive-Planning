@@ -40,13 +40,13 @@ def find_normal(p):
     curve_normal[idx]=-curve_normal[idx]
     return curve_normal
 
-def distance_calc(t,p,step_size):
-    p_next=find_point(t)
+def distance_calc(t,p,step_size, a, b, c):
+    p_next=find_point(t, a, b, c)
     return np.abs(step_size-np.linalg.norm(p-p_next))
 
-def find_next_point(t,p,step_size):
-    t_next=fminbound(distance_calc,t,t+step_size,args=(p,step_size))
-    p_next=find_point(t_next)
+def find_next_point(t,p,step_size, a=0.54, b=1000., c=0.5):
+    t_next=fminbound(distance_calc,t,t+step_size,args=(p,step_size, a, b, c))
+    p_next=find_point(t_next, a=a, b=b, c=c)
     normal_next=find_normal(p_next)
     return t_next, p_next, normal_next
 
@@ -88,7 +88,7 @@ def generate_rl_data(robot, data_size=200, reverse=False, show=False):
         t_act = [0]
         lam_act = np.linspace(0, lam[-1], num_points)
         for i in range(1, num_points):
-            t_next, p_next, normal_next = find_next_point(t_act[-1], curve_act[-1], lam[i] - lam[i - 1])
+            t_next, p_next, normal_next = find_next_point(t_act[-1], curve_act[-1], lam[i] - lam[i - 1], a=a, b=b, c=c)
             curve_act.append(p_next.flatten())
             curve_normal_act.append(normal_next.flatten())
             t_act.append(t_next)
@@ -101,30 +101,30 @@ def generate_rl_data(robot, data_size=200, reverse=False, show=False):
             ax.plot3D(curve_act[:, 0], curve_act[:, 1], curve_act[:, 2], 'r.-')
             plt.show()
 
-        # curve_act = np.flip(curve_act, 0) if reverse else curve_act
-        # curve_normal_act = np.flip(curve_normal_act, 0) if reverse else curve_normal_act
-        #
-        # H_pose = pose_opt(robot, curve_act, curve_normal_act)
-        # curve_base, curve_normal_base = curve_frame_conversion(curve_act, curve_normal_act, H_pose)
-        #
-        # curve_js_all = find_js(robot, curve_base, curve_normal_base)
-        # J_min = []
-        # for i in range(len(curve_js_all)):
-        #     J_min.append(find_j_min(robot, curve_js_all[i]))
-        #
-        # J_min = np.array(J_min)
-        # curve_js = curve_js_all[np.argmin(J_min.min(axis=1))]
-        #
-        # if show:
-        #     fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
-        #     ax.plot3D(curve_base[:, 0], curve_base[:, 1], curve_base[:, 2], 'r.-')
-        #     plt.show()
-        #
-        # df_base = DataFrame({'x':curve_base[:,0],'y':curve_base[:,1], 'z':curve_base[:,2],'x_dir':curve_normal_base[:,0],'y_dir':curve_normal_base[:,1], 'z_dir':curve_normal_base[:,2]})
-        # df_base.to_csv(save_dir + os.sep + 'base/curve_{}.csv'.format(curve_idx), header=False, index=False)
-        #
-        # df_js = DataFrame(curve_js)
-        # df_js.to_csv(save_dir + os.sep + 'js/curve_{}.csv'.format(curve_idx), header=False, index=False)
+        curve_act = np.flip(curve_act, 0) if reverse else curve_act
+        curve_normal_act = np.flip(curve_normal_act, 0) if reverse else curve_normal_act
+
+        H_pose = pose_opt(robot, curve_act, curve_normal_act)
+        curve_base, curve_normal_base = curve_frame_conversion(curve_act, curve_normal_act, H_pose)
+
+        curve_js_all = find_js(robot, curve_base, curve_normal_base)
+        J_min = []
+        for i in range(len(curve_js_all)):
+            J_min.append(find_j_min(robot, curve_js_all[i]))
+
+        J_min = np.array(J_min)
+        curve_js = curve_js_all[np.argmin(J_min.min(axis=1))]
+
+        if show:
+            fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
+            ax.plot3D(curve_base[:, 0], curve_base[:, 1], curve_base[:, 2], 'r.-')
+            plt.show()
+
+        df_base = DataFrame({'x':curve_base[:,0],'y':curve_base[:,1], 'z':curve_base[:,2],'x_dir':curve_normal_base[:,0],'y_dir':curve_normal_base[:,1], 'z_dir':curve_normal_base[:,2]})
+        df_base.to_csv(save_dir + os.sep + 'base/curve_{}.csv'.format(curve_idx), header=False, index=False)
+
+        df_js = DataFrame(curve_js)
+        df_js.to_csv(save_dir + os.sep + 'js/curve_{}.csv'.format(curve_idx), header=False, index=False)
 
 
 def main():
@@ -195,4 +195,4 @@ def main():
 if __name__ == '__main__':
     # main()
     robot = abb6640(d=50)
-    generate_rl_data(robot, data_size=5, reverse=False, show=True)
+    generate_rl_data(robot, data_size=110, reverse=True, show=False)
