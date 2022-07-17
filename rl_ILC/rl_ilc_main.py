@@ -121,15 +121,14 @@ def train(agent: TD3Agent, data_dir, args):
 
 
 def evaluate(agent, data_dir, render=False):
-    forward_data_dir = data_dir + os.sep + 'forward' + os.sep
-    data_dir = forward_data_dir
+    data_dir = data_dir + os.sep
 
     robot = abb6640(d=50)
     exec_error = 0
     num_itr = 0
     num_curve = 0
 
-    for i in range(10):
+    for i in range(11):
 
         curve, curve_normal, curve_js = read_data(i, data_dir)
         env = ILCEnv(curve, curve_normal, curve_js, robot, 100)
