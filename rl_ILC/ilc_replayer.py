@@ -9,10 +9,10 @@ class Replayer(object):
         self.pointer = 0
 
         self.state_curve = np.zeros((capacity, args.curve_normalize_dim*3*2))
-        self.state_feature = np.zeros((capacity, args.state_robot_dim + 2))
+        self.state_feature = np.zeros((capacity, args.state_robot_dim))
 
         self.next_state_curve = np.zeros((capacity, args.curve_normalize_dim*3*2))
-        self.next_state_feature = np.zeros((capacity, args.state_robot_dim + 2))
+        self.next_state_feature = np.zeros((capacity, args.state_robot_dim))
 
         self.action = np.zeros((capacity, args.action_dim))
         self.reward = np.zeros((capacity, 1))
@@ -26,11 +26,11 @@ class Replayer(object):
         for i in range(data_size):
             self.state_curve[self.pointer, :] = np.hstack([curve_error[i].flatten(), curve_target[i].flatten()])
             self.state_feature[self.pointer, :] = np.hstack([robot[i], is_start[i], is_end[i]])
-            self.action[self.pointer, :] = action
-            self.reward[self.pointer, :] = reward
+            self.action[self.pointer, :] = action[i, :]
+            self.reward[self.pointer, :] = reward[i]
             self.next_state_curve[self.pointer, :] = np.hstack([next_curve_error[i].flatten(), next_curve_target[i].flatten()])
             self.next_state_feature[self.pointer, :] = np.hstack([next_robot[i], next_is_start[i], next_is_end[i]])
-            self.done[self.pointer, :] = done
+            self.done[self.pointer, :] = done[i]
 
             self.pointer += 1
             self.pointer = 0 if self.pointer >= self.capacity else self.pointer

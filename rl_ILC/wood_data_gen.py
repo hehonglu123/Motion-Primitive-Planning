@@ -9,6 +9,8 @@ from toolbox.lambda_calc import *
 from toolbox.utils import *
 from data.baseline import pose_opt, curve_frame_conversion, find_js
 
+import yaml
+
 R = 25.4 * 2
 H = 25.4 * 1
 W = 30
@@ -52,12 +54,13 @@ def find_next_point(t,p,step_size, a=0.54, b=1000., c=0.5):
 
 
 def generate_rl_data(robot, data_size=200, reverse=False, show=False):
-    save_dir = 'train_data/curve1/reverse' if reverse else 'train_data/curve1/forward'
+    # save_dir = 'train_data/curve1/reverse' if reverse else 'train_data/curve1/forward'
+    save_dir = 'eval_data/curve1/reverse' if reverse else 'eval_data/curve1/forward'
     # initial_point = np.array([1090.1612137174207, -506.72253554211704, 994.0466002214232, -0.14380380418973931, -0.00396817476110772, -0.9895982616646132])
     for curve_idx in range(data_size):
         print("{:>5} / {:>5}".format(curve_idx, data_size))
-        a = min(max(np.random.normal(0.5, 1.), 0.2), 0.7)
-        b = min(max(np.random.normal(1000, 5.), 990), 1010)
+        a = min(max(np.random.normal(0.5, 1.), 0.3), 0.7)
+        b = min(max(np.random.normal(1000, 5.), 995), 1005)
         c = min(max(np.random.normal(2., 1), 1.5), 2.5)
 
         t = np.linspace(0, 1000, 1000)
@@ -104,7 +107,9 @@ def generate_rl_data(robot, data_size=200, reverse=False, show=False):
         curve_act = np.flip(curve_act, 0) if reverse else curve_act
         curve_normal_act = np.flip(curve_normal_act, 0) if reverse else curve_normal_act
 
-        H_pose = pose_opt(robot, curve_act, curve_normal_act)
+        # H_pose = pose_opt(robot, curve_act, curve_normal_act)
+        with open('blade_pose.yaml') as file:
+            H_pose = np.array(yaml.safe_load(file)['H'], dtype=np.float64)
         curve_base, curve_normal_base = curve_frame_conversion(curve_act, curve_normal_act, H_pose)
 
         curve_js_all = find_js(robot, curve_base, curve_normal_base)
@@ -195,4 +200,4 @@ def main():
 if __name__ == '__main__':
     # main()
     robot = abb6640(d=50)
-    generate_rl_data(robot, data_size=110, reverse=True, show=False)
+    generate_rl_data(robot, data_size=10, reverse=False, show=False)

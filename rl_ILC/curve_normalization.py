@@ -50,6 +50,9 @@ def expand_interpolate(curve, n_points):
 def curve_interpolation(curve, n_points=1000):
     if len(curve) == n_points:
         return curve
+    elif len(curve) == 1:
+        curve_interpolate = np.ones((n_points, 3)) * curve
+        return curve_interpolate
     # if len(curve) > n_points:
     #     return reduce_interpolate(curve, n_points)
     # if len(curve) < n_points:
@@ -75,7 +78,7 @@ def curve_interpolation(curve, n_points=1000):
     return curve_interpolate.T
 
 
-def PCA_normalization(curve, n_points=1000):
+def PCA_normalization(curve, n_points=1000, rescale=False):
     curve = curve_interpolation(curve, n_points=n_points)
     pca = PCA(n_components=3)
     curve_pca = pca.fit_transform(curve)
@@ -88,12 +91,14 @@ def PCA_normalization(curve, n_points=1000):
     if np.abs(np.min(curve_center[:, 2])) > np.abs(np.max(curve_center[:, 2])):
         curve_center[:, 2] = -curve_center[:, 2]
 
-    curve_center = curve_pca - curve_center[0, :]
-    diagonal = curve_center[-1, :]
-    rescale_factor = 1 / np.linalg.norm(diagonal)
-    curve_rescale = curve_center * rescale_factor
+    curve = curve_pca - curve_center[0, :]
 
-    return curve_rescale
+    if rescale:
+        diagonal = curve[-1, :]
+        rescale_factor = 1 / np.linalg.norm(diagonal)
+        curve = curve * rescale_factor
+
+    return curve
 
 
 def fft_feature(curve, n_feature):
