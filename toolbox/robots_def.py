@@ -205,7 +205,9 @@ class m710ic(object):
 		self.upper_limit=np.radians([180.,135,205.,360.,125.,360.])
 		self.lower_limit=np.radians([-180.,-80.,-80.,-360.,-125.,-360.])
 		self.joint_vel_limit=np.radians([160.,120.,120.,225.,225.,225.])
-		self.joint_acc_limit=np.radians([640.,520.,700.,910.,910.,1207.])
+		# self.joint_acc_limit=np.radians([640.,520.,700.,910.,910.,1207.])
+		self.joint_acc_limit=np.radians([285.741,214.286,214.286,401.786,401.786,401.786])
+		self.joint_jrk_limit=np.radians([1020.408,765.306,765.306,1434.949,1434.949,1434.949])
 		self.robot_def=Robot(self.H,self.P,self.joint_type,joint_lower_limit = self.lower_limit, joint_upper_limit = self.upper_limit, joint_vel_limit=self.joint_vel_limit, R_tool=R_tool,p_tool=tcp_new)
 
 	def jacobian(self,q):

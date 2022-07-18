@@ -187,7 +187,7 @@ def extend_start_end(robot,q_bp,primitives,breakpoints,points_list,extension_d=1
         J_start=robot.jacobian(q_bp[0][0])
         qdot=q_bp[1][0]-q_bp[0][0]
         v=J_start[3:,:]@qdot
-        t=extension_d/v
+        t=extension_d/np.linalg.norm(v)
         
         q_bp[0][0]=q_bp[0][0]+qdot*t
         points_list[0][0]=robot.fwd(q_bp[0][0]).p
@@ -255,9 +255,9 @@ def extend_start_end(robot,q_bp,primitives,breakpoints,points_list,extension_d=1
         J_end=robot.jacobian(q_bp[-1][0])
         qdot=q_bp[-1][0]-q_bp[-2][0]
         v=J_end[3:,:]@qdot
-        t=extension_d/v
+        t=extension_d/np.linalg.norm(v)
         
-        q_bp[-1][-1]=q_bp[-1]+qdot*t
+        q_bp[-1][-1]=q_bp[-1][-1]+qdot*t
         points_list[-1][0]=robot.fwd(q_bp[-1][-1]).p
 
     return primitives,points_list,q_bp
