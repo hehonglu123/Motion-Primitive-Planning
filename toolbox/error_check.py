@@ -1,7 +1,7 @@
 import numpy as np
 import copy
 from general_robotics_toolbox import *
-from toolbox.utils import *
+from utils import *
 ###calculate distance between point to line
 def get_distance(p1,p2,p3):
 	return np.linalg.norm(np.cross(p2-p1, p1-p3))/np.linalg.norm(p2-p1)
