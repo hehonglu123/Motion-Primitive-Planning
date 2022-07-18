@@ -58,12 +58,12 @@ def _rpy_to_rot(rpy):
 def robot_from_xml_string(xml_string, root_link = None, tip_link = None):
     """
     Loads a Robot class from a string containing a robot described in URDF XML format.
-    The joints, dimensions, and various limits will be extracted from the URDF data. Inertial
+    The joints, dimensions, and various limits will be extracted from the URDF train_data. Inertial
     properties and other URDF concepts are not currently supported. Use the root_link and
     tip_link to specify the root and tip of a robot if more than one robot is in the file.
     
     :type  xml_string: str
-    :param xml_string: The URDF XML data in a string
+    :param xml_string: The URDF XML train_data in a string
     :type  root_link: str
     :param root_link: The name of the root link (base link) of the robot. If None,
                       this will be determined automatically. Optional
@@ -229,7 +229,7 @@ def _append_inertia(old_inertia,new_inertia):
 def robot_from_xml_file(fname, package = None, root_link = None, tip_link = None):
     """
     Loads a Robot class from a file containing a robot described in URDF XML format.
-    The joints, dimensions, and various limits will be extracted from the URDF data. Inertial
+    The joints, dimensions, and various limits will be extracted from the URDF train_data. Inertial
     properties and other URDF concepts are not currently supported. Use the root_link and
     tip_link to specify the root and tip of a robot if more than one robot is in the file.
     
@@ -256,7 +256,7 @@ def robot_from_xacro_file(fname, package = None, root_link = None, tip_link = No
     """
     Loads a Robot class from a xacro file containing a robot described in URDF XML format.
     The xacro file will be executed into URDF XML format automatically.
-    The joints, dimensions, and various limits will be extracted from the URDF data. Inertial
+    The joints, dimensions, and various limits will be extracted from the URDF train_data. Inertial
     properties and other URDF concepts are not currently supported. Use the root_link and
     tip_link to specify the root and tip of a robot if more than one robot is in the file.
     
@@ -281,7 +281,7 @@ def robot_from_xacro_file(fname, package = None, root_link = None, tip_link = No
 def robot_from_parameter_server(key='robot_description', root_link = None, tip_link = None):    
     """
     Loads a Robot class from the ROS parameter server. The joints, dimensions, and various 
-    limits will be extracted from the URDF data. Inertial properties and other URDF concepts 
+    limits will be extracted from the URDF train_data. Inertial properties and other URDF concepts
     are not currently supported. Use the root_link and tip_link to specify the root and tip 
     of a robot if more than one robot is in the file.
     

@@ -300,7 +300,7 @@ class fitting_toolbox_poly(object):
 def main():
 	###read in points
 	col_names=['X', 'Y', 'Z','direction_x', 'direction_y', 'direction_z'] 
-	data = read_csv("../data/from_cad/Curve_in_base_frame.csv", names=col_names)
+	data = read_csv("../train_data/from_cad/Curve_in_base_frame.csv", names=col_names)
 	curve_x=data['X'].tolist()
 	curve_y=data['Y'].tolist()
 	curve_z=data['Z'].tolist()

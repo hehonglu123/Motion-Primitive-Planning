@@ -167,7 +167,7 @@ class MotionPrimitiveEnv(greedy_fit):
         StringData = StringIO(logged_data)
         df = read_csv(StringData, sep=",")
 
-        ##############################data analysis#####################################
+        ##############################train_data analysis#####################################
         lam, curve_exe, curve_exe_R, curve_exe_js, speed, timestamp = ms.logged_data_analysis(self.robot, df, realrobot=False)
 
         #############################chop extension off##################################

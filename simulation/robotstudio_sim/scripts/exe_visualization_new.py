@@ -10,7 +10,7 @@ sys.path.append('../../../circular_fit')
 from toolbox_circular_fit import *
 
 def parse_excel_sheet(file, sheet_name=0, threshold=1):
-    '''parses multiple tables from an excel sheet into multiple data frame objects. Returns [dfs, df_mds], where dfs is a list of data frames and df_mds their potential associated metadata'''
+    '''parses multiple tables from an excel sheet into multiple train_data frame objects. Returns [dfs, df_mds], where dfs is a list of train_data frames and df_mds their potential associated metadata'''
     xl = ExcelFile(file)
     entire_sheet = xl.parse(sheet_name=sheet_name)
 
@@ -32,7 +32,7 @@ def parse_excel_sheet(file, sheet_name=0, threshold=1):
         md_start = n_values.iloc[:start][n_values==0].index[-1] + 1
         md_beginnings.append(md_start)
 
-    # make data frames
+    # make train_data frames
     dfs = []
     df_mds = []
     for ind in range(len(table_beginnings)):
@@ -50,7 +50,7 @@ def parse_excel_sheet(file, sheet_name=0, threshold=1):
 
 def main():
 	col_names=['X', 'Y', 'Z','direction_x', 'direction_y', 'direction_z'] 
-	# data = read_csv("../../../data/from_ge/Curve_in_base_frame.csv", names=col_names)
+	# train_data = read_csv("../../../train_data/from_ge/Curve_in_base_frame.csv", names=col_names)
 	data = read_csv("../../../constraint_solver/single_arm/trajectory/curve_pose_opt/curve_pose_opt_cs.csv", names=col_names)
 	curve_x=data['X'].tolist()
 	curve_y=data['Y'].tolist()

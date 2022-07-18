@@ -20,7 +20,7 @@ from lambda_calc import *
 def main():
     robot=abb6640(d=50)
 
-    dataset="../data/wood/"
+    dataset="../train_data/wood/"
     data_dir=dataset+'baseline/100L/'
 
     curve = read_csv(dataset+"Curve_in_base_frame.csv",header=None).values
@@ -35,7 +35,7 @@ def main():
             ###update velocity profile
             v_cmd = speeddata(v,9999999,9999999,999999)
 
-            ###read data
+            ###read train_data
             breakpoints,primitives,p_bp,q_bp=ms.extract_data_from_cmd(data_dir+'command.csv')
             ###extension
             p_bp,q_bp=ms.extend(robot,q_bp,primitives,breakpoints,p_bp)

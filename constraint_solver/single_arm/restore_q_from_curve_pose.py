@@ -15,7 +15,7 @@ curve_js=np.vstack((curve_q1, curve_q2, curve_q3,curve_q4,curve_q5,curve_q6)).T
 
 ###read actual curve
 col_names=['X', 'Y', 'Z','direction_x','direction_y','direction_z'] 
-data = read_csv("../../data/from_ge/relative_path.csv", names=col_names)
+data = read_csv("../../train_data/from_ge/relative_path.csv", names=col_names)
 curve_x=data['X'].tolist()
 curve_y=data['Y'].tolist()
 curve_z=data['Z'].tolist()

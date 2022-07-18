@@ -18,7 +18,7 @@ from error_check import *
 from MotionSend import *
 
 def main():
-    dataset='from_NX/'
+    dataset='wood/'
     data_dir="../../../data/"+dataset
     relative_path = read_csv(data_dir+"/Curve_dense.csv", header=None).values
 
@@ -30,9 +30,10 @@ def main():
 
     with open(data_dir+'dual_arm/tcp.yaml') as file:
         H_tcp = np.array(yaml.safe_load(file)['H'],dtype=np.float64)
+    robot1=abb6640(d=50)
     robot2=abb1200(R_tool=H_tcp[:3,:3],p_tool=H_tcp[:-1,-1])
 
-    ms = MotionSend(robot2=robot2,base2_R=base2_R,base2_p=base2_p)
+    ms = MotionSend(robot1=robot1,robot2=robot2,base2_R=base2_R,base2_p=base2_p)
 
     s1=1111
     s2=1111

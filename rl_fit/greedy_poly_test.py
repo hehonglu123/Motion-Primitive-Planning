@@ -240,9 +240,9 @@ def main():
 	n_primitives = []
 
 	for i in range(201):
-		base_file = "data/poly/base/curve_base_poly_{}.csv".format(i)
-		js_file = "data/poly/js/curve_js_poly_{}.csv".format(i)
-		lam_file = "data/poly/lambda/lambda_{}.csv".format(i)
+		base_file = "train_data/poly/base/curve_base_poly_{}.csv".format(i)
+		js_file = "train_data/poly/js/curve_js_poly_{}.csv".format(i)
+		lam_file = "train_data/poly/lambda/lambda_{}.csv".format(i)
 
 		###read in poly
 		col_names=['poly_x', 'poly_y', 'poly_z','poly_direction_x', 'poly_direction_y', 'poly_direction_z']
@@ -320,7 +320,7 @@ def main():
 
 		###check error agains original curve
 		col_names=['X', 'Y', 'Z','direction_x', 'direction_y', 'direction_z']
-		data = read_csv("data/base/traj_{}.csv".format(i), names=col_names)
+		data = read_csv("train_data/base/traj_{}.csv".format(i), names=col_names)
 		curve_x=data['X'].tolist()
 		curve_y=data['Y'].tolist()
 		curve_z=data['Z'].tolist()
@@ -335,7 +335,7 @@ def main():
 		print(max_error,np.degrees(max_error_angle))
 
 	df = DataFrame({"id": curve_idx, "n_primitives": n_primitives})
-	df.to_csv("data/new_poly_greedy_data.csv", index=False)
+	df.to_csv("train_data/new_poly_greedy_data.csv", index=False)
 
 if __name__ == "__main__":
 	main()

@@ -7,7 +7,7 @@ x=np.arange(-2,2,0.001)
 y=np.sin(x)
 
 
-# initialize piecewise linear fit with your x and y data
+# initialize piecewise linear fit with your x and y train_data
 my_pwlf = pwlf.PiecewiseLinFit(x, y)
 
 # define your objective function
@@ -16,7 +16,7 @@ my_pwlf = pwlf.PiecewiseLinFit(x, y)
 def my_obj(x):
     # define some penalty parameter l
     # you'll have to arbitrarily pick this
-    # it depends upon the noise in your data,
+    # it depends upon the noise in your train_data,
     # and the value of your sum of square of residuals
     l = y.mean()*0.001
     f = np.zeros(x.shape[0])

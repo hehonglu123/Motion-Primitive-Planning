@@ -1,6 +1,6 @@
 from pandas import read_csv, DataFrame
 import sys, copy
-sys.path.append('data/')
+sys.path.append('train_data/')
 sys.path.append('toolbox/')
 from toolbox_circular_fit import *
 from abb_motion_program_exec_client import *
@@ -211,13 +211,13 @@ def blend_exe():
 	###maxium blending in RobotStudio, higher than that will result in similar behavior of z100
 	z_max=min(zone,150)
 
-	data = read_csv('data/'+data_set+'command.csv')
+	data = read_csv('train_data/'+data_set+'command.csv')
 	breakpoints=np.array(data['breakpoints'].tolist())
 	act_breakpoints=copy.deepcopy(breakpoints)
 	act_breakpoints[1:]=act_breakpoints[1:]-1
 
-	curve_js = read_csv('data/'+data_set+'Curve_js.csv',header=None).values
-	curve = read_csv('data/'+data_set+'Curve_in_base_frame.csv',header=None).values
+	curve_js = read_csv('train_data/'+data_set+'Curve_js.csv',header=None).values
+	curve = read_csv('train_data/'+data_set+'Curve_in_base_frame.csv',header=None).values
 
 
 
@@ -301,13 +301,13 @@ def main():
 	robot=abb6640(d=50)
 	data_set='movel_30_ori/'
 
-	data = read_csv('data/'+data_set+'command.csv')
+	data = read_csv('train_data/'+data_set+'command.csv')
 	breakpoints=np.array(data['breakpoints'].tolist())
 	act_breakpoints=copy.deepcopy(breakpoints)
 	act_breakpoints[1:]=act_breakpoints[1:]-1
 
-	curve_js = read_csv('data/'+data_set+'Curve_js.csv',header=None).values
-	curve = read_csv('data/'+data_set+'Curve_in_base_frame.csv',header=None).values
+	curve_js = read_csv('train_data/'+data_set+'Curve_js.csv',header=None).values
+	curve = read_csv('train_data/'+data_set+'Curve_in_base_frame.csv',header=None).values
 
 	data=read_csv('execution/'+data_set+'curve_exe_v500_z10.csv')
 	q1=data[' J1'].tolist()
@@ -401,14 +401,14 @@ def main2():
 	robot=abb6640(d=50)
 	data_set='movel_30_car/'
 
-	data = read_csv('data/'+data_set+'command.csv')
+	data = read_csv('train_data/'+data_set+'command.csv')
 	breakpoints=np.array(data['breakpoints'].tolist())
 	primitives=data['primitives'].tolist()[1:]
 	act_breakpoints=copy.deepcopy(breakpoints)
 	act_breakpoints[1:]=act_breakpoints[1:]-1
 
-	curve_js = read_csv('data/'+data_set+'Curve_js.csv',header=None).values
-	curve = read_csv('data/'+data_set+'Curve_in_base_frame.csv',header=None).values
+	curve_js = read_csv('train_data/'+data_set+'Curve_js.csv',header=None).values
+	curve = read_csv('train_data/'+data_set+'Curve_in_base_frame.csv',header=None).values
 
 
 

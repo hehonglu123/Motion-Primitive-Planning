@@ -9,8 +9,8 @@ robot=abb6640(d=50)
 
 # curve_idx=100
 # step_size=500
-# curve_file = "data/base/traj_{}.csv".format(curve_idx)
-# curve_js_file = "data/js_new/traj_{}_js_new.csv".format(curve_idx)
+# curve_file = "train_data/base/traj_{}.csv".format(curve_idx)
+# curve_js_file = "train_data/js_new/traj_{}_js_new.csv".format(curve_idx)
 
 # curve = read_csv(curve_file).values[::step_size]
 # curve_js = read_csv(curve_js_file).values[::step_size]
@@ -32,9 +32,9 @@ robot=abb6640(d=50)
 
 
 idx=1
-base_file = "data/poly/base/curve_base_poly_{}.csv".format(idx)
-js_file = "data/poly/js/curve_js_poly_{}.csv".format(idx)
-lam_file = "data/poly/lambda/lambda_{}.csv".format(idx)
+base_file = "train_data/poly/base/curve_base_poly_{}.csv".format(idx)
+js_file = "train_data/poly/js/curve_js_poly_{}.csv".format(idx)
+lam_file = "train_data/poly/lambda/lambda_{}.csv".format(idx)
 ###read in poly
 col_names=['poly_x', 'poly_y', 'poly_z','poly_direction_x', 'poly_direction_y', 'poly_direction_z']
 data = read_csv(base_file, names=col_names)

@@ -24,7 +24,7 @@ def main():
 	abb6640_obj=abb6640(d=50)
 
 	col_names=['q1', 'q2', 'q3','q4', 'q5', 'q6'] 
-	# data = read_csv("../data/from_ge/Curve_js2.csv", names=col_names)
+	# train_data = read_csv("../train_data/from_ge/Curve_js2.csv", names=col_names)
 	data = read_csv("from_Jon/qbestcurve_new.csv", names=col_names)
 	curve_q1=data['q1'].tolist()
 	curve_q2=data['q2'].tolist()

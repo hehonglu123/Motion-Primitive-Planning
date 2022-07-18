@@ -7,7 +7,7 @@ import numpy as np
 sys.path.append('toolbox')
 from error_check import *
 from projection import LinePlaneCollision
-sys.path.append('data')
+sys.path.append('train_data')
 from cartesian2joint import direction2R
 from pyquaternion import Quaternion
 from general_robotics_toolbox import *
@@ -109,7 +109,7 @@ def fit_test(curve,curve_backproj,curve_R,thresholds,d=50):
 def main():
 	###All in base frame
 	col_names=['X', 'Y', 'Z','direction_x', 'direction_y', 'direction_z'] 
-	data = read_csv("data/from_interp/Curve_in_base_frame.csv", names=col_names)
+	data = read_csv("train_data/from_interp/Curve_in_base_frame.csv", names=col_names)
 	curve_x=data['X'].tolist()
 	curve_y=data['Y'].tolist()
 	curve_z=data['Z'].tolist()

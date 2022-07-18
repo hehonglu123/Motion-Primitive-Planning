@@ -13,8 +13,8 @@ from MotionSend import *
 ms=MotionSend()
 
 col_names=['X', 'Y', 'Z','direction_x', 'direction_y', 'direction_z'] 
-# data = read_csv("../../../data/from_ge/Curve_in_base_frame2.csv", names=col_names)
-# data = read_csv("../../../constraint_solver/single_arm/trajectory/curve_pose_opt/curve_pose_opt_cs.csv", names=col_names)
+# train_data = read_csv("../../../train_data/from_ge/Curve_in_base_frame2.csv", names=col_names)
+# train_data = read_csv("../../../constraint_solver/single_arm/trajectory/curve_pose_opt/curve_pose_opt_cs.csv", names=col_names)
 data = read_csv("../../../data/wood/Curve_in_base_frame.csv", names=col_names)
 
 curve_x=data['X'].tolist()

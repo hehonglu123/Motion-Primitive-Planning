@@ -13,13 +13,13 @@ data_dir="fitting_output_new/curve_pose_opt_blended/"
 robot=abb6640(d=50)
 
 # col_names=['J1', 'J2','J3', 'J4', 'J5', 'J6'] 
-# data=read_csv(data_dir+'qbestcurve.csv',names=col_names)
-# q1=data['J1'].tolist()
-# q2=data['J2'].tolist()
-# q3=data['J3'].tolist()
-# q4=data['J4'].tolist()
-# q5=data['J5'].tolist()
-# q6=data['J6'].tolist()
+# train_data=read_csv(data_dir+'qbestcurve.csv',names=col_names)
+# q1=train_data['J1'].tolist()
+# q2=train_data['J2'].tolist()
+# q3=train_data['J3'].tolist()
+# q4=train_data['J4'].tolist()
+# q5=train_data['J5'].tolist()
+# q6=train_data['J6'].tolist()
 # curve_js_opt=np.vstack((q1,q2,q3,q4,q5,q6)).T.astype(float)
 
 # lam_opt=[0]

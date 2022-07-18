@@ -16,7 +16,7 @@ def main():
 	for i in range(201):
 		print("{} / {}".format(i, 201))
 		col_names=['X', 'Y', 'Z','direction_x','direction_y','direction_z']
-		data = read_csv("data/base/traj_{}.csv".format(i), names=col_names)
+		data = read_csv("train_data/base/traj_{}.csv".format(i), names=col_names)
 		curve_x=data['X'].tolist()
 		curve_y=data['Y'].tolist()
 		curve_z=data['Z'].tolist()
@@ -58,10 +58,10 @@ def main():
 		print('polyfit_dir error: ',np.max(diff_dir),np.average(diff_dir))
 
 		df=DataFrame({'x':lam})
-		df.to_csv("data/poly/lambda/lambda_{}.csv".format(i),header=False,index=False)
+		df.to_csv("train_data/poly/lambda/lambda_{}.csv".format(i),header=False,index=False)
 
 		df=DataFrame({'polyfit_x':polyfit[:,0],'polyfit_y':polyfit[:,1],'polyfit_z':polyfit[:,2],'polyfit_x_dir':polyfit_dir[:,0],'polyfit_y_dir':polyfit_dir[:,1],'polyfit_z_dir':polyfit_dir[:,2]})
-		df.to_csv("data/poly/base/curve_base_poly_{}.csv".format(i),header=False,index=False)
+		df.to_csv("train_data/poly/base/curve_base_poly_{}.csv".format(i),header=False,index=False)
 
 if __name__ == "__main__":
 	main()

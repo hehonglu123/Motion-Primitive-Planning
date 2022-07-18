@@ -11,8 +11,8 @@ def main():
 	# data_dir="fitting_output_new/all_theta_opt/"
 	###read actual curve
 	col_names=['q1', 'q2', 'q3','q4', 'q5', 'q6'] 
-	# data = read_csv(data_dir+"/arm1.csv", names=col_names)
-	# data = read_csv("../../../data/8/Curve_js.csv", names=col_names)
+	# train_data = read_csv(data_dir+"/arm1.csv", names=col_names)
+	# train_data = read_csv("../../../train_data/8/Curve_js.csv", names=col_names)
 	data1 = read_csv("../../../constraint_solver/dual_arm/trajectory/arm1.csv", names=col_names)
 	data2 = read_csv("../../../constraint_solver/dual_arm/trajectory/arm2.csv", names=col_names)
 

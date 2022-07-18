@@ -114,7 +114,7 @@ def main():
 		my_pwlf=MDFit(x_data,curve_js[i:end])
 		my_pwlf.fit_with_breaks([i,end-1])
 
-		###predict at every data index
+		###predict at every train_data index
 		curve_js_pred = my_pwlf.predict_arb(x_data)
 
 		curve_cartesian_pred=[]

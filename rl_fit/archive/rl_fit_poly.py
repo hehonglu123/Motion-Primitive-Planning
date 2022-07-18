@@ -42,9 +42,9 @@ def read_data():
     all_lam = []
 
     for i in range(201):
-        lambda_file = "data/poly/lambda/lambda_{}.csv".format(i)
-        base_file = "data/poly/base/curve_base_poly_{}.csv".format(i)
-        js_file = "data/poly/js/curve_js_poly_{}.csv".format(i)
+        lambda_file = "train_data/poly/lambda/lambda_{}.csv".format(i)
+        base_file = "train_data/poly/base/curve_base_poly_{}.csv".format(i)
+        js_file = "train_data/poly/js/curve_js_poly_{}.csv".format(i)
 
         lambda_data = pd.read_csv(lambda_file, header=None)
         lam = lambda_data.values[-1][0]

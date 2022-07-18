@@ -3,7 +3,7 @@ from general_robotics_toolbox import *
 from pandas import *
 import sys, traceback
 import numpy as np
-sys.path.append('../data')
+sys.path.append('../train_data')
 from cartesian2joint import direction2R
 sys.path.append('../toolbox')
 from robot_def import *
@@ -69,7 +69,7 @@ def main():
 	breakpoints_out=[0,9064,15496,19997,25085,31478,38876,44918,47784,50007]
 
 	col_names=['X', 'Y', 'Z','direction_x', 'direction_y', 'direction_z'] 
-	data = read_csv("../data/from_ge/Curve_backproj_in_base_frame.csv", names=col_names)
+	data = read_csv("../train_data/from_ge/Curve_backproj_in_base_frame.csv", names=col_names)
 	curve_x=data['X'].tolist()
 	curve_y=data['Y'].tolist()
 	curve_z=data['Z'].tolist()

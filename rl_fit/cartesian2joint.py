@@ -13,7 +13,7 @@ from utils import *
 
 
 def main():
-    data_dir = "data/base"
+    data_dir = "train_data/base"
     abb6640_obj=abb6640(d=50)
 
     col_names = ['X', 'Y', 'Z', 'direction_x', 'direction_y', 'direction_z']
@@ -91,7 +91,7 @@ def main():
         if not no_solution:
             df = DataFrame({'q0': curve_js[:, 0], 'q1': curve_js[:, 1], 'q2': curve_js[:, 2], 'q3': curve_js[:, 3],
                             'q4': curve_js[:, 4], 'q5': curve_js[:, 5]})
-            df.to_csv('data/js_new/{}_js_new.csv'.format(file_name), header=False, index=False)
+            df.to_csv('train_data/js_new/{}_js_new.csv'.format(file_name), header=False, index=False)
 
 
 if __name__ == "__main__":

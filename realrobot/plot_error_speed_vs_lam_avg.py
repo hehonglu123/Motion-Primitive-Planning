@@ -13,7 +13,7 @@ from MotionSend import *
 
 robot=abb6640(d=50)
 
-dataset="../data/wood/"
+dataset="../train_data/wood/"
 # data_dir=dataset+'baseline/100L/realrobot/'
 data_dir='../ILC/recorded_data/curve1_250/realrobot/'
 
@@ -32,7 +32,7 @@ for i in range(5):
     ##read in curve_exe
     # df = read_csv(data_dir+"v"+str(s)+'_iteration'+str(i)+'.csv')
     df = read_csv(data_dir+str(s)+'_iteration'+str(i)+'.csv')
-    ##############################data analysis#####################################
+    ##############################train_data analysis#####################################
     lam, curve_exe, curve_exe_R,curve_exe_js, speed, timestamp=ms.logged_data_analysis(robot,df,realrobot=True)
     
     timestamp=timestamp-timestamp[0]

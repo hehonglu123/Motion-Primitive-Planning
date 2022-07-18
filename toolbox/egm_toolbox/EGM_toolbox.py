@@ -3,6 +3,7 @@ from general_robotics_toolbox import *
 from pandas import read_csv
 import sys
 from robots_def import *
+from lambda_calc import *
 from error_check import *
 import rpi_abb_irc5
 
@@ -15,6 +16,16 @@ class EGM_toolbox(object):
         self.egm=egm
         self.ts=0.004
         self.delay=delay
+        self.idx_delay=int(self.delay/self.ts)
+
+    def downsample24ms(self,curve,vd):
+        lam=calc_lam_cs(curve[:,:3])
+
+        steps=int((lam[-1]/vd)/self.ts)
+        idx=np.linspace(0.,len(curve)-1,num=steps).astype(int)
+
+        return idx
+
     def add_extension_egm(self,curve_cmd_js,extension_num=150):
         #################add extension#########################
         init_extension_js=np.linspace(curve_cmd_js[0]-extension_num*(curve_cmd_js[1]-curve_cmd_js[0]),curve_cmd_js[0],num=extension_num,endpoint=False)
@@ -44,6 +55,14 @@ class EGM_toolbox(object):
         curve_cmd_js_ext=np.vstack((init_extension_js,curve_cmd_js,end_extension_js))
 
         return curve_cmd_js_ext,curve_cmd_ext,curve_cmd_R_ext
+
+    def add_extension_egm_js(self,curve_cmd_js,extension_num=150):
+        #################add extension#########################
+        init_extension_js=np.linspace(curve_cmd_js[0]-extension_num*(curve_cmd_js[1]-curve_cmd_js[0]),curve_cmd_js[0],num=extension_num,endpoint=False)
+        end_extension_js=np.linspace(curve_cmd_js[-1],curve_cmd_js[-1]+extension_num*(curve_cmd_js[-1]-curve_cmd_js[-2]),num=extension_num+1)[1:]
+
+        curve_cmd_js_ext=np.vstack((init_extension_js,curve_cmd_js,end_extension_js))
+        return curve_cmd_js_ext
 
 
     def add_extension_egm_cartesian(self,curve_cmd,curve_cmd_R,extension_num=150):
@@ -94,9 +113,8 @@ class EGM_toolbox(object):
         self.clear_queue()
         res, state = self.egm.receive_from_robot(.1)
         q_cur=np.radians(state.joint_angles)
-        num=2*int(np.linalg.norm(q-q_cur)/(1000*self.ts))
+        num=int(np.linalg.norm(q-q_cur)/self.ts)
         q2start=np.linspace(q_cur,q,num=num)
-
         
         try:
             for i in range(len(q2start)):
@@ -119,6 +137,30 @@ class EGM_toolbox(object):
         except KeyboardInterrupt:
             raise
 
+    def traverse_curve_js(self,curve_js):
+        curve_exe_js=[]
+        timestamp=[]
+        ###traverse curve
+        print('traversing trajectory')
+        try:
+            for i in range(len(curve_js)):
+                while True:
+                    res_i, state_i = self.egm.receive_from_robot()
+                    if res_i:
+                        send_res = self.egm.send_to_robot(curve_js[i])
+                        #save joint angles
+                        curve_exe_js.append(np.radians(state_i.joint_angles))
+                        timestamp.append(state_i.robot_message.header.tm)
+                        break
+        except KeyboardInterrupt:
+            raise
+        
+        timestamp=np.array(timestamp)/1000
+        # plt.plot(timestamp)
+        # plt.show()
+
+        return timestamp,np.array(curve_exe_js)
+
     def traverse_curve_cartesian(self,curve,curve_R):
         curve_exe_js=[]
         timestamp=[]
@@ -132,7 +174,6 @@ class EGM_toolbox(object):
                         send_res = self.egm.send_to_robot_cart(curve[i], R2q(curve_R[i]))
                         #save joint angles
                         curve_exe_js.append(np.radians(state_i.joint_angles))
-                        #TODO: replace with controller time
                         timestamp.append(state_i.robot_message.header.tm)
                         break
         except KeyboardInterrupt:
@@ -149,26 +190,13 @@ class EGM_toolbox(object):
             if not res_i:
                 break
 
+    def fix_timestampe_jump(self,timestamp):
+        if np.max(np.diff(timestamp))>1:
+            idx=np.argmax(np.diff(timestamp))
+        else:   
+            return timestamp
 
 def main():
-    ms = MotionSend()
-    # data_dir="../greedy_fitting/greedy_output/"
-    data_dir="../greedy_fitting/greedy_dual_output/"
-    # speed={"v50":v50,"v500":v500,"v5000":v5000}
-    # zone={"fine":fine,"z1":z1,"z10":z10}
-    vmax = speeddata(10000,9999999,9999999,999999)
-    v559 = speeddata(559,9999999,9999999,999999)
-    speed={"v50":v50}#,"v500":v500,"v300":v300,"v100":v100}
-    zone={"z10":z10}
-
-    for s in speed:
-        for z in zone: 
-            curve_exe_js=ms.exe_from_file(data_dir+"command2.csv",data_dir+"curve_fit_js2.csv",speed[s],zone[z])
-   
-
-            # f = open(data_dir+"curve_exe"+"_"+s+"_"+z+".csv", "w")
-            # f.write(curve_exe_js)
-            # f.close()
-
+    return
 if __name__ == "__main__":
     main()

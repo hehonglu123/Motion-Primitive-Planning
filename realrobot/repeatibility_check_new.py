@@ -17,7 +17,7 @@ from utils import *
 robot=abb6640(d=50)
 
 dataset='from_NX/'
-dataset_dir="../data/"+dataset
+dataset_dir="../train_data/"+dataset
 curve = read_csv(dataset_dir+"Curve_in_base_frame.csv",header=None).values
 
 data_dir="recorded_data/repeatibility/"+dataset
@@ -39,7 +39,7 @@ for s in speed:
         for i in range(5):
             ##read in curve_exe
             df = read_csv(data_dir+"v"+str(s)+'_iteration'+str(i)+'.csv')
-            ##############################data analysis#####################################
+            ##############################train_data analysis#####################################
             lam, curve_exe, curve_exe_R,curve_exe_js, speed, timestamp=ms.logged_data_analysis(robot,df,realrobot=True)
             #############################chop extension off##################################
             lam, curve_exe, curve_exe_R,curve_exe_js, speed, timestamp=ms.chop_extension(curve_exe, curve_exe_R,curve_exe_js, speed, timestamp,curve[0,:3],curve[-1,:3])

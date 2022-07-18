@@ -11,7 +11,7 @@ from error_check import *
 from lambda_calc import *
 from MotionSend import *
 
-# curve = read_csv('../../../data/wood/Curve_in_base_frame.csv',header=None).values
+# curve = read_csv('../../../train_data/wood/Curve_in_base_frame.csv',header=None).values
 curve = read_csv('../../../data/from_ge/Curve_in_base_frame2.csv',header=None).values
 
 speed=['v500']

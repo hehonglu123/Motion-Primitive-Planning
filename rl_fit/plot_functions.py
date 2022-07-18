@@ -201,12 +201,12 @@ def plot_curve(curve, other_curves=None, show=True, save=False, save_path=None):
 
 
 if __name__ == '__main__':
-    # data = 'Training Curve data.csv'
-    # rl_df = pd.read_csv(data)
+    # train_data = 'Training Curve train_data.csv'
+    # rl_df = pd.read_csv(train_data)
     # episode_rewards = rl_df['episode_rewards']
     # plot_running_reward(episode_rewards, save=True, show=True)
     #
-    # greedy_data = 'data/poly_greedy_data.csv'
+    # greedy_data = 'train_data/poly_greedy_data.csv'
     # greedy_df = pd.read_csv(greedy_data)
     # greedy_steps_data = greedy_df['n_primitives']
     # rl_steps_data = rl_df['episode_steps']
@@ -215,8 +215,8 @@ if __name__ == '__main__':
     #
     # plot_evaluation("Train Eval Result.csv", greedy_steps_data, show=True, save=True)
 
-    # data = "Training Curve data.csv"
-    # df = pd.read_csv(data)
+    # train_data = "Training Curve train_data.csv"
+    # df = pd.read_csv(train_data)
     # rewards = df['episode_rewards']
     # times = df['episode_times']
     # errors = df['episode_errors']
@@ -228,5 +228,5 @@ if __name__ == '__main__':
     # plot_training_curve(error_angle, 'Max Error Angle', save=True, show=True)
     # plot_training_curve(steps, 'Steps', save=True, show=True)
 
-    plot_time_evaluation("DQN_result/eval_4000.csv", "data/greedy_time_data.csv", show=True, save=True)
+    plot_time_evaluation("DQN_result/eval_4000.csv", "train_data/greedy_time_data.csv", show=True, save=True)
 

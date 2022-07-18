@@ -185,7 +185,7 @@ def greedy_fit(curve_base_data):
         greedy_steps.append(step_count)
         print("{} / {} --- {:.2f}s --- {} steps".format(i, len(curve_base_data), (time.time_ns() - timer)*1e-9, step_count))
     greedy_df = pd.DataFrame({"id": greedy_curve_idx, "n_primitives": greedy_steps})
-    greedy_df.to_csv("data/new_greedy_data.csv", index=False)
+    greedy_df.to_csv("train_data/new_greedy_data.csv", index=False)
 
 
 def save_data(episode_rewards, episode_steps, episode_target_curve):
@@ -202,8 +202,8 @@ def save_evaluation_data(episode_steps, episode_target_curve):
 
 
 def main():
-    curve_base_data = read_base_data("data/base")
-    # curve_js_data = read_js_data("data/js")
+    curve_base_data = read_base_data("train_data/base")
+    # curve_js_data = read_js_data("train_data/js")
     greedy_fit(curve_base_data)
     # pca_df = pd.DataFrame({"axis1": axis1_range, "axis2": axis2_range, "axis3": axis3_range})
     # pca_df.to_csv("pca_movec.csv", index=False)

@@ -10,7 +10,7 @@ def main():
 	q_init2=[0.181847959,	0.435384629,	0.465584225,	0.677493313,	-1.070550513,	-0.266374094]
 
 	col_names=['X', 'Y', 'Z','direction_x','direction_y','direction_z'] 
-	data = read_csv("../../data/from_ge/relative_path_tool_frame.csv", names=col_names)
+	data = read_csv("../../train_data/from_ge/relative_path_tool_frame.csv", names=col_names)
 	curve_x=data['X'].tolist()
 	curve_y=data['Y'].tolist()
 	curve_z=data['Z'].tolist()

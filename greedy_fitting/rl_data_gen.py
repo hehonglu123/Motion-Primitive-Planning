@@ -207,14 +207,14 @@ def bisec(curve,curve_js,primitive_fit):
 
 import glob, pickle
 robot=abb6640(d=50)
-# curve_file_list=sorted(glob.glob("../rl_fit/data/base/*.csv"))
-# with open("../rl_fit/data/curve_file_list",'wb') as fp:
+# curve_file_list=sorted(glob.glob("../rl_fit/train_data/base/*.csv"))
+# with open("../rl_fit/train_data/curve_file_list",'wb') as fp:
 # 	pickle.dump(curve_file_list,fp)
-with open("../rl_fit/data/curve_file_list",'rb') as fp:
+with open("../rl_fit/train_data/curve_file_list",'rb') as fp:
 	curve_file_list=pickle.load(fp)
 
 for i in range(len(curve_file_list)):
-	curve_js_file='../rl_fit/data/js_new/'+curve_file_list[i][20:-4]+'_js_new.csv'
+	curve_js_file='../rl_fit/train_data/js_new/'+curve_file_list[i][20:-4]+'_js_new.csv'
 	col_names=['X', 'Y', 'Z','direction_x', 'direction_y', 'direction_z'] 
 	data = read_csv(curve_file_list[i], names=col_names)
 	curve_x=data['X'].tolist()

@@ -8,13 +8,13 @@ sys.path.append('../')
 from constraint_solver import *
 
 def main():
-	# data = read_csv("../../simulation/robotstudio_sim/scripts/fitting_output_new/threshold0.5/curve_fit.csv")
-	# curve_x=data['x'].tolist()
-	# curve_y=data['y'].tolist()
-	# curve_z=data['z'].tolist()
-	# curve_direction_x=data['R3'].tolist()
-	# curve_direction_y=data['R6'].tolist()
-	# curve_direction_z=data['R9'].tolist()
+	# train_data = read_csv("../../simulation/robotstudio_sim/scripts/fitting_output_new/threshold0.5/curve_fit.csv")
+	# curve_x=train_data['x'].tolist()
+	# curve_y=train_data['y'].tolist()
+	# curve_z=train_data['z'].tolist()
+	# curve_direction_x=train_data['R3'].tolist()
+	# curve_direction_y=train_data['R6'].tolist()
+	# curve_direction_z=train_data['R9'].tolist()
 	# curve=np.vstack((curve_x, curve_y, curve_z)).T
 	# curve_normal=np.vstack((curve_direction_x, curve_direction_y, curve_direction_z)).T
 

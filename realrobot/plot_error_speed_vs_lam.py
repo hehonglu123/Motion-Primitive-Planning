@@ -44,7 +44,7 @@ for s in speed:
 
 <<<<<<< HEAD
 =======
-        ###data filtering
+        ###train_data filtering
         timestamp, curve_exe_js=lfilter(timestamp, curve_exe_js)
 
 

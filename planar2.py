@@ -129,7 +129,7 @@ def main():
     x=np.arange(-1.5,1.5,0.001)
     y=np.sin(x*np.pi/1.5+0.1)
 
-    # initialize piecewise linear fit with your x and y data
+    # initialize piecewise linear fit with your x and y train_data
     my_pwlf = pwlf.PiecewiseLinFit(x, y)
 
     print(num_seg)
@@ -180,7 +180,7 @@ def main2():
     x=np.arange(-1.5,1.5,0.001)
     y=np.sin(x*np.pi/1.5+0.1)
     
-    # initialize piecewise linear fit with your x and y data
+    # initialize piecewise linear fit with your x and y train_data
     my_pwlf = pwlf.PiecewiseLinFit(x, y)
 
     found=False

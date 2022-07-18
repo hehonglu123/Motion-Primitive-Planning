@@ -19,7 +19,7 @@ def main():
 	robot=abb6640(d=50)
 
 	dataset='wood/'
-	# fitting_output="../data/"+dataset+'baseline/100L/'
+	# fitting_output="../train_data/"+dataset+'baseline/100L/'
 	fitting_output= 'greedy_output/'
 	data = read_csv(fitting_output+'command.csv')
 	breakpoints=np.array(data['breakpoints'].tolist())
