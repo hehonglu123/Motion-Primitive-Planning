@@ -16,6 +16,7 @@ class EGM_toolbox(object):
         self.egm=egm
         self.ts=0.004
         self.delay=delay
+        self.idx_delay=int(self.delay/self.ts)
 
     def downsample24ms(self,curve,vd):
         lam=calc_lam_cs(curve[:,:3])
@@ -54,6 +55,14 @@ class EGM_toolbox(object):
         curve_cmd_js_ext=np.vstack((init_extension_js,curve_cmd_js,end_extension_js))
 
         return curve_cmd_js_ext,curve_cmd_ext,curve_cmd_R_ext
+
+    def add_extension_egm_js(self,curve_cmd_js,extension_num=150):
+        #################add extension#########################
+        init_extension_js=np.linspace(curve_cmd_js[0]-extension_num*(curve_cmd_js[1]-curve_cmd_js[0]),curve_cmd_js[0],num=extension_num,endpoint=False)
+        end_extension_js=np.linspace(curve_cmd_js[-1],curve_cmd_js[-1]+extension_num*(curve_cmd_js[-1]-curve_cmd_js[-2]),num=extension_num+1)[1:]
+
+        curve_cmd_js_ext=np.vstack((init_extension_js,curve_cmd_js,end_extension_js))
+        return curve_cmd_js_ext
 
 
     def add_extension_egm_cartesian(self,curve_cmd,curve_cmd_R,extension_num=150):
@@ -104,9 +113,8 @@ class EGM_toolbox(object):
         self.clear_queue()
         res, state = self.egm.receive_from_robot(.1)
         q_cur=np.radians(state.joint_angles)
-        num=2*int(np.linalg.norm(q-q_cur)/(1000*self.ts))
+        num=int(np.linalg.norm(q-q_cur)/self.ts)
         q2start=np.linspace(q_cur,q,num=num)
-
         
         try:
             for i in range(len(q2start)):
@@ -128,6 +136,30 @@ class EGM_toolbox(object):
 
         except KeyboardInterrupt:
             raise
+
+    def traverse_curve_js(self,curve_js):
+        curve_exe_js=[]
+        timestamp=[]
+        ###traverse curve
+        print('traversing trajectory')
+        try:
+            for i in range(len(curve_js)):
+                while True:
+                    res_i, state_i = self.egm.receive_from_robot()
+                    if res_i:
+                        send_res = self.egm.send_to_robot(curve_js[i])
+                        #save joint angles
+                        curve_exe_js.append(np.radians(state_i.joint_angles))
+                        timestamp.append(state_i.robot_message.header.tm)
+                        break
+        except KeyboardInterrupt:
+            raise
+        
+        timestamp=np.array(timestamp)/1000
+        # plt.plot(timestamp)
+        # plt.show()
+
+        return timestamp,np.array(curve_exe_js)
 
     def traverse_curve_cartesian(self,curve,curve_R):
         curve_exe_js=[]
@@ -158,6 +190,11 @@ class EGM_toolbox(object):
             if not res_i:
                 break
 
+    def fix_timestampe_jump(self,timestamp):
+        if np.max(np.diff(timestamp))>1:
+            idx=np.argmax(np.diff(timestamp))
+        else:   
+            return timestamp
 
 def main():
     return

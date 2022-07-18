@@ -367,21 +367,21 @@ class MotionSend(object):
         return lam, np.array(curve_exe), np.array(curve_exe_R),np.array(curve_exe_js), np.array(act_speed), timestamp-timestamp[0]
 
     def logged_data_analysis_multimove(self,df,base2_R,base2_p,realrobot=False):
-        q1_1=df[' J1'].tolist()[1:]
-        q1_2=df[' J2'].tolist()[1:]
-        q1_3=df[' J3'].tolist()[1:]
-        q1_4=df[' J4'].tolist()[1:]
-        q1_5=df[' J5'].tolist()[1:]
-        q1_6=df[' J6'].tolist()[1:]
-        q2_1=df[' J1_2'].tolist()[1:]
-        q2_2=df[' J2_2'].tolist()[1:]
-        q2_3=df[' J3_2'].tolist()[1:]
-        q2_4=df[' J4_2'].tolist()[1:]
-        q2_5=df[' J5_2'].tolist()[1:]
-        q2_6=df[' J6_2'].tolist()[1:]
-        timestamp=df['timestamp'].tolist()[1:]
+        q1_1=df[' J1'].tolist()[1:-1]
+        q1_2=df[' J2'].tolist()[1:-1]
+        q1_3=df[' J3'].tolist()[1:-1]
+        q1_4=df[' J4'].tolist()[1:-1]
+        q1_5=df[' J5'].tolist()[1:-1]
+        q1_6=df[' J6'].tolist()[1:-1]
+        q2_1=df[' J1_2'].tolist()[1:-1]
+        q2_2=df[' J2_2'].tolist()[1:-1]
+        q2_3=df[' J3_2'].tolist()[1:-1]
+        q2_4=df[' J4_2'].tolist()[1:-1]
+        q2_5=df[' J5_2'].tolist()[1:-1]
+        q2_6=df[' J6_2'].tolist()[1:-1]
+        timestamp=df['timestamp'].tolist()[1:-1]
 
-        cmd_num=np.array(df[' cmd_num'].tolist()[1:]).astype(float)
+        cmd_num=np.array(df[' cmd_num'].tolist()[1:-1]).astype(float)
         start_idx=np.where(cmd_num==5)[0][0]
         curve_exe_js1=np.radians(np.vstack((q1_1,q1_2,q1_3,q1_4,q1_5,q1_6)).T.astype(float)[start_idx:])
         curve_exe_js2=np.radians(np.vstack((q2_1,q2_2,q2_3,q2_4,q2_5,q2_6)).T.astype(float)[start_idx:])
