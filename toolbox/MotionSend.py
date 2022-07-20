@@ -82,6 +82,7 @@ class MotionSend(object):
         return self.exec_motions(robot,primitives,breakpoints,p_bp,q_bp,speed,zone)
 
     def exec_motions_multimove(self,breakpoints,primitives1,primitives2,p_bp1,p_bp2,q_bp1,q_bp2,speed1,speed2,zone1,zone2):
+        ###dynamic speed2
         mp1 = MotionProgram(tool=self.tool1)
         mp2 = MotionProgram(tool=self.tool2)
         
@@ -109,11 +110,17 @@ class MotionSend(object):
             motion = primitives2[i]
             if motion == 'movel_fit':
                 robt = self.moveL_target(self.robot2,q_bp2[i][0],p_bp2[i][0])
-                mp2.MoveL(robt,speed2,zone2)
+                if len(speed2)==4:
+                    mp2.MoveL(robt,speed2,zone2)
+                else:
+                    mp2.MoveL(robt,speed2[i],zone2)
 
             elif motion == 'movec_fit':
                 robt1, robt2 = self.moveC_target(self.robot2,q_bp2[i][0],q_bp2[i][1],p_bp2[i][0],p_bp2[i][1])
-                mp2.MoveC(robt1,robt2,speed2,zone2)
+                if len(speed2)==4:
+                    mp2.MoveC(robt1,robt2,speed2,zone2)
+                else:
+                    mp2.MoveC(robt1,robt2,speed2[i],zone2)
 
             else: # movej_fit
                 jointt = self.moveJ_target(q_bp2[i][0])
@@ -123,7 +130,10 @@ class MotionSend(object):
                     mp2.MoveAbsJ(jointt,v500,fine)
                     mp2.WaitTime(0.1)
                 else:
-                    mp2.MoveAbsJ(jointt,speed2,zone2)
+                    if len(speed2)==4:
+                        mp2.MoveAbsJ(jointt,speed2,zone2)
+                    else:
+                        mp2.MoveAbsJ(jointt,speed2[i],zone2)
 
         ###add sleep at the end to wait for train_data transmission
         mp1.WaitTime(0.1)

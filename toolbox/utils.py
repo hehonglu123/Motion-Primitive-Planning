@@ -6,6 +6,13 @@ from scipy import signal
 import scipy
 from sklearn.cluster import KMeans
 
+def clip_joints(robot,curve_js,relax=0.05):
+	curve_js_clipped=np.zeros(curve_js.shape)
+	for i in range(len(curve_js[0])):
+		curve_js_clipped[:,i]=np.clip(curve_js[:,i],robot.lower_limit[i]+relax,robot.upper_limit[i]-relax)
+
+	return curve_js_clipped
+
 def remove_traj_outlier(curve_exe_all,curve_exe_js_all,timestamp_all,total_time_all):
 
 	km = KMeans(n_clusters=2)

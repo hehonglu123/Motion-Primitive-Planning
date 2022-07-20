@@ -56,10 +56,10 @@ class EGM_toolbox(object):
 
         return curve_cmd_js_ext,curve_cmd_ext,curve_cmd_R_ext
 
-    def add_extension_egm_js(self,curve_cmd_js,extension_num=150):
+    def add_extension_egm_js(self,curve_cmd_js,extension_start=150,extension_end=0):
         #################add extension#########################
-        init_extension_js=np.linspace(curve_cmd_js[0]-extension_num*(curve_cmd_js[1]-curve_cmd_js[0]),curve_cmd_js[0],num=extension_num,endpoint=False)
-        end_extension_js=np.linspace(curve_cmd_js[-1],curve_cmd_js[-1]+extension_num*(curve_cmd_js[-1]-curve_cmd_js[-2]),num=extension_num+1)[1:]
+        init_extension_js=np.linspace(curve_cmd_js[0]-extension_start*(curve_cmd_js[1]-curve_cmd_js[0]),curve_cmd_js[0],num=extension_start,endpoint=False)
+        end_extension_js=np.linspace(curve_cmd_js[-1],curve_cmd_js[-1]+extension_end*(curve_cmd_js[-1]-curve_cmd_js[-2]),num=extension_end+1)[1:]
 
         curve_cmd_js_ext=np.vstack((init_extension_js,curve_cmd_js,end_extension_js))
         return curve_cmd_js_ext
