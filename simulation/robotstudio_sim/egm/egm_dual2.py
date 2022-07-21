@@ -62,7 +62,7 @@ def main():
 	curve_js2=read_csv(data_dir+"dual_arm/arm2.csv",header=None).values
 	relative_path=read_csv(data_dir+"Curve_dense.csv",header=None).values
 
-	vd=500
+	vd=50
 	idx=et1.downsample24ms(relative_path,vd)
 
 	curve_cmd_js1=curve_js1[idx]
@@ -106,6 +106,12 @@ def main():
 	print(len(timestamp1))
 	print(len(timestamp2))
 	print(len(curve_cmd_js1))
+
+	print('robot1 duration: ', timestamp1[-1]-timestamp1[0])
+	print('robot2 duration: ', timestamp2[-1]-timestamp2[0])
+
+	plt.plot(timestamp1)
+	plt.show()
 
 	curve_exe_js1=np.array(curve_exe_js1)
 	curve_exe_js2=np.array(copy.deepcopy(curve_js2_exe))
