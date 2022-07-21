@@ -22,7 +22,7 @@ from lambda_calc import *
 from blending import *
 
 def main():
-	dataset='from_NX/'
+	dataset='wood/'
 	data_dir="../../data/"+dataset
 	relative_path = read_csv(data_dir+"/Curve_dense.csv", header=None).values
 
@@ -47,7 +47,7 @@ def main():
 	###get lambda at each breakpoint
 	lam_bp=lam_relative_path[np.append(breakpoints1[0],breakpoints1[1:]-1)]
 
-	vd=1500
+	vd=500
 
 	s1=9999
 	s2=[1000]*len(primitives2)
