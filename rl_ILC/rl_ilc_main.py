@@ -120,7 +120,7 @@ def train(agent: TD3Agent, data_dir, args):
             print("[Model Saved]")
 
 
-def evaluate(agent, data_dir, render=False):
+def evaluate(agent, data_dir, render=False, render_dir=""):
     data_dir = data_dir + os.sep
 
     robot = abb6640(d=50)
@@ -128,7 +128,7 @@ def evaluate(agent, data_dir, render=False):
     num_itr = 0
     num_curve = 0
 
-    for i in range(11):
+    for i in range(3):
 
         curve, curve_normal, curve_js = read_data(i, data_dir)
         env = ILCEnv(curve, curve_normal, curve_js, robot, 100)
@@ -137,7 +137,7 @@ def evaluate(agent, data_dir, render=False):
         print("[EVAL] Curve {:>5}".format(i))
 
         if render:
-            env.render(i, save=True)
+            env.render(i, save=True, save_dir=render_dir)
 
         if status:
             num_curve += 1
@@ -157,7 +157,7 @@ def evaluate(agent, data_dir, render=False):
                 done = np.sum(done) > 0
 
                 if render:
-                    env.render(i, save=True)
+                    env.render(i, save=True, save_dir=render_dir)
 
                 print("\r\t[EVAL] Step {:>3}: {}".format(env.itr, message))
 
@@ -177,8 +177,9 @@ def main():
     eval_dir = 'eval_data/curve1'
 
     agent = TD3Agent(args)
-    train(agent, data_dir, args)
-    # eval_error, eval_itr = evaluate(agent, eval_dir, render=True)
+    agent.load('model/1600')
+    # train(agent, data_dir, args)
+    eval_error, eval_itr = evaluate(agent, eval_dir, render=True, render_dir='render/curve1')
 
 
 if __name__ == '__main__':

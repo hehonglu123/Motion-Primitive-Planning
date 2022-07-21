@@ -68,7 +68,7 @@ class ILCEnv(object):
             self.p_bp.append([self.curve[i]])
             self.q_bp.append([self.curve_js[i]])
             self.ori_bp.append([self.curve_R[i]])
-        self.extend()
+        self.extend(init=True)
         self.next_p_bp = self.p_bp
         self.next_q_bp = self.q_bp
 
@@ -121,6 +121,7 @@ class ILCEnv(object):
             self.p_bp = self.next_p_bp
             self.q_bp = self.next_q_bp
 
+            # self.extend(init=False)
             self.update_ori_bp()
 
             try:
@@ -143,7 +144,8 @@ class ILCEnv(object):
 
                 return next_state, reward, done, message
 
-    def render(self, idx, save=False, render_profile=True):
+    def render(self, idx, save=False, render_profile=True, save_dir=''):
+        save_dir = 'render' if save_dir == "" else save_dir
         fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
         ax.plot3D(self.curve[:, 0], self.curve[:, 1], self.curve[:, 2], 'g', label='Target')
 
@@ -159,29 +161,34 @@ class ILCEnv(object):
         ax.set_zlim(980, 1000)
 
         ax.legend()
-        ax.set_title("Iteration {} (Error {:.3f})".format(self.itr, self.max_exec_error))
+        ax.set_title("Iteration {} (Max Error {:.3f})".format(self.itr, self.max_exec_error))
 
         if save:
-            if not os.path.isdir('render'):
-                os.mkdir('render')
-            if not os.path.isdir('render/curve{}'.format(idx)):
-                os.mkdir('render/curve{}'.format(idx))
-            fig.savefig('render/curve{}/bp_itr_{}.png'.format(idx, self.itr), dpi=300)
+            if not os.path.isdir(save_dir):
+                os.mkdir(save_dir)
+            if not os.path.isdir('{}/curve{}'.format(save_dir, idx)):
+                os.mkdir('{}/curve{}'.format(save_dir, idx))
+            fig.savefig('{}/curve{}/bp_itr_{}.png'.format(save_dir, idx, self.itr), dpi=300)
         plt.close()
 
         if render_profile:
             fig, ax = plt.subplots()
             ax2 = ax.twinx()
-            ax.plot(self.exe_profile['lambda'], self.exe_profile['Speed'], 'g', label='Speed')
-            ax2.plot(self.exe_profile['lambda'], self.exe_profile['Error'], 'b', label='Error')
-            ax.set_xlabel('lambda')
-            ax.set_ylabel('Speed', color='g')
-            ax2.set_ylabel('Error', color='b')
-            ax.set_ylim(0, 300)
-            ax2.set_ylim(0, 1)
+            ax.plot(self.exe_profile['lambda'], self.exe_profile['Speed'], 'g-', label='Speed')
+            ax2.plot(self.exe_profile['lambda'], self.exe_profile['Error'], 'b-', label='Error')
+            ax2.plot(self.exe_profile['lambda'], np.degrees(self.exe_profile['Angle Error']), 'y-', label='Error')
+            ax.set_xlabel('lambda (mm)')
+            ax.set_ylabel('Speed (mm/s)', color='g')
+            ax2.set_ylabel('Error/Normal Error (mm/deg)', color='b')
+            ax.set_ylim(0, 1000)
+            ax2.set_ylim(0, 2)
+            ax.set_title("[Error ({:.3f},{:.3f})] [Speed ({:.2f},{:.2f})]".format(np.mean(self.exe_profile['Error']),
+                                                                                  np.std(self.exe_profile['Error']),
+                                                                                  np.mean(self.exe_profile['Speed']),
+                                                                                  np.std(self.exe_profile['Speed'])))
 
             if save:
-                fig.savefig('render/curve{}/profile_itr_{}.png'.format(idx, self.itr), dpi=300)
+                fig.savefig('{}/curve{}/profile_itr_{}.png'.format(save_dir, idx, self.itr), dpi=300)
 
             plt.close()
 
@@ -296,6 +303,12 @@ class ILCEnv(object):
         self.get_error_speed(error, angle_error, speed, lam)
         return error, angle_error, curve_exe, curve_exe_R, curve_target, curve_target_R
 
+    def execute_abb_robot(self):
+        pass
+
+    def execute_fanuc_robot(self):
+        pass
+
     def calculate_error(self, curve_exe, curve_exe_R, curve_target, curve_target_R):
         error = curve_target - curve_exe
         angle_error = np.zeros(len(curve_exe))
@@ -343,14 +356,22 @@ class ILCEnv(object):
                 new_curve_target_R[i, :] = self.curve_R[closest_point_idx, :]
             return curve_exe, curve_exe_R[:, :, -1], new_curve_target, new_curve_target_R
 
-    def extend(self, extension_start=50, extension_end=50):
+    def extend(self, extension_start=50, extension_end=50, init=False):
         # initial point extension
-        pose_start = self.robot.fwd(self.q_bp[0][-1])
-        p_start = pose_start.p
-        R_start = pose_start.R
-        pose_end = self.robot.fwd(self.q_bp[1][-1])
-        p_end = pose_end.p
-        R_end = pose_end.R
+        if init:
+            pose_start = self.robot.fwd(self.q_bp[0][-1])
+            p_start = pose_start.p
+            R_start = pose_start.R
+            pose_end = self.robot.fwd(self.q_bp[1][-1])
+            p_end = pose_end.p
+            R_end = pose_end.R
+        else:
+            pose_start = self.robot.fwd(self.q_bp[1][-1])
+            p_start = pose_start.p
+            R_start = pose_start.R
+            pose_end = self.robot.fwd(self.q_bp[2][-1])
+            p_end = pose_end.p
+            R_end = pose_end.R
 
         # find new start point
         slope_p = p_end - p_start
@@ -363,15 +384,26 @@ class ILCEnv(object):
         R_start_new = rot(k, theta_new) @ R_start
 
         # solve invkin for initial point
-        q_start_new = car2js(self.robot, self.q_bp[0][0], p_start_new, R_start_new)[0]
+        if init:
+            q_start_new = car2js(self.robot, self.q_bp[0][0], p_start_new, R_start_new)[0]
+        else:
+            q_start_new = car2js(self.robot, self.q_bp[1][0], p_start_new, R_start_new)[0]
 
         # end point extension
-        pose_start = self.robot.fwd(self.q_bp[-2][-1])
-        p_start = pose_start.p
-        R_start = pose_start.R
-        pose_end = self.robot.fwd(self.q_bp[-1][-1])
-        p_end = pose_end.p
-        R_end = pose_end.R
+        if init:
+            pose_start = self.robot.fwd(self.q_bp[-2][-1])
+            p_start = pose_start.p
+            R_start = pose_start.R
+            pose_end = self.robot.fwd(self.q_bp[-1][-1])
+            p_end = pose_end.p
+            R_end = pose_end.R
+        else:
+            pose_start = self.robot.fwd(self.q_bp[-3][-1])
+            p_start = pose_start.p
+            R_start = pose_start.R
+            pose_end = self.robot.fwd(self.q_bp[-2][-1])
+            p_end = pose_end.p
+            R_end = pose_end.R
 
         # find new end point
         slope_p = (p_end - p_start) / np.linalg.norm(p_end - p_start)
@@ -383,12 +415,21 @@ class ILCEnv(object):
         R_end_new = rot(k, extension_end * slope_theta) @ R_end
 
         # solve invkin for end point
-        q_end_new = car2js(self.robot, self.q_bp[-1][0], p_end_new, R_end_new)[0]
+        if init:
+            q_end_new = car2js(self.robot, self.q_bp[-1][0], p_end_new, R_end_new)[0]
+        else:
+            q_end_new = car2js(self.robot, self.q_bp[-2][0], p_end_new, R_end_new)[0]
 
-        self.p_bp.insert(0, [p_start_new])
-        self.p_bp.append([p_end_new])
-        self.q_bp.insert(0, [q_start_new])
-        self.q_bp.append([q_end_new])
+        if init:
+            self.p_bp.insert(0, [p_start_new])
+            self.p_bp.append([p_end_new])
+            self.q_bp.insert(0, [q_start_new])
+            self.q_bp.append([q_end_new])
+        else:
+            self.p_bp[0] = [p_start_new]
+            self.p_bp[-1] = [p_end_new]
+            self.q_bp[0] = [q_start_new]
+            self.q_bp[-1] = [q_end_new]
 
     def chop_extension(self, curve_exe, curve_exe_R, curve_exe_js, speed, timestamp):
         p_start = self.curve[0, :3]

@@ -171,3 +171,10 @@ class TD3Agent(object):
         torch.save(self.actor_target.state_dict(), path + os.sep + "actor_target.pth")
         torch.save(self.critic.state_dict(), path + os.sep + "critic.pth")
         torch.save(self.critic_target.state_dict(), path + os.sep + "critic_target.pth")
+
+    def load(self, path):
+        self.feature_net.load_state_dict(torch.load(path + os.sep + "feature_net.pth"))
+        self.actor.load_state_dict(torch.load(path + os.sep + "actor.pth"))
+        self.actor_target.load_state_dict(torch.load(path + os.sep + "actor_target.pth"))
+        self.critic.load_state_dict(torch.load(path + os.sep + "critic.pth"))
+        self.critic_target.load_state_dict(torch.load(path + os.sep + "critic_target.pth"))
