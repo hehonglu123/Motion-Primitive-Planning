@@ -12,8 +12,10 @@ from io import StringIO
 from scipy.signal import find_peaks
 # sys.path.append('../abb_motion_program_exec')
 from abb_motion_program_exec_client import *
+sys.path.append('../')
+sys.path.append('../../toolbox')
 from ilc_toolbox import *
-sys.path.append('../toolbox')
+
 from robots_def import *
 from error_check import *
 from MotionSend import *
@@ -21,9 +23,10 @@ from lambda_calc import *
 from blending import *
 
 def main():
-	dataset='wood/'
-	data_dir="../train_data/"+dataset
-	fitting_output="../train_data/"+dataset+'baseline/100L/'
+	dataset='from_NX/'
+	data_dir="../../data/"+dataset
+	# fitting_output="../../data/"+dataset+'baseline/100L/'
+	fitting_output="../../data/"+dataset+'qp/'
 	# fitting_output="../greedy_fitting/greedy_output/curve1_movel_0.1/"
 	# fitting_output="../greedy_fitting/greedy_output/curve2_movel_0.1/"
 
@@ -34,7 +37,7 @@ def main():
 	multi_peak_threshold=0.2
 	robot=abb6640(d=50)
 
-	v=250
+	v=1200
 	s = speeddata(v,9999999,9999999,999999)
 	z = z10
 
@@ -65,7 +68,7 @@ def main():
 
 		StringData=StringIO(logged_data)
 		df = read_csv(StringData, sep =",")
-		##############################train_data analysis#####################################
+		##############################data analysis#####################################
 		lam, curve_exe, curve_exe_R,curve_exe_js, speed, timestamp=ms.logged_data_analysis(robot,df,realrobot=True)
 		#############################chop extension off##################################
 		lam, curve_exe, curve_exe_R,curve_exe_js, speed, timestamp=ms.chop_extension(curve_exe, curve_exe_R,curve_exe_js, speed, timestamp,curve[0,:3],curve[-1,:3])

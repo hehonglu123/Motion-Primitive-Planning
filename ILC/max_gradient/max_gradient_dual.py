@@ -22,9 +22,11 @@ from lambda_calc import *
 from blending import *
 
 def main():
-	dataset='from_NX/'
+	dataset='wood/'
 	data_dir="../../data/"+dataset
 	relative_path = read_csv(data_dir+"/Curve_dense.csv", header=None).values
+
+	lam_relative_path=calc_lam_cs(relative_path)
 
 	with open(data_dir+'dual_arm/abb1200.yaml') as file:
 		H_1200 = np.array(yaml.safe_load(file)['H'],dtype=np.float64)
@@ -39,15 +41,20 @@ def main():
 
 	ms = MotionSend(robot1=robot1,robot2=robot2,base2_R=base2_R,base2_p=base2_p)
 
-	s1=1111
-	s2=1111
-	z=10
-	v1 = speeddata(s1,9999999,9999999,999999)
-	v2 = speeddata(s2,9999999,9999999,999999)
-
-
 	breakpoints1,primitives1,p_bp1,q_bp1=ms.extract_data_from_cmd(data_dir+'/dual_arm/command1.csv')
 	breakpoints2,primitives2,p_bp2,q_bp2=ms.extract_data_from_cmd(data_dir+'/dual_arm/command2.csv')
+
+	###get lambda at each breakpoint
+	lam_bp=lam_relative_path[np.append(breakpoints1[0],breakpoints1[1:]-1)]
+
+	vd=500
+
+	s1=9999
+	s2=[1000]*len(primitives2)
+	z=10
+	v1 = speeddata(s1,9999999,9999999,999999)
+	
+
 
 	###extension
 	p_bp1,q_bp1,p_bp2,q_bp2=ms.extend_dual(ms.robot1,p_bp1,q_bp1,primitives1,ms.robot2,p_bp2,q_bp2,primitives2,breakpoints1)
@@ -60,13 +67,17 @@ def main():
 	###TODO: extension fix start point, moveC support
 	max_error=999
 	inserted_points=[]
-	iteration=50
+	iteration=100
 	for i in range(iteration):
+		###format speed for second arm
+		v2=[]
+		for m in range(len(s2)):
+			v2.append(speeddata(s2[m],9999999,9999999,999999))
 
 		ms = MotionSend(robot1=robot1,robot2=robot2,base2_R=base2_R,base2_p=base2_p)
 		###execution with plant
 		logged_data=ms.exec_motions_multimove(breakpoints1,primitives1,primitives2,p_bp1,p_bp2,q_bp1,q_bp2,v1,v2,z10,z10)
-		with open('iteration_'+str(i)+'.csv',"w") as f:
+		with open('recorded_data/dual_iteration_'+str(i)+'.csv',"w") as f:
 		    f.write(logged_data)
 		StringData=StringIO(logged_data)
 		df = read_csv(StringData, sep =",")
@@ -93,7 +104,7 @@ def main():
 		ax2.plot(lam, error, 'b-',label='Error')
 		ax2.scatter(lam[peaks],error[peaks],label='peaks')
 		ax2.plot(lam, np.degrees(angle_error), 'y-',label='Normal Error')
-		# ax1.axis(ymin=0,ymax=1.2*(s1+s2))
+		ax1.axis(ymin=0,ymax=2.*vd)
 		ax2.axis(ymin=0,ymax=4)
 
 		ax1.set_xlabel('lambda (mm)')
@@ -105,7 +116,7 @@ def main():
 		ax2.legend(loc=0)
 
 		plt.legend()
-		plt.savefig('iteration_ '+str(i))
+		plt.savefig('recorded_data/iteration_'+str(i))
 		plt.clf()
 		# plt.show()
 
@@ -163,6 +174,16 @@ def main():
 			q_bp1=q_bp1_new
 			p_bp2=p_bp2_new
 			q_bp2=q_bp2_new
+
+		###cmd speed adjustment
+		speed_alpha=0.5
+
+		for m in range(1,len(lam_bp)):
+			###get segment average speed
+			segment_avg=np.average(speed[np.argmin(np.abs(lam-lam_bp[m-1])):np.argmin(np.abs(lam-lam_bp[m]))])
+			###cap above 100m/s for robot2
+			s2[m]+=speed_alpha*(vd-segment_avg)
+			s2[m]=max(s2[m],100)
 
 
 
