@@ -120,7 +120,7 @@ def train(agent: TD3Agent, data_dir, args):
             print("[Model Saved]")
 
 
-def evaluate(agent, data_dir, render=False, render_dir=""):
+def evaluate(agent, data_dir, render=False, render_dir="", env_mode='robot_studio'):
     data_dir = data_dir + os.sep
 
     robot = abb6640(d=50)
@@ -131,7 +131,7 @@ def evaluate(agent, data_dir, render=False, render_dir=""):
     for i in range(3):
 
         curve, curve_normal, curve_js = read_data(i, data_dir)
-        env = ILCEnv(curve, curve_normal, curve_js, robot, 100)
+        env = ILCEnv(curve, curve_normal, curve_js, robot, 100, mode=env_mode)
         state, status = env.reset()
         done = False
         print("[EVAL] Curve {:>5}".format(i))
@@ -179,7 +179,7 @@ def main():
     agent = TD3Agent(args)
     agent.load('model/1600')
     # train(agent, data_dir, args)
-    eval_error, eval_itr = evaluate(agent, eval_dir, render=True, render_dir='render/curve1')
+    eval_error, eval_itr = evaluate(agent, eval_dir, render=True, render_dir='render/curve1', env_mode='robot_studio')
 
 
 if __name__ == '__main__':

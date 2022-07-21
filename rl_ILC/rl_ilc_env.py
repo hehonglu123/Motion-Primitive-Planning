@@ -15,7 +15,7 @@ from curve_normalization import PCA_normalization
 
 
 class ILCEnv(object):
-    def __init__(self, curve, curve_R, curve_js, robot, n):
+    def __init__(self, curve, curve_R, curve_js, robot, n, mode='robot_studio'):
         self.robot = robot
         self.curve = curve
         self.curve_R = curve_R
@@ -61,6 +61,11 @@ class ILCEnv(object):
 
         self.exe_profile = {'Error': None, 'Angle Error': None, 'Speed': None, 'lambda': None}
 
+        self.execution_mode = mode
+        self.execution_method = {'robot_studio': self.execute_robot_studio,
+                                 'abb': self.execute_abb_robot,
+                                 'fanuc': self.execute_fanuc_robot}
+
     def initialize_breakpoints(self):
         self.breakpoints = np.linspace(1, len(self.curve), self.n).astype(int) - 1
         self.p_bp, self.q_bp = [], []
@@ -96,7 +101,7 @@ class ILCEnv(object):
         try:
             self.initialize_breakpoints()
             self.itr = 0
-            error, angle_error, curve_exe, curve_exe_R, curve_target, curve_target_R = self.execute_robot_studio()
+            error, angle_error, curve_exe, curve_exe_R, curve_target, curve_target_R = self.execution_method[self.execution_mode]()
         except:
             print("[Reset] Initialization Fail. Skipped Curve.")
             return None, False
@@ -125,7 +130,7 @@ class ILCEnv(object):
             self.update_ori_bp()
 
             try:
-                error, angle_error, curve_exe, curve_exe_R, curve_target, curve_target_R = self.execute_robot_studio()
+                error, angle_error, curve_exe, curve_exe_R, curve_target, curve_target_R = self.execution_method[self.execution_mode]()
             except:
                 print("[Fail. RobotSudio Execution Error.]")
                 next_state = (
@@ -304,10 +309,10 @@ class ILCEnv(object):
         return error, angle_error, curve_exe, curve_exe_R, curve_target, curve_target_R
 
     def execute_abb_robot(self):
-        pass
+        raise Exception("execute_abb_robot() not implemented!")
 
     def execute_fanuc_robot(self):
-        pass
+        raise Exception("execute_fanuc_robot() not implemented!")
 
     def calculate_error(self, curve_exe, curve_exe_R, curve_target, curve_target_R):
         error = curve_target - curve_exe
