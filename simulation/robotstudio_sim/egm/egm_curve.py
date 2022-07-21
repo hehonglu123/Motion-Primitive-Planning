@@ -17,7 +17,7 @@ dataset='wood/'
 data_dir='../../../data/'
 curve_js = read_csv(data_dir+dataset+'Curve_js.csv',header=None).values
 curve = read_csv(data_dir+dataset+'Curve_in_base_frame.csv',header=None).values
-vd=50
+vd=200
 
 robot=abb6640(d=50)
 lam=calc_lam_cs(curve[:,:3])
@@ -73,4 +73,6 @@ try:
 except KeyboardInterrupt:
 	raise
 
-DataFrame(np.hstack((np.array(timestamp).reshape((-1,1)),curve_exe_js))).to_csv(dataset+'curve_exe_v'+str(vd)+'.csv',header=False,index=False)
+plt.plot(timestamp)
+plt.show()
+# DataFrame(np.hstack((np.array(timestamp).reshape((-1,1)),curve_exe_js))).to_csv(dataset+'curve_exe_v'+str(vd)+'.csv',header=False,index=False)

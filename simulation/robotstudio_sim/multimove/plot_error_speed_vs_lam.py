@@ -19,7 +19,7 @@ base2_R=np.array([[-1,0,0],[0,-1,0],[0,0,1]])
 base2_p=np.array([3000,1000,0])
 
 dataset='from_NX'
-relative_path = read_csv("../../../train_data/"+dataset+"/relative_path_tool_frame.csv", header=None).values[:,:3]
+relative_path = read_csv("../../../data/"+dataset+"/Curve_dense.csv", header=None).values[:,:3]
 
 
 speed=['vmax']

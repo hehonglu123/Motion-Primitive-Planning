@@ -4,14 +4,13 @@ from constraint_solver import *
 
 
 def main():
-	dataset='from_NX/'
-	curve = read_csv("../../train_data/"+dataset+"Curve_in_base_frame.csv",header=None).values
-	curve_js = read_csv("../../train_data/"+dataset+"Curve_js.csv",header=None).values
+	dataset='wood/'
+	curve = read_csv("../../data/"+dataset+"Curve_in_base_frame.csv",header=None).values
+	curve_js = read_csv("../../data/"+dataset+"Curve_js.csv",header=None).values
 
 	robot=abb6640(d=50)
-	opt=lambda_opt(curve[:,:3],curve[:,3:],robot1=robot,steps=10000)
+	opt=lambda_opt(curve[:,:3],curve[:,3:],robot1=robot,steps=50000)
 	q_init=curve_js[0]
-	# q_init=[-1.71E-06,	0.458127951,	0.800479092,	-5.65E-06,	-1.782205819,	-7.34E-06]
 
 	q_out=opt.single_arm_stepwise_optimize(q_init)
 

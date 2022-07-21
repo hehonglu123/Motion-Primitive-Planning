@@ -15,9 +15,11 @@ from utils import *
 
 
 data_dir='wood/'
+cmd_dir=data_dir+'qp/'
 num_ls=[100]
 robot=abb6640(d=50)
-curve_js = read_csv(data_dir+'Curve_js.csv',header=None).values
+# curve_js = read_csv(data_dir+'Curve_js.csv',header=None).values
+curve_js = read_csv(data_dir+'qp/arm1.csv',header=None).values
 curve = read_csv(data_dir+"Curve_in_base_frame.csv",header=None).values
 
 curve_fit=np.zeros((len(curve_js),3))
@@ -47,10 +49,10 @@ for num_l in num_ls:
 	primitives_choices=['movej_fit']+['movel_fit']*num_l
 
 	df=DataFrame({'breakpoints':breakpoints,'primitives':primitives_choices,'points':points,'q_bp':q_bp})
-	df.to_csv(data_dir+'baseline/'+str(num_l)+'L/command.csv',header=True,index=False)
+	df.to_csv(cmd_dir+'command.csv',header=True,index=False)
 
 	curve_fit_js=car2js(robot,curve_js[0],curve_fit,curve_fit_R)
-	DataFrame(curve_fit_js).to_csv(data_dir+'baseline/'+str(num_l)+'L/curve_fit_js.csv',header=False,index=False)
-	DataFrame(curve_fit).to_csv(data_dir+'baseline/'+str(num_l)+'L/curve_fit.csv',header=False,index=False)
+	DataFrame(curve_fit_js).to_csv(cmd_dir+'curve_fit_js.csv',header=False,index=False)
+	DataFrame(curve_fit).to_csv(cmd_dir+'/curve_fit.csv',header=False,index=False)
 
 

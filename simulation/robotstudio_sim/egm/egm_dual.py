@@ -76,6 +76,8 @@ def main():
 
 	timestamp1=np.array(timestamp1)/1000
 	timestamp2=np.array(timestamp2)/1000
+	plt.plot(timestamp1)
+	plt.show()
 
 	##############################calcualte error########################################
 	relative_path_exe,relative_path_exe_R=form_relative_path(robot1,robot2,curve_exe_js1,curve_exe_js2,base2_R,base2_p)

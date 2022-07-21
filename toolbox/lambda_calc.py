@@ -225,22 +225,44 @@ def calc_lamdot_dual(curve_js1,curve_js2,lam,joint_vel_limit1,joint_vel_limit2,s
 def traj_speed_est(robot,curve_js,lam,vd):
 	###find desired qdot at each step
 	dq=np.gradient(curve_js,axis=0)
-	dlam=np.average(np.gradient(lam))
+	dlam=np.gradient(lam)
 	dt=dlam/vd
-	qdot_d=dq/dt
+	qdot_d=np.divide(dq,np.tile(np.array([dt]).T,(1,6)))
 	###bound desired qdot with qdot constraint
 	qdot_max=np.tile(robot.joint_vel_limit,(len(curve_js),1))
 	coeff=np.divide(np.abs(qdot_d),qdot_max)
 	coeff=np.max(coeff,axis=1)	###get the limiting joint
 	coeff=np.clip(coeff,1,999)	###clip coeff to 1
 	coeff=np.tile(np.array([coeff]).T,(1,6))
+
 	qdot=np.divide(qdot_d,coeff)	###clip propotionally
-	print(coeff)	
+		
 
 
 
 	# ###iterate a few times to satisfy qddot constraint
-	# for r in range(3):
+	for r in range(1000):
+		dqdot=np.gradient(qdot,axis=0)
+
+		qddot_d=np.divide(dqdot,np.tile(np.array([dt]).T,(1,6)))
+		###bound desired qddot with qddot constraint
+		qddot_max=np.tile(robot.joint_acc_limit,(len(curve_js),1))
+		coeff=np.divide(np.abs(qddot_d),qddot_max)
+		coeff=np.max(coeff,axis=1)	###get the limiting joint
+
+
+		
+		coeff=np.clip(coeff,1,999)	###clip coeff to 1
+
+		coeff=np.tile(np.array([coeff]).T,(1,6))
+		qddot=np.divide(qddot_d,coeff)	###clip propotionally
+
+		qdot[1:]=qdot[:-1]+qddot[:-1]*np.tile(np.array([dt[:-1]]).T,(1,6))
+
+
+
+		###update dt
+		dt=np.max(dq/qdot,axis=1)
 
 	speed=[]
 	for i in range(len(curve_js)):
@@ -248,9 +270,50 @@ def traj_speed_est(robot,curve_js,lam,vd):
 		speed.append(np.linalg.norm((J@qdot[i])[3:]))
 
 	return speed
+
+def traj_speed_est2(robot,curve_js,lam,vd):
+
+	###find desired qdot at each step
+	dq=np.gradient(curve_js,axis=0)
+	dlam=np.gradient(lam)
+	dt=dlam/vd
+	qdot_d=np.divide(dq,np.tile(np.array([dt]).T,(1,6)))
+	###bound desired qdot with qdot constraint
+	qdot_max=np.tile(robot.joint_vel_limit,(len(curve_js),1))
+	coeff=np.divide(np.abs(qdot_d),qdot_max)
+	coeff=np.max(coeff,axis=1)	###get the limiting joint
+	coeff=np.clip(coeff,1,999)	###clip coeff to 1
+	coeff=np.tile(np.array([coeff]).T,(1,6))
+
+	qdot=np.divide(qdot_d,coeff)	###clip propotionally
+	
+	#traversal
+	qdot_act=[qdot[0]]
+	for i in range(1,len(curve_js)):
+		dqdot=qdot[i]-qdot_act[-1]
+		qddot_d=dqdot/dt[i]
+
+		coeffs=np.abs(qddot_d)/robot.joint_acc_limit
+		coeff=np.max(coeffs)
+		limiting_joint=np.argmax(coeffs)
+
+		if coeff>1:
+			qdot_limiting_joint=qdot_act[-1][limiting_joint]+dt[i]*robot.joint_acc_limit[limiting_joint]*np.sign(dqdot[limiting_joint])
+			qdot_act.append(qdot[i]*(qdot_limiting_joint/qdot[i][limiting_joint]))
+			print(coeff,(qdot_limiting_joint/qdot[i][limiting_joint]))
+		else:
+			qdot_act.append(qdot[i])
+
+	speed=[]
+	for i in range(len(curve_js)):
+		J=robot.jacobian(curve_js[i])
+		speed.append(np.linalg.norm((J@qdot_act[i])[3:]))
+
+	return speed
+
 def main():
 	robot=abb6640(d=50)
-	curve_js = read_csv("../data/from_NX/Curve_js.csv",header=None).values
+	curve_js = read_csv("../data/wood/Curve_js.csv",header=None).values
 
 	# train_data = read_csv("../constraint_solver/single_arm/trajectory/curve_pose_opt/arm1.csv", names=col_names)
 	# train_data = read_csv("qsol.csv", names=col_names)
@@ -293,12 +356,22 @@ def main2():
 	plt.show()
 
 def main3():
+	from MotionSend import MotionSend
+	from blending import form_traj_from_bp,blend_js_from_primitive
 
 	robot=abb6640(d=50)
-	curve_js = read_csv("../data/from_NX/Curve_js.csv",header=None).values
-	lam=calc_lam_js(curve_js,robot)
-	speed=traj_speed_est(robot,curve_js,lam,250)
-	plt.plot(lam,speed)
+	# curve_js = read_csv("../data/wood/baseline/100L/curve_fit_js.csv",header=None).values
+	# curve_js = read_csv("../data/wood/Curve_js.csv",header=None).values
+
+	ms = MotionSend()
+	breakpoints,primitives,p_bp,q_bp=ms.extract_data_from_cmd('../data/wood/baseline/100L/command.csv')
+	# breakpoints,primitives,p_bp,q_bp=ms.extract_data_from_cmd('../ILC/max_gradient/curve2_1100_100L_multipeak/command.csv')
+	curve_interp, curve_R_interp, curve_js_interp, breakpoints_blended=form_traj_from_bp(q_bp,primitives,robot)
+	curve_js_blended,curve_blended,curve_R_blended=blend_js_from_primitive(curve_interp, curve_js_interp, breakpoints_blended, primitives,robot,zone=10)
+
+	lam=calc_lam_js(curve_js_blended,robot)
+	speed=traj_speed_est2(robot,curve_js_blended,lam,250)
+	plt.plot(lam[:],speed)
 	plt.show()
 
 if __name__ == "__main__":
