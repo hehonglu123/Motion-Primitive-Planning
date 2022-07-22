@@ -35,6 +35,7 @@ def main():
     
     multi_peak_threshold=0.2
     robot=m710ic(d=50)
+    ms = MotionSendFANUC()
 
     s = 515
     z = 100
@@ -64,7 +65,7 @@ def main():
         df=DataFrame({'breakpoints':breakpoints,'primitives':primitives,'points':p_bp,'q_bp':q_bp})
         df.to_csv(fitting_output+'command.csv',header=True,index=False)
 
-    primitives,p_bp,q_bp=extend_start_end(robot,q_bp,primitives,breakpoints,p_bp,extension_d=60)
+    primitives,p_bp,q_bp=ms.extend_start_end(robot,q_bp,primitives,breakpoints,p_bp,extension_d=60)
     # print(np.rad2deg(q_bp))
     # exit()
 
@@ -72,7 +73,6 @@ def main():
     ilc=ilc_toolbox(robot,primitives)
 
     ###TODO: extension fix start point, moveC support
-    ms = MotionSendFANUC()
     iteration=200
     draw_y_max=None
     max_error_tolerance = 0.5

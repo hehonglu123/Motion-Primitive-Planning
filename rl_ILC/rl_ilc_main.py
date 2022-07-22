@@ -125,6 +125,10 @@ def evaluate(agent, data_dir, render=False, render_dir="", env_mode='robot_studi
     data_dir = data_dir + os.sep
 
     robot = abb6640(d=50)
+
+    if env_mode=='roboguide' or env_mode=='fanuc':
+        robot = m710ic(d=50)
+
     exec_error = 0
     num_itr = 0
     num_curve = 0
@@ -174,13 +178,16 @@ def evaluate(agent, data_dir, render=False, render_dir="", env_mode='robot_studi
 
 def main():
     args = get_args()
-    data_dir = 'train_data/curve1'
-    eval_dir = 'eval_data/curve1'
+    # data_dir = 'train_data/curve1'
+    # eval_dir = 'eval_data/curve1'
+
+    eval_dir = 'eval_data/curve1_fanuc'
 
     agent = TD3Agent(args)
     agent.load('model/1600')
     # train(agent, data_dir, args)
-    eval_error, eval_itr = evaluate(agent, eval_dir, render=True, render_dir='render/curve1', env_mode='abb')
+    # eval_error, eval_itr = evaluate(agent, eval_dir, render=True, render_dir='render/curve1', env_mode='abb')
+    eval_error, eval_itr = evaluate(agent, eval_dir, render=True, render_dir='render/curve1_fanuc', env_mode='roboguide')
 
 
 if __name__ == '__main__':

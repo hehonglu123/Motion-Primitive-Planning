@@ -22,6 +22,11 @@ from general_robotics_toolbox import *
 from abb_motion_program_exec_client import *
 from curve_normalization import PCA_normalization
 
+### fanuc robot
+from fanuc_motion_program_exec_client import *
+sys.path.append('../simulation/roboguide/fanuc_toolbox/')
+from fanuc_utils import *
+
 
 class ILCEnv(object):
     def __init__(self, curve, curve_R, curve_js, robot, n, mode='robot_studio'):
@@ -36,6 +41,12 @@ class ILCEnv(object):
         self.v = 250
         self.s = speeddata(self.v, 9999999, 9999999, 999999)
         self.z = z10
+
+        #### fanuc speed and zone (corner path) profile
+        if mode =='roboguide' or mode =='fanuc':
+            self.s = self.v # mm/sec
+            self.z = 100 # CNT100
+        ####
 
         self.breakpoints = []
         self.p_bp = []
@@ -73,6 +84,7 @@ class ILCEnv(object):
         self.execution_mode = mode
         self.execution_method = {'robot_studio': self.execute_robot_studio,
                                  'abb': self.execute_abb_robot,
+                                 'roboguide': self.execute_fanuc_robot,
                                  'fanuc': self.execute_fanuc_robot}
 
     def initialize_breakpoints(self):
@@ -369,7 +381,32 @@ class ILCEnv(object):
         self.get_error_speed(error, angle_error, speed, lam)
         return error, angle_error, curve_exe, curve_exe_R, curve_target, curve_target_R
 
+    def execute_roboguide(self):
+
+        ms = MotionSendFANUC()
+        primitives = self.primitives.copy()
+        primitives.insert(0, 'movej_fit')
+        primitives.append('movel_fit')
+
+        breakpoints = np.hstack([-1, self.breakpoints, -1])
+        ms.write_data_to_cmd(os.getcwd()+'/recorded_data/command.csv', breakpoints, primitives, self.p_bp, self.q_bp)
+
+        logged_data = ms.exec_motions(self.robot, primitives, self.breakpoints, self.p_bp, self.q_bp, self.s, self.z)
+        with open(os.getcwd()+"/recorded_data/curve_exe_v" + str(self.v) + "_CNT"+str(self.z)+".csv", "w") as f:
+            f.write(logged_data)
+
+        StringData = StringIO(logged_data.decode('utf-8'))
+        df = pd.read_csv(StringData)
+
+        lam, curve_exe, curve_exe_R, curve_exe_js, speed, timestamp = ms.logged_data_analysis(self.robot, df)
+        lam, curve_exe, curve_exe_R, curve_exe_js, speed, timestamp = self.chop_extension(curve_exe, curve_exe_R, curve_exe_js, speed, timestamp)
+        curve_exe, curve_exe_R, curve_target, curve_target_R = self.interpolate_curve(curve_exe, curve_exe_R)
+        error, angle_error = self.calculate_error(curve_exe, curve_exe_R, curve_target, curve_target_R)
+        self.get_error_speed(error, angle_error, speed, lam)
+        return error, angle_error, curve_exe, curve_exe_R, curve_target, curve_target_R
+
     def execute_fanuc_robot(self):
+        
         raise Exception("execute_fanuc_robot() not implemented!")
 
     def calculate_error(self, curve_exe, curve_exe_R, curve_target, curve_target_R):

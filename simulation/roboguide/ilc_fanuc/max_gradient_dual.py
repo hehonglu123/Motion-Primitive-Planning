@@ -66,11 +66,11 @@ def main():
     ilc_output=data_dir+'results_'+str(s)+'/'
     Path(ilc_output).mkdir(exist_ok=True)
 
-    breakpoints1,primitives1,p_bp1,q_bp1=extract_data_from_cmd(os.getcwd()+'/'+cmd_dir+'/dual_arm/command1.csv')
-    breakpoints2,primitives2,p_bp2,q_bp2=extract_data_from_cmd(os.getcwd()+'/'+cmd_dir+'/dual_arm/command2.csv')
+    breakpoints1,primitives1,p_bp1,q_bp1=ms.extract_data_from_cmd(os.getcwd()+'/'+cmd_dir+'/dual_arm/command1.csv')
+    breakpoints2,primitives2,p_bp2,q_bp2=ms.extract_data_from_cmd(os.getcwd()+'/'+cmd_dir+'/dual_arm/command2.csv')
 
     ###extension
-    p_bp1,q_bp1,p_bp2,q_bp2=extend_dual(ms.robot1,p_bp1,q_bp1,primitives1,ms.robot2,p_bp2,q_bp2,primitives2,breakpoints1,extension_d=100)
+    p_bp1,q_bp1,p_bp2,q_bp2=ms.extend_dual(ms.robot1,p_bp1,q_bp1,primitives1,ms.robot2,p_bp2,q_bp2,primitives2,breakpoints1,extension_d=100)
 
     ###ilc toolbox def
     ilc=ilc_toolbox([robot1,robot2],[primitives1,primitives2],base2_R,base2_p)
