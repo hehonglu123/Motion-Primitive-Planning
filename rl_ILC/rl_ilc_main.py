@@ -8,7 +8,7 @@ sys.path.append('../toolbox/')
 from rl_ilc_env import ILCEnv
 from ilc_replayer import Replayer
 from td3_agent import TD3Agent
-from robots_def import abb6640
+from robots_def import abb6640,m710ic
 
 
 def get_args(message=None):
@@ -181,13 +181,13 @@ def main():
     # data_dir = 'train_data/curve1'
     # eval_dir = 'eval_data/curve1'
 
-    eval_dir = 'eval_data/curve1_fanuc'
+    eval_dir = 'eval_data/curve2_fanuc'
 
     agent = TD3Agent(args)
     agent.load('model/1600')
     # train(agent, data_dir, args)
     # eval_error, eval_itr = evaluate(agent, eval_dir, render=True, render_dir='render/curve1', env_mode='abb')
-    eval_error, eval_itr = evaluate(agent, eval_dir, render=True, render_dir='render/curve1_fanuc', env_mode='roboguide')
+    eval_error, eval_itr = evaluate(agent, eval_dir, render=True, render_dir='render/curve2_fanuc', env_mode='roboguide')
 
 
 if __name__ == '__main__':

@@ -38,7 +38,7 @@ class ILCEnv(object):
         self.n = n
         self.action_dim = 3
 
-        self.v = 250
+        self.v = 1300
         self.s = speeddata(self.v, 9999999, 9999999, 999999)
         self.z = z10
 
@@ -84,7 +84,7 @@ class ILCEnv(object):
         self.execution_mode = mode
         self.execution_method = {'robot_studio': self.execute_robot_studio,
                                  'abb': self.execute_abb_robot,
-                                 'roboguide': self.execute_fanuc_robot,
+                                 'roboguide': self.execute_roboguide,
                                  'fanuc': self.execute_fanuc_robot}
 
     def initialize_breakpoints(self):
@@ -392,7 +392,7 @@ class ILCEnv(object):
         ms.write_data_to_cmd(os.getcwd()+'/recorded_data/command.csv', breakpoints, primitives, self.p_bp, self.q_bp)
 
         logged_data = ms.exec_motions(self.robot, primitives, self.breakpoints, self.p_bp, self.q_bp, self.s, self.z)
-        with open(os.getcwd()+"/recorded_data/curve_exe_v" + str(self.v) + "_CNT"+str(self.z)+".csv", "w") as f:
+        with open(os.getcwd()+"/recorded_data/curve_exe_v" + str(self.v) + "_CNT"+str(self.z)+".csv", "wb") as f:
             f.write(logged_data)
 
         StringData = StringIO(logged_data.decode('utf-8'))
