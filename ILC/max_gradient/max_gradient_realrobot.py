@@ -13,8 +13,10 @@ from scipy.signal import find_peaks
 
 # sys.path.append('../abb_motion_program_exec')
 from abb_motion_program_exec_client import *
+sys.path.append('../')
+sys.path.append('../../toolbox/')
+
 from ilc_toolbox import *
-sys.path.append('../toolbox')
 from robots_def import *
 from error_check import *
 from MotionSend import *
@@ -26,8 +28,8 @@ def main():
 
 	# data_dir="fitting_output_new/python_qp_movel/"
 	dataset='from_NX/'		####ADJUST COMMAND & SPEED AS WELL!!!!!!!!!!
-	data_dir="../data/"+dataset
-	fitting_output="../data/"+dataset+'baseline/100L/'
+	data_dir="../../data/"+dataset
+	fitting_output="../../data/"+dataset+'baseline/100L/'
 
 
 	curve_js=read_csv(data_dir+'Curve_js.csv',header=None).values
@@ -48,7 +50,7 @@ def main():
 	# primitives,p_bp,q_bp=ms.extend(robot,q_bp,primitives,breakpoints,p_bp)
 	###########################################get cmd from simulation improved cmd################################
 	# breakpoints,primitives,p_bp,q_bp=ms.extract_data_from_cmd('max_gradient/curve1_250_100L_multipeak/command.csv')
-	breakpoints,primitives,p_bp,q_bp=ms.extract_data_from_cmd('max_gradient/curve2_1100_100L_multipeak/command.csv')
+	breakpoints,primitives,p_bp,q_bp=ms.extract_data_from_cmd('curve2_1100_100L_multipeak/command.csv')
 
 	###ilc toolbox def
 	ilc=ilc_toolbox(robot,primitives)
