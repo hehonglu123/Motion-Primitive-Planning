@@ -2,12 +2,13 @@ import os
 import pandas as pd
 import numpy as np
 import argparse
-import time
+import time, sys
+sys.path.append('../toolbox/')
 
 from rl_ilc_env import ILCEnv
 from ilc_replayer import Replayer
 from td3_agent import TD3Agent
-from toolbox.robots_def import abb6640
+from robots_def import abb6640
 
 
 def get_args(message=None):
@@ -128,7 +129,7 @@ def evaluate(agent, data_dir, render=False, render_dir="", env_mode='robot_studi
     num_itr = 0
     num_curve = 0
 
-    for i in range(3):
+    for i in range(10, 11):
 
         curve, curve_normal, curve_js = read_data(i, data_dir)
         env = ILCEnv(curve, curve_normal, curve_js, robot, 100, mode=env_mode)
@@ -179,7 +180,7 @@ def main():
     agent = TD3Agent(args)
     agent.load('model/1600')
     # train(agent, data_dir, args)
-    eval_error, eval_itr = evaluate(agent, eval_dir, render=True, render_dir='render/curve1', env_mode='robot_studio')
+    eval_error, eval_itr = evaluate(agent, eval_dir, render=True, render_dir='render/curve1', env_mode='abb')
 
 
 if __name__ == '__main__':

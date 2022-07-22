@@ -1,14 +1,23 @@
 import os.path
-
+import sys, traceback
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
 from io import StringIO
-from toolbox.MotionSend import MotionSend, calc_lam_cs
-from toolbox.toolbox_circular_fit import arc_from_3point, circle_from_3point
-from toolbox.error_check import calc_all_error_w_normal, get_angle
-from toolbox.utils import car2js
+# from toolbox.MotionSend import MotionSend, calc_lam_cs
+# from toolbox.toolbox_circular_fit import arc_from_3point, circle_from_3point
+# from toolbox.error_check import calc_all_error_w_normal, get_angle
+# from toolbox.utils import car2js
+
+sys.path.append('../toolbox/')
+
+from robots_def import *
+from error_check import *
+from MotionSend import *
+from lambda_calc import *
+from blending import *
+
 from general_robotics_toolbox import *
 from abb_motion_program_exec_client import *
 from curve_normalization import PCA_normalization
@@ -103,6 +112,7 @@ class ILCEnv(object):
             self.itr = 0
             error, angle_error, curve_exe, curve_exe_R, curve_target, curve_target_R = self.execution_method[self.execution_mode]()
         except:
+            traceback.print_exc()
             print("[Reset] Initialization Fail. Skipped Curve.")
             return None, False
         else:
@@ -119,6 +129,7 @@ class ILCEnv(object):
         try:
             self.next_q_bp = self.get_q_bp(self.next_p_bp)
         except:
+            traceback.print_exc()
             print("[Fail. Unreachable joint position.]")
             next_state = (np.zeros((self.n, 50, 3)), np.zeros((self.n, 50, 3)), np.zeros((self.n, 2)), self.state_is_start, self.state_is_end)
             return next_state, self.fail_reward, True, "Error"
@@ -324,15 +335,16 @@ class ILCEnv(object):
         total_time_all=[]
 
         for r in range(5):
+
             logged_data=ms.exec_motions(self.robot,primitives,self.breakpoints,self.p_bp,self.q_bp,self.s,self.z)
-            
+
             StringData=StringIO(logged_data)
             df = read_csv(StringData, sep =",")
             ##############################data analysis#####################################
             lam, curve_exe, curve_exe_R,curve_exe_js, speed, timestamp=ms.logged_data_analysis(self.robot,df,realrobot=True)
 
             ###throw bad curves
-            _, _, _,_, _, timestamp_temp=ms.chop_extension(curve_exe, curve_exe_R,curve_exe_js, speed, timestamp,curve[0,:3],curve[-1,:3])
+            _, _, _,_, _, timestamp_temp=self.chop_extension(curve_exe, curve_exe_R, curve_exe_js, speed, timestamp)
             total_time_all.append(timestamp_temp[-1]-timestamp_temp[0])
 
             timestamp=timestamp-timestamp[0]
