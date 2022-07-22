@@ -138,6 +138,7 @@ class EGM_toolbox(object):
             raise
 
     def traverse_curve_js(self,curve_js):
+        self.clear_queue()
         curve_exe_js=[]
         timestamp=[]
         ###traverse curve
@@ -162,6 +163,7 @@ class EGM_toolbox(object):
         return timestamp,np.array(curve_exe_js)
 
     def traverse_curve_cartesian(self,curve,curve_R):
+        self.clear_queue()
         curve_exe_js=[]
         timestamp=[]
         ###traverse curve
