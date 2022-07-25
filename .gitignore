@@ -402,6 +402,14 @@ simulation/roboguide/data/movec_smooth_ori/*.png
 simulation/roboguide/data/movel_smooth_ori/*.npy
 simulation/roboguide/data/movel_smooth_ori/*.png
 
-
 simulation/roboguide/ilc_fanuc/data/from_NX/results/*.png
 simulation/roboguide/ilc_fanuc/data/from_NX/results/*.npy
+
+simulation/roboguide/ilc_fanuc/data/blade/results*
+simulation/roboguide/ilc_fanuc/data/blade_dual/results*
+simulation/roboguide/ilc_fanuc/data/kink_30/results*
+simulation/roboguide/ilc_fanuc/data/wood/results*
+simulation/roboguide/ilc_fanuc/data/wood_dual/results*
+
+simulation/roboguide/qp_opt/data_bp/curve_js*
+simulation/roboguide/qp_opt/data_opt_point_basis/curve_js*

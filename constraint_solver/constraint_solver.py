@@ -8,7 +8,7 @@ from qpsolvers import solve_qp
 
 sys.path.append('../../circular_Fit')
 
-sys.path.append('../../toolbox')
+sys.path.append('../../../toolbox')
 from robots_def import *
 from lambda_calc import *
 from blending import *

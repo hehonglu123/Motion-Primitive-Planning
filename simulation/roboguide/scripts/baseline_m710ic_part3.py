@@ -11,8 +11,7 @@ sys.path.append('../../../toolbox')
 from robots_def import *
 from lambda_calc import *
 from error_check import *
-sys.path.append('../fanuc_toolbox')
-from fanuc_client import *
+from fanuc_motion_program_exec_client import *
 
 # define m900ia
 robot=m710ic(d=50)

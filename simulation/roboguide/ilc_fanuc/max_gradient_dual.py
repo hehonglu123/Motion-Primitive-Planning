@@ -61,7 +61,7 @@ def main():
     elif data_type=='wood':
         ms = MotionSendFANUC(robot1=robot1,robot2=robot2,utool2=3)
 
-    s=1000 # mm/sec in leader frame
+    s=250 # mm/sec in leader frame
     z=100 # CNT100
     ilc_output=data_dir+'results_'+str(s)+'/'
     Path(ilc_output).mkdir(exist_ok=True)

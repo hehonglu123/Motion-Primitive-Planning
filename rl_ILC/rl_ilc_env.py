@@ -38,7 +38,7 @@ class ILCEnv(object):
         self.n = n
         self.action_dim = 3
 
-        self.v = 1300
+        self.v = 1500
         self.s = speeddata(self.v, 9999999, 9999999, 999999)
         self.z = z10
 
@@ -208,7 +208,7 @@ class ILCEnv(object):
             ax.set_xlabel('lambda (mm)')
             ax.set_ylabel('Speed (mm/s)', color='g')
             ax2.set_ylabel('Error/Normal Error (mm/deg)', color='b')
-            ax.set_ylim(0, 1000)
+            ax.set_ylim(0, 1300)
             ax2.set_ylim(0, 2)
             ax.set_title("[Error ({:.3f},{:.3f})] [Speed ({:.2f},{:.2f})]".format(np.mean(self.exe_profile['Error']),
                                                                                   np.std(self.exe_profile['Error']),

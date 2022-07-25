@@ -37,7 +37,7 @@ def main():
     robot=m710ic(d=50)
     ms = MotionSendFANUC()
 
-    s = 515
+    s = 250
     z = 100
     alpha = 0.5 # for gradient descent
     ilc_output=fitting_output+'results_'+str(s)+'/'
