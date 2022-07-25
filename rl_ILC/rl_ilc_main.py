@@ -15,7 +15,8 @@ def get_args(message=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--eval_frequency", type=int, default=100)
-    parser.add_argument("--max_train_episode", type=int, default=int(2e3))
+    parser.add_argument("--train_episode_start", type=int, default=0)
+    parser.add_argument("--max_train_episode", type=int, default=int(3e3))
     parser.add_argument("--curve_feature_dim", type=int, default=32)
     parser.add_argument("--state_robot_dim", type=int, default=4)
     parser.add_argument("--replayer_capacity", type=int, default=int(1e6))
@@ -55,7 +56,7 @@ def train(agent: TD3Agent, data_dir, args):
 
     eps_start = 0.5
 
-    for episode in range(args.max_train_episode):
+    for episode in range(args.train_episode_start, args.max_train_episode):
         epsilon = eps_start - (episode/args.max_train_episode) * eps_start
 
         curve_idx = np.random.randint(100)
@@ -70,7 +71,7 @@ def train(agent: TD3Agent, data_dir, args):
 
         if status:
             episode_reward = 0
-            is_warm_up = episode < args.warm_up
+            is_warm_up = (episode - args.train_episode_start) < args.warm_up
 
             print("[Episode {:>6}] {:>6.2f}".format(episode+1, (time.time()-train_timer)/(episode+1)))
 
@@ -129,7 +130,7 @@ def evaluate(agent, data_dir, render=False, render_dir="", env_mode='robot_studi
     num_itr = 0
     num_curve = 0
 
-    for i in range(1):
+    for i in range(10):
 
         curve, curve_normal, curve_js = read_data(i, data_dir)
         env = ILCEnv(curve, curve_normal, curve_js, robot, 100, mode=env_mode)
@@ -137,11 +138,11 @@ def evaluate(agent, data_dir, render=False, render_dir="", env_mode='robot_studi
         done = False
         print("[EVAL] Curve {:>5}".format(i))
 
-        if render:
-            env.render(i, save=True, save_dir=render_dir)
-
         if status:
             num_curve += 1
+
+            if render:
+                env.render(i, save=True, save_dir=render_dir)
 
             while not done:
 
@@ -165,6 +166,7 @@ def evaluate(agent, data_dir, render=False, render_dir="", env_mode='robot_studi
             exec_error += env.max_exec_error
             num_itr += env.itr
         else:
+            time.sleep(2)
             print("[EVAL] Invalid curve. Skipped.")
     exec_error /= num_curve
     num_itr /= num_curve
@@ -172,15 +174,32 @@ def evaluate(agent, data_dir, render=False, render_dir="", env_mode='robot_studi
     return exec_error, num_itr
 
 
+def evaluate_all(agent, data_dir):
+    all_eval_result = {'Max Error': [], 'Iteration': [], 'Episode': []}
+
+    for i in range(100, 1700, 100):
+        print('Evaluating Model at Episode {}'.format(i))
+        agent.load('model/{}'.format(i))
+        eval_error, eval_itr = evaluate(agent, data_dir, render=False, env_mode='robot_studio')
+        all_eval_result['Max Error'].append(eval_error)
+        all_eval_result['Iteration'].append(eval_itr)
+        all_eval_result['Episode'].append(i)
+        df = pd.DataFrame(all_eval_result)
+        df.to_csv('Eval Result New.csv', index=False)
+
+
 def main():
     args = get_args()
     data_dir = 'train_data/curve1'
-    eval_dir = 'eval_data/curve2'
+    eval_dir = 'eval_data/curve1'
 
     agent = TD3Agent(args)
+    # evaluate_all(agent, eval_dir)
+
     agent.load('model/1600')
-    # train(agent, data_dir, args)
-    eval_error, eval_itr = evaluate(agent, eval_dir, render=True, render_dir='render/curve2', env_mode='abb')
+    args.train_episode_start = 1600
+    train(agent, data_dir, args)
+    # eval_error, eval_itr = evaluate(agent, eval_dir, render=True, render_dir='render/curve1', env_mode='robot_studio')
 
 
 if __name__ == '__main__':

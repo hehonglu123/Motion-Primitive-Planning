@@ -33,7 +33,7 @@ class ILCEnv(object):
         self.n = n
         self.action_dim = 3
 
-        self.v = 1100
+        self.v = 250
         self.s = speeddata(self.v, 9999999, 9999999, 999999)
         self.z = z10
 
@@ -112,7 +112,7 @@ class ILCEnv(object):
             self.itr = 0
             error, angle_error, curve_exe, curve_exe_R, curve_target, curve_target_R = self.execution_method[self.execution_mode]()
         except:
-            traceback.print_exc()
+            # traceback.print_exc()
             print("[Reset] Initialization Fail. Skipped Curve.")
             return None, False
         else:
@@ -129,7 +129,7 @@ class ILCEnv(object):
         try:
             self.next_q_bp = self.get_q_bp(self.next_p_bp)
         except:
-            traceback.print_exc()
+            # traceback.print_exc()
             print("[Fail. Unreachable joint position.]")
             next_state = (np.zeros((self.n, 50, 3)), np.zeros((self.n, 50, 3)), np.zeros((self.n, 2)), self.state_is_start, self.state_is_end)
             return next_state, self.fail_reward, True, "Error"
@@ -173,9 +173,9 @@ class ILCEnv(object):
         for i in range(1, len(self.p_bp) - 1):
             breakpoints[i-1, :] = self.p_bp[i][-1]
         ax.plot3D(breakpoints[:, 0], breakpoints[:, 1], breakpoints[:, 2], 'b.', label='Breakpoints')
-        # ax.set_xlim(1000, 1150)
-        # ax.set_ylim(-500, 500)
-        # ax.set_zlim(980, 1000)
+        ax.set_xlim(1000, 1150)
+        ax.set_ylim(-500, 500)
+        ax.set_zlim(980, 1000)
 
         ax.legend()
         ax.set_title("Iteration {} (Max Error {:.3f})".format(self.itr, self.max_exec_error))
