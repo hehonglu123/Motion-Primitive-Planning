@@ -133,7 +133,7 @@ def evaluate(agent, data_dir, render=False, render_dir="", env_mode='robot_studi
     num_itr = 0
     num_curve = 0
 
-    for i in range(10, 11):
+    for i in range(1):
 
         curve, curve_normal, curve_js = read_data(i, data_dir)
         env = ILCEnv(curve, curve_normal, curve_js, robot, 100, mode=env_mode)

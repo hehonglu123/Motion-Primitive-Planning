@@ -38,7 +38,7 @@ class ILCEnv(object):
         self.n = n
         self.action_dim = 3
 
-        self.v = 1500
+        self.v = 1100
         self.s = speeddata(self.v, 9999999, 9999999, 999999)
         self.z = z10
 
@@ -155,6 +155,7 @@ class ILCEnv(object):
             try:
                 error, angle_error, curve_exe, curve_exe_R, curve_target, curve_target_R = self.execution_method[self.execution_mode]()
             except:
+                traceback.print_exc()
                 print("[Fail. RobotSudio Execution Error.]")
                 next_state = (
                 np.zeros((self.n, 50, 3)), np.zeros((self.n, 50, 3)), np.zeros((self.n, 2)), self.state_is_start,
@@ -184,9 +185,9 @@ class ILCEnv(object):
         for i in range(1, len(self.p_bp) - 1):
             breakpoints[i-1, :] = self.p_bp[i][-1]
         ax.plot3D(breakpoints[:, 0], breakpoints[:, 1], breakpoints[:, 2], 'b.', label='Breakpoints')
-        ax.set_xlim(1000, 1150)
-        ax.set_ylim(-500, 500)
-        ax.set_zlim(980, 1000)
+        # ax.set_xlim(1000, 1150)
+        # ax.set_ylim(-500, 500)
+        # ax.set_zlim(980, 1000)
 
         ax.legend()
         ax.set_title("Iteration {} (Max Error {:.3f})".format(self.itr, self.max_exec_error))
@@ -208,7 +209,7 @@ class ILCEnv(object):
             ax.set_xlabel('lambda (mm)')
             ax.set_ylabel('Speed (mm/s)', color='g')
             ax2.set_ylabel('Error/Normal Error (mm/deg)', color='b')
-            ax.set_ylim(0, 1300)
+            ax.set_ylim(0, 1.2*self.v)
             ax2.set_ylim(0, 2)
             ax.set_title("[Error ({:.3f},{:.3f})] [Speed ({:.2f},{:.2f})]".format(np.mean(self.exe_profile['Error']),
                                                                                   np.std(self.exe_profile['Error']),
@@ -355,6 +356,18 @@ class ILCEnv(object):
             ##############################data analysis#####################################
             lam, curve_exe, curve_exe_R,curve_exe_js, speed, timestamp=ms.logged_data_analysis(self.robot,df,realrobot=True)
 
+            fig, ax1 = plt.subplots()
+            ax1.plot(lam[1:], speed, 'g-', label='Speed')
+            ax1.axis(ymin=0,ymax=1.2*self.v)
+
+            ax1.set_xlabel('lambda (mm)')
+            ax1.set_ylabel('Speed/lamdot (mm/s)', color='g')
+            plt.title("Speed and Error Plot")
+            ax1.legend(loc=0)
+
+            plt.legend()
+            plt.savefig('recorded_data/'+str(self.itr)+'_run_'+str(r))
+            plt.clf()
             ###throw bad curves
             _, _, _,_, _, timestamp_temp=self.chop_extension(curve_exe, curve_exe_R, curve_exe_js, speed, timestamp)
             total_time_all.append(timestamp_temp[-1]-timestamp_temp[0])

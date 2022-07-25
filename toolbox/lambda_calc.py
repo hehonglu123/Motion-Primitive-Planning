@@ -1,11 +1,12 @@
 import numpy as np
-import scipy
+import scipy, copy
 from pandas import *
 import sys, traceback
 from general_robotics_toolbox import *
 import matplotlib.pyplot as plt
 from robots_def import *
 from utils import * 
+from scipy.optimize import fminbound
 
 def calc_lam_js(curve_js,robot):
 	#calculate lambda from joints
@@ -241,17 +242,20 @@ def traj_speed_est(robot,curve_js,lam,vd):
 
 
 	# ###iterate a few times to satisfy qddot constraint
-	for r in range(1000):
+	for r in range(100):
 		dqdot=np.gradient(qdot,axis=0)
 
 		qddot_d=np.divide(dqdot,np.tile(np.array([dt]).T,(1,6)))
 		###bound desired qddot with qddot constraint
 		qddot_max=np.tile(robot.joint_acc_limit,(len(curve_js),1))
+
+
 		coeff=np.divide(np.abs(qddot_d),qddot_max)
 		coeff=np.max(coeff,axis=1)	###get the limiting joint
 
+		# qddot_lim_violate_idx=np.argwhere(coeff>1)
+		# qdot[qddot_lim_violate_idx-1]*=0.999
 
-		
 		coeff=np.clip(coeff,1,999)	###clip coeff to 1
 
 		coeff=np.tile(np.array([coeff]).T,(1,6))
@@ -271,6 +275,18 @@ def traj_speed_est(robot,curve_js,lam,vd):
 
 	return speed
 
+def q_linesearch(alpha,qdot_prev,qdot_next,dt,joint_acc_limit):
+	###alpha: coefficient of next qdot, (0,1]
+	qddot=(alpha*qdot_next-qdot_prev)/dt
+	coeff=np.abs(qddot)/joint_acc_limit
+
+	###if find one alpha within acc constraint, take it
+	if np.max(coeff)<1:
+		return -alpha
+	###else choose one alpha that brings outcome qddot closest to acc constraint
+	else:
+		return np.abs(np.max(coeff)-1)
+
 def traj_speed_est2(robot,curve_js,lam,vd):
 
 	###find desired qdot at each step
@@ -289,20 +305,14 @@ def traj_speed_est2(robot,curve_js,lam,vd):
 	
 	#traversal
 	qdot_act=[qdot[0]]
+	alpha_all=[]
 	for i in range(1,len(curve_js)):
-		dqdot=qdot[i]-qdot_act[-1]
-		qddot_d=dqdot/dt[i]
 
-		coeffs=np.abs(qddot_d)/robot.joint_acc_limit
-		coeff=np.max(coeffs)
-		limiting_joint=np.argmax(coeffs)
+		alpha=fminbound(q_linesearch,0,1.,args=(qdot_act[-1],qdot[i],dt[i],robot.joint_acc_limit))
+		line_out=q_linesearch(alpha,qdot_act[-1],qdot[i],dt[i],robot.joint_acc_limit)
 
-		if coeff>1:
-			qdot_limiting_joint=qdot_act[-1][limiting_joint]+dt[i]*robot.joint_acc_limit[limiting_joint]*np.sign(dqdot[limiting_joint])
-			qdot_act.append(qdot[i]*(qdot_limiting_joint/qdot[i][limiting_joint]))
-			print(coeff,(qdot_limiting_joint/qdot[i][limiting_joint]))
-		else:
-			qdot_act.append(qdot[i])
+		qdot_act.append(alpha*qdot[i])
+		alpha_all.append(alpha)
 
 	speed=[]
 	for i in range(len(curve_js)):
@@ -358,21 +368,38 @@ def main2():
 def main3():
 	from MotionSend import MotionSend
 	from blending import form_traj_from_bp,blend_js_from_primitive
-
+	dataset='wood/'
 	robot=abb6640(d=50)
-	# curve_js = read_csv("../data/wood/baseline/100L/curve_fit_js.csv",header=None).values
-	# curve_js = read_csv("../data/wood/Curve_js.csv",header=None).values
+	curve = read_csv('../data/'+dataset+'/Curve_in_base_frame.csv',header=None).values
 
 	ms = MotionSend()
-	breakpoints,primitives,p_bp,q_bp=ms.extract_data_from_cmd('../data/wood/baseline/100L/command.csv')
+	
+	breakpoints,primitives,p_bp,q_bp=ms.extract_data_from_cmd('../data/'+dataset+'baseline/100L/command.csv')
+	# breakpoints,primitives,p_bp,q_bp=ms.extract_data_from_cmd('../ILC/max_gradient/curve1_250_100L_multipeak/command.csv')
 	# breakpoints,primitives,p_bp,q_bp=ms.extract_data_from_cmd('../ILC/max_gradient/curve2_1100_100L_multipeak/command.csv')
+
 	curve_interp, curve_R_interp, curve_js_interp, breakpoints_blended=form_traj_from_bp(q_bp,primitives,robot)
 	curve_js_blended,curve_blended,curve_R_blended=blend_js_from_primitive(curve_interp, curve_js_interp, breakpoints_blended, primitives,robot,zone=10)
+	lam_original=calc_lam_js(curve_js_blended,robot)
 
-	lam=calc_lam_js(curve_js_blended,robot)
-	speed=traj_speed_est2(robot,curve_js_blended,lam,250)
-	plt.plot(lam[:],speed)
-	plt.show()
+	exe_dir='../simulation/robotstudio_sim/scripts/fitting_output/'+dataset+'/100L/'
+	v_cmds=[200,250,300,350,400,450,500]
+	# v_cmds=[800,900,1000,1100,1200,1300,1400]
+	for v_cmd in v_cmds:
+		speed_est=traj_speed_est2(robot,curve_js_blended,lam_original,v_cmd)
+		###read actual exe file
+		df = read_csv(exe_dir+"curve_exe"+"_v"+str(v_cmd)+"_z10.csv")
+		lam_exe, curve_exe, curve_exe_R,curve_exe_js, act_speed, timestamp=ms.logged_data_analysis(robot,df,realrobot=True)
+		lam_exe, curve_exe_exe, curve_exe_R_exe,curve_exe_js_exe, act_speed, _=ms.chop_extension(curve_exe, curve_exe_R,curve_exe_js, act_speed, timestamp,curve[0,:3],curve[-1,:3])
+
+		plt.plot(lam_original,speed_est,label='estimated')
+		plt.plot(lam_exe,act_speed,label='actual')
+		plt.legend()
+		plt.ylim([0,1.2*v_cmd])
+		plt.xlabel('lambda (mm)')
+		plt.ylabel('Speed (mm/s)')
+		plt.title('Speed Estimation for v'+str(v_cmd))
+		plt.show()
 
 if __name__ == "__main__":
 	main3()

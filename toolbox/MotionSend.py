@@ -359,7 +359,7 @@ class MotionSend(object):
         curve_exe=[]
         curve_exe_R=[]
         for i in range(len(curve_exe_js)):
-            robot_pose=robot.fwd(curve_exe_js[i])
+            robot_pose=robot.fwd(curve_exe_js[i],qlim_override=True)
             curve_exe.append(robot_pose.p)
             curve_exe_R.append(robot_pose.R)
             if i>0:
@@ -374,7 +374,7 @@ class MotionSend(object):
 
         ###speed filter, only for simulation
 
-        return lam, np.array(curve_exe), np.array(curve_exe_R),np.array(curve_exe_js), np.array(act_speed), timestamp-timestamp[0]
+        return np.array(lam), np.array(curve_exe), np.array(curve_exe_R),np.array(curve_exe_js), np.array(act_speed), timestamp-timestamp[0]
 
     def logged_data_analysis_multimove(self,df,base2_R,base2_p,realrobot=False):
         q1_1=df[' J1'].tolist()[1:-1]
