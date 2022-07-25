@@ -1,6 +1,6 @@
 from general_robotics_toolbox import *
 import numpy as np
-import yaml
+import yaml, copy
 
 
 def Rx(theta):
@@ -46,8 +46,14 @@ class abb6640(object):
 
 	def jacobian(self,q):
 		return robotjacobian(self.robot_def,q)
-	def fwd(self,q,base_R=np.eye(3),base_p=np.array([0,0,0])):
-		pose_temp=fwdkin(self.robot_def,q)
+	def fwd(self,q,base_R=np.eye(3),base_p=np.array([0,0,0]),qlim_override=False):
+		if qlim_override:
+			robot_def=copy.deepcopy(self.robot_def)
+			robot_def.joint_upper_limit=999*np.ones(len(self.upper_limit))
+			robot_def.joint_lower_limit=-999*np.ones(len(self.lower_limit))
+			pose_temp=fwdkin(robot_def,q)
+		else:
+			pose_temp=fwdkin(self.robot_def,q)
 		pose_temp.p=np.dot(base_R,pose_temp.p)+base_p
 		pose_temp.R=np.dot(base_R,pose_temp.R)
 		return pose_temp
@@ -98,7 +104,15 @@ class abb1200(object):
 
 	def jacobian(self,q):
 		return robotjacobian(self.robot_def,q)
-	def fwd(self,q,base_R=np.eye(3),base_p=np.array([0,0,0])):
+	def fwd(self,q,base_R=np.eye(3),base_p=np.array([0,0,0]),qlim_override=False):
+		if qlim_override:
+			robot_def=copy.deepcopy(self.robot_def)
+			robot_def.joint_upper_limit=999*np.ones(len(self.upper_limit))
+			robot_def.joint_lower_limit=-999*np.ones(len(self.lower_limit))
+			pose_temp=fwdkin(robot_def,q)
+		else:
+			pose_temp=fwdkin(self.robot_def,q)
+
 		pose_temp=fwdkin(self.robot_def,q)
 		pose_temp.p=np.dot(base_R,pose_temp.p)+base_p
 		pose_temp.R=np.dot(base_R,pose_temp.R)
@@ -142,7 +156,14 @@ class arb_robot(object):
 
 	def jacobian(self,q):
 		return robotjacobian(self.robot_def,q)
-	def fwd(self,q,base_R=np.eye(3),base_p=np.array([0,0,0])):
+	def fwd(self,q,base_R=np.eye(3),base_p=np.array([0,0,0]),qlim_override=False):
+		if qlim_override:
+			robot_def=copy.deepcopy(self.robot_def)
+			robot_def.joint_upper_limit=999*np.ones(len(self.upper_limit))
+			robot_def.joint_lower_limit=-999*np.ones(len(self.lower_limit))
+			pose_temp=fwdkin(robot_def,q)
+		else:
+			pose_temp=fwdkin(self.robot_def,q)
 		pose_temp=fwdkin(self.robot_def,q)
 		pose_temp.p=np.dot(base_R,pose_temp.p)+base_p
 		pose_temp.R=np.dot(base_R,pose_temp.R)

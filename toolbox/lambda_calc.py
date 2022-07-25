@@ -1,11 +1,12 @@
 import numpy as np
-import scipy
+import scipy, copy
 from pandas import *
 import sys, traceback
 from general_robotics_toolbox import *
 import matplotlib.pyplot as plt
 from robots_def import *
 from utils import * 
+from scipy.optimize import fminbound
 
 def calc_lam_js(curve_js,robot):
 	#calculate lambda from joints
@@ -241,17 +242,20 @@ def traj_speed_est(robot,curve_js,lam,vd):
 
 
 	# ###iterate a few times to satisfy qddot constraint
-	for r in range(1000):
+	for r in range(100):
 		dqdot=np.gradient(qdot,axis=0)
 
 		qddot_d=np.divide(dqdot,np.tile(np.array([dt]).T,(1,6)))
 		###bound desired qddot with qddot constraint
 		qddot_max=np.tile(robot.joint_acc_limit,(len(curve_js),1))
+
+
 		coeff=np.divide(np.abs(qddot_d),qddot_max)
 		coeff=np.max(coeff,axis=1)	###get the limiting joint
 
+		# qddot_lim_violate_idx=np.argwhere(coeff>1)
+		# qdot[qddot_lim_violate_idx-1]*=0.999
 
-		
 		coeff=np.clip(coeff,1,999)	###clip coeff to 1
 
 		coeff=np.tile(np.array([coeff]).T,(1,6))
@@ -271,6 +275,18 @@ def traj_speed_est(robot,curve_js,lam,vd):
 
 	return speed
 
+def q_linesearch(alpha,qdot_prev,qdot_next,dt,joint_acc_limit):
+	###alpha: coefficient of next qdot, (0,1]
+	qddot=(alpha*qdot_next-qdot_prev)/dt
+	coeff=np.abs(qddot)/joint_acc_limit
+
+	###if find one alpha within acc constraint, take it
+	if np.max(coeff)<1:
+		return -alpha
+	###else choose one alpha that brings outcome qddot closest to acc constraint
+	else:
+		return np.abs(np.max(coeff)-1)
+
 def traj_speed_est2(robot,curve_js,lam,vd):
 
 	###find desired qdot at each step
@@ -289,20 +305,14 @@ def traj_speed_est2(robot,curve_js,lam,vd):
 	
 	#traversal
 	qdot_act=[qdot[0]]
+	alpha_all=[]
 	for i in range(1,len(curve_js)):
-		dqdot=qdot[i]-qdot_act[-1]
-		qddot_d=dqdot/dt[i]
 
-		coeffs=np.abs(qddot_d)/robot.joint_acc_limit
-		coeff=np.max(coeffs)
-		limiting_joint=np.argmax(coeffs)
+		alpha=fminbound(q_linesearch,0,1.,args=(qdot_act[-1],qdot[i],dt[i],robot.joint_acc_limit))
+		line_out=q_linesearch(alpha,qdot_act[-1],qdot[i],dt[i],robot.joint_acc_limit)
 
-		if coeff>1:
-			qdot_limiting_joint=qdot_act[-1][limiting_joint]+dt[i]*robot.joint_acc_limit[limiting_joint]*np.sign(dqdot[limiting_joint])
-			qdot_act.append(qdot[i]*(qdot_limiting_joint/qdot[i][limiting_joint]))
-			print(coeff,(qdot_limiting_joint/qdot[i][limiting_joint]))
-		else:
-			qdot_act.append(qdot[i])
+		qdot_act.append(alpha*qdot[i])
+		alpha_all.append(alpha)
 
 	speed=[]
 	for i in range(len(curve_js)):
@@ -364,14 +374,15 @@ def main3():
 	# curve_js = read_csv("../data/wood/Curve_js.csv",header=None).values
 
 	ms = MotionSend()
-	breakpoints,primitives,p_bp,q_bp=ms.extract_data_from_cmd('../data/wood/baseline/100L/command.csv')
+	breakpoints,primitives,p_bp,q_bp=ms.extract_data_from_cmd('../data/from_NX/baseline/100L/command.csv')
+	# breakpoints,primitives,p_bp,q_bp=ms.extract_data_from_cmd('../ILC/max_gradient/curve1_250_100L_multipeak/command.csv')
 	# breakpoints,primitives,p_bp,q_bp=ms.extract_data_from_cmd('../ILC/max_gradient/curve2_1100_100L_multipeak/command.csv')
 	curve_interp, curve_R_interp, curve_js_interp, breakpoints_blended=form_traj_from_bp(q_bp,primitives,robot)
 	curve_js_blended,curve_blended,curve_R_blended=blend_js_from_primitive(curve_interp, curve_js_interp, breakpoints_blended, primitives,robot,zone=10)
 
 	lam=calc_lam_js(curve_js_blended,robot)
-	speed=traj_speed_est2(robot,curve_js_blended,lam,250)
-	plt.plot(lam[:],speed)
+	speed=traj_speed_est2(robot,curve_js_blended,lam,1200)
+	plt.plot(lam,speed)
 	plt.show()
 
 if __name__ == "__main__":

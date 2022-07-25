@@ -37,7 +37,7 @@ def main():
 	multi_peak_threshold=0.2
 	robot=abb6640(d=50)
 
-	v=1200
+	v=1100
 	s = speeddata(v,9999999,9999999,999999)
 	z = z10
 
@@ -46,7 +46,7 @@ def main():
 	breakpoints,primitives,p_bp,q_bp=ms.extract_data_from_cmd(fitting_output+'command.csv')
 
 	###extension
-	p_bp,q_bp=ms.extend(robot,q_bp,primitives,breakpoints,p_bp)
+	p_bp,q_bp=ms.extend(robot,q_bp,primitives,breakpoints,p_bp,extension_start=100,extension_end=100)
 
 	###ilc toolbox def
 	ilc=ilc_toolbox(robot,primitives)
