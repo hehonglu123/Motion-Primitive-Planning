@@ -368,22 +368,38 @@ def main2():
 def main3():
 	from MotionSend import MotionSend
 	from blending import form_traj_from_bp,blend_js_from_primitive
-
+	dataset='wood/'
 	robot=abb6640(d=50)
-	# curve_js = read_csv("../data/wood/baseline/100L/curve_fit_js.csv",header=None).values
-	# curve_js = read_csv("../data/wood/Curve_js.csv",header=None).values
+	curve = read_csv('../data/'+dataset+'/Curve_in_base_frame.csv',header=None).values
 
 	ms = MotionSend()
-	breakpoints,primitives,p_bp,q_bp=ms.extract_data_from_cmd('../data/from_NX/baseline/100L/command.csv')
+	
+	breakpoints,primitives,p_bp,q_bp=ms.extract_data_from_cmd('../data/'+dataset+'baseline/100L/command.csv')
 	# breakpoints,primitives,p_bp,q_bp=ms.extract_data_from_cmd('../ILC/max_gradient/curve1_250_100L_multipeak/command.csv')
 	# breakpoints,primitives,p_bp,q_bp=ms.extract_data_from_cmd('../ILC/max_gradient/curve2_1100_100L_multipeak/command.csv')
+
 	curve_interp, curve_R_interp, curve_js_interp, breakpoints_blended=form_traj_from_bp(q_bp,primitives,robot)
 	curve_js_blended,curve_blended,curve_R_blended=blend_js_from_primitive(curve_interp, curve_js_interp, breakpoints_blended, primitives,robot,zone=10)
+	lam_original=calc_lam_js(curve_js_blended,robot)
 
-	lam=calc_lam_js(curve_js_blended,robot)
-	speed=traj_speed_est2(robot,curve_js_blended,lam,1200)
-	plt.plot(lam,speed)
-	plt.show()
+	exe_dir='../simulation/robotstudio_sim/scripts/fitting_output/'+dataset+'/100L/'
+	v_cmds=[200,250,300,350,400,450,500]
+	# v_cmds=[800,900,1000,1100,1200,1300,1400]
+	for v_cmd in v_cmds:
+		speed_est=traj_speed_est2(robot,curve_js_blended,lam_original,v_cmd)
+		###read actual exe file
+		df = read_csv(exe_dir+"curve_exe"+"_v"+str(v_cmd)+"_z10.csv")
+		lam_exe, curve_exe, curve_exe_R,curve_exe_js, act_speed, timestamp=ms.logged_data_analysis(robot,df,realrobot=True)
+		lam_exe, curve_exe_exe, curve_exe_R_exe,curve_exe_js_exe, act_speed, _=ms.chop_extension(curve_exe, curve_exe_R,curve_exe_js, act_speed, timestamp,curve[0,:3],curve[-1,:3])
+
+		plt.plot(lam_original,speed_est,label='estimated')
+		plt.plot(lam_exe,act_speed,label='actual')
+		plt.legend()
+		plt.ylim([0,1.2*v_cmd])
+		plt.xlabel('lambda (mm)')
+		plt.ylabel('Speed (mm/s)')
+		plt.title('Speed Estimation for v'+str(v_cmd))
+		plt.show()
 
 if __name__ == "__main__":
 	main3()

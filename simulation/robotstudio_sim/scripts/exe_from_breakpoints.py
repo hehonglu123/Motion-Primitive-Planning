@@ -17,37 +17,30 @@ from MotionSend import *
 
 def main():
     ms = MotionSend()
-    # data_dir="fitting_output_new/python_qp_movel/"
-    # data_dir="../../../train_data/from_NX/baseline/0.1/"
-    data_dir="debug/"
+    dataset='from_NX/'
+    cmd_dir='../../../data/'+dataset+'baseline/100L/'
+    data_dir='fitting_output/'+dataset+'100L/'
 
     robot=abb6640(d=50)
 
-    vmax = speeddata(10000,9999999,9999999,999999)
-    v680 = speeddata(680,9999999,9999999,999999)
-    speed={"v500":v500}
-    zone={"z10":z10}
+    v250 = speeddata(250,9999999,9999999,999999)
+    v350 = speeddata(350,9999999,9999999,999999)
+    v450 = speeddata(450,9999999,9999999,999999)
+    v900 = speeddata(900,9999999,9999999,999999)
+    v1100 = speeddata(1100,9999999,9999999,999999)
+    v1200 = speeddata(1200,9999999,9999999,999999)
+    v1300 = speeddata(1300,9999999,9999999,999999)
+    v1400 = speeddata(1400,9999999,9999999,999999)
+    # speed={'v200':v200,'v250':v250,'v300':v300,'v350':v350,'v400':v400,'v450':v450,'v500':v500}
+    speed={'v800':v800,'v900':v900,'v1000':v1000,'v1100':v1100,'v1200':v1200,'v1300':v1300,'v1400':v1400}
+    zone={'z10':z10}
 
     for s in speed:
         for z in zone: 
-            breakpoints,primitives, p_bp,q_bp=ms.extract_data_from_cmd(data_dir+"command.csv")
-            # original_points=np.array([p_bp[-2][0],p_bp[-1][0],p_bp[-1][1]])
-            # original_arc=arc_from_3point(p_bp[-2][0],p_bp[-1][-1],p_bp[-1][0])
+            breakpoints,primitives, p_bp,q_bp=ms.extract_data_from_cmd(cmd_dir+"command.csv")
             p_bp, q_bp = ms.extend(robot, q_bp, primitives, breakpoints, p_bp)
-            # plt.figure()
-            # ax = plt.axes(projection='3d')
-            
-            # extended_points=np.array([p_bp[-2][0],p_bp[-1][0],p_bp[-1][1]])
-            # extended_arc=arc_from_3point(p_bp[-2][0],p_bp[-1][-1],p_bp[-1][0])
-            # modified_bp=arc_from_3point(p_bp[-2][0],p_bp[-1][-1],p_bp[-1][0],N=3)
-            # ax.scatter(original_points[:,0],original_points[:,1],original_points[:,2], c='gray',label='original')
-            # ax.plot3D(original_arc[:,0],original_arc[:,1],original_arc[:,2], c='gray',label='original')
-            # ax.scatter(extended_points[:,0],extended_points[:,1],extended_points[:,2], c='green',label='extended')
-            # ax.plot3D(extended_arc[:,0],extended_arc[:,1],extended_arc[:,2], c='green',label='original')
 
-            # ax.scatter(modified_bp[:,0],modified_bp[:,1],modified_bp[:,2], c='red',label='modified')
-            # plt.legend()
-            # plt.show()
+
             logged_data= ms.exec_motions(robot,primitives,breakpoints,p_bp,q_bp,speed[s],zone[z])
 
 
