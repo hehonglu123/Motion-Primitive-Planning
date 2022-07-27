@@ -17,7 +17,7 @@ dataset='wood/'
 dataset_dir="../data/"+dataset
 curve = read_csv(dataset_dir+"Curve_in_base_frame.csv",header=None).values
 
-data_dir="recorded_data/repeatibility_EGM/"+dataset
+data_dir="recorded_data/repeatability_EGM/"
 
 speed=[100,200,300,400]
 
@@ -27,13 +27,13 @@ speed=[100,200,300,400]
 for v in speed:
     trajectories=[]
 
-    trajectory_js0 = read_csv(dataset_dir+'_v'+str(v)+'_iteration0.csv',header=None).values
+    trajectory_js0 = read_csv(data_dir+'v'+str(v)+'_iteration0.csv',header=None).values[:,1:]
     curve_exe_it0=[]
     for q in trajectory_js0:
         curve_exe_it0.append(robot.fwd(q).p)
 
     for i in range(1,5):
-        trajectory_js = read_csv(dataset_dir+'_v'+str(v)+'_iteration'+str(i)+'.csv',header=None).values
+        trajectory_js = read_csv(data_dir+'v'+str(v)+'_iteration'+str(i)+'.csv',header=None).values[:,1:]
         trajectory=[]
         error=[]
         for q in trajectory_js:
@@ -45,7 +45,7 @@ for v in speed:
     plt.xlabel('Lambda (mm)')
     plt.ylabel('Error (mm)', color='g')
 
-    plt.title("Repeatibility: "+dataset+'_'+'v'+str(s))
+    plt.title("Repeatibility: "+dataset+'v'+str(v))
 
     plt.legend()
     plt.show()
