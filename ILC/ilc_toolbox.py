@@ -99,6 +99,82 @@ class ilc_toolbox(object):
 
 		return de_dp
 
+	def get_speed_gradient_from_model(self,q_bp,breakpoints_blended,curve_js_blended,curve_blended,min_speed_curve_blended_idx,breakpoint_interp_2tweak_indices,speed_est,vd):
+		
+		###q_bp:								joint configs at breakpoints
+		###breakpoints_blended:					breakpoints of blended trajectory
+		###curve_js_blended:					blended trajectory js
+		###curve_blended:						blended trajectory
+		###min_speed_curve_blended_idx:	p', 	closest point to worst case error on blended trajectory
+		###breakpoint_interp_2tweak_indices:	closest N breakpoints
+		###speed_est:							estimated speed for blended trajectory
+		###vd:									desired TCP velocity
+
+		###TODO:ADD MOVEC SUPPORT
+		dv_dq=[]    #ds_dp1q1,de_dp1q2,...,de_dp3q6
+		delta=0.01 	#rad
+
+		###len(primitives)==len(breakpoints)==len(breakpoints_blended)==len(points_list)
+		for m in breakpoint_interp_2tweak_indices:  #3 breakpoints
+			for n in range(len(q_bp[0][0])): #6DOF joints
+				q_bp_temp=np.array(copy.deepcopy(q_bp))
+				q_bp_temp[m][0][n]+=delta
+
+				#restore new trajectory, only for adjusted breakpoint, 1-bp change requires traj interp from 5 bp
+				short_version=range(max(m-2,0),min(m+3,len(breakpoints_blended)))
+				###start & end idx, choose points in the middle of breakpoints to avoid affecting previous/next blending segments, unless at the boundary (star/end of all curve)
+				###guard 5 breakpoints for short blending
+				if short_version[0]==0:
+					short_version=range(0,5)
+					start_idx=breakpoints_blended[short_version[0]]
+				else:
+					start_idx=int((breakpoints_blended[short_version[0]]+breakpoints_blended[short_version[1]])/2)
+				if short_version[-1]==len(breakpoints_blended)-1:
+					short_version=range(len(breakpoints_blended)-5,len(breakpoints_blended))
+					end_idx = breakpoints_blended[short_version[-1]]+1
+				else:
+					end_idx=int((breakpoints_blended[short_version[-1]]+breakpoints_blended[short_version[-2]])/2)+1
+
+				###form new blended trajectory
+				curve_interp_temp, curve_R_interp_temp, curve_js_interp_temp, breakpoints_blended_temp=form_traj_from_bp(q_bp_temp[short_version],[self.primitives[i] for i in short_version],self.robot)
+				curve_js_blended_temp,curve_blended_temp,curve_R_blended_temp=blend_js_from_primitive(curve_interp_temp, curve_js_interp_temp, breakpoints_blended_temp, [self.primitives[i] for i in short_version],self.robot,zone=10)
+				curve_blended_new=copy.deepcopy(curve_blended)
+				curve_blended_new[start_idx:end_idx]=curve_blended_temp[start_idx-breakpoints_blended[short_version[0]]:len(curve_blended_temp)-(breakpoints_blended[short_version[-1]]+1-end_idx)]
+				curve_js_blended_new=copy.deepcopy(curve_js_blended)
+				curve_js_blended_new[start_idx:end_idx]=curve_js_blended_temp[start_idx-breakpoints_blended[short_version[0]]:len(curve_js_blended_temp)-(breakpoints_blended[short_version[-1]]+1-end_idx)]
+
+				###get new speed
+				lam_blended_new=calc_lam_cs(curve_blended_new)
+				speed_est_new=traj_speed_est2(self.robot,curve_js_blended_new,lam_blended_new,vd)
+
+
+				###get new est speed - prev est speed
+				dv=np.average(speed_est_new[min_speed_curve_blended_idx-5:min_speed_curve_blended_idx+5])-np.average(speed_est[min_speed_curve_blended_idx-5:min_speed_curve_blended_idx+5])
+
+				dv_dq.append(dv/delta)
+
+		dv_dq=np.reshape(dv_dq,(-1,1))
+		print(dv_dq)
+
+		return dv_dq
+
+	def update_bp_speed(self,p_bp,q_bp,dv_dq,min_speed,breakpoint_interp_2tweak_indices,vd,alpha=0.5):
+		###p_bp:								xyz of breakpoints
+		###q_bp:								joint configs of breakpoints
+		###dv_dq								gradient of speed and each breakpoints
+		###min_speed:							lowest speed value
+		###breakpoint_interp_2tweak_indices:	closest N breakpoints
+		###alpha:								stepsize
+
+		q_adjustment=-alpha*np.linalg.pinv(dv_dq)*(min_speed-vd)
+
+		for i in range(len(breakpoint_interp_2tweak_indices)):  #3 breakpoints
+			q_bp[breakpoint_interp_2tweak_indices[i]][0]+=q_adjustment[0][6*i:6*(i+1)]
+			###TODO:ADD MOVEC SUPPORT
+			p_bp[breakpoint_interp_2tweak_indices[i]][0]=self.robot.fwd(q_bp[breakpoint_interp_2tweak_indices[i]][0]).p
+
+		return p_bp, q_bp
+
 	def get_gradient_from_model_xyz_dual(self,\
 											p_bp,q_bp,breakpoints_blended,curve_blended,max_error_curve_blended_idx,worst_point_joints,closest_p,breakpoint_interp_2tweak_indices):
 		

@@ -14,17 +14,20 @@ from lambda_calc import *
 from utils import *
 
 
-data_dir='wood/'
-cmd_dir=data_dir+'qp/'
-num_ls=[100]
+data_dir='from_NX/'
+solution_dir='baseline/'
+
+num_ls=[50,100]
 robot=abb6640(d=50)
 # curve_js = read_csv(data_dir+'Curve_js.csv',header=None).values
-curve_js = read_csv(data_dir+'qp/arm1.csv',header=None).values
+curve_js = read_csv(data_dir+solution_dir+'Curve_js.csv',header=None).values
 curve = read_csv(data_dir+"Curve_in_base_frame.csv",header=None).values
 
 curve_fit=np.zeros((len(curve_js),3))
 curve_fit_R=np.zeros((len(curve_js),3,3))
 for num_l in num_ls:
+	cmd_dir=data_dir+solution_dir+str(num_l)+'L/'
+
 	breakpoints=np.linspace(0,len(curve_js),num_l+1).astype(int)
 	points=[]
 	points.append([np.array(curve[0,:3])])

@@ -13,7 +13,7 @@ from scipy.signal import find_peaks
 # sys.path.append('../abb_motion_program_exec')
 from abb_motion_program_exec_client import *
 sys.path.append('../')
-sys.path.append('../../toolbox/')
+
 from ilc_toolbox import *
 from robots_def import *
 from error_check import *
@@ -22,35 +22,36 @@ from lambda_calc import *
 from blending import *
 
 def main():
-	dataset='wood/'
+	dataset='from_NX/'
+	solution_dir='qp1_100/'
 	data_dir="../../data/"+dataset
 	relative_path = read_csv(data_dir+"/Curve_dense.csv", header=None).values
 
 	lam_relative_path=calc_lam_cs(relative_path)
 
-	with open(data_dir+'dual_arm/abb1200.yaml') as file:
+	with open(data_dir+'dual_arm/'+solution_dir+'abb1200.yaml') as file:
 		H_1200 = np.array(yaml.safe_load(file)['H'],dtype=np.float64)
 
 	base2_R=H_1200[:3,:3]
 	base2_p=1000*H_1200[:-1,-1]
 
-	with open(data_dir+'dual_arm/tcp.yaml') as file:
+	with open(data_dir+'dual_arm/'+solution_dir+'tcp.yaml') as file:
 		H_tcp = np.array(yaml.safe_load(file)['H'],dtype=np.float64)
 	robot1=abb6640(d=50)
 	robot2=abb1200(R_tool=H_tcp[:3,:3],p_tool=H_tcp[:-1,-1])
 
 	ms = MotionSend(robot1=robot1,robot2=robot2,base2_R=base2_R,base2_p=base2_p)
 
-	breakpoints1,primitives1,p_bp1,q_bp1=ms.extract_data_from_cmd(data_dir+'/dual_arm/command1.csv')
-	breakpoints2,primitives2,p_bp2,q_bp2=ms.extract_data_from_cmd(data_dir+'/dual_arm/command2.csv')
+	breakpoints1,primitives1,p_bp1,q_bp1=ms.extract_data_from_cmd(data_dir+'/dual_arm/'+solution_dir+'command1.csv')
+	breakpoints2,primitives2,p_bp2,q_bp2=ms.extract_data_from_cmd(data_dir+'/dual_arm/'+solution_dir+'command2.csv')
 
 	###get lambda at each breakpoint
 	lam_bp=lam_relative_path[np.append(breakpoints1[0],breakpoints1[1:]-1)]
 
-	vd=500
+	vd=1500
 
 	s1=9999
-	s2=[1000]*len(primitives2)
+	s2=[vd]*len(primitives2)
 	z=10
 	v1 = speeddata(s1,9999999,9999999,999999)
 	

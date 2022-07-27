@@ -12,16 +12,19 @@ import rpi_abb_irc5
 
 
 def main():
+	alpha_default=1.
+
 	data_dir='../../data/from_NX/'
+	solution_dir='qp4/'
 
 	robot1=abb6640(d=50)
-	with open(data_dir+'dual_arm/abb1200.yaml') as file:
+	with open(data_dir+'dual_arm/'+solution_dir+'abb1200.yaml') as file:
 		H_1200 = np.array(yaml.safe_load(file)['H'],dtype=np.float64)
 
 	base2_R=H_1200[:3,:3]
 	base2_p=1000*H_1200[:-1,-1]
 
-	with open(data_dir+'dual_arm/tcp.yaml') as file:
+	with open(data_dir+'dual_arm/'+solution_dir+'tcp.yaml') as file:
 		H_tcp = np.array(yaml.safe_load(file)['H'],dtype=np.float64)
 	robot2=abb1200(R_tool=H_tcp[:3,:3],p_tool=H_tcp[:-1,-1])
 
@@ -31,14 +34,14 @@ def main():
 	et1=EGM_toolbox(egm1,robot1)
 	et2=EGM_toolbox(egm2,robot2)
 
-	curve_js1=read_csv(data_dir+"dual_arm/arm1.csv",header=None).values
-	curve_js2=read_csv(data_dir+"dual_arm/arm2.csv",header=None).values
+	curve_js1=read_csv(data_dir+'dual_arm/'+solution_dir+'arm1.csv',header=None).values
+	curve_js2=read_csv(data_dir+'dual_arm/'+solution_dir+'arm2.csv',header=None).values
 	relative_path=read_csv(data_dir+"Curve_dense.csv",header=None).values
 
 	vd=1500
 	idx=et1.downsample24ms(relative_path,vd)
-	extension_start=40
-	extension_end=10
+	extension_start=100
+	extension_end=100
 
 	curve_cmd_js1=curve_js1[idx]
 	curve_cmd_js2=curve_js2[idx]
@@ -52,31 +55,35 @@ def main():
 
 	
 	iteration=100
-	adjust_weigt_it=20
+	skip=False
 
 	for i in range(iteration):
+		if skip:
+			timestamp1=timestamp1_temp
+			timestamp2=timestamp2_temp
+			curve_exe_js1=curve_exe_js1_temp
+			curve_exe_js2=curve_exe_js2_temp
 
+			error=error_temp
+			angle_error=angle_error_temp
+			speed=speed_temp
+		else:
+			################################traverse curve for both arms#####################################
+
+			###jog both arm to start pose
+			et1.jog_joint(curve_cmd_js1_ext[0])
+			timestamp1,curve_exe_js1=et1.traverse_curve_js(curve_cmd_js1_ext)
+
+			et2.jog_joint(curve_cmd_js2_ext[0])
+			timestamp2,curve_exe_js2=et2.traverse_curve_js(curve_cmd_js2_ext)
+
+			##############################calcualte error########################################
+			relative_path_exe,relative_path_exe_R=form_relative_path(robot1,robot2,curve_exe_js1[extension_start:-extension_end],curve_exe_js2[extension_start:-extension_end],base2_R,base2_p)
+
+			lam=calc_lam_cs(relative_path_exe)
+			speed=np.gradient(lam)/np.gradient(timestamp1[extension_start:-extension_end])
+			error,angle_error=calc_all_error_w_normal(relative_path_exe,relative_path[:,:3],relative_path_exe_R[:,:,-1],relative_path[:,3:])
 		
-
-
-		###jog both arm to start pose
-		
-		
-		################################traverse curve for both arms#####################################
-
-		###jog both arm to start pose
-		et1.jog_joint(curve_cmd_js1_ext[0])
-		timestamp1,curve_exe_js1=et1.traverse_curve_js(curve_cmd_js1_ext)
-
-		et2.jog_joint(curve_cmd_js2_ext[0])
-		timestamp2,curve_exe_js2=et2.traverse_curve_js(curve_cmd_js2_ext)
-
-		##############################calcualte error########################################
-		relative_path_exe,relative_path_exe_R=form_relative_path(robot1,robot2,curve_exe_js1[extension_start:-extension_end],curve_exe_js2[extension_start:-extension_end],base2_R,base2_p)
-
-		lam=calc_lam_cs(relative_path_exe)
-		speed=np.gradient(lam)/np.gradient(timestamp1[extension_start:-extension_end])
-		error,angle_error=calc_all_error_w_normal(relative_path_exe,relative_path[:,:3],relative_path_exe_R[:,:,-1],relative_path[:,3:])
 		print(max(error))
 
 
@@ -110,16 +117,37 @@ def main():
 		###get new error
 		delta1_new=curve_exe_js1_aug-curve_exe_js1
 		grad1=np.flipud(delta1_new)*gradient_step
-
-		alpha=0.5
-		curve_cmd_js1_ext=clip_joints(robot1,curve_cmd_js1_ext-alpha*grad1)
-
 		delta2_new=curve_exe_js2_aug-curve_exe_js2
 		grad2=np.flipud(delta2_new)*gradient_step
 
-		alpha=0.5
-		curve_cmd_js2_ext=clip_joints(robot2,curve_cmd_js2_ext-alpha*grad2)
+		alpha=alpha_default
+		skip=False
+		#########################################adaptive step size######################
+		for x in range(6):
+			curve_cmd_js1_ext_temp=clip_joints(robot1,curve_cmd_js1_ext-alpha*grad1)
+			curve_cmd_js2_ext_temp=clip_joints(robot2,curve_cmd_js2_ext-alpha*grad2)
 
+			###jog both arm to start pose
+			et1.jog_joint(curve_cmd_js1_ext_temp[0])
+			timestamp1_temp,curve_exe_js1_temp=et1.traverse_curve_js(curve_cmd_js1_ext_temp)
+
+			et2.jog_joint(curve_cmd_js2_ext_temp[0])
+			timestamp2_temp,curve_exe_js2_temp=et2.traverse_curve_js(curve_cmd_js2_ext_temp)
+
+			###calcualte error
+			relative_path_exe_temp,relative_path_exe_R_temp=form_relative_path(robot1,robot2,curve_exe_js1_temp[extension_start:-extension_end],curve_exe_js2_temp[extension_start:-extension_end],base2_R,base2_p)
+
+			lam_temp=calc_lam_cs(relative_path_exe_temp)
+			speed_temp=np.gradient(lam_temp)/np.gradient(timestamp1_temp[extension_start:-extension_end])
+			error_temp,angle_error_temp=calc_all_error_w_normal(relative_path_exe_temp,relative_path[:,:3],relative_path_exe_R_temp[:,:,-1],relative_path[:,3:])
+			if np.max(error_temp)>np.max(error):
+				alpha/=2
+			else:
+				skip=True
+				break
+		curve_cmd_js1_ext=curve_cmd_js1_ext_temp
+		curve_cmd_js2_ext=curve_cmd_js2_ext_temp
+		print('step size: ',alpha)
 		##############################plot error#####################################
 
 		fig, ax1 = plt.subplots()
@@ -143,13 +171,25 @@ def main():
 		plt.savefig('iteration '+str(i))
 		plt.clf()
 
-		plt.plot(error1)
+		plt.plot(error1,label=['joint1','joint2','joint3','joint4','joint5','joint6'])
+		plt.legend()
 		plt.savefig('iteration '+str(i)+'_r1')
 		plt.clf()
 
-		plt.plot(error2)
+		plt.plot(error2,label=['joint1','joint2','joint3','joint4','joint5','joint6'])
+		plt.legend()
 		plt.savefig('iteration '+str(i)+'_r2')
 		plt.clf()
+
+		###save EGM commands
+		df=DataFrame({'q0':curve_cmd_js1_ext[:,0],'q1':curve_cmd_js1_ext[:,1],'q2':curve_cmd_js1_ext[:,2],'q3':curve_cmd_js1_ext[:,3],'q4':curve_cmd_js1_ext[:,4],'q5':curve_cmd_js1_ext[:,5]})
+		df.to_csv('EGM_arm1.csv',header=False,index=False)
+		df=DataFrame({'q0':curve_js1_d[:,0],'q1':curve_js1_d[:,1],'q2':curve_js1_d[:,2],'q3':curve_js1_d[:,3],'q4':curve_js1_d[:,4],'q5':curve_js1_d[:,5]})
+		df.to_csv('EGM_arm1_d.csv',header=False,index=False)
+		df=DataFrame({'q0':curve_cmd_js2_ext[:,0],'q1':curve_cmd_js2_ext[:,1],'q2':curve_cmd_js2_ext[:,2],'q3':curve_cmd_js2_ext[:,3],'q4':curve_cmd_js2_ext[:,4],'q5':curve_cmd_js2_ext[:,5]})
+		df.to_csv('EGM_arm2.csv',header=False,index=False)
+		df=DataFrame({'q0':curve_js2_d[:,0],'q1':curve_js2_d[:,1],'q2':curve_js2_d[:,2],'q3':curve_js2_d[:,3],'q4':curve_js2_d[:,4],'q5':curve_js2_d[:,5]})
+		df.to_csv('EGM_arm2_d.csv',header=False,index=False)
 
 if __name__ == '__main__':
 	main()

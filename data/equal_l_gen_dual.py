@@ -4,18 +4,17 @@ import sys, traceback
 from general_robotics_toolbox import *
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
-sys.path.append('../toolbox')
+
 from robots_def import *
 from utils import *
 from lambda_calc import *
 
-sys.path.append('../../toolbox')
 from lambda_calc import *
 from utils import *
 
 
-data_dir='wood/dual_arm/'
-num_ls=[50]
+data_dir='from_NX/dual_arm/qp1_300/'
+num_ls=[300]
 robot=abb6640(d=50)
 curve_js = read_csv(data_dir+'arm1.csv',header=None).values
 
