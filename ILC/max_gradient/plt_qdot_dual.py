@@ -40,7 +40,7 @@ def main():
 	base2_p=1000*H_1200[:-1,-1]
 
 	###read in curve_exe
-	df = read_csv('recorded_data/dual_iteration_0.csv')
+	df = read_csv('curve1_500_dual_qp1_50/dual_iteration_29.csv')
 	lam, curve_exe1,curve_exe2,curve_exe_R1,curve_exe_R2,curve_exe_js1,curve_exe_js2, speed, timestamp, relative_path_exe, relative_path_exe_R = ms.logged_data_analysis_multimove(df,base2_R,base2_p,realrobot=True)
 	#############################chop extension off##################################
 	lam, curve_exe1,curve_exe2,curve_exe_R1,curve_exe_R2,curve_exe_js1,curve_exe_js2, speed, timestamp, relative_path_exe, relative_path_exe_R=\
