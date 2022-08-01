@@ -23,12 +23,11 @@ from lambda_calc import *
 from blending import *
 
 def main():
-	dataset='from_NX/'
-	data_dir="../../data/"+dataset
-	# fitting_output="../../data/"+dataset+'baseline/100L/'
-	fitting_output="../../data/"+dataset+'qp/'
-	# fitting_output="../greedy_fitting/greedy_output/curve1_movel_0.1/"
-	# fitting_output="../greedy_fitting/greedy_output/curve2_movel_0.1/"
+	dataset='wood/'
+	solution_dir='curve_pose_opt/'
+	data_dir="../../data/"+dataset+solution_dir
+	cmd_dir="../../data/"+dataset+solution_dir+'100L/'
+
 
 
 	curve = read_csv(data_dir+"Curve_in_base_frame.csv",header=None).values
@@ -37,13 +36,13 @@ def main():
 	multi_peak_threshold=0.2
 	robot=abb6640(d=50)
 
-	v=1100
+	v=500
 	s = speeddata(v,9999999,9999999,999999)
 	z = z10
 
 
 	ms = MotionSend()
-	breakpoints,primitives,p_bp,q_bp=ms.extract_data_from_cmd(fitting_output+'command.csv')
+	breakpoints,primitives,p_bp,q_bp=ms.extract_data_from_cmd(cmd_dir+'command.csv')
 
 	###extension
 	p_bp,q_bp=ms.extend(robot,q_bp,primitives,breakpoints,p_bp,extension_start=100,extension_end=100)

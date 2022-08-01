@@ -293,7 +293,7 @@ def traj_speed_est(robot,curve_js,lam,vd,qdot_init=[]):
 			###find closet point to start backtracking, without jump in alpha
 			smooth_idx=np.argwhere(np.abs(np.diff(alpha_all))<alpha_smooth_thresh)
 			temp_arr=smooth_idx-large_drop_idx
-			back_trak_start_idx=smooth_idx[np.where(temp_arr > 0, temp_arr, np.inf).argmin()][0]+1 ###+/-1 here because used diff
+			back_trak_start_idx=min(len(curve_js)-2,smooth_idx[np.where(temp_arr > 0, temp_arr, np.inf).argmin()][0]+1) ###+/-1 here because used diff
 			###traverse backward
 			for i in range(back_trak_start_idx,1,-1):
 
@@ -320,7 +320,7 @@ def traj_speed_est(robot,curve_js,lam,vd,qdot_init=[]):
 			###find closet point to start forwardtracking, without jump in alpha
 			smooth_idx=np.argwhere(np.abs(np.diff(alpha_all))<alpha_smooth_thresh)
 			temp_arr=smooth_idx-large_drop_idx
-			trak_start_idx=smooth_idx[np.where(temp_arr < 0, temp_arr, -np.inf).argmax()][0]-1
+			trak_start_idx=max(1,smooth_idx[np.where(temp_arr < 0, temp_arr, -np.inf).argmax()][0]-1)
 			###traverse backward
 			for i in range(trak_start_idx,len(curve_js)):
 
@@ -347,7 +347,8 @@ def traj_speed_est(robot,curve_js,lam,vd,qdot_init=[]):
 		# print(np.max(np.abs(np.diff(alpha_all))))
 
 	###smooth out trajectory
-	speed=replace_outliers2(speed)
+	speed=replace_outliers2(speed,threshold=0.00001)
+	speed=moving_average(speed,n=5,padding=True)
 	return np.array(speed)
 
 def main():
@@ -395,11 +396,18 @@ def main2():
 	plt.show()
 
 def main3():
+	###speed estimation
 	from MotionSend import MotionSend
 	from blending import form_traj_from_bp,blend_js_from_primitive
 	dataset='wood/'
+	solution_dir='baseline/'
 	robot=abb6640(d=50)
-	curve = read_csv('../data/'+dataset+'/Curve_in_base_frame.csv',header=None).values
+	curve = read_csv('../data/'+dataset+solution_dir+'/Curve_in_base_frame.csv',header=None).values
+
+	curve_js=read_csv('../data/'+dataset+solution_dir+'/Curve_js.csv',header=None).values
+	curve=curve[::1000]
+	curve_js=curve_js[::1000]
+	lam_original=calc_lam_cs(curve)
 
 	ms = MotionSend()
 	
@@ -409,20 +417,20 @@ def main3():
 
 	curve_interp, curve_R_interp, curve_js_interp, breakpoints_blended=form_traj_from_bp(q_bp,primitives,robot)
 	curve_js_blended,curve_blended,curve_R_blended=blend_js_from_primitive(curve_interp, curve_js_interp, breakpoints_blended, primitives,robot,zone=10)
-	lam_original=calc_lam_js(curve_js_blended,robot)
+	lam_blended=calc_lam_js(curve_js_blended,robot)
 
 	exe_dir='../simulation/robotstudio_sim/scripts/fitting_output/'+dataset+'/100L/'
 	v_cmds=[200,250,300,350,400,450,500]
 	# v_cmds=[400]
 	# v_cmds=[800,900,1000,1100,1200,1300,1400]
 	for v_cmd in v_cmds:
-		# speed_est=traj_speed_est(robot,curve_js_blended,lam_original,v_cmd)
+
 		###read actual exe file
 		df = read_csv(exe_dir+"curve_exe"+"_v"+str(v_cmd)+"_z10.csv")
 		lam_exe, curve_exe, curve_exe_R,curve_exe_js, act_speed, timestamp=ms.logged_data_analysis(robot,df,realrobot=True)
 		lam_exe, curve_exe, curve_exe_R,curve_exe_js, act_speed, timestamp=ms.chop_extension(curve_exe, curve_exe_R,curve_exe_js, act_speed, timestamp,curve[0,:3],curve[-1,:3])
 
-		speed_est=traj_speed_est(robot,curve_exe_js,lam_exe,v_cmd)
+		speed_est=traj_speed_est(robot,curve_js,lam_original,v_cmd)
 
 
 		qdot_all=np.gradient(curve_exe_js,axis=0)/np.tile([np.gradient(timestamp)],(6,1)).T
@@ -435,7 +443,7 @@ def main3():
 			plt.axvline(x=lam_exe[idx],c='orange')
 		
 
-		plt.plot(lam_exe,speed_est,label='estimated1')
+		plt.plot(lam_original,speed_est,label='estimated')
 		plt.plot(lam_exe,act_speed,label='actual')
 
 

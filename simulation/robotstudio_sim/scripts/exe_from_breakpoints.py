@@ -18,10 +18,10 @@ from MotionSend import *
 
 def main():
     ms = MotionSend()
-    dataset='from_NX/'
-    solution_dir='baseline/'
-    cmd_dir='../../../data/'+dataset+solution_dir+'300L/'
-    data_dir='../../../data/'+dataset
+    dataset='wood/'
+    solution_dir='curve_pose_opt/'
+    cmd_dir='../../../data/'+dataset+solution_dir+'100L/'
+    data_dir='../../../data/'+dataset+solution_dir
 
     curve = read_csv(data_dir+"Curve_in_base_frame.csv",header=None).values
 
@@ -37,7 +37,8 @@ def main():
     v1400 = speeddata(1400,9999999,9999999,999999)
     # speed={'v200':v200,'v250':v250,'v300':v300,'v350':v350,'v400':v400,'v450':v450,'v500':v500}
     # speed={'v800':v800,'v900':v900,'v1000':v1000,'v1100':v1100,'v1200':v1200,'v1300':v1300,'v1400':v1400}
-    speed={'v800':v800,'v1000':v1000,'v1200':v1200,'v1500':v1500,'v2000':v2000}
+    # speed={'v800':v800,'v1000':v1000,'v1200':v1200,'v1500':v1500,'v2000':v2000}
+    speed={'v500':v500}
     zone={'z10':z10}
 
     for s in speed:
