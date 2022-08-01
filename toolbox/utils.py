@@ -60,13 +60,17 @@ def average_curve(curve_all,timestamp_all):
 	return curve_all_new, np.average(curve_all_new,axis=0),timestamp_d
 	
 def replace_outliers2(data):
+	###replace outlier with rolling average
 	rolling_window=30
-	for i in range(len(data)-rolling_window):
-		rolling_avg=np.mean(data[i:i+rolling_window])
+	rolling_window_half=int(rolling_window/2)
+	for i in range(rolling_window_half,len(data)-rolling_window_half):
+		rolling_avg=np.mean(data[i-rolling_window_half:i+rolling_window_half])
 		if np.abs(data[i]-rolling_avg)>0.0001*rolling_avg:
+			rolling_avg=(rolling_avg*rolling_window-data[i])/(rolling_window-1)
 			data[i]=rolling_avg
 	return data
 def replace_outliers(data, m=2):
+	###replace outlier with average
 	data[abs(data - np.mean(data)) > m * np.std(data)] = np.mean(data)
 	return data
 
