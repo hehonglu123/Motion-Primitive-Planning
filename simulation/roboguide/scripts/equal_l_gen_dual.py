@@ -10,7 +10,7 @@ from robots_def import *
 from utils import *
 from lambda_calc import *
 
-data_type='wood'
+data_type='blade'
 
 if data_type=='blade':
     curve_data_dir='../../../data/from_NX/'
@@ -19,9 +19,14 @@ elif data_type=='wood':
     curve_data_dir='../../../data/wood/'
     data_dir='../data/curve_wood/'
 
+# output_dir='dual_arm/'
+# output_dir='dual_single_arm/'
+output_dir='dual_single_arm_straight/' # robot2 is multiple user defined straight line
+# output_dir='dual_arm_10/'
+
 num_ls=[100]
 robot=m710ic(d=50)
-curve_js = read_csv(data_dir+'dual_arm/arm1.csv',header=None).values
+curve_js = read_csv(data_dir+output_dir+'arm1.csv',header=None).values
 
 
 curve = []
@@ -57,7 +62,7 @@ for num_l in num_ls:
 	primitives_choices=['movej_fit']+['movel_fit']*num_l
 
 	df=DataFrame({'breakpoints':breakpoints,'primitives':primitives_choices,'points':points,'q_bp':q_bp})
-	df.to_csv(data_dir+'dual_arm/command1.csv',header=True,index=False)
+	df.to_csv(data_dir+output_dir+'command1.csv',header=True,index=False)
 
 	# curve_fit_js=car2js(robot,curve_js[0],curve_fit,curve_fit_R)
 	# DataFrame(curve_fit_js).to_csv(data_dir+'curve_fit_js1.csv',header=False,index=False)
@@ -65,12 +70,12 @@ for num_l in num_ls:
 
 
 
-with open(data_dir+'dual_arm/tcp.yaml') as file:
+with open(data_dir+'tcp.yaml') as file:
     H_tcp = np.array(yaml.safe_load(file)['H'],dtype=np.float64)
 
 robot=m900ia(R_tool=H_tcp[:3,:3],p_tool=H_tcp[:-1,-1])
 
-curve_js = read_csv(data_dir+'dual_arm/arm2.csv',header=None).values
+curve_js = read_csv(data_dir+output_dir+'arm2.csv',header=None).values
 
 curve = []
 for q in curve_js:
@@ -105,7 +110,7 @@ for num_l in num_ls:
 	primitives_choices=['movej_fit']+['movel_fit']*num_l
 
 	df=DataFrame({'breakpoints':breakpoints,'primitives':primitives_choices,'points':points,'q_bp':q_bp})
-	df.to_csv(data_dir+'dual_arm/command2.csv',header=True,index=False)
+	df.to_csv(data_dir+output_dir+'command2.csv',header=True,index=False)
 
 	# curve_fit_js=car2js(robot,curve_js[0],curve_fit,curve_fit_R)
 	# DataFrame(curve_fit_js).to_csv(data_dir+'curve_fit_js2.csv',header=False,index=False)

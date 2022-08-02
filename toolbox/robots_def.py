@@ -157,6 +157,7 @@ class m900ia(object):
 		self.lower_limit=np.radians([-180.,-65.,-66.,-360.,-125.,-360.])
 		self.joint_vel_limit=np.radians([100.,95.,95.,105.,105.,170.])
 		self.joint_acc_limit=np.radians([300.,561.,743.,244.,319.,243.])
+		self.joint_jrk_limit=np.radians([1020.408,765.306,765.306,1434.949,1434.949,1434.949])
 		self.robot_def=Robot(self.H,self.P,self.joint_type,joint_lower_limit = self.lower_limit, joint_upper_limit = self.upper_limit, joint_vel_limit=self.joint_vel_limit, R_tool=R_tool,p_tool=tcp_new)
 
 	def jacobian(self,q):

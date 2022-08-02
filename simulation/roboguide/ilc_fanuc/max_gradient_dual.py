@@ -6,7 +6,7 @@
 
 import numpy as np
 from general_robotics_toolbox import *
-from pandas import read_csv
+from pandas import read_csv,DataFrame
 import sys
 from io import StringIO
 from scipy.signal import find_peaks
@@ -26,8 +26,8 @@ from blending import *
 
 def main():
     # curve
-    # data_type='blade'
-    data_type='wood'
+    data_type='blade'
+    # data_type='wood'
 
     # data and curve directory
     if data_type=='blade':
@@ -47,6 +47,7 @@ def main():
         H_robot2 = np.array(yaml.safe_load(file)['H'],dtype=np.float64)
     base2_R=H_robot2[:3,:3]
     base2_p=1000*H_robot2[:-1,-1]
+    base2_T=rox.Transform(base2_R,base2_p)
     # workpiece (curve) relative to robot tcp
     with open(cmd_dir+'dual_arm/tcp.yaml') as file:
         H_tcp = np.array(yaml.safe_load(file)['H'],dtype=np.float64)
@@ -61,7 +62,7 @@ def main():
     elif data_type=='wood':
         ms = MotionSendFANUC(robot1=robot1,robot2=robot2,utool2=3)
 
-    s=250 # mm/sec in leader frame
+    s=2000 # mm/sec in leader frame
     z=100 # CNT100
     ilc_output=data_dir+'results_'+str(s)+'/'
     Path(ilc_output).mkdir(exist_ok=True)
@@ -70,15 +71,16 @@ def main():
     breakpoints2,primitives2,p_bp2,q_bp2=ms.extract_data_from_cmd(os.getcwd()+'/'+cmd_dir+'/dual_arm/command2.csv')
 
     ###extension
-    p_bp1,q_bp1,p_bp2,q_bp2=ms.extend_dual(ms.robot1,p_bp1,q_bp1,primitives1,ms.robot2,p_bp2,q_bp2,primitives2,breakpoints1,extension_d=100)
+    p_bp1,q_bp1,p_bp2,q_bp2,step_to_extend_end=ms.extend_dual(ms.robot1,p_bp1,q_bp1,primitives1,ms.robot2,p_bp2,q_bp2,primitives2,breakpoints1,base2_T,extension_d=200)
 
     ###ilc toolbox def
     ilc=ilc_toolbox([robot1,robot2],[primitives1,primitives2],base2_R,base2_p)
 
     multi_peak_threshold=0.2
     ###TODO: extension fix start point, moveC support
-    iteration=10
-    draw_y_max=None
+    iteration=500
+    draw_speed_max=None
+    draw_error_max=None
     max_error_tolerance = 0.5
     for i in range(iteration):
 
@@ -117,9 +119,12 @@ def main():
         ax2.plot(lam, error, 'b-',label='Error')
         ax2.scatter(lam[peaks],error[peaks],label='peaks')
         ax2.plot(lam, np.degrees(angle_error), 'y-',label='Normal Error')
-        if draw_y_max is None:
-            draw_y_max=max(error)*1.05
-        ax2.axis(ymin=0,ymax=draw_y_max)
+        if draw_speed_max is None:
+            draw_speed_max=max(speed)*1.05
+        ax1.axis(ymin=0,ymax=draw_speed_max)
+        if draw_error_max is None:
+            draw_error_max=max(error)*1.05
+        ax2.axis(ymin=0,ymax=draw_error_max)
         ax1.set_xlabel('lambda (mm)')
         ax1.set_ylabel('Speed/lamdot (mm/s)', color='g')
         ax2.set_ylabel('Error/Normal Error (mm/deg)', color='b')
@@ -127,9 +132,21 @@ def main():
         ax1.legend(loc=0)
         ax2.legend(loc=0)
         plt.legend()
-        # plt.savefig(ilc_output+'iteration_ '+str(i))
-        # plt.clf()
-        plt.show()
+        plt.savefig(ilc_output+'iteration_ '+str(i))
+        plt.clf()
+        # plt.show()
+
+        if i%10==0:
+            df=DataFrame({'primitives':primitives1,'points':p_bp1,'q_bp':q_bp1})
+            df.to_csv(ilc_output+'command_arm1_'+str(i)+'.csv',header=True,index=False)
+            df=DataFrame({'primitives':primitives2,'points':p_bp2,'q_bp':q_bp2})
+            df.to_csv(ilc_output+'command_arm2_'+str(i)+'.csv',header=True,index=False)
+        if max(error) < max_error_tolerance:
+            df=DataFrame({'primitives':primitives1,'points':p_bp1,'q_bp':q_bp1})
+            df.to_csv(ilc_output+'command_arm1_'+str(i)+'.csv',header=True,index=False)
+            df=DataFrame({'primitives':primitives2,'points':p_bp2,'q_bp':q_bp2})
+            df.to_csv(ilc_output+'command_arm2_'+str(i)+'.csv',header=True,index=False)
+            break
 
         # plt.figure()
         # ax = plt.axes(projection='3d')
@@ -138,7 +155,7 @@ def main():
         # ax.plot3D(relative_path_exe[:,0], relative_path_exe[:,1],relative_path_exe[:,2], 'green',label='execution')
         # plt.legend()
         # plt.show()
-        exit()
+        # exit()
         ###########################plot for verification###################################
         # p_bp_relative,_=ms.form_relative_path(np.squeeze(q_bp1),np.squeeze(q_bp2),base2_R,base2_p)
         # plt.figure()

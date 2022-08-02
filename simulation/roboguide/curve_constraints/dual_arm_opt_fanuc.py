@@ -94,7 +94,6 @@ plt.plot(dlam)
 plt.title('dlam')
 plt.show()
 
-exit()
 ####output to trajectory csv
 df=DataFrame({'q0':q_out1[:,0],'q1':q_out1[:,1],'q2':q_out1[:,2],'q3':q_out1[:,3],'q4':q_out1[:,4],'q5':q_out1[:,5]})
 df.to_csv(data_dir+'dual_arm/arm1.csv',header=False,index=False)

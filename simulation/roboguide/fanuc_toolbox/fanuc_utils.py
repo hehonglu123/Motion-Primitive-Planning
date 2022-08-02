@@ -3,6 +3,8 @@ from pandas import read_csv, DataFrame
 from fanuc_motion_program_exec_client import *
 from general_robotics_toolbox import *
 
+sys.path.append('../../../constraint_solver')
+from constraint_solver import *
 sys.path.append('../../../toolbox/')
 from utils import *
 from lambda_calc import *
@@ -57,7 +59,7 @@ class MotionSendFANUC(object):
         
         return self.client.execute_motion_program(tp)
 
-    def exec_motions_multimove(self,robot1,robot2,primitives1,primitives2,p_bp1,p_bp2,q_bp1,q_bp2,speed,zone):
+    def exec_motions_multimove(self,robot1,robot2,primitives1,primitives2,p_bp1,p_bp2,q_bp1,q_bp2,speed,zone,coord=[]):
 
         tp_follow = TPMotionProgram()
         tp_lead = TPMotionProgram()
@@ -72,33 +74,45 @@ class MotionSendFANUC(object):
         tp_lead.moveJ(j0,5,'%',-1)
         self.client.execute_motion_program_coord(tp_lead,tp_follow)
 
+        #### coordinated motion in the trajectory
+        if len(coord) == 0:
+            coord = np.ones(len(primitives1))
+        assert len(coord) == len(primitives1) , "Coordination string must have the same length as primitives"
+
         #### start traj
         tp_follow = TPMotionProgram()
         tp_lead = TPMotionProgram()
         for i in range(1,len(primitives1)):
             if i == len(primitives1)-1:
+                # this_zone = zone
                 this_zone = -1
             else:
                 this_zone = zone
+            option=''
+            if coord[i]:
+                option='COORD'
+
             if primitives1[i]=='movel_fit':
                 # robot1
                 robt1 = joint2robtarget(q_bp1[i][0],robot1,self.group,self.uframe,self.utool)
-                tp_follow.moveL(robt1,speed,'mmsec',this_zone,'COORD')
+                tp_follow.moveL(robt1,speed,'mmsec',this_zone,option)
                 # robot2
                 robt2 = joint2robtarget(q_bp2[i][0],robot2,self.group2,self.uframe2,self.utool2)
-                tp_lead.moveL(robt2,speed,'mmsec',this_zone,'COORD')
+                tp_lead.moveL(robt2,speed,'mmsec',this_zone,option)
             elif primitives1[i]=='movec_fit':
                 # robot1
                 robt_mid1 = joint2robtarget(q_bp1[i][0],robot1,self.group,self.uframe,self.utool)
                 robt1 = joint2robtarget(q_bp1[i][1],robot1,self.group,self.uframe,self.utool)
-                tp_follow.moveC(robt_mid1,robt1,speed,'mmsec',this_zone,'COORD')
+                tp_follow.moveC(robt_mid1,robt1,speed,'mmsec',this_zone,option)
                 # robot2
                 robt_mid2 = joint2robtarget(q_bp2[i][0],robot2,self.group2,self.uframe2,self.utool2)
                 robt2 = joint2robtarget(q_bp2[i][1],robot2,self.group2,self.uframe2,self.utool2)
-                tp_lead.moveC(robt_mid2,robt2,speed,'mmsec',this_zone,'COORD')
-            # else: #moveJ
-            #     robt = jointtarget(self.group,self.uframe,self.utool,np.degrees(q_bp[i][0]),[0]*6)
-            #     tp.moveJ(robt,speed,'%',this_zone)
+                tp_lead.moveC(robt_mid2,robt2,speed,'mmsec',this_zone,option)
+            else: #moveJ
+                robt1 = joint2robtarget(q_bp1[i][0],robot1,self.group,self.uframe,self.utool)
+                tp_follow.moveJ(robt1,speed,'%',this_zone)
+                robt2 = joint2robtarget(q_bp2[i][0],robot2,self.group2,self.uframe2,self.utool2)
+                tp_lead.moveJ(robt2,speed,'%',this_zone)
         
         return self.client.execute_motion_program_coord(tp_lead,tp_follow)
     
@@ -193,7 +207,7 @@ class MotionSendFANUC(object):
         timestamp_act = []
         last_cont = False
         for i in range(len(curve_exe_js1)):
-            if i>5 and i<len(curve_exe_js1)-5:
+            if i>2 and i<len(curve_exe_js1)-2:
                 # if the recording is not fast enough
                 # then having to same logged joint angle
                 # do interpolation for estimation
@@ -266,6 +280,7 @@ class MotionSendFANUC(object):
         curve_exe_R2=curve_exe_R2[start_idx:end_idx+1]
         curve_exe_js1=curve_exe_js1[start_idx:end_idx+1]
         curve_exe_js2=curve_exe_js2[start_idx:end_idx+1]
+        timestamp=timestamp[start_idx:end_idx+1]
 
         relative_path_exe=relative_path_exe[start_idx:end_idx+1]
         relative_path_exe_R=relative_path_exe_R[start_idx:end_idx+1]
@@ -398,6 +413,11 @@ class MotionSendFANUC(object):
         pose_end=robot.fwd(q_bp[-1][-1])
         p_end=pose_end.p
         R_end=pose_end.R
+
+        dist_bp = np.linalg.norm(np.array(points_list[-1][-1])-np.array(points_list[-2][-1]))
+        if dist_bp > extension_end:
+            dist_bp=extension_end
+        step_to_extend=round(extension_end/dist_bp)
         extend_step_d_end=float(extension_end)/step_to_extend
 
         if primitives[-1]=='movel_fit':
@@ -462,17 +482,117 @@ class MotionSendFANUC(object):
 
         return primitives,points_list,q_bp
 
-    def extend_dual(self,robot1,p_bp1,q_bp1,primitives1,robot2,p_bp2,q_bp2,primitives2,breakpoints,extension_d=100):
+    def extend_start_end_relative(self,robot1,q_bp1,primitives1,p_bp1,robot2,q_bp2,primitives2,p_bp2,base2_T,extension_d,steps_opt,steps):
+        ##### extend tool start
+        pose_start=(base2_T*robot2.fwd(q_bp2[0][-1])).inv()*robot1.fwd(q_bp1[0][-1])
+        p_start=pose_start.p
+        R_start=pose_start.R
+        pose_end=(base2_T*robot2.fwd(q_bp2[1][-1])).inv()*robot1.fwd(q_bp1[1][-1])
+        p_end=pose_end.p
+        R_end=pose_end.R
+        #find new start point
+        slope_p=p_end-p_start
+        slope_p=slope_p/np.linalg.norm(slope_p)
+        #find new start orientation
+        k,theta=R2rot(R_end@R_start.T)
+        # adding extension with uniform space
+        relative_path=[]
+        extend_step=extension_d/steps_opt
+        for i in range(1,steps_opt+1):
+            pn=np.array([])
+            p_extend=p_start-i*extend_step*slope_p
+            theta_extend=-np.linalg.norm(p_extend-p_start)*theta/np.linalg.norm(p_end-p_start)
+            R_extend=rot(k,theta_extend)@R_start
+            pn = np.append(pn,p_extend)
+            pn = np.append(pn,R_extend[:,-1])
+            relative_path.append(pn)
+        relative_path=np.array(relative_path)
+        ## extend in relative
+        opt=lambda_opt(relative_path[:,:3],relative_path[:,3:],robot1=robot1,robot2=robot2,base2_R=base2_T.R,base2_p=base2_T.p,steps=steps_opt)
+        q_out1, q_out2=opt.dual_arm_stepwise_optimize(q_bp1[0][-1],q_bp2[0][-1])
+        # adding extension with uniform space
+        for i in range(1,steps+1):
+            p_bp1.insert(0,[robot1.fwd(q_out1[int(i*(steps_opt/steps))-1]).p])
+            p_bp2.insert(0,[robot2.fwd(q_out2[int(i*(steps_opt/steps))-1]).p])
+            q_bp1.insert(0,[q_out1[int(i*(steps_opt/steps))-1]])
+            q_bp2.insert(0,[q_out2[int(i*(steps_opt/steps))-1]])
+            primitives1.insert(1,'movel_fit')
+            primitives2.insert(1,'movel_fit')
+        ##########################################
+        ##### extend tool start
+        pose_start=(base2_T*robot2.fwd(q_bp2[-2][-1])).inv()*robot1.fwd(q_bp1[-2][-1])
+        p_start=pose_start.p
+        R_start=pose_start.R
+        pose_end=(base2_T*robot2.fwd(q_bp2[-1][-1])).inv()*robot1.fwd(q_bp1[-1][-1])
+        p_end=pose_end.p
+        R_end=pose_end.R
+        #find new start point
+        slope_p=p_end-p_start
+        slope_p=slope_p/np.linalg.norm(slope_p)
+        #find new start orientation
+        k,theta=R2rot(R_end@R_start.T)
+        # adding extension with uniform space
+        relative_path=[]
+        extend_step=extension_d/steps_opt
+        for i in range(1,steps_opt+1):
+            pn=np.array([])
+            p_extend=p_end+i*extend_step*slope_p
+            theta_extend=np.linalg.norm(p_extend-p_end)*theta/np.linalg.norm(p_end-p_start)
+            R_extend=rot(k,theta_extend)@R_end
+            pn = np.append(pn,p_extend)
+            pn = np.append(pn,R_extend[:,-1])
+            relative_path.append(pn)
+        relative_path=np.array(relative_path)
+        ## extend in relative
+        opt=lambda_opt(relative_path[:,:3],relative_path[:,3:],robot1=robot1,robot2=robot2,base2_R=base2_T.R,base2_p=base2_T.p,steps=steps_opt)
+        q_out1, q_out2=opt.dual_arm_stepwise_optimize(q_bp1[-1][-1],q_bp2[-1][-1])
+        # adding extension with uniform space
+        for i in range(1,steps+1):
+            p_bp1.append([robot1.fwd(q_out1[int(i*(steps_opt/steps))-1]).p])
+            p_bp2.append([robot2.fwd(q_out2[int(i*(steps_opt/steps))-1]).p])
+            q_bp1.append([q_out1[int(i*(steps_opt/steps))-1]])
+            q_bp2.append([q_out2[int(i*(steps_opt/steps))-1]])
+            primitives1.append('movel_fit')
+            primitives2.append('movel_fit')
+        
+        return primitives1,p_bp1,q_bp1,primitives2,p_bp2,q_bp2
+    
+    def extend_dual(self,robot1,p_bp1,q_bp1,primitives1,robot2,p_bp2,q_bp2,primitives2,breakpoints,base2_T,extension_d=100):
         #extend porpotionally
         d1_start=np.linalg.norm(p_bp1[1][-1]-p_bp1[0][-1])
         d2_start=np.linalg.norm(p_bp2[1][-1]-p_bp2[0][-1])
         d1_end=np.linalg.norm(p_bp1[-1][-1]-p_bp1[-2][-1])
         d2_end=np.linalg.norm(p_bp2[-1][-1]-p_bp2[-2][-1])
 
-        primitives1,p_bp1,q_bp1=self.extend_start_end(robot1,q_bp1,primitives1,breakpoints,p_bp1,extension_start=extension_d*d1_start/d2_start,extension_end=extension_d*d1_end/d2_end)
-        primitives2,p_bp2,q_bp2=self.extend_start_end(robot2,q_bp2,primitives2,breakpoints,p_bp2,extension_start=extension_d,extension_end=extension_d)
+        if (d2_start > 1e-9) and (d2_end > 1e-9):
+            pose_start=(base2_T*robot2.fwd(q_bp2[0][-1])).inv()*robot1.fwd(q_bp1[0][-1])
+            pose_end=(base2_T*robot2.fwd(q_bp2[1][-1])).inv()*robot1.fwd(q_bp1[1][-1])
+            steps_opt=round(extension_d/np.linalg.norm(pose_start.p-pose_end.p))*500
+            steps=round(extension_d/np.linalg.norm(pose_start.p-pose_end.p))
+            primitives1,p_bp1,q_bp1,primitives2,p_bp2,q_bp2=\
+                self.extend_start_end_relative(robot1,q_bp1,primitives1,p_bp1,robot2,q_bp2,primitives2,p_bp2,base2_T,extension_d,steps_opt,steps)
+            step_to_extend_end=steps
+            ### How much steps it need to extend start and end
+            # step_to_extend_start=round(extension_d/d2_start) if d2_start < extension_d else 1
+            # step_to_extend_end=round(extension_d/d2_end) if d2_end < extension_d else 1
+            # ### First, extend the leader (workpiece robot).
+            # primitives2,p_bp2,q_bp2=self.extend_start_end(robot2,q_bp2,primitives2,breakpoints,p_bp2,extension_start=extension_d,extension_end=extension_d)
+            # ### Then, extend the follower (tool robot) in the workpiece (i.e. leader robot workpiece) frame.
+            # # primitives1,p_bp1,q_bp1=self.extend_start_end_relative(robot1,q_bp1,primitives1,p_bp1,robot2,q_bp2,p_bp2,base2_T,step_to_extend_start,step_to_extend_end)
+            # primitives1,p_bp1,q_bp1=self.extend_start_end(robot1,q_bp1,primitives1,breakpoints,p_bp1,extension_start=extension_d*d1_start/d2_start,extension_end=extension_d*d1_end/d2_end)
+            
+        else: # if the leader robot barely move
+            ### How much steps it need to extend start and end
+            step_to_extend_start=round(extension_d/d1_start) if d1_start < extension_d else 1
+            step_to_extend_end=round(extension_d/d1_end) if d1_end < extension_d else 1
+            primitives1,p_bp1,q_bp1=self.extend_start_end(robot1,q_bp1,primitives1,breakpoints,p_bp1,extension_start=extension_d,extension_end=extension_d)
+            add_num = len(p_bp1)-len(p_bp2)
+            for i in range(add_num):
+                p_bp2.append(p_bp2[-1])
+                q_bp2.append(q_bp2[-1])
+                primitives2.append(primitives2[-1])
 
-        return p_bp1,q_bp1,p_bp2,q_bp2
+        return p_bp1,q_bp1,p_bp2,q_bp2,step_to_extend_end
 
     def extract_data_from_cmd(self,filename):
         data = read_csv(filename)

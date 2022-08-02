@@ -27,7 +27,8 @@ class lambda_opt(object):
 
 		self.steps=steps
 
-		self.lim_factor=0.0000001###avoid fwd error on joint limit
+		# self.lim_factor=0.0000001###avoid fwd error on joint limit
+		self.lim_factor=np.deg2rad(0.2) ###avoid fwd error on joint limit
 
 		#prespecified primitives
 		self.primitives=primitives
@@ -68,7 +69,8 @@ class lambda_opt(object):
 		q_out=[q_init]
 		Kw=1
 		for i in range(len(curve)):
-			print(i)
+			if (i%1000) == 0:
+				print(i)
 			try:
 				error_fb=999
 				error_fb_prev=999
@@ -278,7 +280,8 @@ class lambda_opt(object):
 								[1,1]])
 
 		for i in range(len(self.curve)):
-			print(i)
+			if (i%1000) == 0:
+				print(i)
 			try:
 				error_fb=999
 				while error_fb>0.2:
