@@ -1,5 +1,5 @@
 import numpy as np
-import scipy, copy
+import scipy, copy, time
 from pandas import *
 import sys, traceback
 from general_robotics_toolbox import *
@@ -223,61 +223,11 @@ def calc_lamdot_dual(curve_js1,curve_js2,lam,joint_vel_limit1,joint_vel_limit2,s
 
 	return dlam_max
 
-def traj_speed_est(robot,curve_js,lam,vd):
-	###find desired qdot at each step
-	dq=np.gradient(curve_js,axis=0)
-	dlam=np.gradient(lam)
-	dt=dlam/vd
-	qdot_d=np.divide(dq,np.tile(np.array([dt]).T,(1,6)))
-	###bound desired qdot with qdot constraint
-	qdot_max=np.tile(robot.joint_vel_limit,(len(curve_js),1))
-	coeff=np.divide(np.abs(qdot_d),qdot_max)
-	coeff=np.max(coeff,axis=1)	###get the limiting joint
-	coeff=np.clip(coeff,1,999)	###clip coeff to 1
-	coeff=np.tile(np.array([coeff]).T,(1,6))
-
-	qdot=np.divide(qdot_d,coeff)	###clip propotionally
-		
-
-
-
-	# ###iterate a few times to satisfy qddot constraint
-	for r in range(100):
-		dqdot=np.gradient(qdot,axis=0)
-
-		qddot_d=np.divide(dqdot,np.tile(np.array([dt]).T,(1,6)))
-		###bound desired qddot with qddot constraint
-		qddot_max=np.tile(robot.joint_acc_limit,(len(curve_js),1))
-
-
-		coeff=np.divide(np.abs(qddot_d),qddot_max)
-		coeff=np.max(coeff,axis=1)	###get the limiting joint
-
-		# qddot_lim_violate_idx=np.argwhere(coeff>1)
-		# qdot[qddot_lim_violate_idx-1]*=0.999
-
-		coeff=np.clip(coeff,1,999)	###clip coeff to 1
-
-		coeff=np.tile(np.array([coeff]).T,(1,6))
-		qddot=np.divide(qddot_d,coeff)	###clip propotionally
-
-		qdot[1:]=qdot[:-1]+qddot[:-1]*np.tile(np.array([dt[:-1]]).T,(1,6))
-
-
-
-		###update dt
-		dt=np.max(dq/qdot,axis=1)
-
-	speed=[]
-	for i in range(len(curve_js)):
-		J=robot.jacobian(curve_js[i])
-		speed.append(np.linalg.norm((J@qdot[i])[3:]))
-
-	return speed
 
 def q_linesearch(alpha,qdot_prev,qdot_next,dt,joint_acc_limit):
+	###equation: qdot1+qddot*dt/alpha=alpha*qdot2
 	###alpha: coefficient of next qdot, (0,1]
-	qddot=(alpha*qdot_next-qdot_prev)/dt
+	qddot=alpha*(alpha*qdot_next-qdot_prev)/dt
 	coeff=np.abs(qddot)/joint_acc_limit
 
 	###if find one alpha within acc constraint, take it
@@ -285,9 +235,9 @@ def q_linesearch(alpha,qdot_prev,qdot_next,dt,joint_acc_limit):
 		return -alpha
 	###else choose one alpha that brings outcome qddot closest to acc constraint
 	else:
-		return np.abs(np.max(coeff)-1)
+		return np.max(coeff)-1
 
-def traj_speed_est2(robot,curve_js,lam,vd):
+def traj_speed_est(robot,curve_js,lam,vd,qdot_init=[]):
 
 	###find desired qdot at each step
 	dq=np.gradient(curve_js,axis=0)
@@ -304,22 +254,102 @@ def traj_speed_est2(robot,curve_js,lam,vd):
 	qdot=np.divide(qdot_d,coeff)	###clip propotionally
 	
 	#traversal
-	qdot_act=[qdot[0]]
-	alpha_all=[]
+	if len(qdot_init)==0:
+		qdot_act=[qdot[0]]
+	else:
+		qdot_act=[qdot_init]
+
+	J0=robot.jacobian(curve_js[0])
+	speed=[np.linalg.norm((J0@qdot_act[0])[3:])]
+
+	###alpha: coeff of bounded qdot by qddot constraint
+	alpha_all=[1]
+	###acc_limit:[ 5.44542727  5.09636142  7.29547627 42.0100751  27.00024353 59.34119457]
 	for i in range(1,len(curve_js)):
+		qddot=(qdot[i]-qdot_act[-1])/dt[i]
 
-		alpha=fminbound(q_linesearch,0,1.,args=(qdot_act[-1],qdot[i],dt[i],robot.joint_acc_limit))
-		line_out=q_linesearch(alpha,qdot_act[-1],qdot[i],dt[i],robot.joint_acc_limit)
 
+		if np.any(np.abs(qddot)>robot.joint_acc_limit):
+			alpha=fminbound(q_linesearch,0,1,args=(qdot_act[-1],qdot[i],dt[i],robot.joint_acc_limit))
+
+		else:
+			alpha=1
 		qdot_act.append(alpha*qdot[i])
 		alpha_all.append(alpha)
 
-	speed=[]
-	for i in range(len(curve_js)):
 		J=robot.jacobian(curve_js[i])
 		speed.append(np.linalg.norm((J@qdot_act[i])[3:]))
 
-	return speed
+	
+
+	alpha_all=np.array(alpha_all)
+	alpha_jump_thresh=0.1
+	alpha_smooth_thresh=0.01
+	reverse=True
+	iteration_num=0
+	while np.max(np.abs(np.diff(alpha_all)))>alpha_jump_thresh:
+		if reverse:
+			large_drop_idx=np.argwhere(np.abs(np.diff(alpha_all))>alpha_jump_thresh)[-1][0]
+			###find closet point to start backtracking, without jump in alpha
+			smooth_idx=np.argwhere(np.abs(np.diff(alpha_all))<alpha_smooth_thresh)
+			temp_arr=smooth_idx-large_drop_idx
+			back_trak_start_idx=min(len(curve_js)-2,smooth_idx[np.where(temp_arr > 0, temp_arr, np.inf).argmin()][0]+1) ###+/-1 here because used diff
+			###traverse backward
+			for i in range(back_trak_start_idx,1,-1):
+
+				qddot=(qdot_act[i+1]-qdot[i])/dt[i]
+
+				if np.any(np.abs(qddot)>robot.joint_acc_limit):
+					alpha=fminbound(q_linesearch,0,1,args=(qdot_act[i+1],qdot[i],dt[i],robot.joint_acc_limit))
+				else:
+					if i<large_drop_idx:
+						reverse=False
+						break
+					alpha=1
+
+				# print(i,alpha)
+				qdot_act[i]=alpha*qdot[i]
+				alpha_all[i]=alpha
+
+				J=robot.jacobian(curve_js[i])
+				speed[i]=np.linalg.norm((J@qdot_act[i])[3:])
+
+		else:
+			large_drop_idx=np.argwhere(np.abs(np.diff(alpha_all))>alpha_jump_thresh)[0][0]
+
+			###find closet point to start forwardtracking, without jump in alpha
+			smooth_idx=np.argwhere(np.abs(np.diff(alpha_all))<alpha_smooth_thresh)
+			temp_arr=smooth_idx-large_drop_idx
+			trak_start_idx=max(1,smooth_idx[np.where(temp_arr < 0, temp_arr, -np.inf).argmax()][0]-1)
+			###traverse backward
+			for i in range(trak_start_idx,len(curve_js)):
+
+				qddot=(qdot_act[i-1]-qdot[i])/dt[i]
+
+				if np.any(np.abs(qddot)>robot.joint_acc_limit):
+					alpha=fminbound(q_linesearch,0,1,args=(qdot_act[i-1],qdot[i],dt[i],robot.joint_acc_limit))
+				else:
+					if i>large_drop_idx:
+						reverse=True
+						break
+					alpha=1
+				# print(i,alpha)
+				qdot_act[i]=alpha*qdot[i]
+				alpha_all[i]=alpha
+
+				J=robot.jacobian(curve_js[i])
+				speed[i]=np.linalg.norm((J@qdot_act[i])[3:])
+
+		iteration_num+=1
+		if iteration_num>10:
+			# print('exceed speed iteration')
+			break
+		# print(np.max(np.abs(np.diff(alpha_all))))
+
+	###smooth out trajectory
+	speed=replace_outliers2(speed,threshold=0.00001)
+	speed=moving_average(speed,n=5,padding=True)
+	return np.array(speed)
 
 def main():
 	robot=abb6640(d=50)
@@ -366,11 +396,18 @@ def main2():
 	plt.show()
 
 def main3():
+	###speed estimation
 	from MotionSend import MotionSend
 	from blending import form_traj_from_bp,blend_js_from_primitive
 	dataset='wood/'
+	solution_dir='baseline/'
 	robot=abb6640(d=50)
-	curve = read_csv('../data/'+dataset+'/Curve_in_base_frame.csv',header=None).values
+	curve = read_csv('../data/'+dataset+solution_dir+'/Curve_in_base_frame.csv',header=None).values
+
+	curve_js=read_csv('../data/'+dataset+solution_dir+'/Curve_js.csv',header=None).values
+	curve=curve[::1000]
+	curve_js=curve_js[::1000]
+	lam_original=calc_lam_cs(curve)
 
 	ms = MotionSend()
 	
@@ -380,25 +417,53 @@ def main3():
 
 	curve_interp, curve_R_interp, curve_js_interp, breakpoints_blended=form_traj_from_bp(q_bp,primitives,robot)
 	curve_js_blended,curve_blended,curve_R_blended=blend_js_from_primitive(curve_interp, curve_js_interp, breakpoints_blended, primitives,robot,zone=10)
-	lam_original=calc_lam_js(curve_js_blended,robot)
+	lam_blended=calc_lam_js(curve_js_blended,robot)
 
 	exe_dir='../simulation/robotstudio_sim/scripts/fitting_output/'+dataset+'/100L/'
 	v_cmds=[200,250,300,350,400,450,500]
+	# v_cmds=[400]
 	# v_cmds=[800,900,1000,1100,1200,1300,1400]
 	for v_cmd in v_cmds:
-		speed_est=traj_speed_est2(robot,curve_js_blended,lam_original,v_cmd)
+
 		###read actual exe file
 		df = read_csv(exe_dir+"curve_exe"+"_v"+str(v_cmd)+"_z10.csv")
 		lam_exe, curve_exe, curve_exe_R,curve_exe_js, act_speed, timestamp=ms.logged_data_analysis(robot,df,realrobot=True)
-		lam_exe, curve_exe_exe, curve_exe_R_exe,curve_exe_js_exe, act_speed, _=ms.chop_extension(curve_exe, curve_exe_R,curve_exe_js, act_speed, timestamp,curve[0,:3],curve[-1,:3])
+		lam_exe, curve_exe, curve_exe_R,curve_exe_js, act_speed, timestamp=ms.chop_extension(curve_exe, curve_exe_R,curve_exe_js, act_speed, timestamp,curve[0,:3],curve[-1,:3])
+
+		speed_est=traj_speed_est(robot,curve_js,lam_original,v_cmd)
+
+
+		qdot_all=np.gradient(curve_exe_js,axis=0)/np.tile([np.gradient(timestamp)],(6,1)).T
+		qddot_all=np.gradient(qdot_all,axis=0)/np.tile([np.gradient(timestamp)],(6,1)).T
+		qddot_violate_idx=np.array([])
+		for i in range(len(curve_exe_js[0])):
+			qddot_violate_idx=np.append(qddot_violate_idx,np.argwhere(np.abs(qddot_all[:,i])>robot.joint_acc_limit[i]))
+		qddot_violate_idx=np.unique(qddot_violate_idx).astype(int)
+		for idx in qddot_violate_idx:
+			plt.axvline(x=lam_exe[idx],c='orange')
+		
 
 		plt.plot(lam_original,speed_est,label='estimated')
 		plt.plot(lam_exe,act_speed,label='actual')
+
+
+		
+		
+
+
+
 		plt.legend()
 		plt.ylim([0,1.2*v_cmd])
 		plt.xlabel('lambda (mm)')
 		plt.ylabel('Speed (mm/s)')
 		plt.title('Speed Estimation for v'+str(v_cmd))
+		plt.show()
+
+		plt.figure()
+		ax = plt.axes(projection='3d')
+		ax.plot3D(curve[:,0], curve[:,1], curve[:,2], c='gray',label='original')
+		ax.plot3D(curve_exe[:,0], curve_exe[:,1], curve_exe[:,2], c='red',label='execution')
+		ax.scatter3D(curve_exe[qddot_violate_idx,0], curve_exe[qddot_violate_idx,1], curve_exe[qddot_violate_idx,2], c=curve_exe[qddot_violate_idx,2], cmap='Greens',label='commanded points')
 		plt.show()
 
 if __name__ == "__main__":

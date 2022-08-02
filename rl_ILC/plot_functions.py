@@ -56,8 +56,8 @@ def plot_training_curve(file_path):
     fig, ax1 = plt.subplots()
     ax2 = ax1.twinx()
 
-    ax1.plot(episode, max_error, 'r', label='Average Max Execution Error')
-    ax2.plot(episode, itr, 'b', label='Average Num. Iteration')
+    ax1.plot(episode, max_error, 'r-o', label='Average Max Execution Error')
+    ax2.plot(episode, itr, 'b-o', label='Average Num. Iteration')
 
     ax1.set_xlabel('Episode')
     ax1.set_ylabel('Max Error', color='r')
@@ -79,12 +79,13 @@ def max_gradient_gif():
 
 
 if __name__ == '__main__':
-    generate_gif("render/curve1/curve1")
+    # generate_gif("render/curve1/curve10")
     # max_gradient_gif()
 
     # num_curve = 1
     # for i in range(num_curve):
     #     generate_gif("render/curve2/curve{}".format(i))
     #     print("{} / {}".format(i, num_curve))
-    # plot_training_curve('Eval Result.csv')
+
+    plot_training_curve('Eval Result New.csv')
 

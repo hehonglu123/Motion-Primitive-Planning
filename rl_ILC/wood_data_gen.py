@@ -7,7 +7,7 @@ from scipy.optimize import fminbound
 sys.path.append('../toolbox')
 from lambda_calc import *
 from utils import *
-# from data.baseline import pose_opt, curve_frame_conversion, find_js
+from data.baseline import pose_opt, curve_frame_conversion, find_js
 
 import yaml
 
@@ -55,13 +55,13 @@ def find_next_point(t,p,step_size, a=0.54, b=1000., c=0.5):
 
 def generate_rl_data(robot, data_size=200, reverse=False, show=False):
     # save_dir = 'train_data/curve1/reverse' if reverse else 'train_data/curve1/forward'
-    save_dir = 'eval_data/curve1/reverse' if reverse else 'eval_data/curve1/forward'
+    save_dir = 'eval_data/curve1'
     # initial_point = np.array([1090.1612137174207, -506.72253554211704, 994.0466002214232, -0.14380380418973931, -0.00396817476110772, -0.9895982616646132])
     for curve_idx in range(data_size):
         print("{:>5} / {:>5}".format(curve_idx, data_size))
-        a = min(max(np.random.normal(0.5, 1.), 0.3), 0.7)
-        b = min(max(np.random.normal(1000, 5.), 995), 1005)
-        c = min(max(np.random.normal(2., 1), 1.5), 2.5)
+        a = min(max(np.random.normal(0.5, 0.1), 0.4), 0.6)
+        b = min(max(np.random.normal(1000, 1), 998), 1002)
+        c = min(max(np.random.normal(2., 0.1), 1.8), 2.2)
 
         t = np.linspace(0, 1000, 1000)
         curve = find_point(t, a, b, c)
@@ -83,7 +83,7 @@ def generate_rl_data(robot, data_size=200, reverse=False, show=False):
             plt.title('Curve 1')
             plt.show()
 
-        num_points = 5000
+        num_points = 50000
         lam = calc_lam_cs(curve)
         lam = np.linspace(0, lam[-1], num_points)
         curve_act = [curve[0]]
@@ -99,10 +99,10 @@ def generate_rl_data(robot, data_size=200, reverse=False, show=False):
         curve_act = np.array(curve_act)
         curve_normal_act = np.array(curve_normal_act)
 
-        if show:
-            fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
-            ax.plot3D(curve_act[:, 0], curve_act[:, 1], curve_act[:, 2], 'r.-')
-            plt.show()
+        # if show:
+        #     fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
+        #     ax.plot3D(curve_act[:, 0], curve_act[:, 1], curve_act[:, 2], 'r.-')
+        #     plt.show()
 
         curve_act = np.flip(curve_act, 0) if reverse else curve_act
         curve_normal_act = np.flip(curve_normal_act, 0) if reverse else curve_normal_act
@@ -120,10 +120,10 @@ def generate_rl_data(robot, data_size=200, reverse=False, show=False):
         J_min = np.array(J_min)
         curve_js = curve_js_all[np.argmin(J_min.min(axis=1))]
 
-        if show:
-            fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
-            ax.plot3D(curve_base[:, 0], curve_base[:, 1], curve_base[:, 2], 'r.-')
-            plt.show()
+        # if show:
+        #     fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
+        #     ax.plot3D(curve_base[:, 0], curve_base[:, 1], curve_base[:, 2], 'r.-')
+        #     plt.show()
 
         df_base = DataFrame({'x':curve_base[:,0],'y':curve_base[:,1], 'z':curve_base[:,2],'x_dir':curve_normal_base[:,0],'y_dir':curve_normal_base[:,1], 'z_dir':curve_normal_base[:,2]})
         df_base.to_csv(save_dir + os.sep + 'base/curve_{}.csv'.format(curve_idx), header=False, index=False)
@@ -200,4 +200,4 @@ def main():
 if __name__ == '__main__':
     # main()
     robot = abb6640(d=50)
-    generate_rl_data(robot, data_size=10, reverse=False, show=False)
+    generate_rl_data(robot, data_size=10, reverse=False, show=True)

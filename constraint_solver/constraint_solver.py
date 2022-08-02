@@ -16,7 +16,7 @@ from utils import *
 
 class lambda_opt(object):
 	###robot1 hold paint gun, robot2 hold part
-	def __init__(self,curve,curve_normal,robot1=abb6640(d=50),robot2=abb1200(),base2_R=np.eye(3),base2_p=np.zeros(3),steps=50,breakpoints=[],primitives=[]):
+	def __init__(self,curve,curve_normal,robot1=abb6640(d=50),robot2=abb1200(),base2_R=np.eye(3),base2_p=np.zeros(3),steps=50,breakpoints=[],primitives=[],v_cmd=1000):
 
 		self.curve_original=curve
 		self.curve_normal_original=curve_normal
@@ -24,6 +24,8 @@ class lambda_opt(object):
 		self.robot2=robot2
 		self.base2_R=base2_R
 		self.base2_p=base2_p
+
+		self.v_cmd=v_cmd
 
 		self.steps=steps
 
@@ -266,7 +268,8 @@ class lambda_opt(object):
 
 		#####weights
 		Kw=0.1
-		Kq=.01*np.eye(12)    #small value to make sure positive definite
+		Kq=.02*np.eye(12)    #small value to make sure positive definite
+		Kq[6:,6:]=0.01*np.eye(6)		#larger weights for second robot for it moves slower
 		KR=np.eye(3)        #gains for position and orientation error
 
 		###concatenated bounds
@@ -487,6 +490,37 @@ class lambda_opt(object):
 		
 		print(min(dlam))
 		return -min(dlam)
+
+	def curve_pose_opt2(self,x,method=2):
+		###optimize on curve pose for single arm
+		theta0=np.linalg.norm(x[:3])	###pose rotation angle
+		k=x[:3]/theta0					###pose rotation axis
+		shift=x[3:-1]					###pose translation
+		theta1=x[-1]					###initial spray angle (1DOF)
+
+		R_curve=rot(k,theta0)
+		curve_new=np.dot(R_curve,self.curve.T).T+np.tile(shift,(len(self.curve),1))
+		curve_normal_new=np.dot(R_curve,self.curve_normal.T).T
+
+		R_temp=direction2R(curve_normal_new[0],-curve_new[1]+curve_new[0])
+		R=np.dot(R_temp,Rz(theta1))
+		try:
+			q_init=self.robot1.inv(curve_new[0],R)[0]
+			if method==1:###follow +x
+				q_out=self.followx(curve_new,curve_normal_new)
+			else:
+				q_out=self.single_arm_stepwise_optimize(q_init,curve_new,curve_normal_new)
+			
+		except:
+			# traceback.print_exc()
+			return 999
+		
+		speed=traj_speed_est(self.robot1,q_out,self.lam,self.v_cmd)
+
+		
+		print(min(speed))
+		return -min(speed)
+
 
 	def dual_arm_opt(self,x):
 		q_init2=x[:-1]

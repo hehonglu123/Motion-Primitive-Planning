@@ -11,11 +11,12 @@ from utils import *
 
 def main():
 	robot=abb6640(d=50)
-	data_dir='from_NX/'
+	data_dir='wood/'
+	solution_dir='curve_pose_opt/'
 
 	
 	col_names=['X', 'Y', 'Z','normal_x','normal_y','normal_z'] 
-	data = read_csv(data_dir+'Curve_in_base_frame.csv', names=col_names)
+	data = read_csv(data_dir+solution_dir+'Curve_in_base_frame.csv', names=col_names)
 	curve_x=data['X'].tolist()
 	curve_y=data['Y'].tolist()
 	curve_z=data['Z'].tolist()

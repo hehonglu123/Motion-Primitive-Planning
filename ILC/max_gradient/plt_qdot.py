@@ -29,7 +29,6 @@ def main():
 	data_dir="../../data/"+dataset
 	curve = read_csv(data_dir+"Curve_in_base_frame.csv",header=None).values
 	###read in curve_exe
-	col_names=['timestamp', 'cmd_num', 'J1', 'J2','J3', 'J4', 'J5', 'J6'] 
 	df = read_csv('curve1_300_qp_multipeak/curve_exe_v300_z10.csv')
 	lam, curve_exe, curve_exe_R,curve_exe_js, speed, timestamp=ms.logged_data_analysis(robot,df,realrobot=True)
 	#############################chop extension off##################################

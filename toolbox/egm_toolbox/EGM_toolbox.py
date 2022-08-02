@@ -31,6 +31,11 @@ class EGM_toolbox(object):
         init_extension_js=np.linspace(curve_cmd_js[0]-extension_num*(curve_cmd_js[1]-curve_cmd_js[0]),curve_cmd_js[0],num=extension_num,endpoint=False)
         end_extension_js=np.linspace(curve_cmd_js[-1],curve_cmd_js[-1]+extension_num*(curve_cmd_js[-1]-curve_cmd_js[-2]),num=extension_num+1)[1:]
 
+        ###cap extension within joint limits
+        for i in range(len(curve_cmd_js[0])):
+            init_extension_js[:,i]=np.clip(init_extension_js[:,i],self.robot.lower_limit[i]+0.01,self.robot.upper_limit[i]-0.01)
+            end_extension_js[:,i]=np.clip(end_extension_js[:,i],self.robot.lower_limit[i]+0.01,self.robot.upper_limit[i]-0.01)
+
         init_extension_p=[]
         init_extension_R=[]
         for q in init_extension_js:
@@ -60,6 +65,11 @@ class EGM_toolbox(object):
         #################add extension#########################
         init_extension_js=np.linspace(curve_cmd_js[0]-extension_start*(curve_cmd_js[1]-curve_cmd_js[0]),curve_cmd_js[0],num=extension_start,endpoint=False)
         end_extension_js=np.linspace(curve_cmd_js[-1],curve_cmd_js[-1]+extension_end*(curve_cmd_js[-1]-curve_cmd_js[-2]),num=extension_end+1)[1:]
+
+        ###cap extension within joint limits
+        for i in range(len(curve_cmd_js[0])):
+            init_extension_js[:,i]=np.clip(init_extension_js[:,i],self.robot.lower_limit[i]+0.01,self.robot.upper_limit[i]-0.01)
+            end_extension_js[:,i]=np.clip(end_extension_js[:,i],self.robot.lower_limit[i]+0.01,self.robot.upper_limit[i]-0.01)
 
         curve_cmd_js_ext=np.vstack((init_extension_js,curve_cmd_js,end_extension_js))
         return curve_cmd_js_ext

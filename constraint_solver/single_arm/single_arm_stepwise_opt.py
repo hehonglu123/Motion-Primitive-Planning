@@ -5,8 +5,9 @@ from constraint_solver import *
 
 def main():
 	dataset='wood/'
-	curve = read_csv("../../data/"+dataset+"Curve_in_base_frame.csv",header=None).values
-	curve_js = read_csv("../../data/"+dataset+"Curve_js.csv",header=None).values
+	solution_dir='curve_pose_opt/'
+	curve = read_csv("../../data/"+dataset+solution_dir+"Curve_in_base_frame.csv",header=None).values
+	curve_js = read_csv("../../data/"+dataset+solution_dir+"Curve_js.csv",header=None).values
 
 	robot=abb6640(d=50)
 	opt=lambda_opt(curve[:,:3],curve[:,3:],robot1=robot,steps=50000)

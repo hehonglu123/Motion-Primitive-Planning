@@ -507,6 +507,7 @@ class MotionSend(object):
         relative_path_exe=relative_path_exe[start_idx:end_idx+1]
         relative_path_exe_R=relative_path_exe_R[start_idx:end_idx+1]
 
+        timestamp=timestamp[start_idx:end_idx+1]
         speed=speed[start_idx:end_idx+1]
         lam=calc_lam_cs(relative_path_exe)
 
