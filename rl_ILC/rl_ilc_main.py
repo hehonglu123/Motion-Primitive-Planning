@@ -133,7 +133,7 @@ def evaluate(agent, data_dir, render=False, render_dir="", env_mode='robot_studi
     num_itr = 0
     num_curve = 0
 
-    for i in range(1):
+    for i in range(10,11):
 
         curve, curve_normal, curve_js = read_data(i, data_dir)
         env = ILCEnv(curve, curve_normal, curve_js, robot, 100, mode=env_mode)
@@ -148,7 +148,6 @@ def evaluate(agent, data_dir, render=False, render_dir="", env_mode='robot_studi
             num_curve += 1
 
             while not done:
-
                 curve_error, curve_target, robot_pose, is_start, is_end = state
                 state_error = np.array([x.T.flatten() for x in curve_error])
                 state_target = np.array([x.T.flatten() for x in curve_target])

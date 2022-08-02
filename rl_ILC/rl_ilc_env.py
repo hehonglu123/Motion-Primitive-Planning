@@ -38,7 +38,7 @@ class ILCEnv(object):
         self.n = n
         self.action_dim = 3
 
-        self.v = 1100
+        self.v = 1300
         self.s = speeddata(self.v, 9999999, 9999999, 999999)
         self.z = z10
 
@@ -199,6 +199,15 @@ class ILCEnv(object):
                 os.mkdir('{}/curve{}'.format(save_dir, idx))
             fig.savefig('{}/curve{}/bp_itr_{}.png'.format(save_dir, idx, self.itr), dpi=300)
         plt.close()
+
+        error=self.exe_profile['Error']
+        speed=self.exe_profile['Speed']
+        ave_speed=np.mean(speed)
+        angle_error=self.exe_profile['Angle Error']
+        print('Max Error:',max(error),'Ave. Speed:',ave_speed,'Std. Speed:',np.std(speed),'Std/Ave (%):',np.std(speed)/ave_speed*100)
+        print('Max Speed:',max(speed),'Min Speed:',np.min(speed),'Ave. Error:',np.mean(error),'Min Error:',np.min(error),"Std. Error:",np.std(error))
+        print('Max Ang Error:',max(np.degrees(angle_error)),'Min Ang Error:',np.min(np.degrees(angle_error)),'Ave. Ang Error:',np.mean(np.degrees(angle_error)),"Std. Ang Error:",np.std(np.degrees(angle_error)))
+        print("===========================================")
 
         if render_profile:
             fig, ax = plt.subplots()
