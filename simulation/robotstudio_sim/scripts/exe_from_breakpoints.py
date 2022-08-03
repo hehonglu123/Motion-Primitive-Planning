@@ -18,7 +18,7 @@ from MotionSend import *
 
 def main():
     ms = MotionSend()
-    dataset='wood/'
+    dataset='from_NX/'
     solution_dir='curve_pose_opt1/'
     cmd_dir='../../../data/'+dataset+solution_dir+'100L/'
     data_dir='../../../data/'+dataset+solution_dir
@@ -38,13 +38,13 @@ def main():
     # speed={'v200':v200,'v250':v250,'v300':v300,'v350':v350,'v400':v400,'v450':v450,'v500':v500}
     # speed={'v800':v800,'v900':v900,'v1000':v1000,'v1100':v1100,'v1200':v1200,'v1300':v1300,'v1400':v1400}
     # speed={'v800':v800,'v1000':v1000,'v1200':v1200,'v1500':v1500,'v2000':v2000}
-    speed={'v400':v400}
+    speed={'v1100':v1100}
     zone={'z10':z10}
 
     for s in speed:
         for z in zone: 
             breakpoints,primitives, p_bp,q_bp=ms.extract_data_from_cmd(cmd_dir+"command.csv")
-            p_bp, q_bp = ms.extend(robot, q_bp, primitives, breakpoints, p_bp)
+            # p_bp, q_bp = ms.extend(robot, q_bp, primitives, breakpoints, p_bp)
 
             logged_data= ms.exec_motions(robot,primitives,breakpoints,p_bp,q_bp,speed[s],zone[z])
 
@@ -53,13 +53,13 @@ def main():
             ##############################data analysis#####################################
             lam, curve_exe, curve_exe_R,curve_exe_js, exe_speed, timestamp=ms.logged_data_analysis(robot,df,realrobot=True)
             #############################chop extension off##################################
-            lam, curve_exe, curve_exe_R,curve_exe_js, exe_speed, timestamp=ms.chop_extension(curve_exe, curve_exe_R,curve_exe_js, exe_speed, timestamp,curve[0,:3],curve[-1,:3])
+            # lam, curve_exe, curve_exe_R,curve_exe_js, exe_speed, timestamp=ms.chop_extension(curve_exe, curve_exe_R,curve_exe_js, exe_speed, timestamp,curve[0,:3],curve[-1,:3])
             ##############################calcualte error########################################
             error,angle_error=calc_all_error_w_normal(curve_exe,curve[:,:3],curve_exe_R[:,:,-1],curve[:,3:])
 
             fig, ax1 = plt.subplots()
             ax2 = ax1.twinx()
-            ax1.plot(lam, exe_speed, 'g-', label='Speed')
+            ax1.plot(lam[1:], exe_speed, 'g-', label='Speed')
             ax2.plot(lam, error, 'b-',label='Error')
             ax2.plot(lam, np.degrees(angle_error), 'y-',label='Normal Error')
             ax2.axis(ymin=0,ymax=6)
