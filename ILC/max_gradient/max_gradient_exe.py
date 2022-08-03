@@ -24,7 +24,7 @@ from blending import *
 
 def main():
 	dataset='wood/'
-	solution_dir='curve_pose_opt/'
+	solution_dir='curve_pose_opt1/'
 	data_dir="../../data/"+dataset+solution_dir
 	cmd_dir="../../data/"+dataset+solution_dir+'100L/'
 
@@ -36,7 +36,7 @@ def main():
 	multi_peak_threshold=0.2
 	robot=abb6640(d=50)
 
-	v=500
+	v=400
 	s = speeddata(v,9999999,9999999,999999)
 	z = z10
 
@@ -88,7 +88,7 @@ def main():
 		ax2.plot(lam, error, 'b-',label='Error')
 		ax2.scatter(lam[peaks],error[peaks],label='peaks')
 		ax2.plot(lam, np.degrees(angle_error), 'y-',label='Normal Error')
-		ax2.axis(ymin=0,ymax=2)
+		ax2.axis(ymin=0,ymax=5)
 		ax1.axis(ymin=0,ymax=1.2*v)
 
 		ax1.set_xlabel('lambda (mm)')
@@ -100,9 +100,11 @@ def main():
 		ax2.legend(loc="upper left")
 
 		plt.legend()
-		plt.savefig('recorded_data/iteration_ '+str(i))
+		plt.savefig('recorded_data/iteration_'+str(i))
 		plt.clf()
 		# plt.show()
+
+		
 
 		###########################plot for verification###################################
 		# plt.figure()

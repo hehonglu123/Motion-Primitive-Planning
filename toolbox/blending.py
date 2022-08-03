@@ -95,6 +95,16 @@ def blend_js_from_primitive(curve, curve_js, breakpoints, primitives,robot,zone=
 
 	blending_end_idx.pop(0)	#remove first one
 
+
+	###guard to have no same index
+	for i in range(len(blending_start_idx)):
+		if blending_start_idx[i]==blending_end_idx[i]:
+			if i==0:	#guard i==0
+				blending_start_idx[i]=3
+			else:
+				blending_start_idx[i]=blending_end_idx[i-1]+1	
+			blending_end_idx[i]=int((breakpoints[i+1]+breakpoints[i+2])/2)-1
+
 	curve_js_blended=blend_js2(curve_js,breakpoints,lam,blending_start_idx,blending_end_idx)
 	curve_blended=[]
 	curve_R_blended=[]

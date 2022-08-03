@@ -17,26 +17,24 @@ from lambda_calc import *
 from blending import *
 
 def main():
-	dataset='wood/'
-	data_dir="../../data/"+dataset
-	# fitting_output="../../data/"+dataset+'baseline/100L/'
-	fitting_output="../../data/"+dataset+'qp/'
-	# fitting_output="../greedy_fitting/greedy_output/curve1_movel_0.1/"
-	# fitting_output="../greedy_fitting/greedy_output/curve2_movel_0.1/"
 
+	dataset='wood/'
+	solution_dir='curve_pose_opt1/'
+	data_dir="../../data/"+dataset+solution_dir
+	cmd_dir='curve1_400_curve_pose_opt1/'
 
 	curve = read_csv(data_dir+"Curve_in_base_frame.csv",header=None).values
 
 
 	robot=abb6640(d=50)
 
-	v=250
+	v=400
 	s = speeddata(v,9999999,9999999,999999)
 	z = z10
 
 
 	ms = MotionSend()
-	breakpoints,primitives,p_bp,q_bp=ms.extract_data_from_cmd('curve1_250_100L_multipeak/command.csv')
+	breakpoints,primitives,p_bp,q_bp=ms.extract_data_from_cmd(cmd_dir+'command.csv')
 
 	###ilc toolbox def
 	ilc=ilc_toolbox(robot,primitives)
@@ -89,7 +87,7 @@ def main():
 		ax2.legend(loc="upper left")
 
 		plt.legend()
-		plt.savefig('recorded_data/iteration_ '+str(i))
+		plt.savefig('recorded_data/iteration_'+str(i))
 		plt.clf()
 		# plt.show()
 
@@ -99,9 +97,12 @@ def main():
 
 		curve_js_blended,curve_blended,curve_R_blended=blend_js_from_primitive(curve_interp, curve_js_interp, breakpoints_blended, primitives,robot,zone=10)
 		lam_blended=calc_lam_cs(curve_blended)
-		print('estimate speed')
-		speed_est=traj_speed_est2(robot,curve_js_blended,lam_blended,v)
-		print('for all valleys')
+		print('estimating speed')
+		speed_est=traj_speed_est(robot,curve_js_blended,lam_blended,v)
+		plt.plot(lam_blended,speed_est)
+		plt.savefig('recorded_data/speedest_iteration_'+str(i))
+		plt.clf()
+
 		for valley in valleys:
 			######gradient calculation related to nearest 3 points from primitive blended trajectory, not actual one
 			_,valley_speed_curve_idx=calc_error(curve_exe[valley],curve[:,:3])  # index of original curve closest to max error point
