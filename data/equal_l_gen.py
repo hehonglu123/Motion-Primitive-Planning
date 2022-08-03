@@ -15,7 +15,7 @@ from utils import *
 
 
 data_dir='wood/'
-solution_dir='curve_pose_opt/'
+solution_dir='curve_pose_opt3/'
 
 num_ls=[100]
 robot=abb6640(d=50)
@@ -54,8 +54,8 @@ for num_l in num_ls:
 	df=DataFrame({'breakpoints':breakpoints,'primitives':primitives_choices,'points':points,'q_bp':q_bp})
 	df.to_csv(cmd_dir+'command.csv',header=True,index=False)
 
-	curve_fit_js=car2js(robot,curve_js[0],curve_fit,curve_fit_R)
-	DataFrame(curve_fit_js).to_csv(cmd_dir+'curve_fit_js.csv',header=False,index=False)
-	DataFrame(curve_fit).to_csv(cmd_dir+'/curve_fit.csv',header=False,index=False)
+	# curve_fit_js=car2js(robot,curve_js[0],curve_fit,curve_fit_R)
+	# DataFrame(curve_fit_js).to_csv(cmd_dir+'curve_fit_js.csv',header=False,index=False)
+	# DataFrame(curve_fit).to_csv(cmd_dir+'/curve_fit.csv',header=False,index=False)
 
 

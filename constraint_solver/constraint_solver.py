@@ -72,10 +72,15 @@ class lambda_opt(object):
 		for i in range(len(curve)):
 			# print(i)
 			try:
+				now=time.time()
 				error_fb=999
 				error_fb_prev=999
 
 				while error_fb>0.01:
+					if time.time()-now>10:
+						print('qp timeout')
+						raise AssertionError
+						break
 
 					pose_now=self.robot1.fwd(q_all[-1])
 					error_fb=np.linalg.norm(pose_now.p-curve[i])+Kw*np.linalg.norm(pose_now.R[:,-1]-curve_normal[i])

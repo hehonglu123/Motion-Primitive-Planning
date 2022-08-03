@@ -86,33 +86,6 @@ class fitting_toolbox(object):
 		curve_fit_R=np.array(curve_fit_R)
 		return curve_fit_R
 
-	def car2js(self,curve_fit,curve_fit_R):
-
-		###calculate corresponding joint configs
-		curve_fit_js=[]
-		if curve_fit.shape==(3,):
-			q_all=np.array(self.robot.inv(curve_fit,curve_fit_R))
-
-			###choose inv_kin closest to previous joints
-			if len(self.curve_fit_js)>1:
-				temp_q=q_all-self.curve_fit_js[-1]
-			else:
-				temp_q=q_all-self.curve_js[0]
-			order=np.argsort(np.linalg.norm(temp_q,axis=1))
-			curve_fit_js.append(q_all[order[0]])
-		else:
-			for i in range(len(curve_fit)):
-				q_all=np.array(self.robot.inv(curve_fit[i],curve_fit_R[i]))
-
-				###choose inv_kin closest to previous joints
-				if len(self.curve_fit_js)>1:
-					temp_q=q_all-self.curve_fit_js[-1]
-				else:
-					temp_q=q_all-self.curve_js[0]
-				order=np.argsort(np.linalg.norm(temp_q,axis=1))
-				curve_fit_js.append(q_all[order[0]])
-		return curve_fit_js
-
 	def quatera(self,curve_quat,initial_quat=[]):
 		###quaternion regression
 		if len(initial_quat)==0:
@@ -201,8 +174,8 @@ class fitting_toolbox(object):
 		return data_fit
 
 	def get_start_slope(self,p1,p2,R1,R2):
-		q1=self.car2js(p1,R1)[0]
-		q2=self.car2js(p2,R2)[0]
+		q1=car2js(self.curve_js[0],p1,R1)[0]
+		q2=car2js(self.curve_js[0],p2,R2)[0]
 
 		return (q2-q1)/np.linalg.norm(q2-q1)
 
@@ -254,7 +227,7 @@ class fitting_toolbox(object):
 
 		###slope thresholding 2
 		if len(dqdlam_prev)>0:
-			q1=self.car2js(curve_fit[0],curve_fit_R[0])[0]
+			q1=car2js(curve_js[0],curve_fit[0],curve_fit_R[0])[0]
 			dqdlam_cur=(q1-self.curve_fit_js[-1])/(self.lam[len(self.curve_fit_js)]-self.lam[len(self.curve_fit_js)-1])
 			# print(np.max(np.abs(dqdlam_cur-dqdlam_prev)))
 			if np.max(np.abs(dqdlam_cur-dqdlam_prev))>self.dqdlam_slope:
@@ -421,7 +394,7 @@ class fitting_toolbox(object):
 
 		###slope thresholding 2
 		if len(dqdlam_prev)>0:
-			q1=self.car2js(curve_fit[0],curve_fit_R[0])[0]
+			q1=car2js(curve_js[0],curve_fit[0],curve_fit_R[0])[0]
 			dqdlam_cur=(q1-self.curve_fit_js[-1])/(self.lam[len(self.curve_fit_js)]-self.lam[len(self.curve_fit_js)-1])
 			
 			if np.max(np.abs(dqdlam_cur-dqdlam_prev))>self.dqdlam_slope:
