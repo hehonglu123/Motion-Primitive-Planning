@@ -20,6 +20,7 @@ def main():
     # curve
     data_type='blade'
     # data_type='wood'
+    # data_type='blade_shift'
 
     # data and curve directory
     if data_type=='blade':
@@ -30,11 +31,20 @@ def main():
         curve_data_dir='../../../data/wood/'
         cmd_dir='../data/curve_wood/'
         data_dir='data/'
+    elif data_type=='blade_shift':
+        curve_data_dir='../../../data/blade_shift/'
+        cmd_dir='../data/curve_blade_shift/'
+        data_dir='data/'
 
-    # cmd_dir=cmd_dir+'dual_arm/'
-    # cmd_dir=cmd_dir+'dual_single_arm/'
-    # cmd_dir=cmd_dir+'dual_single_arm_straight/' # robot2 is multiple user defined straight line
-    cmd_dir=cmd_dir+'dual_arm_10/'
+    # test_type='dual_arm'
+    # test_type='dual_single_arm'
+    test_type='dual_single_arm_straight' # robot2 is multiple user defined straight line
+    # test_type='dual_single_arm_straight_50' # robot2 is multiple user defined straight line
+    # test_type='dual_single_arm_straight_min' # robot2 is multiple user defined straight line
+    # test_type='dual_single_arm_straight_min10' # robot2 is multiple user defined straight line
+    # test_type='dual_arm_10'
+
+    cmd_dir=cmd_dir+test_type+'/'
 
     # relative path
     relative_path = read_csv(curve_data_dir+"/Curve_dense.csv", header=None).values
@@ -58,8 +68,10 @@ def main():
         ms = MotionSendFANUC(robot1=robot1,robot2=robot2)
     elif data_type=='wood':
         ms = MotionSendFANUC(robot1=robot1,robot2=robot2,utool2=3)
+    elif data_type=='blade_shift':
+        ms = MotionSendFANUC(robot1=robot1,robot2=robot2,utool2=4)
 
-    s=2000 # mm/sec in leader frame
+    s=1500 # mm/sec in leader frame
     z=100 # CNT100
 
     breakpoints1,primitives1,p_bp1,q_bp1=ms.extract_data_from_cmd(os.getcwd()+'/'+cmd_dir+'command1.csv')
@@ -81,34 +93,42 @@ def main():
     # exit()
 
     ###extension
-    extension_d=300
-    try:
-        breakpoints1,primitives1,p_bp1,q_bp1=ms.extract_data_from_cmd(os.getcwd()+'/'+cmd_dir+'command_arm1_extend_'+str(extension_d)+'.csv')
-        breakpoints2,primitives2,p_bp2,q_bp2=ms.extract_data_from_cmd(os.getcwd()+'/'+cmd_dir+'command_arm2_extend_'+str(extension_d)+'.csv')
-        print("Extension file existed.")
-        primitives1=np.array(primitives1)
-        primitives2=np.array(primitives2)
-        primitives1[:]='movel_fit'
-        primitives2[:]='movel_fit'
-    except:
-        print("Extension file not existed.")
-        p_bp1,q_bp1,p_bp2,q_bp2,step_to_extend_end=ms.extend_dual(ms.robot1,p_bp1,q_bp1,primitives1,ms.robot2,p_bp2,q_bp2,primitives2,breakpoints1,base2_T,extension_d=extension_d)
-        print(len(primitives1))
-        print(len(primitives2))
-        # not_coord_step=3 # after 3 bp of workpiece, no more coordination
-        # coord_primitives[-(step_to_extend_end-not_coord_step):]=0
-        primitives1=np.array(primitives1)
-        primitives2=np.array(primitives2)
-        primitives1[-int(step_to_extend_end/2):]='movej_fit'
-        primitives2[-int(step_to_extend_end/2):]='movej_fit'
+    if data_type=='wood':
+        extension_d=200
+    elif data_type=='blade':
+        extension_d=300
+    elif data_type=='blade_shift':
+        extension_d=300
+    # extension_d=0
+    if extension_d != 0:
+        try:
+            _,primitives1,p_bp1,q_bp1=ms.extract_data_from_cmd(os.getcwd()+'/'+cmd_dir+'command_arm1_extend_'+str(extension_d)+'.csv')
+            _,primitives2,p_bp2,q_bp2=ms.extract_data_from_cmd(os.getcwd()+'/'+cmd_dir+'command_arm2_extend_'+str(extension_d)+'.csv')
+            print("Extension file existed.")
+            primitives1=np.array(primitives1)
+            primitives2=np.array(primitives2)
+            primitives1[:]='movel_fit'
+            primitives2[:]='movel_fit'
+        except:
+            print("Extension file not existed.")
+            p_bp1,q_bp1,p_bp2,q_bp2,step_to_extend_end=ms.extend_dual(ms.robot1,p_bp1,q_bp1,primitives1,ms.robot2,p_bp2,q_bp2,primitives2,breakpoints1,base2_T,extension_d=extension_d)
+            print(len(primitives1))
+            print(len(primitives2))
+            # not_coord_step=3 # after 3 bp of workpiece, no more coordination
+            # coord_primitives[-(step_to_extend_end-not_coord_step):]=0
+            primitives1=np.array(primitives1)
+            primitives2=np.array(primitives2)
+            primitives1[-int(step_to_extend_end/2):]='movej_fit'
+            primitives2[-int(step_to_extend_end/2):]='movej_fit'
 
-        df=DataFrame({'primitives':primitives1,'points':p_bp1,'q_bp':q_bp1})
-        df.to_csv(cmd_dir+'command_arm1_extend_'+str(extension_d)+'.csv',header=True,index=False)
-        df=DataFrame({'primitives':primitives2,'points':p_bp2,'q_bp':q_bp2})
-        df.to_csv(cmd_dir+'command_arm2_extend_'+str(extension_d)+'.csv',header=True,index=False)
+            df=DataFrame({'primitives':primitives1,'points':p_bp1,'q_bp':q_bp1})
+            df.to_csv(cmd_dir+'command_arm1_extend_'+str(extension_d)+'.csv',header=True,index=False)
+            df=DataFrame({'primitives':primitives2,'points':p_bp2,'q_bp':q_bp2})
+            df.to_csv(cmd_dir+'command_arm2_extend_'+str(extension_d)+'.csv',header=True,index=False)
         
     
     coord_primitives=np.ones(len(primitives1))
+    # coord_primitives=np.zeros(len(primitives1))
 
     ###execution with plant
     logged_data=ms.exec_motions_multimove(robot1,robot2,primitives1,primitives2,p_bp1,p_bp2,q_bp1,q_bp2,s,z,coord_primitives)
@@ -160,35 +180,35 @@ def main():
     plt.show()
 
     ########################## plot joint ##########################
-    curve_exe_js1=np.array(curve_exe_js1)
-    curve_exe_js2=np.array(curve_exe_js2)
-    print(len(timestamp))
-    print(len(curve_exe_js2))
-    for i in range(1,3):
-        # robot
-        if i==1:
-            this_robot=robot1
-            this_curve_js_exe=curve_exe_js1
-        else:
-            this_robot=robot2
-            this_curve_js_exe=curve_exe_js2
-        fig, ax = plt.subplots(4,6)
-        dt=np.gradient(timestamp)
-        for j in range(6):
-            ax[0,j].plot(lam,this_curve_js_exe[:,j])
-            ax[0,j].axis(ymin=this_robot.lower_limit[j]*1.05,ymax=this_robot.upper_limit[j]*1.05)
-            dq=np.gradient(this_curve_js_exe[:,j])
-            dqdt=dq/dt
-            ax[1,j].plot(lam,dqdt)
-            ax[1,j].axis(ymin=-this_robot.joint_vel_limit[j]*1.05,ymax=this_robot.joint_vel_limit[j]*1.05)
-            d2qdt2=np.gradient(dqdt)/dt
-            ax[2,j].plot(lam,d2qdt2)
-            ax[2,j].axis(ymin=-this_robot.joint_acc_limit[j]*1.05,ymax=this_robot.joint_acc_limit[j]*1.05)
-            d3qdt3=np.gradient(d2qdt2)/dt
-            ax[3,j].plot(lam,d3qdt3)
-            ax[3,j].axis(ymin=-this_robot.joint_jrk_limit[j]*1.05,ymax=this_robot.joint_jrk_limit[j]*1.05)
-        # plt.title('Robot '+str(i)+' joint trajectoy/velocity/acceleration.')
-        plt.show()
+    plot_joint=False
+    if plot_joint:
+        curve_exe_js1=np.array(curve_exe_js1)
+        curve_exe_js2=np.array(curve_exe_js2)
+        for i in range(1,3):
+            # robot
+            if i==1:
+                this_robot=robot1
+                this_curve_js_exe=curve_exe_js1
+            else:
+                this_robot=robot2
+                this_curve_js_exe=curve_exe_js2
+            fig, ax = plt.subplots(4,6)
+            dt=np.gradient(timestamp)
+            for j in range(6):
+                ax[0,j].plot(lam,this_curve_js_exe[:,j])
+                ax[0,j].axis(ymin=this_robot.lower_limit[j]*1.05,ymax=this_robot.upper_limit[j]*1.05)
+                dq=np.gradient(this_curve_js_exe[:,j])
+                dqdt=dq/dt
+                ax[1,j].plot(lam,dqdt)
+                ax[1,j].axis(ymin=-this_robot.joint_vel_limit[j]*1.05,ymax=this_robot.joint_vel_limit[j]*1.05)
+                d2qdt2=np.gradient(dqdt)/dt
+                ax[2,j].plot(lam,d2qdt2)
+                ax[2,j].axis(ymin=-this_robot.joint_acc_limit[j]*1.05,ymax=this_robot.joint_acc_limit[j]*1.05)
+                d3qdt3=np.gradient(d2qdt2)/dt
+                ax[3,j].plot(lam,d3qdt3)
+                ax[3,j].axis(ymin=-this_robot.joint_jrk_limit[j]*1.05,ymax=this_robot.joint_jrk_limit[j]*1.05)
+            # plt.title('Robot '+str(i)+' joint trajectoy/velocity/acceleration.')
+            plt.show()
         
         # fig, ax = plt.subplots(2,3)
         # for j in range(6):

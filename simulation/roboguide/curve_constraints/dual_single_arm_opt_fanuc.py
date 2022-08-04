@@ -22,7 +22,9 @@ elif data_type=='wood':
     data_dir='../data/curve_wood/'
 
 # robot2_type='dual_single_arm_freeze' # robot2 not moving
-robot2_type='dual_single_arm_straight/' # robot2 is multiple user defined straight line
+# robot2_type='dual_single_arm_straight/' # robot2 is multiple user defined straight line
+# robot2_type='dual_single_arm_straight_min/' # robot2 is multiple user defined straight line
+robot2_type='dual_single_arm_straight_min10/' # robot2 is multiple user defined straight line
 Path(data_dir+robot2_type).mkdir(exist_ok=True)
 
 # read curve relative path
@@ -99,7 +101,11 @@ q_out2=np.tile(q_init2,(len(relative_path),1))
 # robot2_step=[12500,37499]
 # robot2_path=np.array([q_init2,np.deg2rad([18.0,52.8,-10.9,-20.2,63.5,8.8])])
 # robot2_step=[49999]
-robot2_path=np.array([q_init2,np.deg2rad([22.4,59.6,2.9,-28.3,52.2,15.6])])
+# robot2_path=np.array([q_init2,np.deg2rad([22.4,59.6,2.9,-28.3,52.2,15.6])])
+# robot2_step=[49999]
+# robot2_path=np.array([q_init2,np.deg2rad([2.9,53,-10.4,-3.3,61.9,1.5])]) # min (100)
+# robot2_step=[49999]
+robot2_path=np.array([q_init2,np.deg2rad([0.3,50.2,-16.5,-0.4,65.1,0.2])]) # min10
 robot2_step=[49999]
 ###########################################
 

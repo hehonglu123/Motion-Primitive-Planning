@@ -39,17 +39,27 @@ def main():
         cmd_dir='../data/curve_wood/'
         data_dir='data/wood_dual/'
 
+    # test_type='dual_arm'
+    # test_type='dual_single_arm'
+    # test_type='dual_single_arm_straight' # robot2 is multiple user defined straight line
+    test_type='dual_single_arm_straight_50' # robot2 is multiple user defined straight line
+    # test_type='dual_single_arm_straight_min' # robot2 is multiple user defined straight line
+    # test_type='dual_single_arm_straight_min10' # robot2 is multiple user defined straight line
+    # test_type='dual_arm_10'
+
+    cmd_dir=cmd_dir+test_type+'/'
+
     # relative path
     relative_path = read_csv(curve_data_dir+"/Curve_dense.csv", header=None).values
 
     # the second robot relative to the fist robot
-    with open(cmd_dir+'dual_arm/m900ia.yaml') as file:
+    with open(cmd_dir+'../m900ia.yaml') as file:
         H_robot2 = np.array(yaml.safe_load(file)['H'],dtype=np.float64)
     base2_R=H_robot2[:3,:3]
     base2_p=1000*H_robot2[:-1,-1]
     base2_T=rox.Transform(base2_R,base2_p)
     # workpiece (curve) relative to robot tcp
-    with open(cmd_dir+'dual_arm/tcp.yaml') as file:
+    with open(cmd_dir+'../tcp.yaml') as file:
         H_tcp = np.array(yaml.safe_load(file)['H'],dtype=np.float64)
     
     # define robot
@@ -62,16 +72,16 @@ def main():
     elif data_type=='wood':
         ms = MotionSendFANUC(robot1=robot1,robot2=robot2,utool2=3)
 
-    s=2000 # mm/sec in leader frame
+    s=1500 # mm/sec in leader frame
     z=100 # CNT100
-    ilc_output=data_dir+'results_'+str(s)+'/'
+    ilc_output=data_dir+'results_'+str(s)+'_'+test_type+'/'
     Path(ilc_output).mkdir(exist_ok=True)
 
-    breakpoints1,primitives1,p_bp1,q_bp1=ms.extract_data_from_cmd(os.getcwd()+'/'+cmd_dir+'/dual_arm/command1.csv')
-    breakpoints2,primitives2,p_bp2,q_bp2=ms.extract_data_from_cmd(os.getcwd()+'/'+cmd_dir+'/dual_arm/command2.csv')
+    breakpoints1,primitives1,p_bp1,q_bp1=ms.extract_data_from_cmd(os.getcwd()+'/'+cmd_dir+'command1.csv')
+    breakpoints2,primitives2,p_bp2,q_bp2=ms.extract_data_from_cmd(os.getcwd()+'/'+cmd_dir+'command2.csv')
 
     ###extension
-    p_bp1,q_bp1,p_bp2,q_bp2,step_to_extend_end=ms.extend_dual(ms.robot1,p_bp1,q_bp1,primitives1,ms.robot2,p_bp2,q_bp2,primitives2,breakpoints1,base2_T,extension_d=200)
+    p_bp1,q_bp1,p_bp2,q_bp2,step_to_extend_end=ms.extend_dual(ms.robot1,p_bp1,q_bp1,primitives1,ms.robot2,p_bp2,q_bp2,primitives2,breakpoints1,base2_T,extension_d=300)
 
     ###ilc toolbox def
     ilc=ilc_toolbox([robot1,robot2],[primitives1,primitives2],base2_R,base2_p)

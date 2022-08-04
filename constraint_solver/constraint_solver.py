@@ -274,7 +274,8 @@ class lambda_opt(object):
 		#####weights
 		Kw=0.1
 		Kq=.02*np.eye(12)    #small value to make sure positive definite
-		Kq[6:,6:]=0.01*np.eye(6)		#larger weights for second robot for it moves slower
+		# Kq[6:,6:]=0.01*np.eye(6)		#larger weights for second robot for it moves slower
+		Kq[6:,6:]=0.1*np.eye(6)		#larger weights for second robot for it moves slower
 		KR=np.eye(3)        #gains for position and orientation error
 
 		###concatenated bounds

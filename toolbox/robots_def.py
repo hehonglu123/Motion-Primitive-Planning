@@ -192,9 +192,9 @@ class m900ia(object):
 
 		return Transform_all(pose_p_all,pose_R_all)
 
-	def inv(self,p,R=np.eye(3)):
+	def inv(self,p,R=np.eye(3),last_joints=None):
 		pose=Transform(R,p)
-		q_all=robot6_sphericalwrist_invkin(self.robot_def,pose)
+		q_all=robot6_sphericalwrist_invkin(self.robot_def,pose,last_joints)
 		return q_all
 
 class m710ic(object):
@@ -257,9 +257,9 @@ class m710ic(object):
 
 		return Transform_all(pose_p_all,pose_R_all)
 
-	def inv(self,p,R=np.eye(3)):
+	def inv(self,p,R=np.eye(3),last_joints=None):
 		pose=Transform(R,p)
-		q_all=robot6_sphericalwrist_invkin(self.robot_def,pose)
+		q_all=robot6_sphericalwrist_invkin(self.robot_def,pose,last_joints)
 		return q_all
 
 class arb_robot(object):

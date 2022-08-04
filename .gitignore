@@ -387,6 +387,7 @@ simulation/roboguide/data/zone_ana/*.png
 simulation/roboguide/data/zone_ana/*.npy
 simulation/roboguide/heuristic_curve_fit/data/*.png
 simulation/roboguide/**/*.png
+simulation/roboguide/**/*.gif
 simulation/roboguide/**/*.npy
 
 simulation/traj_prediction/data/
