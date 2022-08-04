@@ -26,7 +26,7 @@ def main():
 	dataset='wood/'
 	solution_dir='curve_pose_opt1/'
 	data_dir="../../data/"+dataset+solution_dir
-	cmd_dir="../../data/"+dataset+solution_dir+'100L/'
+	cmd_dir="../../data/"+dataset+solution_dir+'greedy0.05/'
 
 
 
@@ -157,7 +157,7 @@ def main():
 		#########################################adaptive step size######################
 		alpha=alpha_default
 		skip=False
-		for x in range(6):
+		for x in range(4):
 			p_bp_temp=copy.deepcopy(p_bp)
 			q_bp_temp=copy.deepcopy(q_bp)
 			###update all peaks with same step size
