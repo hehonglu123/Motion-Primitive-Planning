@@ -22,7 +22,7 @@ def get_args(message=None):
     parser.add_argument("--replayer_capacity", type=int, default=int(1e6))
     parser.add_argument("--curve_normalize_dim", type=int, default=50)
     parser.add_argument("--action_dim", type=int, default=3)
-    parser.add_argument("--max_action", type=float, default=1)
+    parser.add_argument("--max_action", type=float, default=1.)
     parser.add_argument("--warm_up", type=int, default=5)
 
     args = parser.parse_args() if message is None else parser.parse_args(message)
@@ -196,8 +196,8 @@ def main():
     agent = TD3Agent(args)
     # evaluate_all(agent, eval_dir)
 
-    agent.load('model/1600')
-    args.train_episode_start = 1600
+    agent.load('model/1400')
+    args.train_episode_start = 1400
     train(agent, data_dir, args)
     # eval_error, eval_itr = evaluate(agent, eval_dir, render=True, render_dir='render/curve1', env_mode='robot_studio')
 

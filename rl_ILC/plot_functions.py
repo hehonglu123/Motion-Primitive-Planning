@@ -79,7 +79,7 @@ def max_gradient_gif():
 
 
 if __name__ == '__main__':
-    # generate_gif("render/curve1/curve10")
+    generate_gif("render/curve1/curve10")
     # max_gradient_gif()
 
     # num_curve = 1
@@ -87,5 +87,5 @@ if __name__ == '__main__':
     #     generate_gif("render/curve2/curve{}".format(i))
     #     print("{} / {}".format(i, num_curve))
 
-    plot_training_curve('Eval Result New.csv')
+    # plot_training_curve('Eval Result.csv')
 
