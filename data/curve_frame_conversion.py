@@ -7,7 +7,7 @@ sys.path.append('../toolbox')
 from robots_def import *
 
 data_dir='wood/'
-curve_pose_dir='curve_pose_opt/'
+curve_pose_dir='curve_pose_opt3/'
 
 col_names=['X', 'Y', 'Z','direction_x','direction_y','direction_z'] 
 data = read_csv(data_dir+"Curve_dense.csv", names=col_names)

@@ -5,13 +5,17 @@ from constraint_solver import *
 
 def main():
 	dataset='wood/'
-	solution_dir='curve_pose_opt/'
+	solution_dir='curve_pose_opt3/'
 	curve = read_csv("../../data/"+dataset+solution_dir+"Curve_in_base_frame.csv",header=None).values
-	curve_js = read_csv("../../data/"+dataset+solution_dir+"Curve_js.csv",header=None).values
+	# curve_js = read_csv("../../data/"+dataset+solution_dir+"Curve_js.csv",header=None).values
+	# q_init=curve_js[0]
+
+
+	q_init=[0.085918203,	0.096852813,	0.284197147,	2.563882607,	-1.344704035,	-3.032035596]
 
 	robot=abb6640(d=50)
-	opt=lambda_opt(curve[:,:3],curve[:,3:],robot1=robot,steps=50000)
-	q_init=curve_js[0]
+	opt=lambda_opt(curve[:,:3],curve[:,3:],robot1=robot,steps=len(curve))
+	
 
 	q_out=opt.single_arm_stepwise_optimize(q_init)
 

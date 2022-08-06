@@ -145,7 +145,7 @@ class ilc_toolbox(object):
 
 				###get new speed
 				lam_blended_new=calc_lam_cs(curve_blended_new)
-				speed_est_new=traj_speed_est2(self.robot,curve_js_blended_new,lam_blended_new,vd)
+				speed_est_new=traj_speed_est(self.robot,curve_js_blended_new,lam_blended_new,vd)
 
 
 				###get new est speed - prev est speed
@@ -259,7 +259,7 @@ class ilc_toolbox(object):
 		###breakpoint_interp_2tweak_indices:	closest N breakpoints
 		###alpha:								stepsize
 
-		q_adjustment=-alpha*np.linalg.pinv(dv_dq)*(min_speed-vd)
+		q_adjustment=alpha*np.linalg.pinv(dv_dq)*(min_speed-vd)
 
 		for i in range(len(breakpoint_interp_2tweak_indices)):  #3 breakpoints
 			q_bp[breakpoint_interp_2tweak_indices[i]][0]+=q_adjustment[0][6*i:6*(i+1)]

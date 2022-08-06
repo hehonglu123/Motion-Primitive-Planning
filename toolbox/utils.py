@@ -222,27 +222,20 @@ def H_from_RT(R,T):
 def car2js(robot,q_init,curve_fit,curve_fit_R):
 	###calculate corresponding joint configs
 	curve_fit_js=[]
-	if curve_fit.shape==(3,):
-		q_all=np.array(robot.inv(curve_fit,curve_fit_R))
+	if curve_fit.shape==(3,):### if a single point
+		temp_q=robot.inv(curve_fit,curve_fit_R,last_joints=q_init)[0]
+		curve_fit_js.append(temp_q)
 
-		###choose inv_kin closest to previous joints
-		if len(curve_fit_js)>1:
-			temp_q=q_all-curve_fit_js[-1]
-		else:
-			temp_q=q_all-q_init
-		order=np.argsort(np.linalg.norm(temp_q,axis=1))
-		curve_fit_js.append(q_all[order[0]])
 	else:
 		for i in range(len(curve_fit)):
-			q_all=np.array(robot.inv(curve_fit[i],curve_fit_R[i]))
-
 			###choose inv_kin closest to previous joints
 			if len(curve_fit_js)>1:
-				temp_q=q_all-curve_fit_js[-1]
+				temp_q=robot.inv(curve_fit[i],curve_fit_R[i],last_joints=curve_fit_js[-1])[0]
 			else:
-				temp_q=q_all-q_init
-			order=np.argsort(np.linalg.norm(temp_q,axis=1))
-			curve_fit_js.append(q_all[order[0]])
+				temp_q=robot.inv(curve_fit[i],curve_fit_R[i],last_joints=q_init)[0]
+			
+			curve_fit_js.append(temp_q)
+
 	return curve_fit_js
 
 def R2w(curve_R,R_constraint=[]):

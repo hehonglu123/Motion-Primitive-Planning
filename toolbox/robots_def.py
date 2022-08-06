@@ -68,9 +68,9 @@ class abb6640(object):
 
 		return Transform_all(pose_p_all,pose_R_all)
 
-	def inv(self,p,R=np.eye(3)):
+	def inv(self,p,R=np.eye(3),last_joints=None):
 		pose=Transform(R,p)
-		q_all=robot6_sphericalwrist_invkin(self.robot_def,pose)
+		q_all=robot6_sphericalwrist_invkin(self.robot_def,pose,last_joints)
 		return q_all
 
 
@@ -128,9 +128,9 @@ class abb1200(object):
 
 		return Transform_all(pose_p_all,pose_R_all)
 
-	def inv(self,p,R=np.eye(3)):
+	def inv(self,p,R=np.eye(3),last_joints=None):
 		pose=Transform(R,p)
-		q_all=robot6_sphericalwrist_invkin(self.robot_def,pose)
+		q_all=robot6_sphericalwrist_invkin(self.robot_def,pose,last_joints)
 		return q_all
 
 class arb_robot(object):
@@ -179,9 +179,9 @@ class arb_robot(object):
 
 		return Transform_all(pose_p_all,pose_R_all)
 
-	def inv(self,p,R=np.eye(3)):
+	def inv(self,p,R=np.eye(3),last_joints=None):
 		pose=Transform(R,p)
-		q_all=robot6_sphericalwrist_invkin(self.robot_def,pose)
+		q_all=robot6_sphericalwrist_invkin(self.robot_def,pose,last_joints)
 		return q_all
 
 def yml2robdef(file):
@@ -294,7 +294,12 @@ def jdot(q,qdot):
 	return Jdotmat[-1]
 
 def main():
-	abb6640(d=50)
+	robot=abb6640(d=50)
+	p=np.array([1445.00688987, -248.17799722, 1037.37341832])
+	R=np.array([[-0.83395293, -0.1490643,  -0.53132131],
+				[ 0.17227772,  0.84437554, -0.50729709],
+				[ 0.52425461, -0.51459672, -0.678489  ]])
+	print(robot.inv(p,R,last_joints=[ 0.0859182,   0.09685281,  0.28419715,  2.56388261, -1.34470404, -3.0320356 ]))
 	return
 
 if __name__ == '__main__':
