@@ -80,8 +80,24 @@ def main():
     breakpoints1,primitives1,p_bp1,q_bp1=ms.extract_data_from_cmd(os.getcwd()+'/'+cmd_dir+'command1.csv')
     breakpoints2,primitives2,p_bp2,q_bp2=ms.extract_data_from_cmd(os.getcwd()+'/'+cmd_dir+'command2.csv')
 
+    q_bp1_start = q_bp1[0][0]
+    q_bp1_end = q_bp1[-1][-1]
+
     ###extension
     p_bp1,q_bp1,p_bp2,q_bp2,step_to_extend_end=ms.extend_dual(ms.robot1,p_bp1,q_bp1,primitives1,ms.robot2,p_bp2,q_bp2,primitives2,breakpoints1,base2_T,extension_d=300)
+
+    ## calculate step at start and end
+    step_start=None
+    step_end=None
+    for i in range(len(q_bp1)):
+        if np.all(q_bp1[i][0]==q_bp1_start):
+            step_start=i
+        if np.all(q_bp1[i][-1]==q_bp1_end):
+            step_end=i
+
+    assert step_start is not None,'Cant find step start'
+    assert step_end is not None,'Cant find step start'
+    print(step_start,step_end)
 
     ###ilc toolbox def
     ilc=ilc_toolbox([robot1,robot2],[primitives1,primitives2],base2_R,base2_p)
@@ -146,34 +162,48 @@ def main():
         plt.clf()
         # plt.show()
 
-        if i%10==0:
-            df=DataFrame({'primitives':primitives1,'points':p_bp1,'q_bp':q_bp1})
-            df.to_csv(ilc_output+'command_arm1_'+str(i)+'.csv',header=True,index=False)
-            df=DataFrame({'primitives':primitives2,'points':p_bp2,'q_bp':q_bp2})
-            df.to_csv(ilc_output+'command_arm2_'+str(i)+'.csv',header=True,index=False)
-        if max(error) < max_error_tolerance:
-            df=DataFrame({'primitives':primitives1,'points':p_bp1,'q_bp':q_bp1})
-            df.to_csv(ilc_output+'command_arm1_'+str(i)+'.csv',header=True,index=False)
-            df=DataFrame({'primitives':primitives2,'points':p_bp2,'q_bp':q_bp2})
-            df.to_csv(ilc_output+'command_arm2_'+str(i)+'.csv',header=True,index=False)
-            break
-
         # plt.figure()
         # ax = plt.axes(projection='3d')
         # ax.plot3D(relative_path[:,0], relative_path[:,1],relative_path[:,2], 'red',label='original')
         # ax.scatter3D(relative_path[breakpoints1[:-1],0], relative_path[breakpoints1[:-1],1],relative_path[breakpoints1[:-1],2], 'blue')
+        # ax.scatter3D(relative_path_exe[peaks,0], relative_path_exe[peaks,1], relative_path_exe[peaks,2],c='orange',label='worst case')
         # ax.plot3D(relative_path_exe[:,0], relative_path_exe[:,1],relative_path_exe[:,2], 'green',label='execution')
+        # ax.view_init(100, -101)
         # plt.legend()
+        # plt.savefig(ilc_output+'traj_iteration_ '+str(i))
+        # plt.clf()
         # plt.show()
-        # exit()
+
+        # if i%10==0:
+        #     df=DataFrame({'primitives':primitives1,'points':p_bp1,'q_bp':q_bp1})
+        #     df.to_csv(ilc_output+'command_arm1_'+str(i)+'.csv',header=True,index=False)
+        #     df=DataFrame({'primitives':primitives2,'points':p_bp2,'q_bp':q_bp2})
+        #     df.to_csv(ilc_output+'command_arm2_'+str(i)+'.csv',header=True,index=False)
+        # if max(error) < max_error_tolerance:
+        #     df=DataFrame({'primitives':primitives1,'points':p_bp1,'q_bp':q_bp1})
+        #     df.to_csv(ilc_output+'command_arm1_'+str(i)+'.csv',header=True,index=False)
+        #     df=DataFrame({'primitives':primitives2,'points':p_bp2,'q_bp':q_bp2})
+        #     df.to_csv(ilc_output+'command_arm2_'+str(i)+'.csv',header=True,index=False)
+        #     break
+
+        df=DataFrame({'primitives':primitives1,'points':p_bp1,'q_bp':q_bp1})
+        df.to_csv(ilc_output+'command_arm1_'+str(i)+'.csv',header=True,index=False)
+        df=DataFrame({'primitives':primitives2,'points':p_bp2,'q_bp':q_bp2})
+        df.to_csv(ilc_output+'command_arm2_'+str(i)+'.csv',header=True,index=False)
+
         ###########################plot for verification###################################
-        # p_bp_relative,_=ms.form_relative_path(np.squeeze(q_bp1),np.squeeze(q_bp2),base2_R,base2_p)
-        # plt.figure()
+        
+        p_bp_relative,_=ms.form_relative_path(np.squeeze(q_bp1),np.squeeze(q_bp2),base2_R,base2_p)
         # ax = plt.axes(projection='3d')
-        # ax.plot3D(relative_path[:,0], relative_path[:,1], relative_path[:,2], c='gray',label='original')
-        # ax.plot3D(relative_path_exe[:,0], relative_path_exe[:,1], relative_path_exe[:,2], c='red',label='execution')
-        # ax.scatter3D(p_bp_relative[:,0], p_bp_relative[:,1], p_bp_relative[:,2], c=p_bp_relative[:,2], cmap='Greens',label='breakpoints')
-        # ax.scatter(relative_path_exe[peaks,0], relative_path_exe[peaks,1], relative_path_exe[peaks,2],c='orange',label='worst case')
+        # ax.plot3D(relative_path[:,0], relative_path[:,1],relative_path[:,2], 'red',label='original')
+        # ax.scatter3D(p_bp_relative[step_start:step_end+1,0], p_bp_relative[step_start:step_end+1,1],p_bp_relative[step_start:step_end+1,2], 'blue', label='breakpoints')
+        # ax.scatter3D(relative_path_exe[peaks,0], relative_path_exe[peaks,1], relative_path_exe[peaks,2],c='orange',label='worst case')
+        # ax.scatter3D(p_bp_relative_new[breakpoint_interp_2tweak_indices,0], p_bp_relative_new[breakpoint_interp_2tweak_indices,1], p_bp_relative_new[breakpoint_interp_2tweak_indices,2], c='magenta',label='new breakpoints')
+        # ax.plot3D(relative_path_exe[:,0], relative_path_exe[:,1],relative_path_exe[:,2], 'green',label='execution')
+        # ax.view_init(100, -101)
+        # plt.legend()
+        # plt.savefig(ilc_output+'traj_iteration_ '+str(i))
+        # plt.clf()
         # plt.show()
 
         ##########################################calculate gradient for peaks######################################
@@ -186,6 +216,7 @@ def main():
         ###establish relative trajectory from blended trajectory
         relative_path_blended,relative_path_blended_R=ms.form_relative_path(curve_js_blended1,curve_js_blended2,base2_R,base2_p)
 
+        all_new_bp=[]
         for peak in peaks:
             ######gradient calculation related to nearest 3 points from primitive blended trajectory, not actual one
             _,peak_error_curve_idx=calc_error(relative_path_exe[peak],relative_path[:,:3])  # index of original curve closest to max error point
@@ -207,9 +238,15 @@ def main():
             #########plot adjusted breakpoints
             p_bp_relative_new,_=ms.form_relative_path(np.squeeze(q_bp1_new),np.squeeze(q_bp2_new),base2_R,base2_p)
 
+            for bp_new in p_bp_relative_new[breakpoint_interp_2tweak_indices]:
+                all_new_bp.append(bp_new)
+            # print(all_new_bp)
+
 
             # ax.scatter3D(p_bp_relative_new[breakpoint_interp_2tweak_indices,0], p_bp_relative_new[breakpoint_interp_2tweak_indices,1], p_bp_relative_new[breakpoint_interp_2tweak_indices,2], c='blue',label='new breakpoints')
             # plt.legend()
+            # plt.show()
+            
             # plt.show()
 
             ###update
@@ -217,6 +254,18 @@ def main():
             q_bp1=q_bp1_new
             p_bp2=p_bp2_new
             q_bp2=q_bp2_new
+        
+        all_new_bp=np.array(all_new_bp)
+        ax = plt.axes(projection='3d')
+        ax.plot3D(relative_path[:,0], relative_path[:,1],relative_path[:,2], 'red',label='original')
+        ax.scatter3D(p_bp_relative[step_start:step_end+1,0], p_bp_relative[step_start:step_end+1,1],p_bp_relative[step_start:step_end+1,2], 'blue', label='breakpoints')
+        ax.scatter3D(relative_path_exe[peaks,0], relative_path_exe[peaks,1], relative_path_exe[peaks,2],c='orange',label='worst case')
+        ax.scatter3D(all_new_bp[:,0], all_new_bp[:,1], all_new_bp[:,2], c='magenta',label='new breakpoints')
+        ax.plot3D(relative_path_exe[:,0], relative_path_exe[:,1],relative_path_exe[:,2], 'green',label='execution')
+        ax.view_init(100, -101)
+        plt.legend()
+        plt.savefig(ilc_output+'traj_iteration_ '+str(i))
+        plt.clf()
 
 
 
