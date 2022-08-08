@@ -230,11 +230,11 @@ def car2js(robot,q_init,curve_fit,curve_fit_R):
 		for i in range(len(curve_fit)):
 			###choose inv_kin closest to previous joints
 			if len(curve_fit_js)>1:
-				temp_q=robot.inv(curve_fit,curve_fit_R,last_joints=curve_fit_js[-1])[0]
+				temp_q=robot.inv(curve_fit[i],curve_fit_R[i],last_joints=curve_fit_js[-1])[0]
 			else:
-				temp_q=robot.inv(curve_fit,curve_fit_R,last_joints=q_init)[0]
+				temp_q=robot.inv(curve_fit[i],curve_fit_R[i],last_joints=q_init)[0]
 			
-			curve_fit_js.append(temp_q[0])
+			curve_fit_js.append(temp_q)
 
 	return curve_fit_js
 

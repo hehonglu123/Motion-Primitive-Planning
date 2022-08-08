@@ -138,7 +138,12 @@ class greedy_fit(fitting_toolbox):
 				self.curve_fit_js.extend(curve_fit_js[key])
 			else:
 				###inv here to save time
-				curve_fit_js=self.car2js(curve_fit[key],curve_fit_R[key])
+				if len(self.curve_fit_js)>1:
+					q_init=self.curve_fit_js[-1]
+				else:
+					q_init=self.curve_js[0]
+
+				curve_fit_js=car2js(self.robot,q_init,curve_fit[key],curve_fit_R[key])
 			
 				self.curve_fit_js.extend(curve_fit_js)
 
@@ -172,24 +177,24 @@ class greedy_fit(fitting_toolbox):
 
 
 def main():
+	dataset='wood/'
+	solution_dir='curve_pose_opt1/'
+	data_dir="../data/"+dataset+solution_dir
+
 	###read in points
 	# curve_js = read_csv("../train_data/wood/Curve_js.csv",header=None).values
-	curve_js = read_csv("../data/from_NX/Curve_js.csv",header=None).values
-	# curve_js = read_csv("../constraint_solver/dual_arm/trajectory/arm2.csv",header=None).values
+	curve_js = read_csv(data_dir+'Curve_js.csv',header=None).values
 
 	robot=abb6640(d=50)
 
-	greedy_fit_obj=greedy_fit(robot,curve_js,0.1)
-	greedy_fit_obj=greedy_fit(robot,curve_js[::10],0.5)
+	greedy_fit_obj=greedy_fit(robot,curve_js,0.05)
 
 
 	###set primitive choices, defaults are all 3
 	# greedy_fit_obj.primitives={'movel_fit':greedy_fit_obj.movel_fit_greedy,'movec_fit':greedy_fit_obj.movec_fit_greedy}
 
-	greedy_fit_obj.primitives={'movel_fit':greedy_fit_obj.movel_fit_greedy}
 	# greedy_fit_obj.primitives={'movej_fit':greedy_fit_obj.movej_fit_greedy}
 	# greedy_fit_obj.primitives={'movel_fit':greedy_fit_obj.movel_fit_greedy}
-	greedy_fit_obj.primitives={'movej_fit':greedy_fit_obj.movej_fit_greedy}
 	# greedy_fit_obj.primitives={'movec_fit':greedy_fit_obj.movec_fit_greedy}
 
 	breakpoints,primitives_choices,points,q_bp=greedy_fit_obj.fit_under_error()

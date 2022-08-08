@@ -14,8 +14,8 @@ from lambda_calc import *
 from utils import *
 
 
-data_dir='wood/'
-solution_dir='curve_pose_opt3/'
+data_dir='from_NX/'
+solution_dir='curve_pose_opt1/'
 
 num_ls=[100]
 robot=abb6640(d=50)

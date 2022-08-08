@@ -26,8 +26,8 @@ def main():
     dataset='wood/'
     solution_dir='curve_pose_opt1/'
     data_dir="../../data/"+dataset+solution_dir
-    cmd_dir='recorded_data/'
-
+    # cmd_dir='recorded_data/'
+    cmd_dir='curve1_300_curve_pose_opt/'
 
 
     curve = read_csv(data_dir+"Curve_in_base_frame.csv",header=None).values
@@ -36,7 +36,7 @@ def main():
     multi_peak_threshold=0.2
     robot=abb6640(d=50)
 
-    v=400
+    v=300
     s = speeddata(v,9999999,9999999,999999)
     z = z10
 
@@ -105,13 +105,13 @@ def main():
         
 
         ###########################plot for verification###################################
-        # plt.figure()
-        # ax = plt.axes(projection='3d')
-        # ax.plot3D(curve[:,0], curve[:,1], curve[:,2], c='gray',label='original')
-        # ax.plot3D(curve_exe[:,0], curve_exe[:,1], curve_exe[:,2], c='red',label='execution')
-        # p_bp_np=np.array([item[0] for item in p_bp])      ###np version, avoid first and last extended points
-        # ax.scatter3D(p_bp_np[:,0], p_bp_np[:,1], p_bp_np[:,2], c=p_bp_np[:,2], cmap='Greens',label='breakpoints')
-        # ax.scatter(curve_exe[max_error_idx,0], curve_exe[max_error_idx,1], curve_exe[max_error_idx,2],c='orange',label='worst case')
+        plt.figure()
+        ax = plt.axes(projection='3d')
+        ax.plot3D(curve[:,0], curve[:,1], curve[:,2], c='gray',label='original')
+        ax.plot3D(curve_exe[:,0], curve_exe[:,1], curve_exe[:,2], c='red',label='execution')
+        p_bp_np=np.array([item[0] for item in p_bp])      ###np version, avoid first and last extended points
+        ax.scatter3D(p_bp_np[:,0], p_bp_np[:,1], p_bp_np[:,2], c=p_bp_np[:,2], cmap='Greens',label='breakpoints')
+        ax.scatter(curve_exe[peaks,0], curve_exe[peaks,1], curve_exe[peaks,2],c='orange',label='worst case')
         
         
         ##########################################calculate gradient for peaks######################################
@@ -135,10 +135,10 @@ def main():
             de_dp=ilc.get_gradient_from_model_xyz(p_bp,q_bp,breakpoints_blended,curve_blended,peak_error_curve_blended_idx,robot.fwd(curve_exe_js[peak]),curve[peak_error_curve_idx,:3],breakpoint_interp_2tweak_indices)
             p_bp, q_bp=ilc.update_bp_xyz(p_bp,q_bp,de_dp,error[peak],breakpoint_interp_2tweak_indices)
 
-        # for m in breakpoint_interp_2tweak_indices:
-        #   ax.scatter(p_bp[m][0][0], p_bp[m][0][1], p_bp[m][0][2],c='blue',label='adjusted breakpoints')
-        # plt.legend()
-        # plt.show()
+        for m in breakpoint_interp_2tweak_indices:
+          ax.scatter(p_bp[m][0][0], p_bp[m][0][1], p_bp[m][0][2],c='blue',label='adjusted breakpoints')
+        plt.legend()
+        plt.show()
 
         ####joint limit visualization
         # q_bp_np=np.squeeze(np.array(q_bp))

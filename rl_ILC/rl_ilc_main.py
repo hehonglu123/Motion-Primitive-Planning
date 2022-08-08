@@ -8,7 +8,7 @@ sys.path.append('../toolbox/')
 from rl_ilc_env import ILCEnv
 from ilc_replayer import Replayer
 from td3_agent import TD3Agent
-from robots_def import abb6640,m710ic
+from robots_def import abb6640
 
 
 def get_args(message=None):
@@ -22,7 +22,7 @@ def get_args(message=None):
     parser.add_argument("--replayer_capacity", type=int, default=int(1e6))
     parser.add_argument("--curve_normalize_dim", type=int, default=50)
     parser.add_argument("--action_dim", type=int, default=3)
-    parser.add_argument("--max_action", type=float, default=1)
+    parser.add_argument("--max_action", type=float, default=1.)
     parser.add_argument("--warm_up", type=int, default=5)
 
     args = parser.parse_args() if message is None else parser.parse_args(message)
@@ -126,10 +126,6 @@ def evaluate(agent, data_dir, render=False, render_dir="", env_mode='robot_studi
     data_dir = data_dir + os.sep
 
     robot = abb6640(d=50)
-
-    if env_mode=='roboguide' or env_mode=='fanuc':
-        robot = m710ic(d=50)
-
     exec_error = 0
     num_itr = 0
     num_curve = 0
@@ -149,6 +145,7 @@ def evaluate(agent, data_dir, render=False, render_dir="", env_mode='robot_studi
                 env.render(i, save=True, save_dir=render_dir)
 
             while not done:
+
                 curve_error, curve_target, robot_pose, is_start, is_end = state
                 state_error = np.array([x.T.flatten() for x in curve_error])
                 state_target = np.array([x.T.flatten() for x in curve_target])
@@ -193,18 +190,15 @@ def evaluate_all(agent, data_dir):
 
 def main():
     args = get_args()
-    # data_dir = 'train_data/curve1'
-    # eval_dir = 'eval_data/curve1'
-
-    eval_dir = 'eval_data/curve2_fanuc'
+    data_dir = 'train_data/curve1'
+    eval_dir = 'eval_data/curve1'
 
     agent = TD3Agent(args)
     # evaluate_all(agent, eval_dir)
 
-    agent.load('model/1600')
-    eval_error, eval_itr = evaluate(agent, eval_dir, render=True, render_dir='render/curve2_fanuc', env_mode='roboguide')
-    # args.train_episode_start = 1600
-    # train(agent, data_dir, args)
+    agent.load('model/1400')
+    args.train_episode_start = 1400
+    train(agent, data_dir, args)
     # eval_error, eval_itr = evaluate(agent, eval_dir, render=True, render_dir='render/curve1', env_mode='robot_studio')
 
 

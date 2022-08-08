@@ -468,7 +468,7 @@ class lambda_opt(object):
 				return
 		return curve_js
 	def curve_pose_opt(self,x,method=1):
-		###optimize on curve pose for single arm
+		###optimize on curve pose for single arm with lambda dot calculation
 		theta0=np.linalg.norm(x[:3])	###pose rotation angle
 		k=x[:3]/theta0					###pose rotation axis
 		shift=x[3:-1]					###pose translation
@@ -477,6 +477,10 @@ class lambda_opt(object):
 		R_curve=rot(k,theta0)
 		curve_new=np.dot(R_curve,self.curve.T).T+np.tile(shift,(len(self.curve),1))
 		curve_normal_new=np.dot(R_curve,self.curve_normal.T).T
+
+		###make sure curve above ground:
+		if min(curve_new[:,3])<0:
+			return 999
 
 		R_temp=direction2R(curve_normal_new[0],-curve_new[1]+curve_new[0])
 		R=np.dot(R_temp,Rz(theta1))
@@ -489,6 +493,10 @@ class lambda_opt(object):
 			
 		except:
 			# traceback.print_exc()
+			return 999
+
+		###make sure extension possible by checking start & end configuration
+		if np.min(self.robot1.upper_limit-q_out[0])<0.2 or  np.min(q_out[0]-self.robot1.lower_limit)<0.2 or np.min(self.robot1.upper_limit-q_out[-1])<0.2 or  np.min(q_out[-1]-self.robot1.lower_limit)<0.2:
 			return 999
 		
 		dlam=calc_lamdot(q_out,self.lam,self.robot1,1)
@@ -498,7 +506,7 @@ class lambda_opt(object):
 		return -min(dlam)
 
 	def curve_pose_opt2(self,x,method=2):
-		###optimize on curve pose for single arm
+		###optimize on curve pose for single arm with speed estimation
 		theta0=np.linalg.norm(x[:3])	###pose rotation angle
 		k=x[:3]/theta0					###pose rotation axis
 		shift=x[3:-1]					###pose translation
@@ -507,6 +515,10 @@ class lambda_opt(object):
 		R_curve=rot(k,theta0)
 		curve_new=np.dot(R_curve,self.curve.T).T+np.tile(shift,(len(self.curve),1))
 		curve_normal_new=np.dot(R_curve,self.curve_normal.T).T
+
+		###make sure curve above ground:
+		if np.min(curve_new[:,2])<0:
+			return 999
 
 		R_temp=direction2R(curve_normal_new[0],-curve_new[1]+curve_new[0])
 		R=np.dot(R_temp,Rz(theta1))
@@ -521,6 +533,10 @@ class lambda_opt(object):
 			# traceback.print_exc()
 			return 999
 		
+		###make sure extension possible by checking start & end configuration
+		if np.min(self.robot1.upper_limit-q_out[0])<0.2 or  np.min(q_out[0]-self.robot1.lower_limit)<0.2 or np.min(self.robot1.upper_limit-q_out[-1])<0.2 or  np.min(q_out[-1]-self.robot1.lower_limit)<0.2:
+			return 999
+
 		speed=traj_speed_est(self.robot1,q_out,self.lam,self.v_cmd)
 
 		

@@ -25,6 +25,16 @@ class OrnsteinUhlenbeckActionNoise(object):
         self.x_prev = self.x0 if self.x0 is not None else np.zeros_like(self.mu)
 
 
+class GaussianActionNoise(object):
+    def __init__(self, action_dim, mu=0, sigma=0.1):
+        self.dim = action_dim
+        self.mu = mu
+        self.sigma = sigma
+
+    def __call__(self):
+        return np.random.normal(self.mu, self.sigma, size=self.dim)
+
+
 class Feature(nn.Module):
     def __init__(self, input_dim, output_dim, hidden_dim=128):
         super(Feature, self).__init__()
@@ -111,7 +121,8 @@ class TD3Agent(object):
         self.policy_noise = 0.2
         self.noise_clip = 0.5
         self.batch_size = 256
-        self.action_noise = OrnsteinUhlenbeckActionNoise(action_dim=self.action_dim)
+        # self.action_noise = OrnsteinUhlenbeckActionNoise(action_dim=self.action_dim)
+        self.action_noise = GaussianActionNoise(action_dim=self.action_dim)
 
         self.feature_net = Feature(input_dim=self.curve_dim, output_dim=self.curve_feature_dim)
 
