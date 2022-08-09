@@ -406,20 +406,22 @@ class ilc_toolbox(object):
 		###len(primitives)==len(breakpoints)==len(breakpoints_blended)==len(points_list)
 		for m in breakpoint_interp_2tweak_indices:  #3 breakpoints
 			for n in range(6): #6DOF, q1~q6
-				q_bp_temp=copy.deepcopy(q_bp)
+				q_bp_temp=np.array(copy.deepcopy(q_bp))
 				q_bp_temp[m][0][n]+=delta		###ADD MOVEC SUPPORT
 				
 				#restore new trajectory, only for adjusted breakpoint, 1-bp change requires traj interp from 5 bp
-				short_version=range(max(m-2,0),min(m+2,len(breakpoints_blended)-1))
+				short_version=range(max(m-2,0),min(m+2,len(breakpoints_blended)-1))						
 				curve_interp_temp, curve_R_interp_temp, curve_js_interp_temp, breakpoints_blended_temp=form_traj_from_bp(q_bp_temp[short_version],[self.primitives[i] for i in short_version],self.robot)
 
 				curve_js_blended_temp,curve_blended_temp,curve_R_blended_temp=blend_js_from_primitive(curve_interp_temp, curve_js_interp_temp, breakpoints_blended_temp, [self.primitives[i] for i in short_version],self.robot,zone=10)
 				
 				curve_blended_new=copy.deepcopy(curve_blended)
+				curve_R_blended_new=copy.deepcopy(curve_R_blended)
 				start_idx=int((breakpoints_blended[short_version[0]]+breakpoints_blended[short_version[1]])/2)
 				end_idx=int((breakpoints_blended[short_version[-1]]+breakpoints_blended[short_version[-2]])/2)
 
 				curve_blended_new[start_idx:end_idx]=curve_blended_temp[start_idx-breakpoints_blended[short_version[0]]:-1-(breakpoints_blended[short_version[-1]]-end_idx)]
+				curve_R_blended_new[start_idx:end_idx]=curve_R_blended_temp[start_idx-breakpoints_blended[short_version[0]]:-1-(breakpoints_blended[short_version[-1]]-end_idx)]
 
 				###calculate relative gradient, xyz
 				worst_case_point_shift=curve_blended_new[max_error_curve_blended_idx]-curve_blended[max_error_curve_blended_idx]
@@ -427,8 +429,9 @@ class ilc_toolbox(object):
 				de=np.linalg.norm(worst_point_pose.p+worst_case_point_shift-closest_p)-np.linalg.norm(worst_point_pose.p-closest_p)
 
 				###calculate relative gradient, ori
-				worst_case_R_shift=curve_R_blended_temp[max_error_curve_blended_idx]@curve_R_blended[max_error_curve_blended_idx].T
-				de_ori=get_angle(worst_case_R_shift@worst_point_pose.R,closest_N)-get_angle(worst_point_pose.R,closest_N)
+				worst_case_R_shift=curve_R_blended_new[max_error_curve_blended_idx]@curve_R_blended[max_error_curve_blended_idx].T
+
+				de_ori=get_angle(worst_case_R_shift[:,-1]@worst_point_pose.R,closest_N)-get_angle(worst_point_pose.R[:,-1],closest_N)
 
 				de_dp.append(de/delta)
 				de_ori_dp.append(de_ori/delta)
@@ -450,8 +453,8 @@ class ilc_toolbox(object):
 
 		bp_q_adjustment=-alpha1*np.linalg.pinv(de_dp)*max_error-alpha2*np.linalg.pinv(de_ori_dp)*max_ori_error
 		for i in range(len(breakpoint_interp_2tweak_indices)):  #3 breakpoints
-			q_bp[breakpoint_interp_2tweak_indices[i]]+=bp_q_adjustment[0][6*i:6*(i+1)]
-			p_bp[breakpoint_interp_2tweak_indices[i]]=self.robot.fwd(q_bp[breakpoint_interp_2tweak_indices[i]]).p
+			q_bp[breakpoint_interp_2tweak_indices[i]][0]+=bp_q_adjustment[0][6*i:6*(i+1)]
+			p_bp[breakpoint_interp_2tweak_indices[i]][0]=self.robot.fwd(q_bp[breakpoint_interp_2tweak_indices[i]][0]).p
 
 		return p_bp, q_bp
 

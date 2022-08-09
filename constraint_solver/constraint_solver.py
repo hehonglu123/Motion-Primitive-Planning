@@ -261,7 +261,9 @@ class lambda_opt(object):
 			if np.linalg.norm(curve_js[-1])>0:
 				break
 		return curve_js
-	def dual_arm_stepwise_optimize(self,q_init1,q_init2):
+	def dual_arm_stepwise_optimize(self,q_init1,q_init2,w1=0.03,w2=0.01):
+		###w1: weight for first robot
+		###w2: weight for second robot (larger weight path shorter)
 		#curve_normal: expressed in second robot tool frame
 		###all (jacobian) in robot2 tool frame
 		q_all1=[q_init1]
@@ -271,8 +273,8 @@ class lambda_opt(object):
 
 		#####weights
 		Kw=0.1
-		Kq=.02*np.eye(12)    #small value to make sure positive definite
-		Kq[6:,6:]=0.01*np.eye(6)		#larger weights for second robot for it moves slower
+		Kq=w1*np.eye(12)    #small value to make sure positive definite
+		Kq[6:,6:]=w2*np.eye(6)		#larger weights for second robot for it moves slower
 		KR=np.eye(3)        #gains for position and orientation error
 
 		###concatenated bounds

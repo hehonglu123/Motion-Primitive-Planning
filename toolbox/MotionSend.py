@@ -9,10 +9,11 @@ sys.path.append('../toolbox')
 from toolbox_circular_fit import *
 from lambda_calc import *
 
+R90=rot([0,1,0],np.pi/2)    ###rotation to align z to global x
 class MotionSend(object):
     def __init__(self,robot1=abb6640(d=50),robot2=abb1200(),url='http://127.0.0.1:80',base2_R=np.array([[-1,0,0],[0,-1,0],[0,0,1]]),base2_p=np.array([1500,-500,000])) -> None:
-        ###robot1: 1200
-        ###robot2: 6640 with d=50 fake link
+        ###robot1: 6640 with d=50 fake link
+        ###robot2: 1200 
         
         self.client = MotionProgramExecClient(base_url=url)
 
@@ -20,7 +21,7 @@ class MotionSend(object):
         self.robot1=robot1
         self.robot2=robot2
         
-        R90=rot([0,1,0],np.pi/2)    ###rotation to align z to global x
+        
 
         self.tool1 = tooldata(True,pose(R90.T@self.robot1.p_tool,R2q(self.robot1.R_tool@R90.T)),loaddata(1,[0,0,0.001],[1,0,0,0],0,0,0))
         self.tool2 = tooldata(True,pose(R90.T@self.robot2.p_tool,R2q(self.robot2.R_tool@R90.T)),loaddata(1,[0,0,0.001],[1,0,0,0],0,0,0))
@@ -47,7 +48,8 @@ class MotionSend(object):
         return jointt
 
     def exec_motions(self,robot,primitives,breakpoints,p_bp,q_bp,speed,zone):
-        mp = MotionProgram(tool=self.tool1)
+
+        mp = MotionProgram(tool=tooldata(True,pose(R90.T@robot.p_tool,R2q(robot.R_tool@R90.T)),loaddata(1,[0,0,0.001],[1,0,0,0],0,0,0)))
         
         for i in range(len(primitives)):
             motion = primitives[i]
@@ -350,7 +352,8 @@ class MotionSend(object):
         curve_exe_js=np.radians(np.vstack((q1,q2,q3,q4,q5,q6)).T.astype(float)[start_idx:])
         timestamp=np.array(df['timestamp'].tolist()[start_idx:]).astype(float)
         timestep=np.average(timestamp[1:]-timestamp[:-1])
-
+        # np.set_printoptions(threshold=sys.maxsize)
+        # print(timestamp)
         if realrobot:
             timestamp, curve_exe_js=lfilter(timestamp, curve_exe_js)
 
@@ -484,6 +487,8 @@ class MotionSend(object):
         curve_exe_R=curve_exe_R[start_idx:end_idx+1]
         speed=speed[start_idx:end_idx+1]
         lam=calc_lam_cs(curve_exe)
+
+
 
         return lam, curve_exe, curve_exe_R,curve_exe_js, speed, timestamp[start_idx:end_idx+1]-timestamp[start_idx]
 

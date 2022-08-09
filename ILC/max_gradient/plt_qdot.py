@@ -26,13 +26,18 @@ def main():
 	ms=MotionSend()
 
 	dataset='wood/'
-	data_dir="../../data/"+dataset
+	solution_dir='curve_pose_opt1/'
+	data_dir="../../data/"+dataset+solution_dir
+
 	curve = read_csv(data_dir+"Curve_in_base_frame.csv",header=None).values
 	###read in curve_exe
-	df = read_csv('curve1_300_qp_multipeak/curve_exe_v300_z10.csv')
+	df = read_csv('curve1_400_curve_pose_opt1/curve_exe_v400_z10.csv')
+
 	lam, curve_exe, curve_exe_R,curve_exe_js, speed, timestamp=ms.logged_data_analysis(robot,df,realrobot=True)
+
 	#############################chop extension off##################################
 	lam, curve_exe, curve_exe_R,curve_exe_js, speed, timestamp=ms.chop_extension(curve_exe, curve_exe_R,curve_exe_js, speed, timestamp,curve[0,:3],curve[-1,:3])
+
 
 	qdot_all=np.gradient(curve_exe_js,axis=0)/np.tile([np.gradient(timestamp)],(6,1)).T
 	qddot_all=np.gradient(qdot_all,axis=0)/np.tile([np.gradient(timestamp)],(6,1)).T

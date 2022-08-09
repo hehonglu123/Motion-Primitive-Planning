@@ -4,7 +4,7 @@ from constraint_solver import *
 
 from MotionSend import *
 
-data_dir='../../data/from_NX/'
+data_dir='../../data/wood/'
 relative_path=read_csv(data_dir+"Curve_dense.csv",header=None).values
 
 with open(data_dir+'dual_arm/abb1200.yaml') as file:
