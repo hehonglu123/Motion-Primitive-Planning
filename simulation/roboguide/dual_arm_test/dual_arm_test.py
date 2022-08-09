@@ -18,9 +18,10 @@ from blending import *
 
 def main():
     # curve
-    data_type='blade'
+    # data_type='blade'
     # data_type='wood'
     # data_type='blade_shift'
+    data_type='curve_line'
 
     # data and curve directory
     if data_type=='blade':
@@ -35,14 +36,19 @@ def main():
         curve_data_dir='../../../data/blade_shift/'
         cmd_dir='../data/curve_blade_shift/'
         data_dir='data/'
+    elif data_type=='curve_line':
+        curve_data_dir='../../../data/curve_line/'
+        cmd_dir='../data/curve_line/'
+        data_dir='data/'
 
     # test_type='dual_arm'
     # test_type='dual_single_arm'
-    test_type='dual_single_arm_straight' # robot2 is multiple user defined straight line
+    # test_type='dual_single_arm_straight' # robot2 is multiple user defined straight line
     # test_type='dual_single_arm_straight_50' # robot2 is multiple user defined straight line
     # test_type='dual_single_arm_straight_min' # robot2 is multiple user defined straight line
     # test_type='dual_single_arm_straight_min10' # robot2 is multiple user defined straight line
     # test_type='dual_arm_10'
+    test_type='dual_straight' # test: robot2 move a simple straight line
 
     cmd_dir=cmd_dir+test_type+'/'
 
@@ -70,8 +76,10 @@ def main():
         ms = MotionSendFANUC(robot1=robot1,robot2=robot2,utool2=3)
     elif data_type=='blade_shift':
         ms = MotionSendFANUC(robot1=robot1,robot2=robot2,utool2=4)
+    elif data_type=='curve_line':
+        ms = MotionSendFANUC(robot1=robot1,robot2=robot2,utool2=5)
 
-    s=1500 # mm/sec in leader frame
+    s=2000 # mm/sec in leader frame
     z=100 # CNT100
 
     breakpoints1,primitives1,p_bp1,q_bp1=ms.extract_data_from_cmd(os.getcwd()+'/'+cmd_dir+'command1.csv')
@@ -98,6 +106,9 @@ def main():
     elif data_type=='blade':
         extension_d=300
     elif data_type=='blade_shift':
+        extension_d=300
+    elif data_type=='curve_line':
+        # extension_d=0
         extension_d=300
     # extension_d=0
     if extension_d != 0:
@@ -158,7 +169,7 @@ def main():
     ax2.plot(lam, np.degrees(angle_error), 'y-',label='Normal Error')
     draw_y_max=max(speed)*1.05
     ax1.axis(ymin=0,ymax=draw_y_max)
-    draw_y_max=max(error)*1.05
+    draw_y_max=np.max([max(error)*1.05,0.5])
     ax2.axis(ymin=0,ymax=draw_y_max)
     ax1.set_xlabel('lambda (mm)')
     ax1.set_ylabel('Speed/lamdot (mm/s)', color='g')

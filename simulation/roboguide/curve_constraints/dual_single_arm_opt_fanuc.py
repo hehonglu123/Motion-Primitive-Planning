@@ -12,7 +12,7 @@ from fanuc_utils import *
 from error_check import *
 from utils import *
 
-data_type='blade'
+data_type='curve_line'
 
 if data_type=='blade':
     curve_data_dir='../../../data/from_NX/'
@@ -20,12 +20,25 @@ if data_type=='blade':
 elif data_type=='wood':
     curve_data_dir='../../../data/wood/'
     data_dir='../data/curve_wood/'
+elif data_type=='curve_line':
+    curve_data_dir='../../../data/curve_line/'
+    data_dir='../data/curve_line/'
 
 # robot2_type='dual_single_arm_freeze' # robot2 not moving
 # robot2_type='dual_single_arm_straight/' # robot2 is multiple user defined straight line
 # robot2_type='dual_single_arm_straight_min/' # robot2 is multiple user defined straight line
-robot2_type='dual_single_arm_straight_min10/' # robot2 is multiple user defined straight line
+# robot2_type='dual_single_arm_straight_min10/' # robot2 is multiple user defined straight line
+robot2_type='dual_straight/' # test: robot2 move a simple straight line
 Path(data_dir+robot2_type).mkdir(exist_ok=True)
+
+# blade_pose=rox.rot([0,0,1],np.pi/2)
+# print(blade_pose)
+# blade_pose=np.hstack((blade_pose,np.array([[1400],[-500],[700]])))
+# blade_pose=np.vstack((blade_pose,[0,0,0,1]))
+# print(blade_pose)
+# with open(data_dir+'blade_pose.yaml','w') as file:
+#     yaml.dump({'H':blade_pose.tolist()},file)
+# exit()
 
 # read curve relative path
 relative_path=read_csv(curve_data_dir+"Curve_dense.csv",header=None).values
@@ -58,41 +71,33 @@ with open(data_dir+'blade_pose.yaml') as file:
 # # exit()
 # robot=m900ia(R_tool=np.matmul(Ry(np.radians(90)),Rz(np.radians(180))),p_tool=np.array([0,0,0])*1000.,d=0)
 # # T_tool=robot.fwd(np.deg2rad([0,49.8,-17.2,0,65.4,0]))
-# T_tool=robot.fwd(np.deg2rad([0,48.3,-7,0,55.8,0]))
+# # T_tool=robot.fwd(np.deg2rad([0,48.3,-7,0,55.8,0]))
 # # T_tool=robot.fwd(np.deg2rad([0,0,0,0,0,0]))
-# print(T_tool)
+# # T_tool=robot.fwd(np.deg2rad([0,40.5,-28.8,0,69.3,0]))
+# T_tool=rox.Transform(np.matmul(Ry(np.radians(-90)),Rx(np.radians(180))),[1950,0,650])
 # bT=T_tool.inv()*bT
+# print(bT)
+# print(R2wpr(bT.R))
 # bT=rox.Transform(np.matmul(Ry(np.radians(90)),Rz(np.radians(180))),np.array([0,0,0])*1000.)*bT
-# # print(bT)
-# # print(R2wpr(bT.R))
 # # exit()
 # bT_T=np.vstack((np.vstack((bT.R.T,bT.p)).T,[0,0,0,1]))
 # # print(bT_T)
-# with open(data_dir+'dual_arm/tcp.yaml','w') as file:
+# with open(data_dir+'tcp.yaml','w') as file:
 #     yaml.dump({'H':bT_T.tolist()},file)
-# with open(data_dir+'dual_arm/tcp.yaml') as file:
-#     H_tcp = np.array(yaml.safe_load(file)['H'],dtype=np.float64)
-# # print(H_tcp)
-# # bT_array=
-# # print(bT.inv())
-# from fanuc_motion_program_exec_client import *
-# print(R2wpr(bT.R))
 # exit()
 ##################################################
-
-curve_js1=read_csv(data_dir+"Curve_js.csv",header=None).values
 
 opt=lambda_opt(relative_path[:,:3],relative_path[:,3:],robot1=robot1,robot2=robot2,base2_R=base2_R,base2_p=base2_p,steps=50000)
 
 # ms = MotionSend(robot2=robot2,base2_R=base2_R,base2_p=base2_p)
 ms = MotionSendFANUC(robot1=robot1,robot2=robot2)
-q_init1=curve_js1[0]
+
 q_init2=ms.calc_robot2_q_from_blade_pose(blade_pose,base2_R,base2_p)
-print(np.rad2deg(q_init2))
+# print(np.rad2deg(q_init2))
 
 ##### user defined robot2 curve
 ## 1. robot2 does not move
-q_out2=np.tile(q_init2,(len(relative_path),1)) 
+# q_out2=np.tile(q_init2,(len(relative_path),1)) 
 ## 2. robot2 move to defined pose with defined steps
 # robot2_path=np.array([q_init2,np.deg2rad([9.1,39.2,-19.3,-18.4,37.4,13.4]),np.deg2rad([17.9,42.4,-13.5,-44.4,27.9,33.5]),\
 #                     np.deg2rad([24.6,51.9,17,-147.9,38.5,133.8])])
@@ -105,7 +110,10 @@ q_out2=np.tile(q_init2,(len(relative_path),1))
 # robot2_step=[49999]
 # robot2_path=np.array([q_init2,np.deg2rad([2.9,53,-10.4,-3.3,61.9,1.5])]) # min (100)
 # robot2_step=[49999]
-robot2_path=np.array([q_init2,np.deg2rad([0.3,50.2,-16.5,-0.4,65.1,0.2])]) # min10
+# robot2_path=np.array([q_init2,np.deg2rad([0.3,50.2,-16.5,-0.4,65.1,0.2])]) # min10
+# robot2_step=[49999]
+robot2_path=np.array([q_init2,car2js(robot2,q_init2,np.array([2100,1000,700]),Rz(np.radians(-90)))[0]])
+print(robot2_path)
 robot2_step=[49999]
 ###########################################
 
@@ -150,6 +158,11 @@ for i in range(len(q_out2)):
     curve_normal_base1.append(this_curve_normal_base1)
 curve_base1=np.array(curve_base1)
 curve_normal_base1=np.array(curve_normal_base1)
+
+# proposed q_init1
+# curve_js1=read_csv(data_dir+"Curve_js.csv",header=None).values
+# q_init1=curve_js1[0]
+q_init1=car2js(robot1,np.deg2rad([23.9,4.1,-11.9,16,-47.3,-31.9]),curve_base1[0],Ry(np.radians(180)))[0]
 
 q_out1=opt.single_arm_stepwise_optimize(q_init1,curve=curve_base1,curve_normal=curve_normal_base1)
 

@@ -10,7 +10,7 @@ from robots_def import *
 from utils import *
 from lambda_calc import *
 
-data_type='blade'
+data_type='curve_line'
 
 if data_type=='blade':
     curve_data_dir='../../../data/from_NX/'
@@ -21,14 +21,18 @@ elif data_type=='wood':
 elif data_type=='blade_shift':
     curve_data_dir='../../../data/blade_shift/'
     data_dir='../data/curve_blade_shift/'
+elif data_type=='curve_line':
+    curve_data_dir='../../../data/curve_line/'
+    data_dir='../data/curve_line/'
 
 # output_dir='dual_arm/'
 # output_dir='dual_single_arm/'
 # output_dir='dual_single_arm_straight/' # robot2 is multiple user defined straight line
-output_dir='dual_single_arm_straight_50/' # robot2 is multiple user defined straight line
+# output_dir='dual_single_arm_straight_50/' # robot2 is multiple user defined straight line
 # output_dir='dual_single_arm_straight_min/' # robot2 is multiple user defined straight line
 # output_dir='dual_single_arm_straight_min10/' # robot2 is multiple user defined straight line
 # output_dir='dual_arm_10/'
+output_dir='dual_straight/' # test: robot2 move a simple straight line
 
 # num_ls=[100]
 num_ls=[50]
