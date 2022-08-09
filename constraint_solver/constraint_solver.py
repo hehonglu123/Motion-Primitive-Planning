@@ -283,10 +283,6 @@ class lambda_opt(object):
 		lower_limit=np.hstack((self.robot1.lower_limit,self.robot2.lower_limit))
 		joint_acc_limit=np.hstack((self.robot1.joint_acc_limit,self.robot2.joint_acc_limit))
 
-		###moving weights, p1 p2,r1 r2
-		weight_distro=np.array([[1,1],
-								[1,1]])
-
 		for i in range(len(self.curve)):
 			print(i)
 			try:
@@ -314,9 +310,11 @@ class lambda_opt(object):
 					J2R=np.dot(pose2_now.R.T,J2[:3,:])
 					J2R_mod=-np.dot(hat(np.dot(pose2_world_now.R.T,pose1_now.R[:,-1])),J2R)
 
-					#form 6x12 jacobian with weight distribution
-					J_all_p=np.hstack((weight_distro[0,0]*J1p,-weight_distro[0,1]*J2p))
-					J_all_R=np.hstack((weight_distro[1,0]*J1R_mod,-weight_distro[1,1]*J2R_mod))
+					p12_2=pose2_world_now.R.T@(pose1_now.p-pose2_world_now.p)
+					
+					#form 6x12 jacobian with weight distribution, velocity propogate from rotation of TCP2
+					J_all_p=np.hstack((J1p,-J2p+hat(p12_2)@J2R))
+					J_all_R=np.hstack((J1R_mod,-J2R_mod))
 					
 					H=np.dot(np.transpose(J_all_p),J_all_p)+Kq+Kw*np.dot(np.transpose(J_all_R),J_all_R)
 					H=(H+np.transpose(H))/2

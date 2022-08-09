@@ -18,8 +18,8 @@ from error_check import *
 from MotionSend import *
 
 def main():
-    dataset='from_NX/'
-    solution_dir='qp1_300/'
+    dataset='wood/'
+    solution_dir='qp3_30L/'
     data_dir="../../../data/"+dataset
     relative_path = read_csv(data_dir+"/Curve_dense.csv", header=None).values
 
@@ -36,47 +36,57 @@ def main():
 
     ms = MotionSend(robot1=robot1,robot2=robot2,base2_R=base2_R,base2_p=base2_p)
 
-    s1=9999
-    s2=500
-    z=10
-    v1 = speeddata(s1,9999999,9999999,999999)
-    v2 = speeddata(s2,9999999,9999999,999999)
+    s2_all=[100,300,500,700]
+
+    for s2 in s2_all:
+        s1=9999
+        zone=10
+        v1 = speeddata(s1,9999999,9999999,999999)
+        v2 = speeddata(s2,9999999,9999999,999999)
+        z= zonedata(False,zone,1.5*zone,1.5*zone,0.15*zone,1.5*zone,0.15*zone)
 
 
-    breakpoints1,primitives1,p_bp1,q_bp1=ms.extract_data_from_cmd(data_dir+'/dual_arm/'+solution_dir+'command1.csv')
-    breakpoints2,primitives2,p_bp2,q_bp2=ms.extract_data_from_cmd(data_dir+'/dual_arm/'+solution_dir+'command2.csv')
+        breakpoints1,primitives1,p_bp1,q_bp1=ms.extract_data_from_cmd(data_dir+'/dual_arm/'+solution_dir+'command1.csv')
+        breakpoints2,primitives2,p_bp2,q_bp2=ms.extract_data_from_cmd(data_dir+'/dual_arm/'+solution_dir+'command2.csv')
 
-    ###extension
-    p_bp1,q_bp1,p_bp2,q_bp2=ms.extend_dual(ms.robot1,p_bp1,q_bp1,primitives1,ms.robot2,p_bp2,q_bp2,primitives2,breakpoints1)
+        ###extension
+        p_bp1,q_bp1,p_bp2,q_bp2=ms.extend_dual(ms.robot1,p_bp1,q_bp1,primitives1,ms.robot2,p_bp2,q_bp2,primitives2,breakpoints1)
 
-    logged_data=ms.exec_motions_multimove(breakpoints1,primitives1,primitives2,p_bp1,p_bp2,q_bp1,q_bp2,v1,v2,z10,z10)
+        logged_data=ms.exec_motions_multimove(breakpoints1,primitives1,primitives2,p_bp1,p_bp2,q_bp1,q_bp2,v1,v2,z,z)
+        # Write log csv to file
+        with open("recorded_data/curve_exe_v"+str(s2)+'_z'+str(zone)+'.csv',"w") as f:
+            f.write(logged_data)
+        StringData=StringIO(logged_data)
+        df = read_csv(StringData, sep =",")
+        lam, curve_exe1,curve_exe2,curve_exe_R1,curve_exe_R2,curve_exe_js1,curve_exe_js2, speed, timestamp, relative_path_exe,relative_path_exe_R = ms.logged_data_analysis_multimove(df,base2_R,base2_p)
+        #############################chop extension off##################################
+        lam, curve_exe1,curve_exe2,curve_exe_R1,curve_exe_R2,curve_exe_js1,curve_exe_js2, speed, timestamp, relative_path_exe, relative_path_exe_R=\
+            ms.chop_extension_dual(lam, curve_exe1,curve_exe2,curve_exe_R1,curve_exe_R2,curve_exe_js1,curve_exe_js2, speed, timestamp, relative_path_exe,relative_path_exe_R,relative_path[0,:3],relative_path[-1,:3])
+        
+        speed1=get_speed(curve_exe1,timestamp)
+        speed2=get_speed(curve_exe2,timestamp)
+        ###calculate error
+        error,angle_error=calc_all_error_w_normal(relative_path_exe,relative_path[:,:3],relative_path_exe_R[:,:,-1],relative_path[:,3:])
 
-    StringData=StringIO(logged_data)
-    df = read_csv(StringData, sep =",")
-    lam, curve_exe1,curve_exe2,curve_exe_R1,curve_exe_R2,curve_exe_js1,curve_exe_js2, speed, timestamp, relative_path_exe,relative_path_exe_R = ms.logged_data_analysis_multimove(df,base2_R,base2_p)
-    #############################chop extension off##################################
-    lam, curve_exe1,curve_exe2,curve_exe_R1,curve_exe_R2,curve_exe_js1,curve_exe_js2, speed, timestamp, relative_path_exe, relative_path_exe_R=\
-        ms.chop_extension_dual(lam, curve_exe1,curve_exe2,curve_exe_R1,curve_exe_R2,curve_exe_js1,curve_exe_js2, speed, timestamp, relative_path_exe,relative_path_exe_R,relative_path[0,:3],relative_path[-1,:3])
-    
-    ###calculate error
-    error,angle_error=calc_all_error_w_normal(relative_path_exe,relative_path[:,:3],relative_path_exe_R[:,:,-1],relative_path[:,3:])
+        fig, ax1 = plt.subplots()
 
-    fig, ax1 = plt.subplots()
+        ax2 = ax1.twinx()
+        ax1.plot(lam,speed, 'g-', label='Relative Speed')
+        ax1.plot(lam,speed1, 'r-', label='TCP1 Speed')
+        ax1.plot(lam,speed2, 'm-', label='TCP2 Speed')
+        ax2.plot(lam, error, 'b-',label='Error')
+        ax2.plot(lam, np.degrees(angle_error), 'y-',label='Normal Error')
 
-    ax2 = ax1.twinx()
-    ax1.plot(lam,speed, 'g-', label='Speed')
-    ax2.plot(lam, error, 'b-',label='Error')
-    ax2.plot(lam, np.degrees(angle_error), 'y-',label='Normal Error')
+        ax1.set_xlabel('lambda (mm)')
+        ax1.set_ylabel('Speed/lamdot (mm/s)', color='g')
+        ax2.set_ylabel('Error (mm)', color='b')
+        plt.title("Speed: "+dataset+'v'+str(s2)+'_z'+str(zone))
+        ax1.legend(loc=0)
 
-    ax1.set_xlabel('lambda (mm)')
-    ax1.set_ylabel('Speed/lamdot (mm/s)', color='g')
-    ax2.set_ylabel('Error (mm)', color='b')
-    plt.title("Speed: "+dataset+str(s2)+'_z'+str(z))
-    ax1.legend(loc=0)
+        ax2.legend(loc=0)
 
-    ax2.legend(loc=0)
-
-    plt.legend()
-    plt.show()
+        plt.legend()
+        plt.savefig('recorded_data/curve_exe_v'+str(s2)+'_z'+str(zone))
+        plt.show()
 if __name__ == "__main__":
     main()

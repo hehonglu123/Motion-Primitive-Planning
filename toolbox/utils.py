@@ -6,6 +6,13 @@ from scipy import signal
 import scipy
 from sklearn.cluster import KMeans
 
+def get_speed(curve_exe,timestamp):
+	d_curve_exe=np.gradient(curve_exe,axis=0)
+	speed=np.linalg.norm(d_curve_exe,axis=1)/np.gradient(timestamp)
+	speed=replace_outliers(speed)
+	speed=replace_outliers2(speed)
+	return speed
+
 def clip_joints(robot,curve_js,relax=0.05):
 	curve_js_clipped=np.zeros(curve_js.shape)
 	for i in range(len(curve_js[0])):

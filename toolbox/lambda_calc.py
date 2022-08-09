@@ -430,6 +430,203 @@ def traj_speed_est_dual(robot1,robot2,curve_js1,curve_js2,base2_R,base2_p,lam,vd
 
 	return speed
 
+def traj_speed_est_dual2(robot1,robot2,curve_js1,curve_js2,base2_R,base2_p,lam2,v2d,qdot_init1=[],qdot_init2=[]):
+	#############################TCP relative speed esitmation with dual arm##############################
+	###curve1_js & curve2_js must have same dimension
+	curve_js=np.hstack((curve_js1,curve_js2))
+	qdot_lim=np.hstack((robot1.joint_vel_limit,robot2.joint_vel_limit))
+	qddot_lim=np.hstack((robot1.joint_acc_limit,robot2.joint_acc_limit))
+
+	# ###form relative path
+	# curve_relative=form_relative_path(robot1,robot2,curve_js1,curve_js2,base2_R,base2_p)
+
+	###find desired qdot at each step
+	dq=np.gradient(curve_js,axis=0)
+	dlam2=np.gradient(lam2)
+	dt=dlam2/v2d
+	qdot_d=np.divide(dq,np.tile(np.array([dt]).T,(1,12)))
+	###bound desired qdot with qdot constraint
+	qdot_max=np.tile(qdot_lim,(len(curve_js),1))
+	coeff=np.divide(np.abs(qdot_d),qdot_max)
+	coeff=np.max(coeff,axis=1)	###get the limiting joint
+	coeff=np.clip(coeff,1,999)	###clip coeff to 1
+	coeff=np.tile(np.array([coeff]).T,(1,12))
+
+	qdot=np.divide(qdot_d,coeff)	###clip propotionally
+
+	#traversal
+	if len(qdot_init1)==0:
+		qdot_act=[qdot[0]]
+	else:
+		qdot_act=[np.hstack((qdot_init1,qdot_init2))]
+
+
+	speed=[]
+	speed1=[]
+	speed2=[]
+	alpha_all=[]
+
+	for i in range(0,len(curve_js1)):
+		pose1_now=robot1.fwd(curve_js1[i])
+		pose2_now=robot2.fwd(curve_js2[i])
+		pose2_world_now=robot2.fwd(curve_js2[i],base2_R,base2_p)
+
+		J1=robot1.jacobian(curve_js1[i])
+		J2=robot2.jacobian(curve_js2[i])
+
+		J1p=np.dot(pose2_world_now.R.T,J1[3:,:])
+		J2p=np.dot(pose2_now.R.T,J2[3:,:])
+		J2R=np.dot(pose2_now.R.T,J2[:3,:])
+
+		p12_2=pose2_world_now.R.T@(pose1_now.p-pose2_world_now.p)
+		J_p=np.hstack((J1p,-J2p+hat(p12_2)@J2R))
+		speed.append(np.linalg.norm(J_p@qdot_act[-1]))
+
+
+		speed1.append(np.linalg.norm(J1p@qdot_act[-1][:6]))
+		speed2.append(np.linalg.norm(J2p@qdot_act[-1][6:]))
+
+
+		qddot=(qdot[i]-qdot_act[-1])/dt[i]
+
+		if np.any(np.abs(qddot)>qddot_lim):
+			alpha=fminbound(q_linesearch,0,1,args=(qdot_act[-1],qdot[i],dt[i],qddot_lim))
+		else:
+			alpha=1
+
+		alpha_all.append(alpha)
+		qdot_act.append(alpha*qdot[i])
+
+	############################################forward/backward traversal##################################
+	speed=np.array(speed)
+	qdot_act=np.array(qdot_act)
+
+	alpha_all=np.array(alpha_all)
+	alpha_jump_thresh=0.1
+	alpha_smooth_thresh=0.01
+	reverse=True
+	iteration_num=0
+	# plt.plot(speed)
+	# plt.show()
+
+	while np.max(np.abs(np.diff(alpha_all)))>alpha_jump_thresh:
+		###identify large speed drop due to invalid acc from cur point
+		large_drop_indices1,_=find_peaks(-speed)
+		large_drop_indices2=np.squeeze(np.argwhere(np.abs(np.diff(alpha_all))>alpha_jump_thresh))
+		large_drop_indices=np.intersect1d(large_drop_indices1,large_drop_indices2)
+		if reverse:
+			for large_drop_idx in large_drop_indices:
+				###find closet point to start backtracking, without jump in alpha
+				smooth_idx=np.argwhere(np.abs(np.diff(alpha_all))<alpha_smooth_thresh)
+				temp_arr=smooth_idx-large_drop_idx
+				back_trak_start_idx=min(len(curve_js)-2,smooth_idx[np.where(temp_arr > 0, temp_arr, np.inf).argmin()][0]+1) ###+/-1 here because used diff
+
+				# print('backtrak')
+				# print(back_trak_start_idx,large_drop_idx)
+				###traverse backward
+				for i in range(back_trak_start_idx,1,-1):
+
+					qddot=(qdot_act[i+1]-qdot[i])/dt[i]
+
+					if np.any(np.abs(qddot)>qddot_lim):
+						alpha=fminbound(q_linesearch,0,1,args=(qdot_act[i+1],qdot[i],dt[i],qddot_lim))
+					else:
+						if i<large_drop_idx:
+							reverse=False
+							break
+						alpha=1
+
+					# print(i,alpha)
+					qdot_act[i]=alpha*qdot[i]
+					alpha_all[i]=alpha
+					####update speed
+					pose1_now=robot1.fwd(curve_js1[i])
+					pose2_now=robot2.fwd(curve_js2[i])
+					pose2_world_now=robot2.fwd(curve_js2[i],base2_R,base2_p)
+
+					J1=robot1.jacobian(curve_js1[i])
+					J2=robot2.jacobian(curve_js2[i])
+
+					J1p=np.dot(pose2_world_now.R.T,J1[3:,:])
+					J2p=np.dot(pose2_now.R.T,J2[3:,:])
+					J2R=np.dot(pose2_now.R.T,J2[:3,:])
+
+					p12_2=pose2_world_now.R.T@(pose1_now.p-pose2_world_now.p)
+					J_p=np.hstack((J1p,-J2p+hat(p12_2)@J2R))
+					speed[i]=np.linalg.norm(J_p@qdot_act[i])
+
+
+					speed1[i]=np.linalg.norm(J1p@qdot_act[i][:6])
+					speed2[i]=np.linalg.norm(J2p@qdot_act[i][6:])
+
+
+		else:
+			for large_drop_idx in large_drop_indices:
+			# large_drop_idx=np.argwhere(np.abs(np.diff(alpha_all))>alpha_jump_thresh)[0][0]
+
+				###find closet point to start forwardtracking, without jump in alpha
+				smooth_idx=np.argwhere(np.abs(np.diff(alpha_all))<alpha_smooth_thresh)
+				temp_arr=smooth_idx-large_drop_idx
+				trak_start_idx=max(0,smooth_idx[np.where(temp_arr < 0, temp_arr, -np.inf).argmax()][0]-1)
+				# print('forward')
+				# print(trak_start_idx,large_drop_idx)
+				###traverse backward
+				for i in range(trak_start_idx,len(curve_js)):
+
+					qddot=(qdot_act[i-1]-qdot[i])/dt[i]
+
+					if np.any(np.abs(qddot)>qddot_lim):
+						alpha=fminbound(q_linesearch,0,1,args=(qdot_act[i-1],qdot[i],dt[i],qddot_lim))
+					else:
+						if i>large_drop_idx:
+							reverse=True
+							break
+						alpha=1
+					# print(i,alpha)
+					qdot_act[i]=alpha*qdot[i]
+					alpha_all[i]=alpha
+
+					####update speed
+					pose1_now=robot1.fwd(curve_js1[i])
+					pose2_now=robot2.fwd(curve_js2[i])
+					pose2_world_now=robot2.fwd(curve_js2[i],base2_R,base2_p)
+
+					J1=robot1.jacobian(curve_js1[i])
+					J2=robot2.jacobian(curve_js2[i])
+
+					J1p=np.dot(pose2_world_now.R.T,J1[3:,:])
+					J2p=np.dot(pose2_now.R.T,J2[3:,:])
+					J2R=np.dot(pose2_now.R.T,J2[:3,:])
+
+					p12_2=pose2_world_now.R.T@(pose1_now.p-pose2_world_now.p)
+					J_p=np.hstack((J1p,-J2p+hat(p12_2)@J2R))
+					speed[i]=np.linalg.norm(J_p@qdot_act[i])
+
+
+					speed1[i]=np.linalg.norm(J1p@qdot_act[i][:6])
+					speed2[i]=np.linalg.norm(J2p@qdot_act[i][6:])
+
+		# plt.plot(speed)
+		# plt.show()
+
+		iteration_num+=1
+		if iteration_num>10:
+			# print('exceed speed iteration')
+			qdot_act=0.9*qdot_act
+			if iteration_num>20:
+				break
+		# print(np.max(np.abs(np.diff(alpha_all))))
+
+
+	###smooth out trajectory
+	speed=replace_outliers2(speed,threshold=0.00001)
+	speed=moving_average(speed,n=5,padding=True)
+
+	#####################################################################
+
+
+	return speed, speed1, speed2
+
 def main():
 	###lamdot calculation
 	robot=abb6640(d=50)
@@ -548,7 +745,7 @@ def main3():
 		plt.show()
 
 def main4():
-	###speed estimation dual
+	###speed estimation dual given desired relative speed
 	from MotionSend import MotionSend
 
 	dataset='wood/'
@@ -598,5 +795,84 @@ def main4():
 		plt.title('Speed Estimation for v'+str(v_cmd))
 		plt.show()
 
+def main5():
+	###speed estimation dual given second robot cmd speed
+	from MotionSend import MotionSend
+
+	dataset='wood/'
+	data_dir='../data/'+dataset
+	solution_dir='qp3_30L/'
+
+	relative_path=read_csv(data_dir+"Curve_dense.csv",header=None).values
+
+	with open(data_dir+'dual_arm/abb1200.yaml') as file:
+		H_1200 = np.array(yaml.safe_load(file)['H'],dtype=np.float64)
+
+	base2_R=H_1200[:3,:3]
+	base2_p=1000*H_1200[:-1,-1]
+
+	with open(data_dir+'dual_arm/tcp.yaml') as file:
+		H_tcp = np.array(yaml.safe_load(file)['H'],dtype=np.float64)
+
+	robot2=abb1200(R_tool=H_tcp[:3,:3],p_tool=H_tcp[:-1,-1])
+	robot1=abb6640(d=50)
+
+	ms = MotionSend(robot2=robot2,base2_R=base2_R,base2_p=base2_p)
+
+	exe_dir='../simulation/robotstudio_sim/multimove/'+dataset+solution_dir
+
+	v_cmds=[700]
+	for v_cmd in v_cmds:
+
+		###read actual exe file
+		df = read_csv(exe_dir+"curve_exe"+"_v"+str(v_cmd)+"_z10.csv")
+		lam_exe, curve_exe1,curve_exe2,curve_exe_R1,curve_exe_R2,curve_exe_js1,curve_exe_js2, speed, timestamp, relative_path_exe,relative_path_exe_R = ms.logged_data_analysis_multimove(df,base2_R,base2_p,realrobot=True)
+
+		lam_exe, curve_exe1,curve_exe2,curve_exe_R1,curve_exe_R2,curve_exe_js1,curve_exe_js2, speed, timestamp, relative_path_exe, relative_path_exe_R=\
+			ms.chop_extension_dual(lam_exe, curve_exe1,curve_exe2,curve_exe_R1,curve_exe_R2,curve_exe_js1,curve_exe_js2, speed, timestamp, relative_path_exe,relative_path_exe_R,relative_path[0,:3],relative_path[-1,:3])
+
+		error,angle_error=calc_all_error_w_normal(relative_path_exe,relative_path[:,:3],relative_path_exe_R[:,:,-1],relative_path[:,3:])
+		print('max error: ', np.max(error))
+
+		speed1=get_speed(curve_exe1,timestamp)
+		speed2=get_speed(curve_exe2,timestamp)
+
+		lam2=calc_lam_cs(curve_exe2)
+		speed_est,speed1_est,speed2_est=traj_speed_est_dual2(robot1,robot2,curve_exe_js1,curve_exe_js2,base2_R,base2_p,lam2,v_cmd)
+
+
+		plt.plot(lam_exe,speed_est,label='estimated')
+		plt.plot(lam_exe,speed,label='actual')
+
+
+		plt.legend()
+		plt.xlabel('lambda (mm)')
+		plt.ylabel('Speed (mm/s)')
+		plt.title('Speed Estimation for v'+str(v_cmd))
+		plt.show()
+
+		plt.plot(lam_exe,speed1_est,label='estimated')
+		plt.plot(lam_exe,speed1,label='actual')
+
+
+		plt.legend()
+		plt.xlabel('lambda (mm)')
+		plt.ylabel('Speed (mm/s)')
+		plt.title('TCP1 Speed Estimation for v'+str(v_cmd))
+		plt.show()
+
+		plt.plot(lam_exe,speed2_est,label='estimated')
+		plt.plot(lam_exe,speed2,label='actual')
+
+
+		plt.legend()
+		plt.xlabel('lambda (mm)')
+		plt.ylabel('Speed (mm/s)')
+		plt.title('TCP2 Speed Estimation for v'+str(v_cmd))
+		plt.show()
+
+		
+
+
 if __name__ == "__main__":
-	main4()
+	main5()
