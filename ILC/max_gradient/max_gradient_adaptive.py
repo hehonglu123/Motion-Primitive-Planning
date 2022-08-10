@@ -25,35 +25,35 @@ from blending import *
 def main():
 	robot=abb6640(d=50)
 
-	# dataset='wood/'
-	# solution_dir='curve_pose_opt1/'
-	# data_dir="../../data/"+dataset+solution_dir
-	# cmd_dir="../../data/"+dataset+solution_dir+'greedy_LJ_0.02/'
-	# curve = read_csv(data_dir+"Curve_in_base_frame.csv",header=None).values
-
-	dataset='wood/dual_arm/'
-	solution_dir='diffevo1_50L/'
+	dataset='wood/'
+	solution_dir='curve_pose_opt1/'
 	data_dir="../../data/"+dataset+solution_dir
-	cmd_dir="../../data/"+dataset+solution_dir
-	arm1_js=read_csv(data_dir+"arm1.csv",header=None).values
-	pose_all=robot.fwd_all(arm1_js)
-	curve=np.hstack((pose_all.p_all,pose_all.R_all[:,:,-1]))
+	cmd_dir="../../data/"+dataset+solution_dir+'100L/'
+	curve = read_csv(data_dir+"Curve_in_base_frame.csv",header=None).values
+
+	# dataset='wood/dual_arm/'
+	# solution_dir='diffevo1_50L/'
+	# data_dir="../../data/"+dataset+solution_dir
+	# cmd_dir="../../data/"+dataset+solution_dir
+	# arm1_js=read_csv(data_dir+"arm1.csv",header=None).values
+	# pose_all=robot.fwd_all(arm1_js)
+	# curve=np.hstack((pose_all.p_all,pose_all.R_all[:,:,-1]))
 
 
 
 	multi_peak_threshold=0.2
 	
 
-	v=1500
+	v=400
 	s = speeddata(v,9999999,9999999,999999)
-	zone=10
+	zone=1
 	z = zonedata(False,zone,1.5*zone,1.5*zone,0.15*zone,1.5*zone,0.15*zone)
 
 	alpha_default=1.
 	skip=False
 
 	ms = MotionSend()
-	breakpoints,primitives,p_bp,q_bp=ms.extract_data_from_cmd(cmd_dir+'command1.csv')
+	breakpoints,primitives,p_bp,q_bp=ms.extract_data_from_cmd(cmd_dir+'command.csv')
 
 	###extension
 	p_bp,q_bp=ms.extend(robot,q_bp,primitives,breakpoints,p_bp,extension_start=100,extension_end=100)
