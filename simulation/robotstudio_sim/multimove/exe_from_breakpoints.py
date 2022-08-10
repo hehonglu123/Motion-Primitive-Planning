@@ -19,7 +19,7 @@ from MotionSend import *
 
 def main():
     dataset='wood/'
-    solution_dir='qp3_30L/'
+    solution_dir='diffevo1_50L/'
     data_dir="../../../data/"+dataset
     relative_path = read_csv(data_dir+"/Curve_dense.csv", header=None).values
 
@@ -36,7 +36,8 @@ def main():
 
     ms = MotionSend(robot1=robot1,robot2=robot2,base2_R=base2_R,base2_p=base2_p)
 
-    s2_all=[100,300,500,700]
+    ###specify speed here for robot2
+    s2_all=[1500]
 
     for s2 in s2_all:
         s1=9999

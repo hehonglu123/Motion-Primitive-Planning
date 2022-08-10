@@ -375,63 +375,8 @@ def traj_speed_est(robot,curve_js,lam,vd,qdot_init=[]):
 
 def traj_speed_est_dual(robot1,robot2,curve_js1,curve_js2,base2_R,base2_p,lam,vd,qdot_init1=[],qdot_init2=[]):
 	#############################TCP relative speed esitmation with dual arm##############################
-	###curve1_js & curve2_js must have same dimension
-	curve_js_all=np.hstack((curve_js1,curve_js2))
-	qdot_lim_all=np.hstack((robot1.joint_vel_limit,robot2.joint_vel_limit))
-	qddot_lim_all=np.hstack((robot1.joint_acc_limit,robot2.joint_acc_limit))
+	###lam & vd must both be 1. relative or 2. robot2's TCP
 
-	# ###form relative path
-	# curve_relative=form_relative_path(robot1,robot2,curve_js1,curve_js2,base2_R,base2_p)
-
-	###find desired qdot at each step
-	dq=np.gradient(curve_js_all,axis=0)
-	dlam=np.gradient(lam)
-	dt=dlam/vd
-	qdot_d_all=np.divide(dq,np.tile(np.array([dt]).T,(1,12)))
-	###bound desired qdot with qdot constraint
-	qdot_max_all=np.tile(qdot_lim_all,(len(curve_js_all),1))
-	coeff=np.divide(np.abs(qdot_d_all),qdot_max_all)
-	coeff=np.max(coeff,axis=1)	###get the limiting joint
-	coeff=np.clip(coeff,1,999)	###clip coeff to 1
-	coeff=np.tile(np.array([coeff]).T,(1,12))
-
-	qdot_all=np.divide(qdot_d_all,coeff)	###clip propotionally
-
-	#traversal
-	if len(qdot_init1)==0:
-		qdot_all_act=[qdot_all[0]]
-	else:
-		qdot_all_act=[np.hstack((qdot_init1,qdot_init2))]
-
-	J1_0=robot1.jacobian(curve_js1[0])
-	J2_0=robot2.jacobian(curve_js2[0])
-	speed1=(J1_0@qdot_all_act[0][:6])[3:]
-	speed2=base2_R@(J2_0@qdot_all_act[0][6:])[3:]
-	speed=[np.linalg.norm(speed1+speed2)]
-
-
-	for i in range(1,len(curve_js1)):
-		# qddot=(qdot[i]-qdot_act[-1])/dt[i]
-
-		# if np.any(np.abs(qddot)>robot.joint_acc_limit):
-		# 	alpha=fminbound(q_linesearch,0,1,args=(qdot_act[-1],qdot[i],dt[i],robot.joint_acc_limit))
-
-		# else:
-		# 	alpha=1
-		# qdot_act.append(alpha*qdot[i])
-		# alpha_all.append(alpha)
-
-		J1=robot1.jacobian(curve_js1[i])
-		J2=robot2.jacobian(curve_js2[i])
-		speed1=(J1@qdot_d_all[i][:6])[3:]
-		speed2=base2_R@(J2@qdot_d_all[i][6:])[3:]
-		speed.append(np.linalg.norm(speed1+speed2))
-
-
-	return speed
-
-def traj_speed_est_dual2(robot1,robot2,curve_js1,curve_js2,base2_R,base2_p,lam2,v2d,qdot_init1=[],qdot_init2=[]):
-	#############################TCP relative speed esitmation with dual arm##############################
 	###curve1_js & curve2_js must have same dimension
 	curve_js=np.hstack((curve_js1,curve_js2))
 	qdot_lim=np.hstack((robot1.joint_vel_limit,robot2.joint_vel_limit))
@@ -442,8 +387,8 @@ def traj_speed_est_dual2(robot1,robot2,curve_js1,curve_js2,base2_R,base2_p,lam2,
 
 	###find desired qdot at each step
 	dq=np.gradient(curve_js,axis=0)
-	dlam2=np.gradient(lam2)
-	dt=dlam2/v2d
+	dlam=np.gradient(lam)
+	dt=dlam/vd
 	qdot_d=np.divide(dq,np.tile(np.array([dt]).T,(1,12)))
 	###bound desired qdot with qdot constraint
 	qdot_max=np.tile(qdot_lim,(len(curve_js),1))
@@ -622,10 +567,17 @@ def traj_speed_est_dual2(robot1,robot2,curve_js1,curve_js2,base2_R,base2_p,lam2,
 	speed=replace_outliers2(speed,threshold=0.00001)
 	speed=moving_average(speed,n=5,padding=True)
 
+	speed1=replace_outliers2(speed1,threshold=0.00001)
+	speed1=moving_average(speed1,n=5,padding=True)
+
+	speed2=replace_outliers2(speed2,threshold=0.00001)
+	speed2=moving_average(speed2,n=5,padding=True)
+
 	#####################################################################
 
 
 	return speed, speed1, speed2
+
 
 def main():
 	###lamdot calculation
@@ -724,12 +676,6 @@ def main3():
 		plt.plot(lam_original,speed_est,label='estimated')
 		plt.plot(lam_exe,act_speed,label='actual')
 
-
-		
-		
-
-
-
 		plt.legend()
 		plt.ylim([0,1.2*v_cmd])
 		plt.xlabel('lambda (mm)')
@@ -744,64 +690,14 @@ def main3():
 		ax.scatter3D(curve_exe[qddot_violate_idx,0], curve_exe[qddot_violate_idx,1], curve_exe[qddot_violate_idx,2], c=curve_exe[qddot_violate_idx,2], cmap='Greens',label='commanded points')
 		plt.show()
 
+
 def main4():
-	###speed estimation dual given desired relative speed
-	from MotionSend import MotionSend
-
-	dataset='wood/'
-	data_dir='../data/'+dataset
-	solution_dir='qp1/'
-
-	relative_path=read_csv(data_dir+"Curve_dense.csv",header=None).values
-
-	with open(data_dir+'dual_arm/abb1200.yaml') as file:
-		H_1200 = np.array(yaml.safe_load(file)['H'],dtype=np.float64)
-
-	base2_R=H_1200[:3,:3]
-	base2_p=1000*H_1200[:-1,-1]
-
-	with open(data_dir+'dual_arm/tcp.yaml') as file:
-		H_tcp = np.array(yaml.safe_load(file)['H'],dtype=np.float64)
-
-	robot2=abb1200(R_tool=H_tcp[:3,:3],p_tool=H_tcp[:-1,-1])
-	robot1=abb6640(d=50)
-
-	ms = MotionSend(robot2=robot2,base2_R=base2_R,base2_p=base2_p)
-
-	exe_dir='../simulation/robotstudio_sim/multimove/'+dataset+'greedy_dual_output/'
-
-	v_cmds=[500]
-	for v_cmd in v_cmds:
-
-		###read actual exe file
-		df = read_csv(exe_dir+"curve_exe"+"_v"+str(v_cmd)+"_z10.csv")
-		lam_exe, curve_exe1,curve_exe2,curve_exe_R1,curve_exe_R2,curve_exe_js1,curve_exe_js2, speed, timestamp, relative_path_exe,relative_path_exe_R = ms.logged_data_analysis_multimove(df,base2_R,base2_p,realrobot=True)
-
-		lam_exe, curve_exe1,curve_exe2,curve_exe_R1,curve_exe_R2,curve_exe_js1,curve_exe_js2, speed, timestamp, relative_path_exe, relative_path_exe_R=\
-			ms.chop_extension_dual(lam_exe, curve_exe1,curve_exe2,curve_exe_R1,curve_exe_R2,curve_exe_js1,curve_exe_js2, speed, timestamp, relative_path_exe,relative_path_exe_R,relative_path[0,:3],relative_path[-1,:3])
-
-		error,angle_error=calc_all_error_w_normal(relative_path_exe,relative_path[:,:3],relative_path_exe_R[:,:,-1],relative_path[:,3:])
-		print(np.max(error))
-		speed_est=traj_speed_est_dual(robot1,robot2,curve_exe_js1,curve_exe_js2,base2_R,base2_p,lam_exe,v_cmd)
-
-		plt.plot(lam_exe,speed_est,label='estimated')
-		plt.plot(lam_exe,speed,label='actual')
-
-
-		plt.legend()
-		plt.ylim([0,1.2*v_cmd])
-		plt.xlabel('lambda (mm)')
-		plt.ylabel('Speed (mm/s)')
-		plt.title('Speed Estimation for v'+str(v_cmd))
-		plt.show()
-
-def main5():
 	###speed estimation dual given second robot cmd speed
 	from MotionSend import MotionSend
 
 	dataset='wood/'
 	data_dir='../data/'+dataset
-	solution_dir='qp3_30L/'
+	solution_dir='qp5_50L/'
 
 	relative_path=read_csv(data_dir+"Curve_dense.csv",header=None).values
 
@@ -819,13 +715,15 @@ def main5():
 
 	ms = MotionSend(robot2=robot2,base2_R=base2_R,base2_p=base2_p)
 
-	exe_dir='../simulation/robotstudio_sim/multimove/'+dataset+solution_dir
+	# exe_dir='../simulation/robotstudio_sim/multimove/'+dataset+solution_dir
 
-	v_cmds=[700]
+
+	v_cmds=[100,300,500,700]
 	for v_cmd in v_cmds:
 
 		###read actual exe file
-		df = read_csv(exe_dir+"curve_exe"+"_v"+str(v_cmd)+"_z10.csv")
+		# df = read_csv(exe_dir+"curve_exe"+"_v"+str(v_cmd)+"_z10.csv")
+		df=read_csv('../ILC/max_gradient/curve1_diffevo1/dual_iteration_2.csv')
 		lam_exe, curve_exe1,curve_exe2,curve_exe_R1,curve_exe_R2,curve_exe_js1,curve_exe_js2, speed, timestamp, relative_path_exe,relative_path_exe_R = ms.logged_data_analysis_multimove(df,base2_R,base2_p,realrobot=True)
 
 		lam_exe, curve_exe1,curve_exe2,curve_exe_R1,curve_exe_R2,curve_exe_js1,curve_exe_js2, speed, timestamp, relative_path_exe, relative_path_exe_R=\
@@ -838,7 +736,8 @@ def main5():
 		speed2=get_speed(curve_exe2,timestamp)
 
 		lam2=calc_lam_cs(curve_exe2)
-		speed_est,speed1_est,speed2_est=traj_speed_est_dual2(robot1,robot2,curve_exe_js1,curve_exe_js2,base2_R,base2_p,lam2,v_cmd)
+		lam=lam_exe
+		speed_est,speed1_est,speed2_est=traj_speed_est_dual(robot1,robot2,curve_exe_js1,curve_exe_js2,base2_R,base2_p,lam,v_cmd)	
 
 
 		plt.plot(lam_exe,speed_est,label='estimated')
@@ -875,4 +774,4 @@ def main5():
 
 
 if __name__ == "__main__":
-	main5()
+	main4()

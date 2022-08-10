@@ -261,7 +261,7 @@ class lambda_opt(object):
 			if np.linalg.norm(curve_js[-1])>0:
 				break
 		return curve_js
-	def dual_arm_stepwise_optimize(self,q_init1,q_init2,w1=0.03,w2=0.01):
+	def dual_arm_stepwise_optimize(self,q_init1,q_init2,w1=0.01,w2=0.01):
 		###w1: weight for first robot
 		###w2: weight for second robot (larger weight path shorter)
 		#curve_normal: expressed in second robot tool frame
@@ -284,10 +284,16 @@ class lambda_opt(object):
 		joint_acc_limit=np.hstack((self.robot1.joint_acc_limit,self.robot2.joint_acc_limit))
 
 		for i in range(len(self.curve)):
-			print(i)
 			try:
+				now=time.time()
 				error_fb=999
-				while error_fb>0.2:
+				while error_fb>0.1:
+					###timeout guard
+					if time.time()-now>10:
+						print('qp timeout')
+						raise AssertionError
+						break
+
 					pose1_now=self.robot1.fwd(q_all1[-1])
 					pose2_now=self.robot2.fwd(q_all2[-1])
 
@@ -549,15 +555,24 @@ class lambda_opt(object):
 		R=np.dot(R_temp,Rz(x[-1]))
 		try:
 			q_init1=self.robot1.inv(pose2_world_now.p,R)[0]
-			q_out1,q_out2=self.dual_arm_stepwise_optimize(q_init1,q_init2)
+			q_out1,q_out2=self.dual_arm_stepwise_optimize(q_init1,q_init2,w1=0.02,w2=0.01)
 		except:
 			# traceback.print_exc()
 			return 999
 
-		dlam=calc_lamdot_2arm(np.hstack((q_out1,q_out2)),self.lam,robot1,self.robot2,step=1)
+		###make sure extension possible by checking start & end configuration
+		if np.min(self.robot1.upper_limit-q_out1[0])<0.2 or  np.min(q_out1[0]-self.robot1.lower_limit)<0.2 or np.min(self.robot1.upper_limit-q_out1[-1])<0.2 or np.min(q_out1[-1]-self.robot1.lower_limit)<0.2:
+			return 999
 
-		print(min(dlam))
-		return -min(dlam)
+		###make sure extension possible by checking start & end configuration
+		if np.min(self.robot2.upper_limit-q_out2[0])<0.2 or  np.min(q_out2[0]-self.robot2.lower_limit)<0.2 or np.min(self.robot2.upper_limit-q_out2[-1])<0.2 or  np.min(q_out2[-1]-self.robot2.lower_limit)<0.2:
+			return 999
+
+		# dlam=calc_lamdot_2arm(np.hstack((q_out1,q_out2)),self.lam,self.robot1,self.robot2,step=1)
+		speed,_,_=traj_speed_est_dual(self.robot1,self.robot2,q_out1,q_out2,self.base2_R,self.base2_p,self.lam,self.v_cmd)
+
+		print(min(speed))
+		return -min(speed)
 
 	def single_arm_theta0_opt(self,theta0):
 

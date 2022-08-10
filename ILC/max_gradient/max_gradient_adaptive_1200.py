@@ -26,7 +26,7 @@ def main():
 
 
 	dataset='wood/dual_arm/'
-	solution_dir='qp3_30L/'
+	solution_dir='diffevo1_50L/'
 	data_dir="../../data/"+dataset+solution_dir
 	cmd_dir="../../data/"+dataset+solution_dir
 	arm1_js=read_csv(data_dir+"arm2.csv",header=None).values
@@ -44,7 +44,7 @@ def main():
 	multi_peak_threshold=0.2
 	
 
-	v=200
+	v=1000
 	s = speeddata(v,9999999,9999999,999999)
 	zone=10
 	z = zonedata(False,zone,1.5*zone,1.5*zone,0.15*zone,1.5*zone,0.15*zone)

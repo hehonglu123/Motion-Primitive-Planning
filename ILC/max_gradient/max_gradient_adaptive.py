@@ -32,7 +32,7 @@ def main():
 	# curve = read_csv(data_dir+"Curve_in_base_frame.csv",header=None).values
 
 	dataset='wood/dual_arm/'
-	solution_dir='qp1/'
+	solution_dir='diffevo1_50L/'
 	data_dir="../../data/"+dataset+solution_dir
 	cmd_dir="../../data/"+dataset+solution_dir
 	arm1_js=read_csv(data_dir+"arm1.csv",header=None).values
@@ -44,7 +44,7 @@ def main():
 	multi_peak_threshold=0.2
 	
 
-	v=400
+	v=1500
 	s = speeddata(v,9999999,9999999,999999)
 	zone=10
 	z = zonedata(False,zone,1.5*zone,1.5*zone,0.15*zone,1.5*zone,0.15*zone)

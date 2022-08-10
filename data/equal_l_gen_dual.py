@@ -13,7 +13,7 @@ from lambda_calc import *
 from utils import *
 
 
-data_dir='wood/dual_arm/qp3_30L/'
+data_dir='wood/dual_arm/diffevo1_50L/'
 num_ls=[30]
 robot=abb6640(d=50)
 curve_js = read_csv(data_dir+'arm1.csv',header=None).values

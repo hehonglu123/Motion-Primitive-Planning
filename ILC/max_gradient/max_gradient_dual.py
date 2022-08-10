@@ -23,7 +23,7 @@ from blending import *
 
 def main():
 	dataset='wood/'
-	solution_dir='qp1/'
+	solution_dir='diffevo1_50L/'
 	data_dir="../../data/"+dataset
 	relative_path = read_csv(data_dir+"/Curve_dense.csv", header=None).values
 
@@ -79,7 +79,7 @@ def main():
 		###execution with plant
 		logged_data=ms.exec_motions_multimove(breakpoints1,primitives1,primitives2,p_bp1,p_bp2,q_bp1,q_bp2,v1,v2,z10,z10)
 		with open('recorded_data/dual_iteration_'+str(i)+'.csv',"w") as f:
-		    f.write(logged_data)
+			f.write(logged_data)
 		###save commands
 		ms.write_data_to_cmd('recorded_data/command1.csv',breakpoints1,primitives1, p_bp1,q_bp1)
 		ms.write_data_to_cmd('recorded_data/command2.csv',breakpoints2,primitives2, p_bp2,q_bp2)
