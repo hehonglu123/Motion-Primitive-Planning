@@ -6,7 +6,7 @@ from MotionSend import *
 
 def main():
 
-	data_dir='../../data/wood/'
+	data_dir='../../data/from_NX/'
 	relative_path=read_csv(data_dir+"Curve_dense.csv",header=None).values
 
 	v_cmd=900
