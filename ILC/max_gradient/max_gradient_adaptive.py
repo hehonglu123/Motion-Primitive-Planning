@@ -26,7 +26,7 @@ def main():
 	robot=abb6640(d=50)
 
 	dataset='wood/'
-	solution_dir='curve_pose_opt1/'
+	solution_dir='curve_pose_opt4/'
 	data_dir="../../data/"+dataset+solution_dir
 	cmd_dir="../../data/"+dataset+solution_dir+'100L/'
 	curve = read_csv(data_dir+"Curve_in_base_frame.csv",header=None).values
@@ -46,7 +46,7 @@ def main():
 
 	v=400
 	s = speeddata(v,9999999,9999999,999999)
-	zone=1
+	zone=10
 	z = zonedata(False,zone,1.5*zone,1.5*zone,0.15*zone,1.5*zone,0.15*zone)
 
 	alpha_default=1.
