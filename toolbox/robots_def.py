@@ -62,7 +62,7 @@ class abb6640(object):
 		pose_p_all=[]
 		pose_R_all=[]
 		for q in q_all:
-			pose_temp=fwd(q,base_R,base_p)
+			pose_temp=self.fwd(q,base_R,base_p)
 			pose_p_all.append(pose_temp.p)
 			pose_R_all.append(pose_temp.R)
 
@@ -122,7 +122,7 @@ class abb1200(object):
 		pose_p_all=[]
 		pose_R_all=[]
 		for q in q_all:
-			pose_temp=fwd(q,base_R,base_p)
+			pose_temp=self.fwd(q,base_R,base_p)
 			pose_p_all.append(pose_temp.p)
 			pose_R_all.append(pose_temp.R)
 

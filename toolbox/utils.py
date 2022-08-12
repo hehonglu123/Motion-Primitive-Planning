@@ -6,6 +6,13 @@ from scipy import signal
 import scipy
 from sklearn.cluster import KMeans
 
+def get_speed(curve_exe,timestamp):
+	d_curve_exe=np.gradient(curve_exe,axis=0)
+	speed=np.linalg.norm(d_curve_exe,axis=1)/np.gradient(timestamp)
+	speed=replace_outliers(speed)
+	speed=replace_outliers2(speed)
+	return speed
+
 def clip_joints(robot,curve_js,relax=0.05):
 	curve_js_clipped=np.zeros(curve_js.shape)
 	for i in range(len(curve_js[0])):
@@ -182,6 +189,11 @@ def visualize_curve(curve,stepsize=10):
 	plt.show()
 
 def linear_interp(x,y):
+	###avoid divided by 0 problem
+	x,unique_indices=np.unique(x,return_index=True)
+	if (len(unique_indices)<len(y)-2):
+		print('Duplicate in interpolate, check timestamp')
+	y=y[unique_indices]
 	f=interp1d(x,y.T)
 	x_new=np.linspace(x[0],x[-1],len(x))
 	return x_new, f(x_new).T
@@ -200,6 +212,7 @@ def lfilter(x, y):
 	n=10
 	y1=moving_average(y,n)
 	y2=moving_average(np.flip(y,axis=0),n)
+
 	return x[int(n/2):-int(n/2)+1], (y1+np.flip(y2,axis=0))/2
 
 def orientation_interp(R_init,R_end,steps):

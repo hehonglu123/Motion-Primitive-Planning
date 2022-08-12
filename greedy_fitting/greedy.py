@@ -187,7 +187,7 @@ def main():
 
 	robot=abb6640(d=50)
 
-	greedy_fit_obj=greedy_fit(robot,curve_js,0.05)
+	greedy_fit_obj=greedy_fit(robot,curve_js,0.02)
 
 
 	###set primitive choices, defaults are all 3
@@ -196,6 +196,8 @@ def main():
 	# greedy_fit_obj.primitives={'movej_fit':greedy_fit_obj.movej_fit_greedy}
 	# greedy_fit_obj.primitives={'movel_fit':greedy_fit_obj.movel_fit_greedy}
 	# greedy_fit_obj.primitives={'movec_fit':greedy_fit_obj.movec_fit_greedy}
+
+	greedy_fit_obj.primitives={'movel_fit':greedy_fit_obj.movel_fit_greedy,'movej_fit':greedy_fit_obj.movej_fit_greedy}
 
 	breakpoints,primitives_choices,points,q_bp=greedy_fit_obj.fit_under_error()
 	# breakpoints,primitives_choices,points=greedy_fit_obj.smooth_slope(greedy_fit_obj.curve_fit,greedy_fit_obj.curve_fit_R,breakpoints,primitives_choices,points)

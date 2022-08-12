@@ -3,13 +3,14 @@ sys.path.append('../')
 from constraint_solver import *
 
 def main():
-	data_dir='../../data/from_NX/'
+	data_dir='../../data/wood/'
 	###read actual curve
 	curve_dense = read_csv(data_dir+"Curve_dense.csv",header=None).values
 
 
 	robot=abb6640(d=50)
-	v_cmd=1500
+	robot.joint_acc_limit*=0.5
+	v_cmd=600
 	opt=lambda_opt(curve_dense[:,:3],curve_dense[:,3:],robot1=robot,steps=500,v_cmd=v_cmd)
 
 	#read in initial curve pose
@@ -33,6 +34,10 @@ def main():
 									polish=True, init='latinhypercube',
 									atol=0.)
 	
+	# class Object(object):
+	# 	pass
+	# res=Object()
+	# setattr(res, "x", np.array([ 5.22786277e+00,  4.30371672e+00,  3.25477272e+00,  1.25793114e+03, 7.65140344e+02,  6.87793008e+02, -2.82344434e-01]))
 
 
 	print(res)

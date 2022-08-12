@@ -1,10 +1,9 @@
 import sys
 sys.path.append('../')
 from constraint_solver import *
-
 from MotionSend import *
 
-data_dir='../../data/from_NX/'
+data_dir='../../data/wood/'
 relative_path=read_csv(data_dir+"Curve_dense.csv",header=None).values
 
 with open(data_dir+'dual_arm/abb1200.yaml') as file:
@@ -29,10 +28,13 @@ curve_js1=read_csv(data_dir+"Curve_js.csv",header=None).values
 opt=lambda_opt(relative_path[:,:3],relative_path[:,3:],robot1=ms.robot1,robot2=ms.robot2,base2_R=base2_R,base2_p=base2_p,steps=50000)
 
 
-q_init1=curve_js1[0]
-q_init2=ms.calc_robot2_q_from_blade_pose(blade_pose,base2_R,base2_p)
+# q_init1=curve_js1[0]
+# q_init2=ms.calc_robot2_q_from_blade_pose(blade_pose,base2_R,base2_p)
 
-q_out1, q_out2=opt.dual_arm_stepwise_optimize(q_init1,q_init2)
+q_init1=[-0.649180862,   0.830331711, -0.257380494,    -2.443021284,    -1.402572862,    2.995595267]
+q_init2=[1.396869156,    0.521484672, -0.530977935,    -3.837055517,    0.623816947, 1.616590226]
+
+q_out1, q_out2=opt.dual_arm_stepwise_optimize(q_init1,q_init2,w1=0.02,w2=0.01)
 ##########path verification####################
 ms = MotionSend(robot2=robot2,base2_R=base2_R,base2_p=base2_p)
 relative_path_out,relative_path_out_R=ms.form_relative_path(q_out1,q_out2,base2_R,base2_p)

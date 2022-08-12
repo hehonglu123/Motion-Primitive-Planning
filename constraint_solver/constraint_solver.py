@@ -263,7 +263,9 @@ class lambda_opt(object):
 			if np.linalg.norm(curve_js[-1])>0:
 				break
 		return curve_js
-	def dual_arm_stepwise_optimize(self,q_init1,q_init2):
+	def dual_arm_stepwise_optimize(self,q_init1,q_init2,w1=0.01,w2=0.01):
+		###w1: weight for first robot
+		###w2: weight for second robot (larger weight path shorter)
 		#curve_normal: expressed in second robot tool frame
 		###all (jacobian) in robot2 tool frame
 		q_all1=[q_init1]
@@ -273,9 +275,9 @@ class lambda_opt(object):
 
 		#####weights
 		Kw=0.1
-		Kq=.02*np.eye(12)    #small value to make sure positive definite
-		# Kq[6:,6:]=0.01*np.eye(6)		#larger weights for second robot for it moves slower
-		Kq[6:,6:]=0.03*np.eye(6)		#larger weights for second robot for it moves slower
+
+		Kq=w1*np.eye(12)    #small value to make sure positive definite
+		Kq[6:,6:]=w2*np.eye(6)		#larger weights for second robot for it moves slower
 		KR=np.eye(3)        #gains for position and orientation error
 
 		###concatenated bounds
@@ -284,16 +286,18 @@ class lambda_opt(object):
 		lower_limit=np.hstack((self.robot1.lower_limit,self.robot2.lower_limit))
 		joint_acc_limit=np.hstack((self.robot1.joint_acc_limit,self.robot2.joint_acc_limit))
 
-		###moving weights, p1 p2,r1 r2
-		weight_distro=np.array([[1,1],
-								[1,1]])
-
 		for i in range(len(self.curve)):
 			if (i%1000) == 0:
 				print(i)
 			try:
+				now=time.time()
 				error_fb=999
-				while error_fb>99:
+				while error_fb>0.1:
+					###timeout guard
+					if time.time()-now>10:
+						print('qp timeout')
+						raise AssertionError
+						break
 					pose1_now=self.robot1.fwd(q_all1[-1])
 					pose2_now=self.robot2.fwd(q_all2[-1])
 
@@ -316,9 +320,11 @@ class lambda_opt(object):
 					J2R=np.dot(pose2_now.R.T,J2[:3,:])
 					J2R_mod=-np.dot(hat(np.dot(pose2_world_now.R.T,pose1_now.R[:,-1])),J2R)
 
-					#form 6x12 jacobian with weight distribution
-					J_all_p=np.hstack((weight_distro[0,0]*J1p,-weight_distro[0,1]*J2p))
-					J_all_R=np.hstack((weight_distro[1,0]*J1R_mod,-weight_distro[1,1]*J2R_mod))
+					p12_2=pose2_world_now.R.T@(pose1_now.p-pose2_world_now.p)
+					
+					#form 6x12 jacobian with weight distribution, velocity propogate from rotation of TCP2
+					J_all_p=np.hstack((J1p,-J2p+hat(p12_2)@J2R))
+					J_all_R=np.hstack((J1R_mod,-J2R_mod))
 					
 					H=np.dot(np.transpose(J_all_p),J_all_p)+Kq+Kw*np.dot(np.transpose(J_all_R),J_all_R)
 					H=(H+np.transpose(H))/2
@@ -638,15 +644,24 @@ class lambda_opt(object):
 		R=np.dot(R_temp,Rz(x[-1]))
 		try:
 			q_init1=self.robot1.inv(pose2_world_now.p,R)[0]
-			q_out1,q_out2=self.dual_arm_stepwise_optimize(q_init1,q_init2)
+			q_out1,q_out2=self.dual_arm_stepwise_optimize(q_init1,q_init2,w1=0.02,w2=0.01)
 		except:
 			# traceback.print_exc()
 			return 999
 
-		dlam=calc_lamdot_2arm(np.hstack((q_out1,q_out2)),self.lam,robot1,self.robot2,step=1)
+		###make sure extension possible by checking start & end configuration
+		if np.min(self.robot1.upper_limit-q_out1[0])<0.2 or  np.min(q_out1[0]-self.robot1.lower_limit)<0.2 or np.min(self.robot1.upper_limit-q_out1[-1])<0.2 or np.min(q_out1[-1]-self.robot1.lower_limit)<0.2:
+			return 999
 
-		print(min(dlam))
-		return -min(dlam)
+		###make sure extension possible by checking start & end configuration
+		if np.min(self.robot2.upper_limit-q_out2[0])<0.2 or  np.min(q_out2[0]-self.robot2.lower_limit)<0.2 or np.min(self.robot2.upper_limit-q_out2[-1])<0.2 or  np.min(q_out2[-1]-self.robot2.lower_limit)<0.2:
+			return 999
+
+		# dlam=calc_lamdot_2arm(np.hstack((q_out1,q_out2)),self.lam,self.robot1,self.robot2,step=1)
+		speed,_,_=traj_speed_est_dual(self.robot1,self.robot2,q_out1,q_out2,self.base2_R,self.base2_p,self.lam,self.v_cmd)
+
+		print(min(speed))
+		return -min(speed)
 
 	def single_arm_theta0_opt(self,theta0):
 

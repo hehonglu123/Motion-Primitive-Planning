@@ -19,8 +19,8 @@ from MotionSend import *
 def main():
     ms = MotionSend()
     dataset='wood/'
-    solution_dir='curve_pose_opt1/'
-    cmd_dir='../../../data/'+dataset+solution_dir+'greedy0.05/'
+    solution_dir='curve_pose_opt4/'
+    cmd_dir='../../../data/'+dataset+solution_dir+'100L/'
     data_dir='../../../data/'+dataset+solution_dir
 
     curve = read_csv(data_dir+"Curve_in_base_frame.csv",header=None).values

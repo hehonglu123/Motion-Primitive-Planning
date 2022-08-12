@@ -23,22 +23,31 @@ from lambda_calc import *
 from blending import *
 
 def main():
+	robot=abb6640(d=50)
+
 	dataset='wood/'
-	solution_dir='curve_pose_opt1/'
+	solution_dir='curve_pose_opt4/'
 	data_dir="../../data/"+dataset+solution_dir
-	cmd_dir="../../data/"+dataset+solution_dir+'greedy0.05/'
-
-
-
+	cmd_dir="../../data/"+dataset+solution_dir+'100L/'
 	curve = read_csv(data_dir+"Curve_in_base_frame.csv",header=None).values
+
+	# dataset='wood/dual_arm/'
+	# solution_dir='diffevo1_50L/'
+	# data_dir="../../data/"+dataset+solution_dir
+	# cmd_dir="../../data/"+dataset+solution_dir
+	# arm1_js=read_csv(data_dir+"arm1.csv",header=None).values
+	# pose_all=robot.fwd_all(arm1_js)
+	# curve=np.hstack((pose_all.p_all,pose_all.R_all[:,:,-1]))
+
 
 
 	multi_peak_threshold=0.2
-	robot=abb6640(d=50)
+	
 
 	v=400
 	s = speeddata(v,9999999,9999999,999999)
-	z = z10
+	zone=10
+	z = zonedata(False,zone,1.5*zone,1.5*zone,0.15*zone,1.5*zone,0.15*zone)
 
 	alpha_default=1.
 	skip=False
@@ -72,15 +81,15 @@ def main():
 			###execution with plant
 			logged_data=ms.exec_motions(robot,primitives,breakpoints,p_bp,q_bp,s,z)
 			# Write log csv to file
-			with open("recorded_data/curve_exe_v"+str(v)+"_z10.csv","w") as f:
+			with open("recorded_data/curve_exe_v"+str(v)+'_z'+str(zone)+'.csv',"w") as f:
 				f.write(logged_data)
 
 			ms.write_data_to_cmd('recorded_data/command.csv',breakpoints,primitives, p_bp,q_bp)
-
 			StringData=StringIO(logged_data)
 			df = read_csv(StringData, sep =",")
 			##############################data analysis#####################################
 			lam, curve_exe, curve_exe_R,curve_exe_js, speed, timestamp=ms.logged_data_analysis(robot,df,realrobot=True)
+			# print(curve_exe)
 			#############################chop extension off##################################
 			lam, curve_exe, curve_exe_R,curve_exe_js, speed, timestamp=ms.chop_extension(curve_exe, curve_exe_R,curve_exe_js, speed, timestamp,curve[0,:3],curve[-1,:3])
 

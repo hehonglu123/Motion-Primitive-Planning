@@ -134,8 +134,14 @@ def main():
 			order=np.argsort(np.abs(breakpoints_blended-peak_error_curve_blended_idx))
 			breakpoint_interp_2tweak_indices=order[:3]
 
-			de_dp=ilc.get_gradient_from_model_xyz(p_bp,q_bp,breakpoints_blended,curve_blended,peak_error_curve_blended_idx,robot.fwd(curve_exe_js[peak]),curve[peak_error_curve_idx,:3],breakpoint_interp_2tweak_indices)
-			p_bp, q_bp=ilc.update_bp_xyz(p_bp,q_bp,de_dp,error[peak],breakpoint_interp_2tweak_indices)
+			##################################################################XYZ Gradient######################################################################
+			# de_dp=ilc.get_gradient_from_model_xyz(p_bp,q_bp,breakpoints_blended,curve_blended,peak_error_curve_blended_idx,robot.fwd(curve_exe_js[peak]),curve[peak_error_curve_idx,:3],breakpoint_interp_2tweak_indices)
+			# p_bp, q_bp=ilc.update_bp_xyz(p_bp,q_bp,de_dp,error[peak],breakpoint_interp_2tweak_indices)
+
+			##################################################################Joint Gradiant####################################################################
+			de_dp, _=ilc.get_gradient_from_model_6j(q_bp,breakpoints_blended,curve_blended,curve_R_blended,peak_error_curve_blended_idx,robot.fwd(curve_exe_js[peak]),curve[peak_error_curve_idx,:3],curve[peak_error_curve_idx,3:],breakpoint_interp_2tweak_indices)
+			p_bp, q_bp=ilc.update_bp_6j(p_bp,q_bp,de_dp,np.zeros(len(de_dp))[np.newaxis],error[peak],0,breakpoint_interp_2tweak_indices)
+
 
 		# for m in breakpoint_interp_2tweak_indices:
 		# 	ax.scatter(p_bp[m][0][0], p_bp[m][0][1], p_bp[m][0][2],c='blue',label='adjusted breakpoints')
