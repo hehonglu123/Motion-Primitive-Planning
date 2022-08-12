@@ -39,10 +39,10 @@ def main():
         cmd_dir='../data/curve_wood/'
         data_dir='data/wood_dual/'
 
-    # test_type='dual_arm'
+    test_type='dual_arm'
     # test_type='dual_single_arm'
     # test_type='dual_single_arm_straight' # robot2 is multiple user defined straight line
-    test_type='dual_single_arm_straight_50' # robot2 is multiple user defined straight line
+    # test_type='dual_single_arm_straight_50' # robot2 is multiple user defined straight line
     # test_type='dual_single_arm_straight_min' # robot2 is multiple user defined straight line
     # test_type='dual_single_arm_straight_min10' # robot2 is multiple user defined straight line
     # test_type='dual_arm_10'
@@ -84,7 +84,7 @@ def main():
     q_bp1_end = q_bp1[-1][-1]
 
     ###extension
-    p_bp1,q_bp1,p_bp2,q_bp2,step_to_extend_end=ms.extend_dual(ms.robot1,p_bp1,q_bp1,primitives1,ms.robot2,p_bp2,q_bp2,primitives2,breakpoints1,base2_T,extension_d=300)
+    p_bp1,q_bp1,p_bp2,q_bp2,step_to_extend_end=ms.extend_dual_relative(ms.robot1,p_bp1,q_bp1,primitives1,ms.robot2,p_bp2,q_bp2,primitives2,breakpoints1,base2_T,extension_d=300)
 
     ## calculate step at start and end
     step_start=None
@@ -147,8 +147,12 @@ def main():
         ax2.plot(lam, np.degrees(angle_error), 'y-',label='Normal Error')
         if draw_speed_max is None:
             draw_speed_max=max(speed)*1.05
+        if max(speed) >= draw_speed_max or max(speed) < draw_speed_max*0.1:
+            draw_speed_max=max(speed)*1.05
         ax1.axis(ymin=0,ymax=draw_speed_max)
         if draw_error_max is None:
+            draw_error_max=max(error)*1.05
+        if max(error) >= draw_error_max or max(error) < draw_error_max*0.1:
             draw_error_max=max(error)*1.05
         ax2.axis(ymin=0,ymax=draw_error_max)
         ax1.set_xlabel('lambda (mm)')
@@ -233,7 +237,7 @@ def main():
                 [p_bp1,p_bp2],[q_bp1,q_bp2],breakpoints_blended,[curve_blended1,curve_blended2],peak_error_curve_blended_idx,[curve_exe_js1[peak],curve_exe_js2[peak]],relative_path[peak_error_curve_idx,:3],breakpoint_interp_2tweak_indices)
 
 
-            p_bp1_new, q_bp1_new,p_bp2_new,q_bp2_new=ilc.update_bp_xyz_dual([p_bp1,p_bp2],[q_bp1,q_bp2],de_dp,error[peak],breakpoint_interp_2tweak_indices)
+            p_bp1_new, q_bp1_new,p_bp2_new,q_bp2_new=ilc.update_bp_xyz_dual([p_bp1,p_bp2],[q_bp1,q_bp2],de_dp,error[peak],breakpoint_interp_2tweak_indices,alpha=0.5)
 
             #########plot adjusted breakpoints
             p_bp_relative_new,_=ms.form_relative_path(np.squeeze(q_bp1_new),np.squeeze(q_bp2_new),base2_R,base2_p)

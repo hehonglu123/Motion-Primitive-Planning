@@ -21,25 +21,25 @@ def main():
     # data_type='blade'
     # data_type='wood'
     # data_type='blade_shift'
-    data_type='curve_line'
+    # data_type='curve_line'
+    data_type='curve_line_1000'
 
     # data and curve directory
     if data_type=='blade':
         curve_data_dir='../../../data/from_NX/'
         cmd_dir='../data/curve_blade/'
-        data_dir='data/'
     elif data_type=='wood':
         curve_data_dir='../../../data/wood/'
         cmd_dir='../data/curve_wood/'
-        data_dir='data/'
     elif data_type=='blade_shift':
         curve_data_dir='../../../data/blade_shift/'
         cmd_dir='../data/curve_blade_shift/'
-        data_dir='data/'
     elif data_type=='curve_line':
         curve_data_dir='../../../data/curve_line/'
         cmd_dir='../data/curve_line/'
-        data_dir='data/'
+    elif data_type=='curve_line_1000':
+        curve_data_dir='../../../data/curve_line_1000/'
+        cmd_dir='../data/curve_line_1000/'
 
     # test_type='dual_arm'
     # test_type='dual_single_arm'
@@ -76,10 +76,10 @@ def main():
         ms = MotionSendFANUC(robot1=robot1,robot2=robot2,utool2=3)
     elif data_type=='blade_shift':
         ms = MotionSendFANUC(robot1=robot1,robot2=robot2,utool2=4)
-    elif data_type=='curve_line':
+    elif data_type=='curve_line' or data_type=='curve_line_1000':
         ms = MotionSendFANUC(robot1=robot1,robot2=robot2,utool2=5)
 
-    s=2000 # mm/sec in leader frame
+    s=200 # mm/sec in leader frame
     z=100 # CNT100
 
     breakpoints1,primitives1,p_bp1,q_bp1=ms.extract_data_from_cmd(os.getcwd()+'/'+cmd_dir+'command1.csv')
@@ -107,9 +107,9 @@ def main():
         extension_d=300
     elif data_type=='blade_shift':
         extension_d=300
-    elif data_type=='curve_line':
-        # extension_d=0
-        extension_d=300
+    elif data_type=='curve_line' or data_type=='curve_line_1000':
+        extension_d=0
+        # extension_d=300
     # extension_d=0
     if extension_d != 0:
         try:
@@ -122,7 +122,7 @@ def main():
             primitives2[:]='movel_fit'
         except:
             print("Extension file not existed.")
-            p_bp1,q_bp1,p_bp2,q_bp2,step_to_extend_end=ms.extend_dual(ms.robot1,p_bp1,q_bp1,primitives1,ms.robot2,p_bp2,q_bp2,primitives2,breakpoints1,base2_T,extension_d=extension_d)
+            p_bp1,q_bp1,p_bp2,q_bp2,step_to_extend_end=ms.extend_dual_relative(ms.robot1,p_bp1,q_bp1,primitives1,ms.robot2,p_bp2,q_bp2,primitives2,breakpoints1,base2_T,extension_d=extension_d)
             print(len(primitives1))
             print(len(primitives2))
             # not_coord_step=3 # after 3 bp of workpiece, no more coordination
@@ -182,13 +182,15 @@ def main():
     # plt.clf()
     plt.show()
 
-    plt.figure()
-    ax = plt.axes(projection='3d')
-    ax.plot3D(relative_path[:,0], relative_path[:,1],relative_path[:,2], 'red',label='original')
-    ax.scatter3D(relative_path[breakpoints1[:-1],0], relative_path[breakpoints1[:-1],1],relative_path[breakpoints1[:-1],2], 'blue')
-    ax.plot3D(relative_path_exe[:,0], relative_path_exe[:,1],relative_path_exe[:,2], 'green',label='execution')
-    plt.legend()
-    plt.show()
+    plot_traj=False
+    if plot_traj:
+        plt.figure()
+        ax = plt.axes(projection='3d')
+        ax.plot3D(relative_path[:,0], relative_path[:,1],relative_path[:,2], 'red',label='original')
+        ax.scatter3D(relative_path[breakpoints1[:-1],0], relative_path[breakpoints1[:-1],1],relative_path[breakpoints1[:-1],2], 'blue')
+        ax.plot3D(relative_path_exe[:,0], relative_path_exe[:,1],relative_path_exe[:,2], 'green',label='execution')
+        plt.legend()
+        plt.show()
 
     ########################## plot joint ##########################
     plot_joint=False

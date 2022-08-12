@@ -115,6 +115,14 @@ class ilc_toolbox(object):
 		de_ori_dp=[]
 		delta=0.1 	#mm
 
+		if type(self.robot) is list:
+			robot=self.robot[0]
+			primitives=self.primitives[0]
+		else:
+			robot=self.robot
+			primitives=self.primitives
+			
+
 		###len(primitives)==len(breakpoints)==len(breakpoints_blended)==len(points_list)
 		for m in breakpoint_interp_2tweak_indices:  #3 breakpoints
 			for n in range(3): #3DOF, xyz
@@ -122,7 +130,7 @@ class ilc_toolbox(object):
 				p_bp_temp=copy.deepcopy(p_bp)
 				p_bp_temp[m][0][n]+=delta
 
-				q_bp_temp[m][0]=car2js(self.robot,q_bp[m][0],np.array(p_bp_temp[m][0]),self.robot.fwd(q_bp[m][0]).R)[0]###TODO:ADD MOVEC SUPPORT
+				q_bp_temp[m][0]=car2js(robot,q_bp[m][0],np.array(p_bp_temp[m][0]),robot.fwd(q_bp[m][0]).R)[0]###TODO:ADD MOVEC SUPPORT
 
 				#restore new trajectory, only for adjusted breakpoint, 1-bp change requires traj interp from 5 bp
 				short_version=range(max(m-2,0),min(m+3,len(breakpoints_blended)))
@@ -140,10 +148,10 @@ class ilc_toolbox(object):
 					end_idx=int((breakpoints_blended[short_version[-1]]+breakpoints_blended[short_version[-2]])/2)+1
 
 
-				curve_interp_temp, curve_R_interp_temp, curve_js_interp_temp, breakpoints_blended_temp=form_traj_from_bp(q_bp_temp[short_version],[self.primitives[i] for i in short_version],self.robot)
+				curve_interp_temp, curve_R_interp_temp, curve_js_interp_temp, breakpoints_blended_temp=form_traj_from_bp(q_bp_temp[short_version],[primitives[i] for i in short_version],robot)
 
-				# curve_js_blended_temp,curve_blended_temp,curve_R_blended_temp=blend_cart_from_primitive(curve_interp_temp, curve_R_interp_temp, curve_js_interp_temp, breakpoints_blended_temp, [self.primitives[i] for i in short_version],self.robot,speed)
-				curve_js_blended_temp,curve_blended_temp,curve_R_blended_temp=blend_js_from_primitive(curve_interp_temp, curve_js_interp_temp, breakpoints_blended_temp, [self.primitives[i] for i in short_version],self.robot,zone=10)
+				# curve_js_blended_temp,curve_blended_temp,curve_R_blended_temp=blend_cart_from_primitive(curve_interp_temp, curve_R_interp_temp, curve_js_interp_temp, breakpoints_blended_temp, [primitives[i] for i in short_version],self.robot,speed)
+				curve_js_blended_temp,curve_blended_temp,curve_R_blended_temp=blend_js_from_primitive(curve_interp_temp, curve_js_interp_temp, breakpoints_blended_temp, [primitives[i] for i in short_version],robot,zone=10)
 				
 				curve_blended_new=copy.deepcopy(curve_blended)
 
@@ -423,12 +431,17 @@ class ilc_toolbox(object):
 		###breakpoint_interp_2tweak_indices:	closest N breakpoints
 		###alpha:								stepsize
 
+		if type(self.robot) is list:
+			robot=self.robot[0]
+		else:
+			robot=self.robot
+
 		point_adjustment=-alpha*np.linalg.pinv(de_dp)*max_error
 
 		for i in range(len(breakpoint_interp_2tweak_indices)):  #3 breakpoints
 			p_bp[breakpoint_interp_2tweak_indices[i]][0]+=point_adjustment[0][3*i:3*(i+1)]
 			###TODO:ADD MOVEC SUPPORT
-			q_bp[breakpoint_interp_2tweak_indices[i]][0]=car2js(self.robot,q_bp[breakpoint_interp_2tweak_indices[i]][0],p_bp[breakpoint_interp_2tweak_indices[i]][0],self.robot.fwd(q_bp[breakpoint_interp_2tweak_indices[i]][0]).R)[0]
+			q_bp[breakpoint_interp_2tweak_indices[i]][0]=car2js(robot,q_bp[breakpoint_interp_2tweak_indices[i]][0],p_bp[breakpoint_interp_2tweak_indices[i]][0],robot.fwd(q_bp[breakpoint_interp_2tweak_indices[i]][0]).R)[0]
 
 		return p_bp, q_bp
 

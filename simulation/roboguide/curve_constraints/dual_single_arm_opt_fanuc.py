@@ -23,6 +23,9 @@ elif data_type=='wood':
 elif data_type=='curve_line':
     curve_data_dir='../../../data/curve_line/'
     data_dir='../data/curve_line/'
+elif data_type=='curve_line_1000':
+    curve_data_dir='../../../data/curve_line_1000/'
+    data_dir='../data/curve_line_1000/'
 
 # robot2_type='dual_single_arm_freeze' # robot2 not moving
 # robot2_type='dual_single_arm_straight/' # robot2 is multiple user defined straight line
@@ -112,7 +115,7 @@ q_init2=ms.calc_robot2_q_from_blade_pose(blade_pose,base2_R,base2_p)
 # robot2_step=[49999]
 # robot2_path=np.array([q_init2,np.deg2rad([0.3,50.2,-16.5,-0.4,65.1,0.2])]) # min10
 # robot2_step=[49999]
-robot2_path=np.array([q_init2,car2js(robot2,q_init2,np.array([2100,1000,700]),Rz(np.radians(-90)))[0]])
+robot2_path=np.array([q_init2,car2js(robot2,q_init2,np.array([2100,1500,700]),Rz(np.radians(-90)))[0]])
 print(robot2_path)
 robot2_step=[49999]
 ###########################################
@@ -136,6 +139,8 @@ for i in range(1,len(robot2_path)):
     # adding extension with uniform space
     extend_step_d=np.linalg.norm(p_end-p_start)/robot2_step[i-1]
     for j in range(1,robot2_step[i-1]+1):
+        if j%1000==0:
+            print(j)
         p_extend=p_start+j*extend_step_d*slope_p
         theta_extend=np.linalg.norm(p_extend-p_start)*theta/np.linalg.norm(p_end-p_start)
         R_extend=rox.rot(k,theta_extend)@R_start
@@ -164,7 +169,15 @@ curve_normal_base1=np.array(curve_normal_base1)
 # q_init1=curve_js1[0]
 q_init1=car2js(robot1,np.deg2rad([23.9,4.1,-11.9,16,-47.3,-31.9]),curve_base1[0],Ry(np.radians(180)))[0]
 
-q_out1=opt.single_arm_stepwise_optimize(q_init1,curve=curve_base1,curve_normal=curve_normal_base1)
+# q_out1=opt.single_arm_stepwise_optimize(q_init1,curve=curve_base1,curve_normal=curve_normal_base1)
+q_out1=[q_init1]
+for i in range(1,len(curve_base1)):
+    if i%1000 == 0:
+        print(i)
+    p_extend=curve_base1[i]
+    R_extend=Ry(np.radians(180))
+    q_out1.append(car2js(robot1,q_out1[-1],p_extend,R_extend)[0])
+q_out1=np.array(q_out1)
 
 ####output to trajectory csv
 df=DataFrame({'q0':q_out1[:,0],'q1':q_out1[:,1],'q2':q_out1[:,2],'q3':q_out1[:,3],'q4':q_out1[:,4],'q5':q_out1[:,5]})

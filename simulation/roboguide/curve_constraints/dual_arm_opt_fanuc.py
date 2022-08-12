@@ -8,7 +8,8 @@ from constraint_solver import *
 sys.path.append('../fanuc_toolbox')
 from fanuc_utils import *
 
-data_type='blade_shift'
+# data_type='blade_shift'
+data_type='blade'
 
 if data_type=='blade':
     curve_data_dir='../../../data/from_NX/'
@@ -86,7 +87,7 @@ q_init1=curve_js1[0]
 q_init2=ms.calc_robot2_q_from_blade_pose(blade_pose,base2_R,base2_p)
 print(np.rad2deg(q_init2))
 
-q_out1, q_out2=opt.dual_arm_stepwise_optimize(q_init1,q_init2)
+q_out1, q_out2=opt.dual_arm_stepwise_optimize2(q_init1,q_init2)
 # q_out1 = np.array(read_csv(data_dir+'dual_arm/arm1.csv',header=None).values)
 # q_out2 = np.array(read_csv(data_dir+'dual_arm/arm2.csv',header=None).values)
 ##########path verification####################

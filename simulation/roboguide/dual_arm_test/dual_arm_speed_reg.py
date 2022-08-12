@@ -106,7 +106,7 @@ def main():
         primitives2[:]='movel_fit'
     except:
         print("Extension file not existed.")
-        p_bp1,q_bp1,p_bp2,q_bp2,step_to_extend_end=ms.extend_dual(ms.robot1,p_bp1,q_bp1,primitives1,ms.robot2,p_bp2,q_bp2,primitives2,breakpoints1,base2_T,extension_d=extension_d)
+        p_bp1,q_bp1,p_bp2,q_bp2,step_to_extend_end=ms.extend_dual_relative(ms.robot1,p_bp1,q_bp1,primitives1,ms.robot2,p_bp2,q_bp2,primitives2,breakpoints1,base2_T,extension_d=extension_d)
         print(len(primitives1))
         print(len(primitives2))
         # not_coord_step=3 # after 3 bp of workpiece, no more coordination

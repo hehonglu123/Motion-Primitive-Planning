@@ -10,7 +10,7 @@ from robots_def import *
 from utils import *
 from lambda_calc import *
 
-data_type='curve_line'
+data_type='blade'
 
 if data_type=='blade':
     curve_data_dir='../../../data/from_NX/'
@@ -24,18 +24,24 @@ elif data_type=='blade_shift':
 elif data_type=='curve_line':
     curve_data_dir='../../../data/curve_line/'
     data_dir='../data/curve_line/'
+elif data_type=='curve_line_1000':
+    curve_data_dir='../../../data/curve_line_1000/'
+    data_dir='../data/curve_line_1000/'
 
-# output_dir='dual_arm/'
+output_dir='dual_arm/'
 # output_dir='dual_single_arm/'
 # output_dir='dual_single_arm_straight/' # robot2 is multiple user defined straight line
 # output_dir='dual_single_arm_straight_50/' # robot2 is multiple user defined straight line
 # output_dir='dual_single_arm_straight_min/' # robot2 is multiple user defined straight line
 # output_dir='dual_single_arm_straight_min10/' # robot2 is multiple user defined straight line
 # output_dir='dual_arm_10/'
-output_dir='dual_straight/' # test: robot2 move a simple straight line
+# output_dir='dual_straight/' # test: robot2 move a simple straight line
 
+# num_ls=[200]
 # num_ls=[100]
+# num_ls=[75]
 num_ls=[50]
+# num_ls=[2]
 robot=m710ic(d=50)
 curve_js = read_csv(data_dir+output_dir+'arm1.csv',header=None).values
 
@@ -58,17 +64,17 @@ for num_l in num_ls:
 		points.append([np.array(curve[breakpoints[i]-1,:3])])
 		q_bp.append([np.array(curve_js[breakpoints[i]-1])])
 
-		if i==1:
-			curve_fit[breakpoints[i-1]:breakpoints[i]]=np.linspace(curve[breakpoints[i-1],:3],curve[breakpoints[i]-1,:3],num=breakpoints[i]-breakpoints[i-1])
-			R_init=robot.fwd(curve_js[breakpoints[i-1]]).R
-			R_end=robot.fwd(curve_js[breakpoints[i]-1]).R
-			curve_fit_R[breakpoints[i-1]:breakpoints[i]]=orientation_interp(R_init,R_end,breakpoints[i]-breakpoints[i-1])
+		# if i==1:
+		# 	curve_fit[breakpoints[i-1]:breakpoints[i]]=np.linspace(curve[breakpoints[i-1],:3],curve[breakpoints[i]-1,:3],num=breakpoints[i]-breakpoints[i-1])
+		# 	R_init=robot.fwd(curve_js[breakpoints[i-1]]).R
+		# 	R_end=robot.fwd(curve_js[breakpoints[i]-1]).R
+		# 	curve_fit_R[breakpoints[i-1]:breakpoints[i]]=orientation_interp(R_init,R_end,breakpoints[i]-breakpoints[i-1])
 
-		else:
-			curve_fit[breakpoints[i-1]:breakpoints[i]]=np.linspace(curve[breakpoints[i-1]-1,:3],curve[breakpoints[i]-1,:3],num=breakpoints[i]-breakpoints[i-1]+1)[1:]
-			R_init=robot.fwd(curve_js[breakpoints[i-1]-1]).R
-			R_end=robot.fwd(curve_js[breakpoints[i]-1]).R
-			curve_fit_R[breakpoints[i-1]:breakpoints[i]]=orientation_interp(R_init,R_end,breakpoints[i]-breakpoints[i-1]+1)[1:]
+		# else:
+		# 	curve_fit[breakpoints[i-1]:breakpoints[i]]=np.linspace(curve[breakpoints[i-1]-1,:3],curve[breakpoints[i]-1,:3],num=breakpoints[i]-breakpoints[i-1]+1)[1:]
+		# 	R_init=robot.fwd(curve_js[breakpoints[i-1]-1]).R
+		# 	R_end=robot.fwd(curve_js[breakpoints[i]-1]).R
+		# 	curve_fit_R[breakpoints[i-1]:breakpoints[i]]=orientation_interp(R_init,R_end,breakpoints[i]-breakpoints[i-1]+1)[1:]
 		
 	primitives_choices=['movej_fit']+['movel_fit']*num_l
 
@@ -106,17 +112,17 @@ for num_l in num_ls:
 		points.append([np.array(curve[breakpoints[i]-1,:3])])
 		q_bp.append([np.array(curve_js[breakpoints[i]-1])])
 
-		if i==1:
-			curve_fit[breakpoints[i-1]:breakpoints[i]]=np.linspace(curve[breakpoints[i-1],:3],curve[breakpoints[i]-1,:3],num=breakpoints[i]-breakpoints[i-1])
-			R_init=robot.fwd(curve_js[breakpoints[i-1]]).R
-			R_end=robot.fwd(curve_js[breakpoints[i]-1]).R
-			curve_fit_R[breakpoints[i-1]:breakpoints[i]]=orientation_interp(R_init,R_end,breakpoints[i]-breakpoints[i-1])
+		# if i==1:
+		# 	curve_fit[breakpoints[i-1]:breakpoints[i]]=np.linspace(curve[breakpoints[i-1],:3],curve[breakpoints[i]-1,:3],num=breakpoints[i]-breakpoints[i-1])
+		# 	R_init=robot.fwd(curve_js[breakpoints[i-1]]).R
+		# 	R_end=robot.fwd(curve_js[breakpoints[i]-1]).R
+		# 	curve_fit_R[breakpoints[i-1]:breakpoints[i]]=orientation_interp(R_init,R_end,breakpoints[i]-breakpoints[i-1])
 
-		else:
-			curve_fit[breakpoints[i-1]:breakpoints[i]]=np.linspace(curve[breakpoints[i-1]-1,:3],curve[breakpoints[i]-1,:3],num=breakpoints[i]-breakpoints[i-1]+1)[1:]
-			R_init=robot.fwd(curve_js[breakpoints[i-1]-1]).R
-			R_end=robot.fwd(curve_js[breakpoints[i]-1]).R
-			curve_fit_R[breakpoints[i-1]:breakpoints[i]]=orientation_interp(R_init,R_end,breakpoints[i]-breakpoints[i-1]+1)[1:]
+		# else:
+		# 	curve_fit[breakpoints[i-1]:breakpoints[i]]=np.linspace(curve[breakpoints[i-1]-1,:3],curve[breakpoints[i]-1,:3],num=breakpoints[i]-breakpoints[i-1]+1)[1:]
+		# 	R_init=robot.fwd(curve_js[breakpoints[i-1]-1]).R
+		# 	R_end=robot.fwd(curve_js[breakpoints[i]-1]).R
+		# 	curve_fit_R[breakpoints[i-1]:breakpoints[i]]=orientation_interp(R_init,R_end,breakpoints[i]-breakpoints[i-1]+1)[1:]
 		
 	primitives_choices=['movej_fit']+['movel_fit']*num_l
 

@@ -61,8 +61,8 @@ class MotionSendFANUC(object):
 
     def exec_motions_multimove(self,robot1,robot2,primitives1,primitives2,p_bp1,p_bp2,q_bp1,q_bp2,speed,zone,coord=[]):
 
-        tp_follow = TPMotionProgram()
-        tp_lead = TPMotionProgram()
+        tp_follow = TPMotionProgram(self.utool,self.uframe)
+        tp_lead = TPMotionProgram(self.utool2,self.uframe2)
         #### move to start
         # robot1
         j0 = joint2robtarget(q_bp1[0][0],robot1,self.group,self.uframe,self.utool)
@@ -87,8 +87,8 @@ class MotionSendFANUC(object):
             all_speed=np.array(speed)
 
         #### start traj
-        tp_follow = TPMotionProgram()
-        tp_lead = TPMotionProgram()
+        tp_follow = TPMotionProgram(self.utool,self.uframe)
+        tp_lead = TPMotionProgram(self.utool2,self.uframe2)
         for i in range(1,len(primitives1)):
             if i == len(primitives1)-1:
                 # this_zone = zone
@@ -105,9 +105,11 @@ class MotionSendFANUC(object):
                 # robot1
                 robt1 = joint2robtarget(q_bp1[i][0],robot1,self.group,self.uframe,self.utool)
                 tp_follow.moveL(robt1,this_speed,'mmsec',this_zone,option)
+                # tp_follow.moveL(robt1,1,'msec',this_zone,option)
                 # robot2
                 robt2 = joint2robtarget(q_bp2[i][0],robot2,self.group2,self.uframe2,self.utool2)
                 tp_lead.moveL(robt2,this_speed,'mmsec',this_zone,option)
+                # tp_lead.moveL(robt2,1,'msec',this_zone,option)
             elif primitives1[i]=='movec_fit':
                 # robot1
                 robt_mid1 = joint2robtarget(q_bp1[i][0],robot1,self.group,self.uframe,self.utool)
@@ -124,6 +126,91 @@ class MotionSendFANUC(object):
                 tp_lead.moveJ(robt2,this_speed,'%',this_zone)
         
         return self.client.execute_motion_program_coord(tp_lead,tp_follow)
+    
+    def exec_motions_multimove_nocoord(self,robot1,robot2,primitives1,primitives2,p_bp1,p_bp2,q_bp1,q_bp2,speed1,speed2,zone1,zone2):
+
+        tp_follow = TPMotionProgram(self.utool,self.uframe)
+        tp_lead = TPMotionProgram(self.utool2,self.uframe2)
+        #### move to start
+        # robot1
+        j0 = joint2robtarget(q_bp1[0][0],robot1,self.group,self.uframe,self.utool)
+        tp_follow.moveJ(j0,50,'%',-1)
+        tp_follow.moveJ(j0,5,'%',-1)
+        # robot2
+        j0 = joint2robtarget(q_bp2[0][0],robot2,self.group2,self.uframe2,self.utool2)
+        tp_lead.moveJ(j0,50,'%',-1)
+        tp_lead.moveJ(j0,5,'%',-1)
+        self.client.execute_motion_program_multi(tp_follow,tp_lead)
+    
+        #### for speed1 regulation
+        if (type(speed1) is int) or (type(speed1) is float):
+            all_speed=np.ones(len(primitives1))*int(speed1)
+        else:
+            assert len(speed1) == len(primitives1), "Speed list must have the same length as primitives"
+            all_speed=np.array(speed1)
+
+        #### start traj, follower, robot1
+        tp_follow = TPMotionProgram(self.utool,self.uframe)
+        for i in range(1,len(primitives1)):
+            if i == len(primitives1)-1:
+                # this_zone = zone1
+                this_zone = -1
+            else:
+                this_zone = zone1
+            option=''
+            # speed
+            this_speed=int(all_speed[i])
+
+            if primitives1[i]=='movel_fit':
+                # robot1
+                robt1 = joint2robtarget(q_bp1[i][0],robot1,self.group,self.uframe,self.utool)
+                # tp_follow.moveL(robt1,this_speed,'mmsec',this_zone,option)
+                tp_follow.moveL(robt1,this_speed,'msec',this_zone,option)
+            elif primitives1[i]=='movec_fit':
+                # robot1
+                robt_mid1 = joint2robtarget(q_bp1[i][0],robot1,self.group,self.uframe,self.utool)
+                robt1 = joint2robtarget(q_bp1[i][1],robot1,self.group,self.uframe,self.utool)
+                tp_follow.moveC(robt_mid1,robt1,this_speed,'mmsec',this_zone,option)
+            else: #moveJ
+                robt1 = joint2robtarget(q_bp1[i][0],robot1,self.group,self.uframe,self.utool)
+                tp_follow.moveJ(robt1,this_speed,'%',this_zone)
+                # tp_follow.moveJ(robt1,this_speed,'msec',this_zone)
+        
+        #### for speed2 regulation
+        if (type(speed2) is int) or (type(speed2) is float):
+            all_speed=np.ones(len(primitives2))*int(speed2)
+        else:
+            assert len(speed2) == len(primitives2), "Speed list must have the same length as primitives"
+            all_speed=np.array(speed2)
+        
+        #### start traj, leader, robot2
+        tp_lead = TPMotionProgram(self.utool2,self.uframe2)
+        for i in range(1,len(primitives2)):
+            if i == len(primitives2)-1:
+                # this_zone = zone2
+                this_zone = -1
+            else:
+                this_zone = zone2
+            option=''
+            # speed
+            this_speed=int(all_speed[i])
+
+            if primitives2[i]=='movel_fit':
+                # robot2
+                robt2 = joint2robtarget(q_bp2[i][0],robot2,self.group2,self.uframe2,self.utool2)
+                # tp_lead.moveL(robt2,this_speed,'mmsec',this_zone,option)
+                tp_lead.moveL(robt2,this_speed,'msec',this_zone,option)
+            elif primitives2[i]=='movec_fit':
+                # robot2
+                robt_mid2 = joint2robtarget(q_bp2[i][0],robot2,self.group2,self.uframe2,self.utool2)
+                robt2 = joint2robtarget(q_bp2[i][1],robot2,self.group2,self.uframe2,self.utool2)
+                tp_lead.moveC(robt_mid2,robt2,this_speed,'mmsec',this_zone,option)
+            else: #moveJ
+                robt2 = joint2robtarget(q_bp2[i][0],robot2,self.group2,self.uframe2,self.utool2)
+                tp_lead.moveJ(robt2,this_speed,'%',this_zone)
+                # tp_lead.moveJ(robt2,this_speed,'msec',this_zone)
+        
+        return self.client.execute_motion_program_multi(tp_follow,tp_lead)
     
     def logged_data_analysis(self,robot,df):
 
@@ -566,7 +653,7 @@ class MotionSendFANUC(object):
         
         return primitives1,p_bp1,q_bp1,primitives2,p_bp2,q_bp2
     
-    def extend_dual(self,robot1,p_bp1,q_bp1,primitives1,robot2,p_bp2,q_bp2,primitives2,breakpoints,base2_T,extension_d=100):
+    def extend_dual_relative(self,robot1,p_bp1,q_bp1,primitives1,robot2,p_bp2,q_bp2,primitives2,breakpoints,base2_T,extension_d=100):
         #extend porpotionally
         d1_start=np.linalg.norm(p_bp1[1][-1]-p_bp1[0][-1])
         d2_start=np.linalg.norm(p_bp2[1][-1]-p_bp2[0][-1])
@@ -603,6 +690,20 @@ class MotionSendFANUC(object):
 
         return p_bp1,q_bp1,p_bp2,q_bp2,step_to_extend_end
 
+    def extend_dual(self,robot1,p_bp1,q_bp1,primitives1,robot2,p_bp2,q_bp2,primitives2,breakpoints,base2_T,extension_d=100):
+        #extend porpotionally
+        d1_start=np.linalg.norm(p_bp1[1][-1]-p_bp1[0][-1])
+        d2_start=np.linalg.norm(p_bp2[1][-1]-p_bp2[0][-1])
+        d1_end=np.linalg.norm(p_bp1[-1][-1]-p_bp1[-2][-1])
+        d2_end=np.linalg.norm(p_bp2[-1][-1]-p_bp2[-2][-1])
+
+        ### First, extend the leader (workpiece robot).
+        primitives2,p_bp2,q_bp2=self.extend_start_end(robot2,q_bp2,primitives2,breakpoints,p_bp2,extension_start=extension_d,extension_end=extension_d)
+        ### Then, extend the follower (tool robot) in the workpiece (i.e. leader robot workpiece) frame.
+        primitives1,p_bp1,q_bp1=self.extend_start_end(robot1,q_bp1,primitives1,breakpoints,p_bp1,extension_start=extension_d*d1_start/d2_start,extension_end=extension_d*d1_end/d2_end)
+
+        return p_bp1,q_bp1,p_bp2,q_bp2
+    
     def extract_data_from_cmd(self,filename):
         data = read_csv(filename)
 

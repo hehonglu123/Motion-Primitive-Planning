@@ -52,24 +52,24 @@ def find_next_point(t,p,step_size):
 
 def main():
 
-    t = np.linspace(0,1000,1001)
+    t = np.linspace(0,2000,2001)
     curve=find_point(t)
     curve_normal=find_normal(curve)
 
     ##############3D plots####################
-    xsurf = np.linspace(0,1000,101)
-    ysurf = np.linspace(- R,R,101)
-    zsurf = np.zeros((len(xsurf),len(ysurf)))
-    for i in range(len(ysurf)):
-        zsurf[:,i] = (R ** 2 - ysurf[i] ** 2) * H / R ** 2
+    # xsurf = np.linspace(0,1000,101)
+    # ysurf = np.linspace(- R,R,101)
+    # zsurf = np.zeros((len(xsurf),len(ysurf)))
+    # for i in range(len(ysurf)):
+    #     zsurf[:,i] = (R ** 2 - ysurf[i] ** 2) * H / R ** 2
 
-    fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
-    ax.plot_surface(xsurf, ysurf, zsurf, cmap=cm.coolwarm,
-                           linewidth=0, antialiased=False)
-    ax.plot3D(curve[:,0],curve[:,1],curve[:,2],'r.-')
-    ax.quiver(curve[::20,0],curve[::20,1],curve[::20,2],curve_normal[::20,0],curve_normal[::20,1],curve_normal[::20,2],length=5, normalize=True)
-    plt.title('Curve 1')
-    plt.show()
+    # fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
+    # ax.plot_surface(xsurf, ysurf, zsurf, cmap=cm.coolwarm,
+    #                        linewidth=0, antialiased=False)
+    # ax.plot3D(curve[:,0],curve[:,1],curve[:,2],'r.-')
+    # ax.quiver(curve[::20,0],curve[::20,1],curve[::20,2],curve_normal[::20,0],curve_normal[::20,1],curve_normal[::20,2],length=5, normalize=True)
+    # plt.title('Curve 1')
+    # plt.show()
 
     ###################check curve normal##############################
     # curve_tan=np.gradient(curve,axis=0)
@@ -85,8 +85,8 @@ def main():
 
     ####################generate equally spaced points##########################
     num_points=50000
-    lam=calc_lam_cs(curve)
-    lam=np.linspace(0,lam[-1],num_points)
+    # lam=calc_lam_cs(curve)
+    lam=np.linspace(0,2000,num_points)
     curve_act=[curve[0]]
     curve_normal_act=[curve_normal[0]]
     t_act=[0]
@@ -102,17 +102,21 @@ def main():
 
     DataFrame(np.hstack((curve_act,curve_normal_act))).to_csv('Curve_dense.csv',header=False,index=False)
 
-    # diff=np.linalg.norm(np.diff(curve_act,axis=0),axis=1)
-    # plt.figure()
-    # plt.plot(diff)
-    # plt.show()
+    # lam=calc_lam_cs(curve_act)
 
-    fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
-    ax.plot3D(curve_act[:,0],curve_act[:,1],curve_act[:,2],'r.-')
-    ax.quiver(curve_act[:,0],curve_act[:,1],curve_act[:,2],curve_normal_act[:,0],curve_normal_act[:,1],curve_normal_act[:,2],length=1, normalize=True)
+    diff=np.linalg.norm(np.diff(curve_act,axis=0),axis=1)
+    plt.figure()
+    plt.plot(diff)
     plt.show()
 
-    visualize_curve_w_normal(curve_act,curve_normal_act,stepsize=10)
+    # fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
+    # ax.plot3D(curve_act[:,0],curve_act[:,1],curve_act[:,2],'r.-')
+    # ax.quiver(curve_act[:,0],curve_act[:,1],curve_act[:,2],curve_normal_act[:,0],curve_normal_act[:,1],curve_normal_act[:,2],length=1, normalize=True)
+    # plt.show()
+
+    # visualize_curve_w_normal(curve_act,curve_normal_act,stepsize=10)
+
+
 
 
 if __name__ == '__main__':

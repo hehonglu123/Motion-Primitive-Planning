@@ -275,7 +275,7 @@ class lambda_opt(object):
 		Kw=0.1
 		Kq=.02*np.eye(12)    #small value to make sure positive definite
 		# Kq[6:,6:]=0.01*np.eye(6)		#larger weights for second robot for it moves slower
-		Kq[6:,6:]=0.1*np.eye(6)		#larger weights for second robot for it moves slower
+		Kq[6:,6:]=0.03*np.eye(6)		#larger weights for second robot for it moves slower
 		KR=np.eye(3)        #gains for position and orientation error
 
 		###concatenated bounds
@@ -293,7 +293,7 @@ class lambda_opt(object):
 				print(i)
 			try:
 				error_fb=999
-				while error_fb>0.2:
+				while error_fb>99:
 					pose1_now=self.robot1.fwd(q_all1[-1])
 					pose2_now=self.robot2.fwd(q_all2[-1])
 
@@ -334,6 +334,91 @@ class lambda_opt(object):
 					alpha=1
 					q_all1.append(q_all1[-1]+alpha*qdot[:6])
 					q_all2.append(q_all2[-1]+alpha*qdot[6:])
+
+			except:
+				traceback.print_exc()
+				q_out1.append(q_all1[-1])
+				q_out2.append(q_all2[-1])			
+				raise AssertionError
+				break
+
+			q_out1.append(q_all1[-1])
+			q_out2.append(q_all2[-1])
+
+		q_out1=np.array(q_out1)[1:]
+		q_out2=np.array(q_out2)[1:]
+		return q_out1, q_out2
+
+	def dual_arm_stepwise_optimize2(self,q_init1,q_init2):
+
+		#curve_normal: expressed in second robot tool frame
+		###all (jacobian) in robot2 tool frame
+		q_all1=[q_init1]
+		q_out1=[q_init1]
+		q_all2=[q_init2]
+		q_out2=[q_init2]
+
+		#####weights
+		Kw=0.1
+		Kq=.02*np.eye(12)    #small value to make sure positive definite
+		# Kq[6:,6:]=0.01*np.eye(6)		#larger weights for second robot for it moves slower
+		Kq[6:,6:]=0.03*np.eye(6)		#larger weights for second robot for it moves slower
+		KR=np.eye(3)        #gains for position and orientation error
+
+		###concatenated bounds
+		joint_vel_limit=np.hstack((self.robot1.joint_vel_limit,self.robot2.joint_vel_limit))
+		upper_limit=np.hstack((self.robot1.upper_limit,self.robot2.upper_limit))
+		lower_limit=np.hstack((self.robot1.lower_limit,self.robot2.lower_limit))
+		joint_acc_limit=np.hstack((self.robot1.joint_acc_limit,self.robot2.joint_acc_limit))
+
+		###moving weights, p1 p2,r1 r2
+		weight_distro=np.array([[1,1],
+								[1,1]])
+
+		for i in range(0,len(self.curve)):
+			if (i%1000) == 0:
+				print(i)
+			try:
+				pose1_now=self.robot1.fwd(q_all1[-1])
+				pose2_now=self.robot2.fwd(q_all2[-1])
+
+				pose2_world_now=self.robot2.fwd(q_all2[-1],self.base2_R,self.base2_p)
+
+				error_fb=np.linalg.norm(np.dot(pose2_world_now.R.T,pose1_now.p-pose2_world_now.p)-self.curve[i])+np.linalg.norm(np.dot(pose2_world_now.R.T,pose1_now.R[:,-1])-self.curve_normal[i])	
+
+				# print(i)
+				# print(np.dot(pose2_world_now.R.T,pose1_now.p-pose2_world_now.p)-self.curve[i])
+				# print(np.dot(pose2_world_now.R.T,pose1_now.R[:,-1])-self.curve_normal[i])
+				########################################################QP formation###########################################
+				
+				J1=self.robot1.jacobian(q_all1[-1])        #calculate current Jacobian
+				J1p=np.dot(pose2_world_now.R.T,J1[3:,:])
+				J1R=np.dot(pose2_world_now.R.T,J1[:3,:])
+				J1R_mod=-np.dot(hat(np.dot(pose2_world_now.R.T,pose1_now.R[:,-1])),J1R)
+
+				J2=self.robot2.jacobian(q_all2[-1])        #calculate current Jacobian, mapped to robot2 tool frame
+				J2p=np.dot(pose2_now.R.T,J2[3:,:])
+				J2R=np.dot(pose2_now.R.T,J2[:3,:])
+				J2R_mod=-np.dot(hat(np.dot(pose2_world_now.R.T,pose1_now.R[:,-1])),J2R)
+
+				#form 6x12 jacobian with weight distribution
+				J_all_p=np.hstack((weight_distro[0,0]*J1p,-weight_distro[0,1]*J2p))
+				J_all_R=np.hstack((weight_distro[1,0]*J1R_mod,-weight_distro[1,1]*J2R_mod))
+				
+				H=np.dot(np.transpose(J_all_p),J_all_p)+Kq+Kw*np.dot(np.transpose(J_all_R),J_all_R)
+				H=(H+np.transpose(H))/2
+
+				vd=self.curve[i]-np.dot(pose2_world_now.R.T,pose1_now.p-pose2_world_now.p)  
+				ezdotd=self.curve_normal[i]-np.dot(pose2_world_now.R.T,pose1_now.R[:,-1])
+
+				f=-np.dot(np.transpose(J_all_p),vd)-Kw*np.dot(np.transpose(J_all_R),ezdotd)
+				qdot=solve_qp(H,f,lb=lower_limit-np.hstack((q_all1[-1],q_all2[-1]))+self.lim_factor*np.ones(12),ub=upper_limit-np.hstack((q_all1[-1],q_all2[-1]))-self.lim_factor*np.ones(12))
+
+				# alpha=fminbound(self.error_calc4,0,0.999999999999999999999,args=(q_all1[-1],q_all2[-1],qdot,self.curve[i],self.curve_normal[i],))
+				# print(alpha)
+				alpha=1
+				q_all1.append(q_all1[-1]+alpha*qdot[:6])
+				q_all2.append(q_all2[-1]+alpha*qdot[6:])
 
 			except:
 				traceback.print_exc()
