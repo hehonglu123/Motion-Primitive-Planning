@@ -99,35 +99,35 @@ def exec(q_d,joint):
 
 	return qdot_max
 
-robot=abb6640()
-resolution=0.1 ###rad
+# robot=abb6640()
+robot=abb1200()
+resolution=0.02 ###rad
 
 dict_table={}
 
 
 #####################first & second joint acc both depends on second and third joint#####################################
-# for q2 in np.arange(robot.lower_limit[1],robot.upper_limit[1],resolution):
-# 	for q3 in np.arange(robot.lower_limit[2],robot.upper_limit[2],resolution):
-# 		###initialize keys, and desired pose
-# 		dict_table[(q2,q3)]=[0]*3
-# 		q_d=[0,q2,q3,0,0,0]
+for q2 in np.arange(robot.lower_limit[1],robot.upper_limit[1],resolution):
+	for q3 in np.arange(robot.lower_limit[2],robot.upper_limit[2],resolution):
+		###initialize keys, and desired pose
+		dict_table[(q2,q3)]=[0]*3
+		q_d=[0,q2,q3,0,0,0]
 
-# 		for joint in range(3):
-# 			###move first q1, q2 and q3
-# 			qdot_max=exec(q_d,joint)
-# 			###update dict
-# 			dict_table[(q2,q3)][joint]=copy.deepcopy(qdot_max)
+		for joint in range(3):
+			###move first q1, q2 and q3
+			qdot_max=exec(q_d,joint)
+			###update dict
+			dict_table[(q2,q3)][joint]=copy.deepcopy(qdot_max)
 
 
-# with open(r'test.txt','w+') as f:
-# 	f.write(str(dict_table))
-# pickle.dump(dict_table, open('test.pickle','wb'))
+with open(r'test.txt','w+') as f:
+	f.write(str(dict_table))
+pickle.dump(dict_table, open('test.pickle','wb'))
 
 
 
 ###############################joint 4,5,6 constant acceleration measurement##############################################
-#4,5,6: [47.29253791291949,39.49167516506145,54.32806813314554]
-for joint in range(3,6):
-	q_d=np.zeros(6)
-	qdot_max=exec(q_d,joint)
-	print('joint '+str(joint+1),qdot_max)
+# for joint in range(3,6):
+# 	q_d=np.zeros(6)
+# 	qdot_max=exec(q_d,joint)
+# 	print('joint '+str(joint+1),qdot_max)

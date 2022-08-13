@@ -41,7 +41,8 @@ class abb6640(object):
 		self.upper_limit=np.radians([170.,85.,70.,300.,120.,360.])
 		self.lower_limit=np.radians([-170.,-65.,-180.,-300.,-120.,-360.])
 		self.joint_vel_limit=np.radians([100,90,90,190,140,190])
-		self.joint_acc_limit=np.radians([312,292,418,2407,1547,3400])
+		# self.joint_acc_limit=np.radians([312,292,418,2407,1547,3400])
+		self.joint_acc_limit=np.array([-1,-1,-1,47.29253791291949,39.49167516506145,54.32806813314554])
 		self.robot_def=Robot(self.H,self.P,self.joint_type,joint_lower_limit = self.lower_limit, joint_upper_limit = self.upper_limit, joint_vel_limit=self.joint_vel_limit, R_tool=R_tool,p_tool=tcp_new)
 
 	def jacobian(self,q):
@@ -99,7 +100,7 @@ class abb1200(object):
 		self.upper_limit=np.radians([170.,130.,70.,270.,130.,360.])
 		self.lower_limit=np.radians([-170.,-100.,-200.,-270.,-130.,-360.])
 		self.joint_vel_limit=np.radians([288,240,297,400,405,600])
-		self.joint_acc_limit=10*self.joint_vel_limit
+		self.joint_acc_limit=np.array([-1,-1,-1,91.68926572933634,130.66682511376243,173.7432801326654])
 		self.robot_def=Robot(self.H,self.P,self.joint_type,joint_lower_limit = self.lower_limit, joint_upper_limit = self.upper_limit, joint_vel_limit=self.joint_vel_limit, R_tool=R_tool,p_tool=tcp_new)
 
 	def jacobian(self,q):
