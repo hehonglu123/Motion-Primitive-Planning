@@ -8,6 +8,10 @@ setup(
     py_modules=['blending','error_check','lambda_calc','MotionSend','robots_def','toolbox_circular_fit','utils'],
     install_requires=[
         'bs4',
-        'numpy'
+        'numpy',
+        'pandas',
+        'general_robotics_toolbox',
+        'matplotlib',
+        'sklearn'
     ]
 )

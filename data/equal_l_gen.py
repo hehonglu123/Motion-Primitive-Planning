@@ -15,7 +15,7 @@ from utils import *
 
 
 data_dir='wood/'
-solution_dir='curve_pose_opt4/'
+solution_dir='curve_pose_opt5/'
 
 num_ls=[100]
 robot=abb6640(d=50)

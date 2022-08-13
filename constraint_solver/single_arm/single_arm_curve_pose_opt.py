@@ -9,7 +9,9 @@ def main():
 
 
 	robot=abb6640(d=50)
-	robot.joint_acc_limit*=0.5
+	robot.joint_acc_limit[1]*=0.8
+	robot.joint_acc_limit[2]*=0.8
+
 	v_cmd=600
 	opt=lambda_opt(curve_dense[:,:3],curve_dense[:,3:],robot1=robot,steps=500,v_cmd=v_cmd)
 
