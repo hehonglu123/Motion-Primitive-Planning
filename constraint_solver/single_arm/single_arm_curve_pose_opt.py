@@ -8,9 +8,8 @@ def main():
 	curve_dense = read_csv(data_dir+"Curve_dense.csv",header=None).values
 
 
-	robot=abb6640(d=50)
-	robot.joint_acc_limit[1]*=0.8
-	robot.joint_acc_limit[2]*=0.8
+	robot=abb6640(d=50, acc_dict_path='../../toolbox/robot_info/6640acc.pickle')
+
 
 	v_cmd=600
 	opt=lambda_opt(curve_dense[:,:3],curve_dense[:,3:],robot1=robot,steps=500,v_cmd=v_cmd)
@@ -29,7 +28,7 @@ def main():
 
 	res = differential_evolution(opt.curve_pose_opt2, bnds, args=None,workers=-1,
 									x0 = np.hstack((k*theta,curve_pose[:-1,-1],[0])),
-									strategy='best1bin', maxiter=500,
+									strategy='best1bin', maxiter=1,
 									popsize=15, tol=1e-10,
 									mutation=(0.5, 1), recombination=0.7,
 									seed=None, callback=None, disp=False,

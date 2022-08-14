@@ -42,7 +42,7 @@ class abb6640(object):
 		self.lower_limit=np.radians([-170.,-65.,-180.,-300.,-120.,-360.])
 		self.joint_vel_limit=np.radians([100,90,90,190,140,190])
 		# self.joint_acc_limit=np.radians([312,292,418,2407,1547,3400])
-		self.joint_acc_limit=np.array([-1,-1,-1,47.29253791291949,39.49167516506145,54.32806813314554])
+		self.joint_acc_limit=np.array([-1,-1,-1,42.49102688076435,36.84030926197994,50.45298947544431])
 		self.robot_def=Robot(self.H,self.P,self.joint_type,joint_lower_limit = self.lower_limit, joint_upper_limit = self.upper_limit, joint_vel_limit=self.joint_vel_limit, R_tool=R_tool,p_tool=tcp_new)
 
 		###acceleration table
@@ -62,10 +62,20 @@ class abb6640(object):
 			self.q2q3_config=np.array([q2_config,q3_config]).T
 			self.q1q2q3_acc=np.array([q1_acc,q2_acc,q3_acc]).T
 
-	def get_acc(self,q):
-		###find closest q2q3 config, along with constant last 3 joints acc
-		idx=np.argmin(np.linalg.norm(self.q2q3_config-q[1:3],axis=1))
-		return np.append(self.q1q2q3_acc[idx],self.joint_acc_limit[-3:])
+	def get_acc(self,q_all):
+		#if a single point
+		if q_all.shape==(len(self.upper_limit),):
+			###find closest q2q3 config, along with constant last 3 joints acc
+			idx=np.argmin(np.linalg.norm(self.q2q3_config-q_all[1:3],axis=1))
+			return np.append(self.q1q2q3_acc[idx],self.joint_acc_limit[-3:])
+		else:
+			acc_limit_all=[]
+			for q in q_all:
+				idx=np.argmin(np.linalg.norm(self.q2q3_config-q[1:3],axis=1))
+				acc_limit_all.append(np.append(self.q1q2q3_acc[idx],self.joint_acc_limit[-3:]))
+
+		return np.array(acc_limit_all)
+
 
 	def jacobian(self,q):
 		return robotjacobian(self.robot_def,q)
@@ -122,7 +132,7 @@ class abb1200(object):
 		self.upper_limit=np.radians([170.,130.,70.,270.,130.,360.])
 		self.lower_limit=np.radians([-170.,-100.,-200.,-270.,-130.,-360.])
 		self.joint_vel_limit=np.radians([288,240,297,400,405,600])
-		self.joint_acc_limit=np.array([-1,-1,-1,91.68926572933634,130.66682511376243,173.7432801326654])
+		self.joint_acc_limit=np.array([-1,-1,-1,85.73244187330907,126.59979534862278,167.56543454239707])
 		self.robot_def=Robot(self.H,self.P,self.joint_type,joint_lower_limit = self.lower_limit, joint_upper_limit = self.upper_limit, joint_vel_limit=self.joint_vel_limit, R_tool=R_tool,p_tool=tcp_new)
 
 		###acceleration table
@@ -142,10 +152,19 @@ class abb1200(object):
 			self.q2q3_config=np.array([q2_config,q3_config]).T
 			self.q1q2q3_acc=np.array([q1_acc,q2_acc,q3_acc]).T
 
-	def get_acc(self,q):
-		###find closest q2q3 config, along with constant last 3 joints acc
-		idx=np.argmin(np.linalg.norm(self.q2q3_config-q[1:3],axis=1))
-		return np.append(self.q1q2q3_acc[idx],self.joint_acc_limit[-3:])
+	def get_acc(self,q_all):
+		#if a single point
+		if q_all.shape==(len(self.upper_limit),):
+			###find closest q2q3 config, along with constant last 3 joints acc
+			idx=np.argmin(np.linalg.norm(self.q2q3_config-q_all[1:3],axis=1))
+			return np.append(self.q1q2q3_acc[idx],self.joint_acc_limit[-3:])
+		else:
+			acc_limit_all=[]
+			for q in q_all:
+				idx=np.argmin(np.linalg.norm(self.q2q3_config-q[1:3],axis=1))
+				acc_limit_all.append(np.append(self.q1q2q3_acc[idx],self.joint_acc_limit[-3:]))
+
+		return np.array(acc_limit_all)
 
 	def jacobian(self,q):
 		return robotjacobian(self.robot_def,q)
@@ -216,10 +235,19 @@ class arb_robot(object):
 			self.q2q3_config=np.array([q2_config,q3_config]).T
 			self.q1q2q3_acc=np.array([q1_acc,q2_acc,q3_acc]).T
 
-	def get_acc(self,q):
-		###find closest q2q3 config, along with constant last 3 joints acc
-		idx=np.argmin(np.linalg.norm(self.q2q3_config-q[1:3],axis=1))
-		return np.append(self.q1q2q3_acc[idx],self.joint_acc_limit[-3:])
+	def get_acc(self,q_all):
+		#if a single point
+		if q_all.shape==(len(self.upper_limit),):
+			###find closest q2q3 config, along with constant last 3 joints acc
+			idx=np.argmin(np.linalg.norm(self.q2q3_config-q_all[1:3],axis=1))
+			return np.append(self.q1q2q3_acc[idx],self.joint_acc_limit[-3:])
+		else:
+			acc_limit_all=[]
+			for q in q_all:
+				idx=np.argmin(np.linalg.norm(self.q2q3_config-q[1:3],axis=1))
+				acc_limit_all.append(np.append(self.q1q2q3_acc[idx],self.joint_acc_limit[-3:]))
+
+		return np.array(acc_limit_all)
 		
 	def jacobian(self,q):
 		return robotjacobian(self.robot_def,q)

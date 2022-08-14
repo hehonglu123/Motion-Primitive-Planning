@@ -239,9 +239,10 @@ def q_linesearch(alpha,qdot_prev,qdot_next,dt,joint_acc_limit):
 	else:
 		return np.max(coeff)-1
 
-def traj_speed_est(robot,curve_js,joint_acc_limit,lam,vd,qdot_init=[]):
+def traj_speed_est(robot,curve_js,lam,vd,qdot_init=[]):
 	####speed estimation given curve in joint space with qdot and qddot constraint
 	#joint_acc_limit: joint acceleration at each pose of curve_js
+	joint_acc_limit=robot.get_acc(curve_js)
 
 	###find desired qdot at each step
 	dq=np.gradient(curve_js,axis=0)
@@ -375,10 +376,11 @@ def traj_speed_est(robot,curve_js,joint_acc_limit,lam,vd,qdot_init=[]):
 	speed=moving_average(speed,n=5,padding=True)
 	return speed
 
-def traj_speed_est_dual(robot1,robot2,curve_js1,curve_js2,joint_acc_limit1,joint_acc_limit2,base2_R,base2_p,lam,vd,qdot_init1=[],qdot_init2=[]):
+def traj_speed_est_dual(robot1,robot2,curve_js1,curve_js2,base2_R,base2_p,lam,vd,qdot_init1=[],qdot_init2=[]):
 	#############################TCP relative speed esitmation with dual arm##############################
 	###lam & vd must both be 1. relative or 2. robot2's TCP
-
+	joint_acc_limit1=robot1.get_acc(curve_js1)
+	joint_acc_limit2=robot2.get_acc(curve_js2)
 	###curve1_js & curve2_js must have same dimension
 	curve_js=np.hstack((curve_js1,curve_js2))
 	qdot_lim=np.hstack((robot1.joint_vel_limit,robot2.joint_vel_limit))
@@ -667,12 +669,7 @@ def main3():
 		lam_exe, curve_exe, curve_exe_R,curve_exe_js, act_speed, timestamp=ms.logged_data_analysis(robot,df,realrobot=True)
 		lam_exe, curve_exe, curve_exe_R,curve_exe_js, act_speed, timestamp=ms.chop_extension(curve_exe, curve_exe_R,curve_exe_js, act_speed, timestamp,curve[0,:3],curve[-1,:3])
 
-		###get joint acceleration at each pose
-		joint_acc_limit_exe=[]
-		for q in curve_exe_js:
-			joint_acc_limit_exe.append(robot.get_acc(q))
-
-		speed_est=traj_speed_est(robot,curve_exe_js,joint_acc_limit_exe,lam_exe,v_cmd)
+		speed_est=traj_speed_est(robot,curve_exe_js,lam_exe,v_cmd)
 
 
 		qdot_all=np.gradient(curve_exe_js,axis=0)/np.tile([np.gradient(timestamp)],(6,1)).T
@@ -760,7 +757,7 @@ def main4():
 			joint_acc_limit_exe2.append(robot2.get_acc(q))
 
 
-		speed_est,speed1_est,speed2_est=traj_speed_est_dual(robot1,robot2,curve_exe_js1,curve_exe_js2,joint_acc_limit_exe1,joint_acc_limit_exe2,base2_R,base2_p,lam,v_cmd)	
+		speed_est,speed1_est,speed2_est=traj_speed_est_dual(robot1,robot2,curve_exe_js1,curve_exe_js2,base2_R,base2_p,lam,v_cmd)	
 
 
 		plt.plot(lam_exe,speed_est,label='estimated')
