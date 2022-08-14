@@ -64,6 +64,8 @@ def get_acc(log_results_str,q,joint,clipped=False):
 	qdot_all=np.gradient(curve_exe_js,axis=0)/np.tile([np.gradient(timestamp)],(6,1)).T
 	qddot_all=np.gradient(qdot_all,axis=0)/np.tile([np.gradient(timestamp)],(6,1)).T
 
+	max_idx=np.argmax(np.abs(qddot_all[0:2*idx,joint]))
+	qddot_max=np.average(np.abs(qddot_all[max(max_idx-2,0):max_idx+3,joint]))
 
 	###plot profile
 	# plt.plot(curve_exe_js[:,joint],qdot_all[:,joint],label='qdot')
@@ -74,7 +76,7 @@ def get_acc(log_results_str,q,joint,clipped=False):
 	# plt.title('joint 1 profile')
 	# plt.show()
 
-	return np.max(np.abs(qddot_all[0:2*idx,joint]))
+	return qddot_max
 
 def exec(q_d,joint):
 	###move joint at q_d configuration
@@ -99,9 +101,9 @@ def exec(q_d,joint):
 
 	return qdot_max
 
-# robot=abb6640()
-robot=abb1200()
-resolution=0.02 ###rad
+robot=abb6640()
+# robot=abb1200()
+resolution=0.05 ###rad
 
 dict_table={}
 

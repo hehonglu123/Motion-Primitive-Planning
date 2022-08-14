@@ -2,15 +2,13 @@ import pickle
 import matplotlib.pyplot as plt
 import numpy as np
 
-dic = ''
-with open(r'test.txt','r') as f:
-         for i in f.readlines():
-            dic=i #string
-dic = eval(dic) # this is orignal dict with instace dict
-print(dic[(-1.0344640137963141, -3.041592653589793)])
+# dic = ''
+# with open(r'test.txt','r') as f:
+#          for i in f.readlines():
+#             dic=i #string
+# dic = eval(dic) # this is orignal dict with instace dict
 
-# dic2 = pickle.load(open('test.pickle','rb'))
-# print(dic2[(-1.0344640137963141, -3.041592653589793)])
+dic = pickle.load(open('1200/1200acc.pickle','rb'))
 
 
 
@@ -28,40 +26,40 @@ for key, value in dic.items():
    q3_acc.append(value[2])
 
 #####################################################################get acc from q###########################################################
-q=np.array([2,0,-1,1,3,4])
-xy=np.array([x,y]).T
-idx=np.argmin(np.linalg.norm(xy-q[1:3],axis=1))
-print('q2,q3 at: ',x[idx],y[idx])
-print('acc: ',q1_acc[idx],q2_acc[idx],q3_acc[idx],47.29253791291949,39.49167516506145,54.32806813314554)
+# q=np.array([2,0,-1,1,3,4])
+# xy=np.array([x,y]).T
+# idx=np.argmin(np.linalg.norm(xy-q[1:3],axis=1))
+# print('q2,q3 at: ',x[idx],y[idx])
+# print('acc: ',q1_acc[idx],q2_acc[idx],q3_acc[idx],47.29253791291949,39.49167516506145,54.32806813314554)
 
 #####################################################################surface plots##########################################################
-# fig = plt.figure()
-# ax = fig.add_subplot(111, projection='3d')
-# surf = ax.plot_trisurf(x, y, q1_acc, linewidth=0, antialiased=False)
-# ax.set_xlabel('q2 (rad)')
-# ax.set_ylabel('q3 (rad)')
-# ax.set_zlabel('q1 acc (rad/s^2)')
+fig = plt.figure()
+ax = fig.add_subplot(111, projection='3d')
+surf = ax.plot_trisurf(x, y, q1_acc, linewidth=0, antialiased=False)
+ax.set_xlabel('q2 (rad)')
+ax.set_ylabel('q3 (rad)')
+ax.set_zlabel('q1 acc (rad/s^2)')
 
-# plt.title('Joint1 Acceleration Limit')
-# plt.show()
+plt.title('Joint1 Acceleration Limit')
+plt.show()
 
-# fig = plt.figure()
-# ax = fig.add_subplot(111, projection='3d')
-# surf = ax.plot_trisurf(x, y, q2_acc, linewidth=0, antialiased=False)
-# ax.set_xlabel('q2 (rad)')
-# ax.set_ylabel('q3 (rad)')
-# ax.set_zlabel('q2 acc (rad/s^2)')
+fig = plt.figure()
+ax = fig.add_subplot(111, projection='3d')
+surf = ax.plot_trisurf(x, y, q2_acc, linewidth=0, antialiased=False)
+ax.set_xlabel('q2 (rad)')
+ax.set_ylabel('q3 (rad)')
+ax.set_zlabel('q2 acc (rad/s^2)')
 
-# plt.title('Joint2 Acceleration Limit')
-# plt.show()
+plt.title('Joint2 Acceleration Limit')
+plt.show()
 
 
-# fig = plt.figure()
-# ax = fig.add_subplot(111, projection='3d')
-# surf = ax.plot_trisurf(x, y, q3_acc, linewidth=0, antialiased=False)
-# ax.set_xlabel('q2 (rad)')
-# ax.set_ylabel('q3 (rad)')
-# ax.set_zlabel('q3 acc (rad/s^2)')
+fig = plt.figure()
+ax = fig.add_subplot(111, projection='3d')
+surf = ax.plot_trisurf(x, y, q3_acc, linewidth=0, antialiased=False)
+ax.set_xlabel('q2 (rad)')
+ax.set_ylabel('q3 (rad)')
+ax.set_zlabel('q3 acc (rad/s^2)')
 
-# plt.title('Joint3 Acceleration Limit')
-# plt.show()
+plt.title('Joint3 Acceleration Limit')
+plt.show()

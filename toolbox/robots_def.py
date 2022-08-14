@@ -1,7 +1,7 @@
 from general_robotics_toolbox import *
 import numpy as np
 import yaml, copy
-
+import pickle
 
 def Rx(theta):
 	return np.array([[1,0,0],[0,np.cos(theta),-np.sin(theta)],[0,np.sin(theta),np.cos(theta)]])
@@ -16,7 +16,7 @@ ez=np.array([[0],[0],[1]])
 #ALL in mm
 class abb6640(object):
 	#default tool paintgun
-	def __init__(self,R_tool=Ry(np.radians(120)),p_tool=np.array([0.45,0,-0.05])*1000.,d=0):
+	def __init__(self,R_tool=Ry(np.radians(120)),p_tool=np.array([0.45,0,-0.05])*1000.,d=0,acc_dict_path=''):
 		###ABB IRB 6640 180/2.55 Robot Definition
 		self.H=np.concatenate((ez,ey,ey,ex,ey,ex),axis=1)
 		p0=np.array([[0],[0],[0.78]])
@@ -44,6 +44,28 @@ class abb6640(object):
 		# self.joint_acc_limit=np.radians([312,292,418,2407,1547,3400])
 		self.joint_acc_limit=np.array([-1,-1,-1,47.29253791291949,39.49167516506145,54.32806813314554])
 		self.robot_def=Robot(self.H,self.P,self.joint_type,joint_lower_limit = self.lower_limit, joint_upper_limit = self.upper_limit, joint_vel_limit=self.joint_vel_limit, R_tool=R_tool,p_tool=tcp_new)
+
+		###acceleration table
+		if len(acc_dict_path)>0:
+			acc_dict= pickle.load(open(acc_dict_path,'rb'))
+			q2_config=[]
+			q3_config=[]
+			q1_acc=[]
+			q2_acc=[]
+			q3_acc=[]
+			for key, value in acc_dict.items():
+			   q2_config.append(key[0])
+			   q3_config.append(key[1])
+			   q1_acc.append(value[0])
+			   q2_acc.append(value[1])
+			   q3_acc.append(value[2])
+			self.q2q3_config=np.array([q2_config,q3_config]).T
+			self.q1q2q3_acc=np.array([q1_acc,q2_acc,q3_acc]).T
+
+	def get_acc(self,q):
+		###find closest q2q3 config, along with constant last 3 joints acc
+		idx=np.argmin(np.linalg.norm(self.q2q3_config-q[1:3],axis=1))
+		return np.append(self.q1q2q3_acc[idx],self.joint_acc_limit[-3:])
 
 	def jacobian(self,q):
 		return robotjacobian(self.robot_def,q)
@@ -77,7 +99,7 @@ class abb6640(object):
 
 class abb1200(object):
 	#default tool paintgun
-	def __init__(self,R_tool=Ry(np.radians(90)),p_tool=np.zeros(3),d=0):
+	def __init__(self,R_tool=Ry(np.radians(90)),p_tool=np.zeros(3),d=0,acc_dict_path=''):
 		###ABB IRB 1200 5/0.9 Robot Definition
 		self.H=np.concatenate((ez,ey,ey,ex,ey,ex),axis=1)
 		p0=np.array([[0],[0],[0.3991]])
@@ -102,6 +124,28 @@ class abb1200(object):
 		self.joint_vel_limit=np.radians([288,240,297,400,405,600])
 		self.joint_acc_limit=np.array([-1,-1,-1,91.68926572933634,130.66682511376243,173.7432801326654])
 		self.robot_def=Robot(self.H,self.P,self.joint_type,joint_lower_limit = self.lower_limit, joint_upper_limit = self.upper_limit, joint_vel_limit=self.joint_vel_limit, R_tool=R_tool,p_tool=tcp_new)
+
+		###acceleration table
+		if len(acc_dict_path)>0:
+			acc_dict= pickle.load(open(acc_dict_path,'rb'))
+			q2_config=[]
+			q3_config=[]
+			q1_acc=[]
+			q2_acc=[]
+			q3_acc=[]
+			for key, value in acc_dict.items():
+			   q2_config.append(key[0])
+			   q3_config.append(key[1])
+			   q1_acc.append(value[0])
+			   q2_acc.append(value[1])
+			   q3_acc.append(value[2])
+			self.q2q3_config=np.array([q2_config,q3_config]).T
+			self.q1q2q3_acc=np.array([q1_acc,q2_acc,q3_acc]).T
+
+	def get_acc(self,q):
+		###find closest q2q3 config, along with constant last 3 joints acc
+		idx=np.argmin(np.linalg.norm(self.q2q3_config-q[1:3],axis=1))
+		return np.append(self.q1q2q3_acc[idx],self.joint_acc_limit[-3:])
 
 	def jacobian(self,q):
 		return robotjacobian(self.robot_def,q)
@@ -136,7 +180,7 @@ class abb1200(object):
 
 class arb_robot(object):
 	#R_tool make tool z pointing to +x at 0 config
-	def __init__(self, H,P,joint_type,upper_limit,lower_limit, joint_vel_limit,R_tool=Ry(np.radians(90)),p_tool=np.zeros(3),d=0):
+	def __init__(self, H,P,joint_type,upper_limit,lower_limit, joint_vel_limit,R_tool=Ry(np.radians(90)),p_tool=np.zeros(3),d=0,acc_dict_path=''):
 		###All in mm
 		self.H=H
 		self.P=P
@@ -155,6 +199,28 @@ class arb_robot(object):
 		self.joint_acc_limit=10*self.joint_vel_limit
 		self.robot_def=Robot(self.H,self.P,self.joint_type,joint_lower_limit = self.lower_limit, joint_upper_limit = self.upper_limit, joint_vel_limit=self.joint_vel_limit, R_tool=R_tool,p_tool=tcp_new)
 
+		###acceleration table
+		if len(acc_dict_path)>0:
+			acc_dict= pickle.load(open(acc_dict_path,'rb'))
+			q2_config=[]
+			q3_config=[]
+			q1_acc=[]
+			q2_acc=[]
+			q3_acc=[]
+			for key, value in acc_dict.items():
+			   q2_config.append(key[0])
+			   q3_config.append(key[1])
+			   q1_acc.append(value[0])
+			   q2_acc.append(value[1])
+			   q3_acc.append(value[2])
+			self.q2q3_config=np.array([q2_config,q3_config]).T
+			self.q1q2q3_acc=np.array([q1_acc,q2_acc,q3_acc]).T
+
+	def get_acc(self,q):
+		###find closest q2q3 config, along with constant last 3 joints acc
+		idx=np.argmin(np.linalg.norm(self.q2q3_config-q[1:3],axis=1))
+		return np.append(self.q1q2q3_acc[idx],self.joint_acc_limit[-3:])
+		
 	def jacobian(self,q):
 		return robotjacobian(self.robot_def,q)
 	def fwd(self,q,base_R=np.eye(3),base_p=np.array([0,0,0]),qlim_override=False):
