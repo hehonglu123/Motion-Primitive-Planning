@@ -19,7 +19,7 @@ from MotionSend import *
 
 def main():
     dataset='wood/'
-    solution_dir='diffevo2/'
+    solution_dir='diffevo3/'
     data_dir="../../../data/"+dataset
     cmd_dir=data_dir+'/dual_arm/'+solution_dir+'50L/'
     relative_path = read_csv(data_dir+"/Curve_dense.csv", header=None).values

@@ -24,7 +24,7 @@ from blending import *
 
 def main():
 	dataset='wood/'
-	solution_dir='curve_pose_opt1/'
+	solution_dir='curve_pose_opt7/'
 	data_dir="../../data/"+dataset+solution_dir
 	cmd_dir="../../data/"+dataset+solution_dir+'100L/'
 

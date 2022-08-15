@@ -728,7 +728,7 @@ def main4():
 	# exe_dir='../simulation/robotstudio_sim/multimove/'+dataset+solution_dir
 
 
-	v_cmds=[100,300,500,700]
+	v_cmds=[300,500,700]
 	for v_cmd in v_cmds:
 
 		###read actual exe file
@@ -794,4 +794,4 @@ def main4():
 
 
 if __name__ == "__main__":
-	main3()
+	main4()

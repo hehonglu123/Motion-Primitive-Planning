@@ -6,10 +6,10 @@ from MotionSend import *
 
 def main():
 
-	data_dir='../../data/from_NX/'
+	data_dir='../../data/wood/'
 	relative_path=read_csv(data_dir+"Curve_dense.csv",header=None).values
 
-	v_cmd=900
+	v_cmd=1100
 
 	with open(data_dir+'dual_arm/abb1200.yaml') as file:
 	    H_1200 = np.array(yaml.safe_load(file)['H'],dtype=np.float64)
@@ -19,7 +19,9 @@ def main():
 
 	with open(data_dir+'dual_arm/tcp.yaml') as file:
 	    H_tcp = np.array(yaml.safe_load(file)['H'],dtype=np.float64)
-	robot2=abb1200(R_tool=H_tcp[:3,:3],p_tool=H_tcp[:-1,-1])
+
+	robot1=abb6640(d=50, acc_dict_path='../../toolbox/robot_info/6640acc.pickle')
+	robot2=abb1200(R_tool=H_tcp[:3,:3],p_tool=H_tcp[:-1,-1], acc_dict_path='../../toolbox/robot_info/1200acc.pickle')
 
 	ms = MotionSend(robot2=robot2,base2_R=base2_R,base2_p=base2_p)
 
@@ -31,7 +33,7 @@ def main():
 	q_init1=curve_js1[0]
 	q_init2=ms.calc_robot2_q_from_blade_pose(blade_pose,base2_R,base2_p)
 	
-	opt=lambda_opt(relative_path[:,:3],relative_path[:,3:],robot1=ms.robot1,robot2=ms.robot2,base2_R=base2_R,base2_p=base2_p,steps=500,v_cmd=v_cmd)
+	opt=lambda_opt(relative_path[:,:3],relative_path[:,3:],robot1=robot1,robot2=robot2,base2_R=base2_R,base2_p=base2_p,steps=500,v_cmd=v_cmd)
 
 	###########################################diff evo opt############################################
 	lower_limit=np.append(robot2.lower_limit,[-np.pi])
@@ -54,9 +56,9 @@ def main():
 	R_temp=direction2R(np.dot(pose2_world_now.R,opt.curve_normal[0]),-opt.curve[1]+opt.curve[0])
 	R=np.dot(R_temp,Rz(res.x[-1]))
 
-	q_init1=opt.robot1.inv(pose2_world_now.p,R)[0]
+	q_init1=robot1.inv(pose2_world_now.p,R)[0]
 	###########################################stepwise qp solver#####################################################
-	opt=lambda_opt(relative_path[:,:3],relative_path[:,3:],robot1=ms.robot1,robot2=ms.robot2,base2_R=base2_R,base2_p=base2_p,steps=50000)
+	opt=lambda_opt(relative_path[:,:3],relative_path[:,3:],robot1=robot1,robot2=robot2,base2_R=base2_R,base2_p=base2_p,steps=50000)
 	q_out1, q_out2=opt.dual_arm_stepwise_optimize(q_init1,q_init2,w1=0.02,w2=0.01)
 
 	####output to trajectory csv
@@ -67,7 +69,7 @@ def main():
 
 	###dual lambda_dot calc
 	# dlam_out=calc_lamdot(np.hstack((q_out1,q_out2)),opt.lam[:len(q_out2)],np.tile(opt.joint_vel_limit,2),1)
-	speed,speed1,speed2=traj_speed_est_dual(opt.robot1,opt.robot2,q_out1[::100],q_out2[::100],opt.base2_R,opt.base2_p,opt.lam[::100],v_cmd)
+	speed,speed1,speed2=traj_speed_est_dual(robot1,robot2,q_out1[::100],q_out2[::100],opt.base2_R,opt.base2_p,opt.lam[::100],v_cmd)
 
 	print('speed min: ', min(speed))
 

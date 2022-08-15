@@ -71,7 +71,7 @@ def main():
 	df.to_csv('trajectory/curve_pose_opt/curve_pose_opt_cs.csv',header=False,index=False)
 	#########################################restore only given points, END##########################################################
 
-	dlam_out=calc_lamdot(q_out,opt.lam,opt.robot1,1)
+	# dlam_out=calc_lamdot(q_out,opt.lam,opt.robot1,1)
 	speed=traj_speed_est(opt.robot1,q_out,opt.lam,opt.v_cmd)
 
 	# plt.plot(opt.lam,dlam_out,label="lambda_dot_max")
