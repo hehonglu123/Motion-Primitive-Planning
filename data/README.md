@@ -1,0 +1,24 @@
+# Data Format for Motion Primitive Planning
+
+## Original Spatial Curve Data
+This repo contains two sets of spatial curve, represented in its own Cartesian frame with first three elements of xyz point and last three elements of xyz normal vector.
+Those files are either created with analytical expression: `data/wood/Curve_dense.csv` or extracted from NX: `data/from_NX/Curve_dense.csv`.
+
+## Spatial Curve Pose
+This is usually a yaml file with a homogeneous transformation matrix, representing the curve frame with respect to robot base frame: `data/wood/curve_pose_opt1/blade_pose.yaml`
+
+## Spatial Curve in Robot Base Frame
+With known curve pose, the spatial curve is converted into robot base frame, with same point + vector format:  `data/wood/curve_pose_opt1/Curve_in_base_frame.csv`
+
+## Spatial Curve in Joint Space Representation
+This is robot joint configuration file for all points in `Curve_in_base_frame.csv`, solved with redundancy resolution. Each row is a point in 6d joint space: `data/wood/curve_pose_opt1/Curve_js.csv`
+
+## Robot Motion Command File
+This file contains a series of breakpoints information, including 
+* breakpoint index in `Curve_in_base_frame.csv`
+* segment primitive type
+* breakpoint(s) in robot base frame. If the primitive type is MoveJ or MoveL, the length of this argument is 1. If the primitive type is MoveC, the length of this argument is 2.
+* breakpoint(s) in joint space. Similarly, 2 for MoveC and 1 for MoveJ and MoveL
+
+## Interpolated Trajectory from Motion Command
+This file contains a continuous (not smooth) trajectory: `curve_fit.csv`
