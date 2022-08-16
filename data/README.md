@@ -14,7 +14,7 @@ With known curve pose, the spatial curve is converted into robot base frame, wit
 This is robot joint configuration file for all points in `Curve_in_base_frame.csv`, solved with redundancy resolution. Each row is a point in 6d joint space: `data/wood/curve_pose_opt1/Curve_js.csv`
 
 ## Robot Motion Command File
-This file contains a series of breakpoints information, including 
+This file contains a series of breakpoints information: `data/wood/curve_pose_opt1/100L/command.csv`, including 
 * breakpoint index in `Curve_in_base_frame.csv`
 * segment primitive type
 * breakpoint(s) in robot base frame. If the primitive type is MoveJ or MoveL, the length of this argument is 1. If the primitive type is MoveC, the length of this argument is 2.
