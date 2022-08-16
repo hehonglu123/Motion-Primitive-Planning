@@ -19,8 +19,9 @@ from MotionSend import *
 
 def main():
     dataset='wood/'
-    solution_dir='diffevo1_50L/'
+    solution_dir='diffevo3/'
     data_dir="../../../data/"+dataset
+    cmd_dir=data_dir+'/dual_arm/'+solution_dir+'50L/'
     relative_path = read_csv(data_dir+"/Curve_dense.csv", header=None).values
 
     with open(data_dir+'dual_arm/'+solution_dir+'abb1200.yaml') as file:
@@ -37,7 +38,7 @@ def main():
     ms = MotionSend(robot1=robot1,robot2=robot2,base2_R=base2_R,base2_p=base2_p)
 
     ###specify speed here for robot2
-    s2_all=[1500]
+    s2_all=[1000]
 
     for s2 in s2_all:
         s1=9999
@@ -47,8 +48,8 @@ def main():
         z= zonedata(False,zone,1.5*zone,1.5*zone,0.15*zone,1.5*zone,0.15*zone)
 
 
-        breakpoints1,primitives1,p_bp1,q_bp1=ms.extract_data_from_cmd(data_dir+'/dual_arm/'+solution_dir+'command1.csv')
-        breakpoints2,primitives2,p_bp2,q_bp2=ms.extract_data_from_cmd(data_dir+'/dual_arm/'+solution_dir+'command2.csv')
+        breakpoints1,primitives1,p_bp1,q_bp1=ms.extract_data_from_cmd(cmd_dir+'command1.csv')
+        breakpoints2,primitives2,p_bp2,q_bp2=ms.extract_data_from_cmd(cmd_dir+'command2.csv')
 
         ###extension
         p_bp1,q_bp1,p_bp2,q_bp2=ms.extend_dual(ms.robot1,p_bp1,q_bp1,primitives1,ms.robot2,p_bp2,q_bp2,primitives2,breakpoints1)

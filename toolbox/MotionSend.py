@@ -62,7 +62,11 @@ class MotionSend(object):
                 robt1, robt2 = self.moveC_target(robot,q_bp[i][0],q_bp[i][1],p_bp[i][0],p_bp[i][1])
                 mp.MoveC(robt1,robt2,speed,zone)
 
-            else: # movej_fit
+            elif motion == 'movej_fit':
+                robt = self.moveL_target(robot,q_bp[i][0],p_bp[i][0])
+                mp.MoveJ(robt,speed,zone)
+
+            else: # moveabsj
                 jointt = self.moveJ_target(q_bp[i][0])
                 if i==0:
                     mp.MoveAbsJ(jointt,v500,fine)
@@ -98,7 +102,11 @@ class MotionSend(object):
                 robt1, robt2 = self.moveC_target(self.robot1,q_bp1[i][0],q_bp1[i][1],p_bp1[i][0],p_bp1[i][1])
                 mp1.MoveC(robt1,robt2,speed1,zone1)
 
-            else: # movej_fit
+            elif motion == 'movej_fit':
+                robt = self.moveL_target(self.robot1,q_bp1[i][0],p_bp1[i][0])
+                mp1.MoveJ(robt,speed1,zone1)
+
+            else: # moveabsj
                 jointt = self.moveJ_target(q_bp1[i][0])
                 if i==0:
                     mp1.MoveAbsJ(jointt,v500,fine)
@@ -124,7 +132,14 @@ class MotionSend(object):
                 else:
                     mp2.MoveC(robt1,robt2,speed2[i],zone2)
 
-            else: # movej_fit
+            elif motion == 'movej_fit':
+                robt = self.moveL_target(self.robot2,q_bp2[i][0],p_bp2[i][0])
+                if len(speed2)==4:
+                    mp2.MoveJ(robt,speed2,zone2)
+                else:
+                    mp2.MoveJ(robt,speed2[i],zone2)
+
+            else: # moveabsj
                 jointt = self.moveJ_target(q_bp2[i][0])
                 if i==0:
                     mp2.MoveAbsJ(jointt,v500,fine)
@@ -395,7 +410,10 @@ class MotionSend(object):
         timestamp=df['timestamp'].tolist()[1:-1]
 
         cmd_num=np.array(df[' cmd_num'].tolist()[1:-1]).astype(float)
-        start_idx=np.where(cmd_num==5)[0][0]
+
+        idx = np.absolute(cmd_num-5).argmin()
+        start_idx=np.where(cmd_num==cmd_num[idx])[0][0]
+
         curve_exe_js1=np.radians(np.vstack((q1_1,q1_2,q1_3,q1_4,q1_5,q1_6)).T.astype(float)[start_idx:])
         curve_exe_js2=np.radians(np.vstack((q2_1,q2_2,q2_3,q2_4,q2_5,q2_6)).T.astype(float)[start_idx:])
         timestamp=np.array(timestamp[start_idx:]).astype(float)
@@ -434,10 +452,13 @@ class MotionSend(object):
             if i>0:
                 lam.append(lam[-1]+np.linalg.norm(relative_path_exe[i]-relative_path_exe[i-1]))
             try:
-                if timestamp[i-1]!=timestamp[i] and np.linalg.norm(relative_path_exe[-1]-relative_path_exe[-2])!=0:
-                    act_speed.append(np.linalg.norm(relative_path_exe[-1]-relative_path_exe[-2])/(timestamp[i]-timestamp[i-1]))
+                if np.linalg.norm(relative_path_exe[-1]-relative_path_exe[-2])==0:
+                    act_speed.append(0)
                 else:
-                    act_speed.append(act_speed[-1])
+                    if timestamp[i-1]!=timestamp[i]:
+                        act_speed.append(np.linalg.norm(relative_path_exe[-1]-relative_path_exe[-2])/(timestamp[i]-timestamp[i-1]))
+                    else:
+                        act_speed.append(act_speed[-1])
                     
             except IndexError:
                 pass
@@ -515,6 +536,8 @@ class MotionSend(object):
         timestamp=timestamp[start_idx:end_idx+1]
         speed=speed[start_idx:end_idx+1]
         lam=calc_lam_cs(relative_path_exe)
+
+
 
         return lam, curve_exe1,curve_exe2,curve_exe_R1,curve_exe_R2,curve_exe_js1,curve_exe_js2, speed, timestamp, relative_path_exe,relative_path_exe_R
 

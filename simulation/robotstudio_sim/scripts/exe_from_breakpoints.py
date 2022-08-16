@@ -19,7 +19,7 @@ from MotionSend import *
 def main():
     ms = MotionSend()
     dataset='wood/'
-    solution_dir='curve_pose_opt4/'
+    solution_dir='curve_pose_opt7/'
     cmd_dir='../../../data/'+dataset+solution_dir+'100L/'
     data_dir='../../../data/'+dataset+solution_dir
 
@@ -63,7 +63,7 @@ def main():
             ax2.plot(lam, error, 'b-',label='Error')
             ax2.plot(lam, np.degrees(angle_error), 'y-',label='Normal Error')
             ax2.axis(ymin=0,ymax=6)
-            ax1.axis(ymin=0,ymax=2000)
+            ax1.axis(ymin=0,ymax=500)
 
             ax1.set_xlabel('lambda (mm)')
             ax1.set_ylabel('Speed/lamdot (mm/s)', color='g')

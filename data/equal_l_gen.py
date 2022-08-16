@@ -15,7 +15,7 @@ from utils import *
 
 
 data_dir='wood/'
-solution_dir='curve_pose_opt4/'
+solution_dir='curve_pose_opt7/'
 
 num_ls=[100]
 robot=abb6640(d=50)
@@ -49,7 +49,7 @@ for num_l in num_ls:
 			R_end=robot.fwd(curve_js[breakpoints[i]-1]).R
 			curve_fit_R[breakpoints[i-1]:breakpoints[i]]=orientation_interp(R_init,R_end,breakpoints[i]-breakpoints[i-1]+1)[1:]
 		
-	primitives_choices=['movej_fit']+['movel_fit']*num_l
+	primitives_choices=['moveabsj']+['movel_fit']*num_l
 
 	df=DataFrame({'breakpoints':breakpoints,'primitives':primitives_choices,'points':points,'q_bp':q_bp})
 	df.to_csv(cmd_dir+'command.csv',header=True,index=False)

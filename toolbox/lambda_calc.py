@@ -240,6 +240,9 @@ def q_linesearch(alpha,qdot_prev,qdot_next,dt,joint_acc_limit):
 		return np.max(coeff)-1
 
 def traj_speed_est(robot,curve_js,lam,vd,qdot_init=[]):
+	####speed estimation given curve in joint space with qdot and qddot constraint
+	#joint_acc_limit: joint acceleration at each pose of curve_js
+	joint_acc_limit=robot.get_acc(curve_js)
 
 	###find desired qdot at each step
 	dq=np.gradient(curve_js,axis=0)
@@ -254,6 +257,7 @@ def traj_speed_est(robot,curve_js,lam,vd,qdot_init=[]):
 	coeff=np.tile(np.array([coeff]).T,(1,6))
 
 	qdot=np.divide(qdot_d,coeff)	###clip propotionally
+
 	
 	#traversal
 	if len(qdot_init)==0:
@@ -270,9 +274,8 @@ def traj_speed_est(robot,curve_js,lam,vd,qdot_init=[]):
 	for i in range(1,len(curve_js)):
 		qddot=(qdot[i]-qdot_act[-1])/dt[i]
 
-
-		if np.any(np.abs(qddot)>robot.joint_acc_limit):
-			alpha=fminbound(q_linesearch,0,1,args=(qdot_act[-1],qdot[i],dt[i],robot.joint_acc_limit))
+		if np.any(np.abs(qddot)>joint_acc_limit[i]):
+			alpha=fminbound(q_linesearch,0,1,args=(qdot_act[-1],qdot[i],dt[i],joint_acc_limit[i]))
 
 		else:
 			alpha=1
@@ -312,8 +315,8 @@ def traj_speed_est(robot,curve_js,lam,vd,qdot_init=[]):
 
 					qddot=(qdot_act[i+1]-qdot[i])/dt[i]
 
-					if np.any(np.abs(qddot)>robot.joint_acc_limit):
-						alpha=fminbound(q_linesearch,0,1,args=(qdot_act[i+1],qdot[i],dt[i],robot.joint_acc_limit))
+					if np.any(np.abs(qddot)>joint_acc_limit[i]):
+						alpha=fminbound(q_linesearch,0,1,args=(qdot_act[i+1],qdot[i],dt[i],joint_acc_limit[i]))
 					else:
 						if i<large_drop_idx:
 							reverse=False
@@ -342,8 +345,8 @@ def traj_speed_est(robot,curve_js,lam,vd,qdot_init=[]):
 
 					qddot=(qdot_act[i-1]-qdot[i])/dt[i]
 
-					if np.any(np.abs(qddot)>robot.joint_acc_limit):
-						alpha=fminbound(q_linesearch,0,1,args=(qdot_act[i-1],qdot[i],dt[i],robot.joint_acc_limit))
+					if np.any(np.abs(qddot)>joint_acc_limit[i]):
+						alpha=fminbound(q_linesearch,0,1,args=(qdot_act[i-1],qdot[i],dt[i],joint_acc_limit[i]))
 					else:
 						if i>large_drop_idx:
 							reverse=True
@@ -376,11 +379,12 @@ def traj_speed_est(robot,curve_js,lam,vd,qdot_init=[]):
 def traj_speed_est_dual(robot1,robot2,curve_js1,curve_js2,base2_R,base2_p,lam,vd,qdot_init1=[],qdot_init2=[]):
 	#############################TCP relative speed esitmation with dual arm##############################
 	###lam & vd must both be 1. relative or 2. robot2's TCP
-
+	joint_acc_limit1=robot1.get_acc(curve_js1)
+	joint_acc_limit2=robot2.get_acc(curve_js2)
 	###curve1_js & curve2_js must have same dimension
 	curve_js=np.hstack((curve_js1,curve_js2))
 	qdot_lim=np.hstack((robot1.joint_vel_limit,robot2.joint_vel_limit))
-	qddot_lim=np.hstack((robot1.joint_acc_limit,robot2.joint_acc_limit))
+	qddot_lim=np.hstack((joint_acc_limit1,joint_acc_limit2))
 
 	# ###form relative path
 	# curve_relative=form_relative_path(robot1,robot2,curve_js1,curve_js2,base2_R,base2_p)
@@ -629,15 +633,20 @@ def main3():
 	###speed estimation
 	from MotionSend import MotionSend
 	from blending import form_traj_from_bp,blend_js_from_primitive
-	dataset='from_NX/'
+	dataset='wood/'
 	solution_dir='baseline/'
-	robot=abb6640(d=50)
+	robot=abb6640(d=50, acc_dict_path='robot_info/6640acc.pickle')
 	curve = read_csv('../data/'+dataset+solution_dir+'/Curve_in_base_frame.csv',header=None).values
 
 	curve_js=read_csv('../data/'+dataset+solution_dir+'/Curve_js.csv',header=None).values
 	curve=curve[::1000]
 	curve_js=curve_js[::1000]
 	lam_original=calc_lam_cs(curve)
+	
+	###get joint acceleration at each pose
+	joint_acc_limit=[]
+	for q in curve_js:
+		joint_acc_limit.append(robot.get_acc(q))
 
 	ms = MotionSend()
 	
@@ -650,9 +659,9 @@ def main3():
 	lam_blended=calc_lam_js(curve_js_blended,robot)
 
 	exe_dir='../simulation/robotstudio_sim/scripts/fitting_output/'+dataset+'/100L/'
-	# v_cmds=[200,250,300,350,400,450,500]
+	v_cmds=[200,250,300,350,400,450,500]
 	# v_cmds=[1300]
-	v_cmds=[800,900,1000,1100,1200,1300,1400]
+	# v_cmds=[800,900,1000,1100,1200,1300,1400]
 	for v_cmd in v_cmds:
 
 		###read actual exe file
@@ -660,7 +669,7 @@ def main3():
 		lam_exe, curve_exe, curve_exe_R,curve_exe_js, act_speed, timestamp=ms.logged_data_analysis(robot,df,realrobot=True)
 		lam_exe, curve_exe, curve_exe_R,curve_exe_js, act_speed, timestamp=ms.chop_extension(curve_exe, curve_exe_R,curve_exe_js, act_speed, timestamp,curve[0,:3],curve[-1,:3])
 
-		speed_est=traj_speed_est(robot,curve_js,lam_original,v_cmd)
+		speed_est=traj_speed_est(robot,curve_exe_js,lam_exe,v_cmd)
 
 
 		qdot_all=np.gradient(curve_exe_js,axis=0)/np.tile([np.gradient(timestamp)],(6,1)).T
@@ -673,7 +682,7 @@ def main3():
 		# 	plt.axvline(x=lam_exe[idx],c='orange')
 		
 
-		plt.plot(lam_original,speed_est,label='estimated')
+		plt.plot(lam_exe,speed_est,label='estimated')
 		plt.plot(lam_exe,act_speed,label='actual')
 
 		plt.legend()
@@ -710,15 +719,16 @@ def main4():
 	with open(data_dir+'dual_arm/tcp.yaml') as file:
 		H_tcp = np.array(yaml.safe_load(file)['H'],dtype=np.float64)
 
-	robot2=abb1200(R_tool=H_tcp[:3,:3],p_tool=H_tcp[:-1,-1])
-	robot1=abb6640(d=50)
+	robot1=abb6640(d=50, acc_dict_path='robot_info/6640acc.pickle')
+	robot2=abb1200(R_tool=H_tcp[:3,:3],p_tool=H_tcp[:-1,-1], acc_dict_path='robot_info/1200acc.pickle')
+	
 
 	ms = MotionSend(robot2=robot2,base2_R=base2_R,base2_p=base2_p)
 
 	# exe_dir='../simulation/robotstudio_sim/multimove/'+dataset+solution_dir
 
 
-	v_cmds=[100,300,500,700]
+	v_cmds=[300,500,700]
 	for v_cmd in v_cmds:
 
 		###read actual exe file
@@ -737,6 +747,16 @@ def main4():
 
 		lam2=calc_lam_cs(curve_exe2)
 		lam=lam_exe
+
+		###get joint acceleration at each pose
+		joint_acc_limit_exe1=[]
+		for q in curve_exe_js1:
+			joint_acc_limit_exe1.append(robot1.get_acc(q))
+		joint_acc_limit_exe2=[]
+		for q in curve_exe_js2:
+			joint_acc_limit_exe2.append(robot2.get_acc(q))
+
+
 		speed_est,speed1_est,speed2_est=traj_speed_est_dual(robot1,robot2,curve_exe_js1,curve_exe_js2,base2_R,base2_p,lam,v_cmd)	
 
 
