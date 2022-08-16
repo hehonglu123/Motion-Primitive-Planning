@@ -21,4 +21,4 @@ This file contains a series of breakpoints information, including
 * breakpoint(s) in joint space. Similarly, 2 for MoveC and 1 for MoveJ and MoveL
 
 ## Interpolated Trajectory from Motion Command
-This file contains a continuous (not smooth) trajectory: `curve_fit.csv`
+This file contains a continuous (not smooth) trajectory interpolated from motion primitives: `curve_fit.csv`, and in joint space `curve_fit_js.csv`
