@@ -21,8 +21,8 @@ def main():
     # data_type='blade'
     # data_type='wood'
     # data_type='blade_shift'
-    # data_type='curve_line'
-    data_type='curve_line_1000'
+    data_type='curve_line'
+    # data_type='curve_line_1000'
 
     # data and curve directory
     if data_type=='blade':
@@ -79,7 +79,7 @@ def main():
     elif data_type=='curve_line' or data_type=='curve_line_1000':
         ms = MotionSendFANUC(robot1=robot1,robot2=robot2,utool2=5)
 
-    s=200 # mm/sec in leader frame
+    s=2000 # mm/sec in leader frame
     z=100 # CNT100
 
     breakpoints1,primitives1,p_bp1,q_bp1=ms.extract_data_from_cmd(os.getcwd()+'/'+cmd_dir+'command1.csv')

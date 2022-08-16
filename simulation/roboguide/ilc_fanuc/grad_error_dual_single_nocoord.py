@@ -73,7 +73,7 @@ def main():
         ms = MotionSendFANUC(robot1=robot1,robot2=robot2,utool2=3)
 
     # s=int(1600/2.) # mm/sec in leader frame
-    s=100 # mm/sec in leader frame
+    s=12 # mm/sec in leader frame
     z=100 # CNT100
     ilc_output=data_dir+'results_'+str(s)+'_'+test_type+'/'
     Path(ilc_output).mkdir(exist_ok=True)
@@ -199,42 +199,34 @@ def main():
         df=DataFrame({'primitives':primitives2,'points':p_bp2,'q_bp':q_bp2})
         df.to_csv(ilc_output+'command_arm2_'+str(i)+'.csv',header=True,index=False)
 
-        ##########################################calculate gradient for peaks######################################
-        ###restore trajectory from primitives
-        curve_interp1, curve_R_interp1, curve_js_interp1, breakpoints_blended=form_traj_from_bp(q_bp1,primitives1,robot1)
-        curve_interp2, curve_R_interp2, curve_js_interp2, breakpoints_blended=form_traj_from_bp(q_bp2,primitives2,robot2)
-        curve_js_blended1,curve_blended1,curve_R_blended1=blend_js_from_primitive(curve_interp1, curve_js_interp1, breakpoints_blended, primitives1,robot1,zone=10)
-        curve_js_blended2,curve_blended2,curve_R_blended2=blend_js_from_primitive(curve_interp2, curve_js_interp2, breakpoints_blended, primitives2,robot2,zone=10)
+        ##########################################calculate error direction and push######################################
+        curve_target = np.zeros((len(relative_path_exe), 3))
+        curve_target_R = np.zeros((len(relative_path_exe), 3))
+        error_target_dir = np.zeros(len(relative_path_exe),3)
+        for i in range(len(relative_path_exe)):
+            dist = np.linalg.norm(relative_path[:,:3] - relative_path_exe[i], axis=1)
+            closest_point_idx = np.argmin(dist)
+            curve_target[i, :] = relative_path[closest_point_idx, :3]
+            curve_target_R[i, :] = relative_path[closest_point_idx, 3:]
+            error_target_dir[i,:] = relative_path_exe[i] - curve_target[i, :]
+        
+        p_bp_relative,_=ms.form_relative_path(np.squeeze(q_bp1),np.squeeze(q_bp2),base2_R,base2_p)
+        p_bp1_error_dir=[]
+        # find error direction
+        for i in range(1, len(p_bp_relative) - 1):
+            p_bp = p_bp_relative[i][-1]
+            closest_point_idx = np.argmin(np.linalg.norm(curve_target - p_bp, axis=1))
+            error_dir = error[error_target_dir]
+            p_bp1_error_dir.append(error_dir)
+        p_bp1_error_dir.append(np.array([0,0,0])) # no update on the end breakpoints
+        p_bp1_error_dir.insert(0,np.array([0,0,0])) # no update on the first breakpoints
+        
+        ### update p_bp1
+        for i in range(0,len(p_bp1)):
+            p_bp1[i][-1] = np.array(p_bp1[i][-1]) - p_bp1_error_dir[i]
 
-        ###establish relative trajectory from blended trajectory
-        relative_path_blended,relative_path_blended_R=ms.form_relative_path(curve_js_blended1,curve_js_blended2,base2_R,base2_p)
-
-        # all_new_bp=[]
-        for peak in peaks:
-            ######gradient calculation related to nearest 3 points from primitive blended trajectory, not actual one
-            _,peak_error_curve_idx=calc_error(relative_path_exe[peak],relative_path[:,:3])  # index of original curve closest to max error point
-
-            ###get closest to worst case point on blended trajectory
-            _,peak_error_curve_blended_idx=calc_error(relative_path_exe[peak],relative_path_blended)
-
-            ###############get numerical gradient#####
-            ###find closest 3 breakpoints
-            order=np.argsort(np.abs(breakpoints_blended-peak_error_curve_blended_idx))
-            breakpoint_interp_2tweak_indices=order[:3]
-            print(breakpoint_interp_2tweak_indices)
-            
-
-            # calculate desired robot1 point
-            tool_in_base1 = rox.Transform(base2_R,base2_p)*robot2.fwd(curve_exe_js2[peak])
-            closest_T = tool_in_base1*rox.Transform(np.eye(3),relative_path[peak_error_curve_idx,:3])
-            closest_p=closest_T.p
-
-            alpha=1
-            de_dp=ilc.get_gradient_from_model_xyz_fanuc(p_bp1,q_bp1,breakpoints_blended,curve_blended1,peak_error_curve_blended_idx,robot1.fwd(curve_exe_js1[peak]),closest_p,breakpoint_interp_2tweak_indices,ave_speed)
-            p_bp1, q_bp1=ilc.update_bp_xyz(p_bp1,q_bp1,de_dp,error[peak],breakpoint_interp_2tweak_indices,alpha=alpha)
-        # exit()
-
-        # all_new_bp=np.array(all_new_bp)
+        p_bp_relative_new,_=ms.form_relative_path(np.squeeze(q_bp1),np.squeeze(q_bp2),base2_R,base2_p)
+        ### update visualization
         ax = plt.axes(projection='3d')
         ax.plot3D(relative_path[:,0], relative_path[:,1],relative_path[:,2], 'red',label='original')
         # ax.scatter3D(p_bp_relative[step_start:step_end+1,0], p_bp_relative[step_start:step_end+1,1],p_bp_relative[step_start:step_end+1,2], 'blue', label='breakpoints')
@@ -243,8 +235,8 @@ def main():
         ax.plot3D(relative_path_exe[:,0], relative_path_exe[:,1],relative_path_exe[:,2], 'green',label='execution')
         ax.view_init(61, -67)
         plt.legend()
-        plt.savefig(ilc_output+'traj_iteration_'+str(i))
-        plt.clf()
+        # plt.savefig(ilc_output+'traj_iteration_'+str(i))
+        # plt.clf()
         # plt.show()
 
 
