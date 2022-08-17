@@ -71,7 +71,7 @@ def average_5_exe(ms,robot,primitives,breakpoints,p_bp,q_bp,s,z,curve,log_path='
 		curve_exe_all.append(curve_exe)
 		curve_exe_js_all.append(curve_exe_js)
 		timestamp_all.append(timestamp)
-
+		time.sleep(0.5)
 	###trajectory outlier detection, based on chopped time
 	curve_exe_all,curve_exe_js_all,timestamp_all=remove_traj_outlier(curve_exe_all,curve_exe_js_all,timestamp_all,total_time_all)
 
