@@ -391,7 +391,8 @@ class MotionSend(object):
                 pass
 
         ###speed filter, only for simulation
-
+        act_speed=moving_average(act_speed,padding=True)
+        
         return np.array(lam), np.array(curve_exe), np.array(curve_exe_R),np.array(curve_exe_js), np.array(act_speed), timestamp-timestamp[0]
 
     def logged_data_analysis_multimove(self,df,base2_R,base2_p,realrobot=False):

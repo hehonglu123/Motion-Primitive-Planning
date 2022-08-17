@@ -23,8 +23,8 @@ from lambda_calc import *
 from blending import *
 
 def main():
-	dataset='wood/'
-	solution_dir='curve_pose_opt7/'
+	dataset='from_NX/'
+	solution_dir='curve_pose_opt2/'
 	data_dir="../../data/"+dataset+solution_dir
 	cmd_dir="../../data/"+dataset+solution_dir+'100L/'
 
@@ -39,7 +39,7 @@ def main():
 	alpha_default=1.
 	skip=False
 
-	v=400
+	v=1200
 	s = speeddata(v,9999999,9999999,999999)
 	z = z10
 
