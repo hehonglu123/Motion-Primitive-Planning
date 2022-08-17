@@ -24,8 +24,8 @@ from blending import *
 from realrobot import *
 
 def main():
-	dataset='from_NX/'
-	solution_dir='curve_pose_opt2/'
+	dataset='wood/'
+	solution_dir='curve_pose_opt7/'
 	data_dir="../../data/"+dataset+solution_dir
 	cmd_dir="../../data/"+dataset+solution_dir+'100L/'
 
@@ -40,16 +40,19 @@ def main():
 	alpha_default=1.
 	skip=False
 
-	v=1200
+	v=400
 	s = speeddata(v,9999999,9999999,999999)
 	z = z10
 
 
-	ms = MotionSend()
-	breakpoints,primitives,p_bp,q_bp=ms.extract_data_from_cmd(cmd_dir+'command.csv')
-
+	ms = MotionSend(url='http://192.168.55.1:80')
+	# breakpoints,primitives,p_bp,q_bp=ms.extract_data_from_cmd(cmd_dir+'command.csv')
 	###extension
-	p_bp,q_bp=ms.extend(robot,q_bp,primitives,breakpoints,p_bp,extension_start=100,extension_end=100)
+	# p_bp,q_bp=ms.extend(robot,q_bp,primitives,breakpoints,p_bp,extension_start=100,extension_end=100)
+	###########################################get cmd from simulation improved cmd################################
+	breakpoints,primitives,p_bp,q_bp=ms.extract_data_from_cmd('curve1_pose_opt7_v400/command.csv')
+
+	
 	###ilc toolbox def
 	ilc=ilc_toolbox(robot,primitives)
 
@@ -70,12 +73,12 @@ def main():
 		else:
 
 
-			ms = MotionSend()
-			curve_js_all_new, avg_curve_js, timestamp_d=average_5_exe(ms,robot,primitives,breakpoints,p_bp,q_bp,s,z,"recorded_data/curve_exe_v")
+			ms = MotionSend(url='http://192.168.55.1:80')
+			curve_js_all_new, avg_curve_js, timestamp_d=average_5_exe(ms,robot,primitives,breakpoints,p_bp,q_bp,s,z,curve,"recorded_data")
 			###calculat data with average curve
 			lam, curve_exe, curve_exe_R, speed=logged_data_analysis(robot,timestamp_d,avg_curve_js)
 			#############################chop extension off##################################
-			lam, curve_exe, curve_exe_R,curve_exe_js, speed, timestamp=ms.chop_extension(curve_exe, curve_exe_R,curve_exe_js, speed, timestamp_d,curve[0,:3],curve[-1,:3])
+			lam, curve_exe, curve_exe_R,curve_exe_js, speed, timestamp=ms.chop_extension(curve_exe, curve_exe_R,avg_curve_js, speed, timestamp_d,curve[0,:3],curve[-1,:3])
 
 			ms.write_data_to_cmd('recorded_data/command.csv',breakpoints,primitives, p_bp,q_bp)
 
@@ -179,11 +182,11 @@ def main():
 				q_bp_temp[bp_idx][0]=car2js(robot,q_bp[bp_idx][0],p_bp[bp_idx][0],robot.fwd(q_bp[bp_idx][0]).R)[0]
 
 			##############################execution##################################################
-			curve_js_all_new_temp, avg_curve_js_temp, timestamp_d_temp=average_5_exe(ms,robot,primitives,breakpoints,p_bp,q_bp,s,z,"recorded_data/curve_exe_v")
+			curve_js_all_new_temp, avg_curve_js_temp, timestamp_d_temp=average_5_exe(ms,robot,primitives,breakpoints,p_bp,q_bp,s,z,curve,"recorded_data")
 			###calculat data with average curve
 			lam_temp, curve_exe_temp, curve_exe_R_temp, speed_temp=logged_data_analysis(robot,timestamp_d_temp,avg_curve_js_temp)
 			#############################chop extension off##################################
-			lam_temp, curve_exe_temp, curve_exe_R_temp,curve_exe_js_temp, speed_temp, timestamp_temp=ms.chop_extension(curve_exe_temp, curve_exe_R_temp,curve_exe_js_temp, speed_temp, timestamp_d_temp,curve[0,:3],curve[-1,:3])
+			lam_temp, curve_exe_temp, curve_exe_R_temp,curve_exe_js_temp, speed_temp, timestamp_temp=ms.chop_extension(curve_exe_temp, curve_exe_R_temp,avg_curve_js_temp, speed_temp, timestamp_d_temp,curve[0,:3],curve[-1,:3])
 			##############################calcualte error########################################
 			error_temp,angle_error_temp=calc_all_error_w_normal(curve_exe_temp,curve[:,:3],curve_exe_R_temp[:,:,-1],curve[:,3:])
 

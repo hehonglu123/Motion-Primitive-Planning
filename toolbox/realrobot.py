@@ -1,6 +1,48 @@
+from io import StringIO
+from pandas import read_csv
+from sklearn.cluster import KMeans
+import numpy as np
+import scipy
+from utils import *
 
+def average_curve(curve_all,timestamp_all):
+	###get desired synced timestamp first
+	max_length=[]
+	max_time=[]
+	for i in range(len(timestamp_all)):
+		max_length.append(len(timestamp_all[i]))
+		max_time.append(timestamp_all[i][-1])
+	max_length=np.max(max_length)
+	max_time=np.max(max_time)
+	timestamp_d=np.linspace(0,max_time,num=max_length)
 
-def average_5_exe(ms,robot,primitives,breakpoints,p_bp,q_bp,s,z,log_path=''):
+	###linear interpolate each curve with synced timestamp
+	curve_all_new=[]
+	for i in range(len(timestamp_all)):
+		curve_all_new.append(interplate_timestamp(curve_all[i],timestamp_all[i],timestamp_d))
+
+	curve_all_new=np.array(curve_all_new)
+
+	return curve_all_new, np.average(curve_all_new,axis=0),timestamp_d
+
+def remove_traj_outlier(curve_exe_all,curve_exe_js_all,timestamp_all,total_time_all):
+
+	km = KMeans(n_clusters=2)
+	index=km.fit_predict(np.array(total_time_all).reshape(-1,1))
+	cluster=km.cluster_centers_
+	major_index=scipy.stats.mode(index)[0][0]       ###mostly appeared index
+	major_indices=np.where(index==major_index)[0]
+	time_mode_avg=cluster[major_index]
+
+	if abs(cluster[0][0]-cluster[1][0])>0.02*time_mode_avg:
+		curve_exe_all=[curve_exe_all[iii] for iii in major_indices]
+		curve_exe_js_all=[curve_exe_js_all[iii] for iii in major_indices]
+		timestamp_all=[timestamp_all[iii] for iii in major_indices]
+		print('outlier traj detected')
+
+	return curve_exe_all,curve_exe_js_all,timestamp_all
+
+def average_5_exe(ms,robot,primitives,breakpoints,p_bp,q_bp,s,z,curve,log_path=''):
 	###5 run execute
 	curve_exe_all=[]
 	curve_exe_js_all=[]
