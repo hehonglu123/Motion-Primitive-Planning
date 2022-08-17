@@ -22,3 +22,9 @@ This file contains a series of breakpoints information: `data/wood/curve_pose_op
 
 ## Interpolated Trajectory from Motion Command
 This file contains a continuous (not smooth) trajectory interpolated from motion primitives: `curve_fit.csv`, and in joint space `curve_fit_js.csv`
+
+## Dual Arm Relative Pose
+`data/wood/dual_arm/diffevo1/abb1200.yaml` contains the homogeneous transformation matrix of 1200 base frame relative to 6640's base frame.
+
+## Spatial Curve Pose held by Tool
+`data/wood/dual_arm/diffevo1/tcp.yaml` contains the homogeneous transformation matrix of spatial curve frame relative to 1200 end-effector frame.
