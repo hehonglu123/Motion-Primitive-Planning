@@ -23,32 +23,35 @@ from blending import *
 
 def main():
 	dataset='wood/'
-	solution_dir='diffevo1_50L/'
+	
+
 	data_dir="../../data/"+dataset
+	solution_dir=data_dir+'dual_arm/'+'diffevo3/'
+	cmd_dir=solution_dir+'50L/'
 	relative_path = read_csv(data_dir+"/Curve_dense.csv", header=None).values
 
 	lam_relative_path=calc_lam_cs(relative_path)
 
-	with open(data_dir+'dual_arm/'+solution_dir+'abb1200.yaml') as file:
+	with open(solution_dir+'abb1200.yaml') as file:
 		H_1200 = np.array(yaml.safe_load(file)['H'],dtype=np.float64)
 
 	base2_R=H_1200[:3,:3]
 	base2_p=1000*H_1200[:-1,-1]
 
-	with open(data_dir+'dual_arm/'+solution_dir+'tcp.yaml') as file:
+	with open(solution_dir+'tcp.yaml') as file:
 		H_tcp = np.array(yaml.safe_load(file)['H'],dtype=np.float64)
 	robot1=abb6640(d=50)
 	robot2=abb1200(R_tool=H_tcp[:3,:3],p_tool=H_tcp[:-1,-1])
 
 	ms = MotionSend(robot1=robot1,robot2=robot2,base2_R=base2_R,base2_p=base2_p)
 
-	breakpoints1,primitives1,p_bp1,q_bp1=ms.extract_data_from_cmd(data_dir+'dual_arm/'+solution_dir+'command1.csv')
-	breakpoints2,primitives2,p_bp2,q_bp2=ms.extract_data_from_cmd(data_dir+'dual_arm/'+solution_dir+'command2.csv')
+	breakpoints1,primitives1,p_bp1,q_bp1=ms.extract_data_from_cmd(cmd_dir+'command1.csv')
+	breakpoints2,primitives2,p_bp2,q_bp2=ms.extract_data_from_cmd(cmd_dir+'command2.csv')
 
 	###get lambda at each breakpoint
 	lam_bp=lam_relative_path[np.append(breakpoints1[0],breakpoints1[1:]-1)]
 
-	vd=500
+	vd=700
 
 	s1=9999
 	s2=[vd]*len(primitives2)
@@ -95,6 +98,7 @@ def main():
 		##############################calcualte error########################################
 		error,angle_error=calc_all_error_w_normal(relative_path_exe,relative_path[:,:3],relative_path_exe_R[:,:,-1],relative_path[:,3:])
 		print(max(error))
+
 		#############################error peak detection###############################
 		peaks,_=find_peaks(error,height=multi_peak_threshold,prominence=0.05,distance=20/(lam[int(len(lam)/2)]-lam[int(len(lam)/2)-1]))		###only push down peaks higher than height, distance between each peak is 20mm, threshold to filter noisy peaks
 		if len(peaks)==0 or np.argmax(error) not in peaks:
@@ -190,7 +194,8 @@ def main():
 			s2[m]+=speed_alpha*(vd-segment_avg)
 			s2[m]=max(s2[m],100)
 
-
+		if max(error)<0.5:
+			break
 
 if __name__ == "__main__":
 	main()

@@ -18,8 +18,8 @@ from MotionSend import *
 
 def main():
     ms = MotionSend()
-    dataset='wood/'
-    solution_dir='curve_pose_opt7/'
+    dataset='from_NX/'
+    solution_dir='curve_pose_opt2/'
     cmd_dir='../../../data/'+dataset+solution_dir+'100L/'
     data_dir='../../../data/'+dataset+solution_dir
 
@@ -38,13 +38,13 @@ def main():
     # speed={'v200':v200,'v250':v250,'v300':v300,'v350':v350,'v400':v400,'v450':v450,'v500':v500}
     # speed={'v800':v800,'v900':v900,'v1000':v1000,'v1100':v1100,'v1200':v1200,'v1300':v1300,'v1400':v1400}
     # speed={'v800':v800,'v1000':v1000,'v1200':v1200,'v1500':v1500,'v2000':v2000}
-    speed={'v400':v400}
+    speed={'v1200':v1200}
     zone={'z10':z10}
 
     for s in speed:
         for z in zone: 
             breakpoints,primitives, p_bp,q_bp=ms.extract_data_from_cmd(cmd_dir+"command.csv")
-            p_bp, q_bp = ms.extend(robot, q_bp, primitives, breakpoints, p_bp)
+            p_bp, q_bp = ms.extend(robot, q_bp, primitives, breakpoints, p_bp,extension_start=100,extension_end=100)
 
             logged_data= ms.exec_motions(robot,primitives,breakpoints,p_bp,q_bp,speed[s],zone[z])
 
@@ -63,7 +63,7 @@ def main():
             ax2.plot(lam, error, 'b-',label='Error')
             ax2.plot(lam, np.degrees(angle_error), 'y-',label='Normal Error')
             ax2.axis(ymin=0,ymax=6)
-            ax1.axis(ymin=0,ymax=500)
+            ax1.axis(ymin=0,ymax=1500)
 
             ax1.set_xlabel('lambda (mm)')
             ax1.set_ylabel('Speed/lamdot (mm/s)', color='g')

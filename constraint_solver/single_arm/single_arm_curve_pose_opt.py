@@ -3,7 +3,7 @@ sys.path.append('../')
 from constraint_solver import *
 
 def main():
-	data_dir='../../data/wood/'
+	data_dir='../../data/from_NX/'
 	###read actual curve
 	curve_dense = read_csv(data_dir+"Curve_dense.csv",header=None).values
 
@@ -11,7 +11,7 @@ def main():
 	robot=abb6640(d=50, acc_dict_path='../../toolbox/robot_info/6640acc.pickle')
 
 
-	v_cmd=600
+	v_cmd=1555
 	opt=lambda_opt(curve_dense[:,:3],curve_dense[:,3:],robot1=robot,steps=500,v_cmd=v_cmd)
 
 	#read in initial curve pose
@@ -26,9 +26,9 @@ def main():
 	bnds=tuple(zip(lowerer_limit,upper_limit))
 
 
-	res = differential_evolution(opt.curve_pose_opt2, bnds, args=None,workers=-1,
+	res = differential_evolution(opt.curve_pose_opt2, bnds, args=None,workers=11,
 									x0 = np.hstack((k*theta,curve_pose[:-1,-1],[0])),
-									strategy='best1bin', maxiter=1,
+									strategy='best1bin', maxiter=500,
 									popsize=15, tol=1e-10,
 									mutation=(0.5, 1), recombination=0.7,
 									seed=None, callback=None, disp=False,
