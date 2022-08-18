@@ -180,7 +180,7 @@ def main():
 			###update all bp's
 			for bp_idx in range(len(p_bp)):
 				###p_bp temp for numerical gradient
-				p_bp_temp[bp_idx][0]-=gamma*v_d[bp_idx]
+				p_bp_temp[bp_idx][0]-=alpha*gamma*v_d[bp_idx]
 				q_bp_temp[bp_idx][0]=car2js(robot,q_bp[bp_idx][0],p_bp[bp_idx][0],robot.fwd(q_bp[bp_idx][0]).R)[0]
 
 			##############################execution##################################################

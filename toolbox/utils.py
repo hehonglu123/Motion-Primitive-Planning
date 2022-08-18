@@ -4,7 +4,6 @@ import matplotlib.pyplot as plt
 from scipy.interpolate import interp1d
 from scipy import signal
 import scipy
-from sklearn.cluster import KMeans
 
 def get_speed(curve_exe,timestamp):
 	d_curve_exe=np.gradient(curve_exe,axis=0)
@@ -20,22 +19,7 @@ def clip_joints(robot,curve_js,relax=0.05):
 
 	return curve_js_clipped
 
-def remove_traj_outlier(curve_exe_all,curve_exe_js_all,timestamp_all,total_time_all):
 
-	km = KMeans(n_clusters=2)
-	index=km.fit_predict(np.array(total_time_all).reshape(-1,1))
-	cluster=km.cluster_centers_
-	major_index=scipy.stats.mode(index)[0][0]       ###mostly appeared index
-	major_indices=np.where(index==major_index)[0]
-	time_mode_avg=cluster[major_index]
-
-	if abs(cluster[0][0]-cluster[1][0])>0.02*time_mode_avg:
-		curve_exe_all=[curve_exe_all[iii] for iii in major_indices]
-		curve_exe_js_all=[curve_exe_js_all[iii] for iii in major_indices]
-		timestamp_all=[timestamp_all[iii] for iii in major_indices]
-		print('outlier traj detected')
-
-	return curve_exe_all,curve_exe_js_all,timestamp_all
 
 def interplate_timestamp(curve,timestamp,timestamp_d):
 
@@ -46,25 +30,6 @@ def interplate_timestamp(curve,timestamp,timestamp_d):
 
 	return np.array(curve_new).T
 
-def average_curve(curve_all,timestamp_all):
-	###get desired synced timestamp first
-	max_length=[]
-	max_time=[]
-	for i in range(len(timestamp_all)):
-		max_length.append(len(timestamp_all[i]))
-		max_time.append(timestamp_all[i][-1])
-	max_length=np.max(max_length)
-	max_time=np.max(max_time)
-	timestamp_d=np.linspace(0,max_time,num=max_length)
-
-	###linear interpolate each curve with synced timestamp
-	curve_all_new=[]
-	for i in range(len(timestamp_all)):
-		curve_all_new.append(interplate_timestamp(curve_all[i],timestamp_all[i],timestamp_d))
-
-	curve_all_new=np.array(curve_all_new)
-
-	return curve_all_new, np.average(curve_all_new,axis=0),timestamp_d
 	
 def replace_outliers2(data,threshold=0.0001):
 	###replace outlier with rolling average

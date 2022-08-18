@@ -18,10 +18,10 @@ from error_check import *
 from MotionSend import *
 
 def main():
-    dataset='wood/'
+    dataset='from_NX/'
     solution_dir='diffevo3/'
     data_dir="../../../data/"+dataset
-    cmd_dir=data_dir+'/dual_arm/'+solution_dir+'50L/'
+    cmd_dir=data_dir+'/dual_arm/'+solution_dir+'30L/'
     relative_path = read_csv(data_dir+"/Curve_dense.csv", header=None).values
 
     with open(data_dir+'dual_arm/'+solution_dir+'abb1200.yaml') as file:
@@ -38,7 +38,7 @@ def main():
     ms = MotionSend(robot1=robot1,robot2=robot2,base2_R=base2_R,base2_p=base2_p)
 
     ###specify speed here for robot2
-    s2_all=[1000]
+    s2_all=[5000]
 
     for s2 in s2_all:
         s1=9999
