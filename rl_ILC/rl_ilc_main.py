@@ -126,11 +126,13 @@ def evaluate(agent, data_dir, render=False, render_dir="", env_mode='robot_studi
     data_dir = data_dir + os.sep
 
     robot = abb6640(d=50)
+    if env_mode=='roboguide':
+        robot = m710ic(d=50)
     exec_error = 0
     num_itr = 0
     num_curve = 0
 
-    for i in range(10):
+    for i in range(10,11):
 
         curve, curve_normal, curve_js = read_data(i, data_dir)
         env = ILCEnv(curve, curve_normal, curve_js, robot, 100, mode=env_mode)
@@ -153,6 +155,7 @@ def evaluate(agent, data_dir, render=False, render_dir="", env_mode='robot_studi
                 state_robot = np.hstack([np.array(robot_pose), is_start.reshape(-1, 1), is_end.reshape(-1, 1)])
 
                 actions = agent.select_action(state_curve, state_robot, use_noise=False)
+                print(actions)
                 next_state, reward, done, message = env.step(actions)
 
                 state = next_state
@@ -198,8 +201,9 @@ def main():
 
     agent.load('model/1400')
     args.train_episode_start = 1400
-    train(agent, data_dir, args)
+    # train(agent, data_dir, args)
     # eval_error, eval_itr = evaluate(agent, eval_dir, render=True, render_dir='render/curve1', env_mode='robot_studio')
+    eval_error, eval_itr = evaluate(agent, eval_dir, render=False, render_dir='render/curve1_fanuc', env_mode='roboguide')
 
 
 if __name__ == '__main__':
