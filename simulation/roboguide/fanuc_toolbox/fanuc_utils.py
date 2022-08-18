@@ -1,11 +1,14 @@
+from turtle import pen
 import numpy as np
 from pandas import read_csv, DataFrame
 from fanuc_motion_program_exec_client import *
 from general_robotics_toolbox import *
 
 sys.path.append('../../../constraint_solver')
+sys.path.append('../constraint_solver')
 from constraint_solver import *
 sys.path.append('../../../toolbox/')
+sys.path.append('../toolbox/')
 from utils import *
 from lambda_calc import *
 from robots_def import *
@@ -164,8 +167,8 @@ class MotionSendFANUC(object):
             if primitives1[i]=='movel_fit':
                 # robot1
                 robt1 = joint2robtarget(q_bp1[i][0],robot1,self.group,self.uframe,self.utool)
-                # tp_follow.moveL(robt1,this_speed,'mmsec',this_zone,option)
-                tp_follow.moveL(robt1,this_speed,'msec',this_zone,option)
+                tp_follow.moveL(robt1,this_speed,'mmsec',this_zone,option)
+                # tp_follow.moveL(robt1,this_speed,'msec',this_zone,option)
             elif primitives1[i]=='movec_fit':
                 # robot1
                 robt_mid1 = joint2robtarget(q_bp1[i][0],robot1,self.group,self.uframe,self.utool)
@@ -198,8 +201,8 @@ class MotionSendFANUC(object):
             if primitives2[i]=='movel_fit':
                 # robot2
                 robt2 = joint2robtarget(q_bp2[i][0],robot2,self.group2,self.uframe2,self.utool2)
-                # tp_lead.moveL(robt2,this_speed,'mmsec',this_zone,option)
-                tp_lead.moveL(robt2,this_speed,'msec',this_zone,option)
+                tp_lead.moveL(robt2,this_speed,'mmsec',this_zone,option)
+                # tp_lead.moveL(robt2,this_speed,'msec',this_zone,option)
             elif primitives2[i]=='movec_fit':
                 # robot2
                 robt_mid2 = joint2robtarget(q_bp2[i][0],robot2,self.group2,self.uframe2,self.utool2)
@@ -368,6 +371,32 @@ class MotionSendFANUC(object):
         if np.linalg.norm(relative_path_exe[start_idx]-p_start)>0.5:
             start_idx+=1
         if np.linalg.norm(relative_path_exe[end_idx]-p_end)>0.5:
+            end_idx-=1
+
+        curve_exe1=curve_exe1[start_idx:end_idx+1]
+        curve_exe2=curve_exe2[start_idx:end_idx+1]
+        curve_exe_R1=curve_exe_R1[start_idx:end_idx+1]
+        curve_exe_R2=curve_exe_R2[start_idx:end_idx+1]
+        curve_exe_js1=curve_exe_js1[start_idx:end_idx+1]
+        curve_exe_js2=curve_exe_js2[start_idx:end_idx+1]
+        timestamp=timestamp[start_idx:end_idx+1]
+
+        relative_path_exe=relative_path_exe[start_idx:end_idx+1]
+        relative_path_exe_R=relative_path_exe_R[start_idx:end_idx+1]
+
+        speed=speed[start_idx:end_idx+1]
+        lam=calc_lam_cs(relative_path_exe)
+
+        return lam, curve_exe1,curve_exe2,curve_exe_R1,curve_exe_R2,curve_exe_js1,curve_exe_js2, speed, timestamp, relative_path_exe,relative_path_exe_R
+    
+    def chop_extension_dual_singel(self,lam, curve_exe1,curve_exe2,curve_exe_R1,curve_exe_R2,curve_exe_js1,curve_exe_js2, speed, timestamp, relative_path_exe,relative_path_exe_R,p_start,p_end,curve_chop_target):
+        start_idx=np.argmin(np.linalg.norm(p_start-curve_chop_target,axis=1))+1
+        end_idx=np.argmin(np.linalg.norm(p_end-curve_chop_target,axis=1))
+
+        #make sure extension doesn't introduce error
+        if np.linalg.norm(curve_chop_target[start_idx]-p_start)>0.5:
+            start_idx+=1
+        if np.linalg.norm(curve_chop_target[end_idx]-p_end)>0.5:
             end_idx-=1
 
         curve_exe1=curve_exe1[start_idx:end_idx+1]

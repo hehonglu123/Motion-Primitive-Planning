@@ -87,7 +87,7 @@ q_init1=curve_js1[0]
 q_init2=ms.calc_robot2_q_from_blade_pose(blade_pose,base2_R,base2_p)
 print(np.rad2deg(q_init2))
 
-q_out1, q_out2=opt.dual_arm_stepwise_optimize2(q_init1,q_init2)
+q_out1, q_out2=opt.dual_arm_stepwise_optimize(q_init1,q_init2,w1=0.01,w2=0.1)
 # q_out1 = np.array(read_csv(data_dir+'dual_arm/arm1.csv',header=None).values)
 # q_out2 = np.array(read_csv(data_dir+'dual_arm/arm2.csv',header=None).values)
 ##########path verification####################
@@ -116,5 +116,41 @@ plt.xlabel("lambda")
 plt.ylabel("lambda_dot")
 plt.title("DUALARM max lambda_dot vs lambda (path index)")
 plt.ylim([0,3500])
-plt.savefig("trajectory/results.png")
+# plt.savefig("trajectory/results.png")
 plt.show()
+
+########################## plot joint ##########################
+ldot_des = 1000
+lam = np.append(0,np.cumsum(np.linalg.norm(np.diff(relative_path_out,axis=0),2,1)))
+dt = np.linalg.norm(np.diff(relative_path_out,axis=0),2,1)/1000
+timestamp = np.append(0,np.cumsum(dt))
+
+plot_joint=True
+if plot_joint:
+    q_out1=np.array(q_out1)
+    q_out2=np.array(q_out2)
+    for i in range(1,3):
+        # robot
+        if i==1:
+            this_robot=robot1
+            this_curve_js_exe=q_out1
+        else:
+            this_robot=robot2
+            this_curve_js_exe=q_out2
+        fig, ax = plt.subplots(4,6)
+        dt=np.gradient(timestamp)
+        for j in range(6):
+            ax[0,j].plot(timestamp,this_curve_js_exe[:,j])
+            ax[0,j].axis(ymin=this_robot.lower_limit[j]*1.05,ymax=this_robot.upper_limit[j]*1.05)
+            dq=np.gradient(this_curve_js_exe[:,j])
+            dqdt=dq/dt
+            ax[1,j].plot(timestamp,dqdt)
+            ax[1,j].axis(ymin=-this_robot.joint_vel_limit[j]*1.05,ymax=this_robot.joint_vel_limit[j]*1.05)
+            d2qdt2=np.gradient(dqdt)/dt
+            ax[2,j].plot(timestamp,d2qdt2)
+            ax[2,j].axis(ymin=-this_robot.joint_acc_limit[j]*1.05,ymax=this_robot.joint_acc_limit[j]*1.05)
+            d3qdt3=np.gradient(d2qdt2)/dt
+            ax[3,j].plot(timestamp,d3qdt3)
+            ax[3,j].axis(ymin=-this_robot.joint_jrk_limit[j]*1.05,ymax=this_robot.joint_jrk_limit[j]*1.05)
+        # plt.title('Robot '+str(i)+' joint trajectoy/velocity/acceleration.')
+        plt.show()

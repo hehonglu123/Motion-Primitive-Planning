@@ -79,7 +79,7 @@ def main():
     elif data_type=='curve_line' or data_type=='curve_line_1000':
         ms = MotionSendFANUC(robot1=robot1,robot2=robot2,utool2=5)
 
-    s=20 # mm/sec in leader frame
+    s=16 # mm/sec in leader frame
     z=100 # CNT100
 
     breakpoints1,primitives1,p_bp1,q_bp1=ms.extract_data_from_cmd(os.getcwd()+'/'+cmd_dir+'command1.csv')
@@ -99,6 +99,11 @@ def main():
     # tp_lead.moveJ(j0,5,'%',-1)
     # client.execute_motion_program_coord(tp_lead,tp_follow)
     # exit()
+
+    q_bp1_start = q_bp1[0][0]
+    q_bp1_end = q_bp1[-1][-1]
+    q_bp2_start = q_bp2[0][0]
+    q_bp2_end = q_bp2[-1][-1]
 
     ###extension
     if data_type=='wood':
@@ -122,22 +127,38 @@ def main():
             primitives2[:]='movel_fit'
         except:
             print("Extension file not existed.")
-            p_bp1,q_bp1,p_bp2,q_bp2,step_to_extend_end=ms.extend_dual(ms.robot1,p_bp1,q_bp1,primitives1,ms.robot2,p_bp2,q_bp2,primitives2,breakpoints1,base2_T,extension_d=extension_d)
-            print(len(primitives1))
-            print(len(primitives2))
-            # not_coord_step=3 # after 3 bp of workpiece, no more coordination
-            # coord_primitives[-(step_to_extend_end-not_coord_step):]=0
-            primitives1=np.array(primitives1)
-            primitives2=np.array(primitives2)
-            primitives1[-int(step_to_extend_end/2):]='movej_fit'
-            primitives2[-int(step_to_extend_end/2):]='movej_fit'
+            p_bp1,q_bp1,p_bp2,q_bp2=ms.extend_dual(ms.robot1,p_bp1,q_bp1,primitives1,ms.robot2,p_bp2,q_bp2,primitives2,breakpoints1,base2_T,extension_d=extension_d)
 
             df=DataFrame({'primitives':primitives1,'points':p_bp1,'q_bp':q_bp1})
             df.to_csv(cmd_dir+'command_arm1_extend_'+str(extension_d)+'.csv',header=True,index=False)
             df=DataFrame({'primitives':primitives2,'points':p_bp2,'q_bp':q_bp2})
             df.to_csv(cmd_dir+'command_arm2_extend_'+str(extension_d)+'.csv',header=True,index=False)
-        
     
+    ## calculate step at start and end
+    step_start=None
+    step_end=None
+    for i in range(len(q_bp1)):
+        if np.all(q_bp1[i][0]==q_bp1_start):
+            step_start=i
+        if np.all(q_bp1[i][-1]==q_bp1_end):
+            step_end=i
+
+    assert step_start is not None,'Cant find step start'
+    assert step_end is not None,'Cant find step start'
+    print(step_start,step_end)
+
+    step_start=None
+    step_end=None
+    for i in range(len(q_bp2)):
+        if np.all(q_bp2[i][0]==q_bp2_start):
+            step_start=i
+        if np.all(q_bp2[i][-1]==q_bp2_end):
+            step_end=i
+
+    assert step_start is not None,'Cant find step start'
+    assert step_end is not None,'Cant find step start'
+    print(step_start,step_end)
+        
     # coord_primitives=np.ones(len(primitives1))
     # coord_primitives=np.zeros(len(primitives1))
 

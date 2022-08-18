@@ -10,7 +10,7 @@ from robots_def import *
 from utils import *
 from lambda_calc import *
 
-data_type='curve_line'
+data_type='blade'
 
 if data_type=='blade':
     curve_data_dir='../../../data/from_NX/'
@@ -30,17 +30,17 @@ elif data_type=='curve_line_1000':
 
 # output_dir='dual_arm/'
 # output_dir='dual_single_arm/'
-# output_dir='dual_single_arm_straight/' # robot2 is multiple user defined straight line
+output_dir='dual_single_arm_straight/' # robot2 is multiple user defined straight line
 # output_dir='dual_single_arm_straight_50/' # robot2 is multiple user defined straight line
 # output_dir='dual_single_arm_straight_min/' # robot2 is multiple user defined straight line
 # output_dir='dual_single_arm_straight_min10/' # robot2 is multiple user defined straight line
 # output_dir='dual_arm_10/'
-output_dir='dual_straight/' # test: robot2 move a simple straight line
+# output_dir='dual_straight/' # test: robot2 move a simple straight line
 
 # num_ls=[200]
-num_ls=[100]
+# num_ls=[100]
 # num_ls=[75]
-# num_ls=[50]
+num_ls=[50]
 # num_ls=[2]
 robot=m710ic(d=50)
 curve_js = read_csv(data_dir+output_dir+'arm1.csv',header=None).values
