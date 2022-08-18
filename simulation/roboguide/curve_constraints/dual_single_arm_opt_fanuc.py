@@ -12,7 +12,7 @@ from fanuc_utils import *
 from error_check import *
 from utils import *
 
-data_type='curve_line'
+data_type='blade'
 
 if data_type=='blade':
     curve_data_dir='../../../data/from_NX/'
@@ -28,10 +28,10 @@ elif data_type=='curve_line_1000':
     data_dir='../data/curve_line_1000/'
 
 # robot2_type='dual_single_arm_freeze' # robot2 not moving
-# robot2_type='dual_single_arm_straight/' # robot2 is multiple user defined straight line
+robot2_type='dual_single_arm_straight/' # robot2 is multiple user defined straight line
 # robot2_type='dual_single_arm_straight_min/' # robot2 is multiple user defined straight line
 # robot2_type='dual_single_arm_straight_min10/' # robot2 is multiple user defined straight line
-robot2_type='dual_straight/' # test: robot2 move a simple straight line
+# robot2_type='dual_straight/' # test: robot2 move a simple straight line
 Path(data_dir+robot2_type).mkdir(exist_ok=True)
 
 # blade_pose=rox.rot([0,0,1],np.pi/2)
@@ -115,74 +115,78 @@ q_init2=ms.calc_robot2_q_from_blade_pose(blade_pose,base2_R,base2_p)
 # robot2_step=[49999]
 # robot2_path=np.array([q_init2,np.deg2rad([0.3,50.2,-16.5,-0.4,65.1,0.2])]) # min10
 # robot2_step=[49999]
-robot2_path=np.array([q_init2,car2js(robot2,q_init2,np.array([2100,1500,700]),Rz(np.radians(-90)))[0]])
-print(robot2_path)
-robot2_step=[49999]
+# robot2_path=np.array([q_init2,car2js(robot2,q_init2,np.array([2100,1500,700]),Rz(np.radians(-90)))[0]])
+# print(robot2_path)
+# robot2_step=[49999]
 ###########################################
+# q_out2=[q_init2]
+# assert np.sum(robot2_step) == (len(relative_path)-1),print("must equal to relative path length")
+# for i in range(1,len(robot2_path)):
+#     print("target:",i,"steps:",robot2_step[i-1])
+#     pose_start=robot2.fwd(robot2_path[i-1])
+#     p_start=pose_start.p
+#     R_start=pose_start.R
+#     pose_end=robot2.fwd(robot2_path[i])
+#     p_end=pose_end.p
+#     R_end=pose_end.R
+#     #find slope
+#     slope_p=p_end-p_start
+#     slope_p=slope_p/np.linalg.norm(slope_p)
+#     #find k,theta
+#     k,theta=rox.R2rot(R_end@R_start.T)
 
-q_out2=[q_init2]
-assert np.sum(robot2_step) == (len(relative_path)-1),print("must equal to relative path length")
-for i in range(1,len(robot2_path)):
-    print("target:",i,"steps:",robot2_step[i-1])
-    pose_start=robot2.fwd(robot2_path[i-1])
-    p_start=pose_start.p
-    R_start=pose_start.R
-    pose_end=robot2.fwd(robot2_path[i])
-    p_end=pose_end.p
-    R_end=pose_end.R
-    #find slope
-    slope_p=p_end-p_start
-    slope_p=slope_p/np.linalg.norm(slope_p)
-    #find k,theta
-    k,theta=rox.R2rot(R_end@R_start.T)
+#     # adding extension with uniform space
+#     extend_step_d=np.linalg.norm(p_end-p_start)/robot2_step[i-1]
+#     for j in range(1,robot2_step[i-1]+1):
+#         if j%1000==0:
+#             print(j)
+#         p_extend=p_start+j*extend_step_d*slope_p
+#         theta_extend=np.linalg.norm(p_extend-p_start)*theta/np.linalg.norm(p_end-p_start)
+#         R_extend=rox.rot(k,theta_extend)@R_start
+#         # ik
+#         q_out2.append(car2js(robot2,q_out2[-1],p_extend,R_extend)[0])
+# ###############################################################
+# q_out2=np.array(q_out2)
+# df=DataFrame({'q0':q_out2[:,0],'q1':q_out2[:,1],'q2':q_out2[:,2],'q3':q_out2[:,3],'q4':q_out2[:,4],'q5':q_out2[:,5]})
+# df.to_csv(data_dir+robot2_type+'arm2.csv',header=False,index=False)
 
-    # adding extension with uniform space
-    extend_step_d=np.linalg.norm(p_end-p_start)/robot2_step[i-1]
-    for j in range(1,robot2_step[i-1]+1):
-        if j%1000==0:
-            print(j)
-        p_extend=p_start+j*extend_step_d*slope_p
-        theta_extend=np.linalg.norm(p_extend-p_start)*theta/np.linalg.norm(p_end-p_start)
-        R_extend=rox.rot(k,theta_extend)@R_start
-        # ik
-        q_out2.append(car2js(robot2,q_out2[-1],p_extend,R_extend)[0])
-###############################################################
-q_out2=np.array(q_out2)
-df=DataFrame({'q0':q_out2[:,0],'q1':q_out2[:,1],'q2':q_out2[:,2],'q3':q_out2[:,3],'q4':q_out2[:,4],'q5':q_out2[:,5]})
-df.to_csv(data_dir+robot2_type+'arm2.csv',header=False,index=False)
+# #convert curve to base frame
+# base2_T=rox.Transform(base2_R,base2_p)
+# curve_base1=[]
+# curve_normal_base1=[]
+# for i in range(len(q_out2)):
+#     T_r1_r2tool = base2_T*robot2.fwd(q_out2[i]) # Transform from r1 base to r2 tool
+#     this_curve_base1= T_r1_r2tool.p + np.matmul(T_r1_r2tool.R, relative_path[i,:3])
+#     this_curve_normal_base1=np.matmul(T_r1_r2tool.R,relative_path[i,3:])
+#     curve_base1.append(this_curve_base1)
+#     curve_normal_base1.append(this_curve_normal_base1)
+# curve_base1=np.array(curve_base1)
+# curve_normal_base1=np.array(curve_normal_base1)
 
-#convert curve to base frame
-base2_T=rox.Transform(base2_R,base2_p)
-curve_base1=[]
-curve_normal_base1=[]
-for i in range(len(q_out2)):
-    T_r1_r2tool = base2_T*robot2.fwd(q_out2[i]) # Transform from r1 base to r2 tool
-    this_curve_base1= T_r1_r2tool.p + np.matmul(T_r1_r2tool.R, relative_path[i,:3])
-    this_curve_normal_base1=np.matmul(T_r1_r2tool.R,relative_path[i,3:])
-    curve_base1.append(this_curve_base1)
-    curve_normal_base1.append(this_curve_normal_base1)
-curve_base1=np.array(curve_base1)
-curve_normal_base1=np.array(curve_normal_base1)
+# # proposed q_init1
+# # curve_js1=read_csv(data_dir+"Curve_js.csv",header=None).values
+# # q_init1=curve_js1[0]
+# q_init1=car2js(robot1,np.deg2rad([23.9,4.1,-11.9,16,-47.3,-31.9]),curve_base1[0],Ry(np.radians(180)))[0]
 
-# proposed q_init1
-# curve_js1=read_csv(data_dir+"Curve_js.csv",header=None).values
-# q_init1=curve_js1[0]
-q_init1=car2js(robot1,np.deg2rad([23.9,4.1,-11.9,16,-47.3,-31.9]),curve_base1[0],Ry(np.radians(180)))[0]
+# # q_out1=opt.single_arm_stepwise_optimize(q_init1,curve=curve_base1,curve_normal=curve_normal_base1)
+# q_out1=[q_init1]
+# for i in range(1,len(curve_base1)):
+#     if i%1000 == 0:
+#         print(i)
+#     p_extend=curve_base1[i]
+#     R_extend=Ry(np.radians(180))
+#     q_out1.append(car2js(robot1,q_out1[-1],p_extend,R_extend)[0])
+# q_out1=np.array(q_out1)
 
-# q_out1=opt.single_arm_stepwise_optimize(q_init1,curve=curve_base1,curve_normal=curve_normal_base1)
-q_out1=[q_init1]
-for i in range(1,len(curve_base1)):
-    if i%1000 == 0:
-        print(i)
-    p_extend=curve_base1[i]
-    R_extend=Ry(np.radians(180))
-    q_out1.append(car2js(robot1,q_out1[-1],p_extend,R_extend)[0])
-q_out1=np.array(q_out1)
+# ####output to trajectory csv
+# df=DataFrame({'q0':q_out1[:,0],'q1':q_out1[:,1],'q2':q_out1[:,2],'q3':q_out1[:,3],'q4':q_out1[:,4],'q5':q_out1[:,5]})
+# df.to_csv(data_dir+robot2_type+'arm1.csv',header=False,index=False)
+#########################################################################################
 
-####output to trajectory csv
-df=DataFrame({'q0':q_out1[:,0],'q1':q_out1[:,1],'q2':q_out1[:,2],'q3':q_out1[:,3],'q4':q_out1[:,4],'q5':q_out1[:,5]})
-df.to_csv(data_dir+robot2_type+'arm1.csv',header=False,index=False)
-
+################### read from existing ###########################
+q_out1 = np.array(read_csv(data_dir+robot2_type+'arm1.csv',header=None).values)
+q_out2 = np.array(read_csv(data_dir+robot2_type+'arm2.csv',header=None).values)
+#################################################################
 
 ##########path verification####################
 relative_path_out,relative_path_out_R=ms.form_relative_path(q_out1,q_out2,base2_R,base2_p)
@@ -210,3 +214,39 @@ plt.title("DUALARM max lambda_dot vs lambda (path index)")
 plt.ylim([0,3500])
 # plt.savefig(data_dir+"results.png")
 plt.show()
+
+########################## plot joint ##########################
+ldot_des = 1000
+lam = np.append(0,np.cumsum(np.linalg.norm(np.diff(relative_path_out,axis=0),2,1)))
+dt = np.linalg.norm(np.diff(relative_path_out,axis=0),2,1)/1000
+timestamp = np.append(0,np.cumsum(dt))
+
+plot_joint=True
+if plot_joint:
+    q_out1=np.array(q_out1)
+    q_out2=np.array(q_out2)
+    for i in range(1,3):
+        # robot
+        if i==1:
+            this_robot=robot1
+            this_curve_js_exe=q_out1
+        else:
+            this_robot=robot2
+            this_curve_js_exe=q_out2
+        fig, ax = plt.subplots(4,6)
+        dt=np.gradient(timestamp)
+        for j in range(6):
+            ax[0,j].plot(timestamp,this_curve_js_exe[:,j])
+            ax[0,j].axis(ymin=this_robot.lower_limit[j]*1.05,ymax=this_robot.upper_limit[j]*1.05)
+            dq=np.gradient(this_curve_js_exe[:,j])
+            dqdt=dq/dt
+            ax[1,j].plot(timestamp,dqdt)
+            ax[1,j].axis(ymin=-this_robot.joint_vel_limit[j]*1.05,ymax=this_robot.joint_vel_limit[j]*1.05)
+            d2qdt2=np.gradient(dqdt)/dt
+            ax[2,j].plot(timestamp,d2qdt2)
+            ax[2,j].axis(ymin=-this_robot.joint_acc_limit[j]*1.05,ymax=this_robot.joint_acc_limit[j]*1.05)
+            d3qdt3=np.gradient(d2qdt2)/dt
+            ax[3,j].plot(timestamp,d3qdt3)
+            ax[3,j].axis(ymin=-this_robot.joint_jrk_limit[j]*1.05,ymax=this_robot.joint_jrk_limit[j]*1.05)
+        # plt.title('Robot '+str(i)+' joint trajectoy/velocity/acceleration.')
+        plt.show()
