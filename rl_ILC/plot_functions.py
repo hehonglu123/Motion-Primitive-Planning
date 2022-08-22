@@ -49,9 +49,9 @@ def generate_gif(dir_path):
 
 def plot_training_curve(file_path):
     data = pd.read_csv(file_path)
-    episode = data['Episode'].values
-    max_error = data['Max Error'].values
-    itr = data['Iteration'].values
+    episode = data['Episode'].values[1:]
+    max_error = data['Max Error'].values[1:]
+    itr = data['Iteration'].values[1:]
 
     fig, ax1 = plt.subplots()
     ax2 = ax1.twinx()
@@ -64,6 +64,8 @@ def plot_training_curve(file_path):
     ax2.set_ylabel('Iteration', color='b')
     fig.legend()
     ax1.set_title('RL Training Curve')
+    ax1.set_ylim(0, 1)
+    ax2.set_ylim(0, 12)
 
     fig.savefig('RL Train.png', dpi=300)
 
@@ -78,8 +80,69 @@ def max_gradient_gif():
     imageio.mimsave('recorded_data/max_gradient.gif', frame_list, duration=0.5)
 
 
+def plot_q_value():
+    df = pd.read_csv('train_q_values.csv')
+    # df = df.loc[df['step'] < 150]
+    steps = df['step'].values
+    q_optimal = df['optimal'].values
+    q_extreme = df['extreme'].values
+    q_policy = df['policy'].values
+    q_highest = df['best'].values
+
+    best_x = df['x'].values
+    best_y = df['y'].values
+    best_z = df['z'].values
+
+    fig, ax = plt.subplots()
+    ax.plot(steps, q_optimal, label='optimal')
+    ax.plot(steps, q_extreme, label='extreme')
+    ax.plot(steps, q_policy, label='policy')
+    ax.legend()
+    # ax.set_yscale('log')
+    ax.set_ylim(-25, 100)
+    ax.set_title('Q values')
+    ax.set_xlabel('Train Step')
+    ax.set_ylabel('Q Value')
+    fig.savefig('Train Q Values.png', dpi=300)
+
+    fig, ax = plt.subplots()
+    ax.plot(steps, (q_optimal - q_policy), label='$\Delta Q_{optimal}$')
+    ax.plot(steps, (q_extreme - q_policy), label='$\Delta Q_{extreme}$')
+    ax.plot(steps, (q_highest - q_policy), label='$\Delta Q_{highest}$')
+    ax.plot(steps, np.zeros(len(steps)), label='Zero')
+    ax.legend()
+    ax.set_title('Q value diff')
+    # ax.set_ylim(-50, 50)
+    ax.set_xlabel('Train Step')
+    ax.set_ylabel('$\Delta Q$')
+    fig.savefig('Train Q Values diff.png', dpi=300)
+
+    fig, ax = plt.subplots()
+    ax.plot(steps, (q_optimal - q_extreme), label='$Q_{optimal} - Q_{extreme}$')
+    ax.plot(steps, (q_optimal - q_highest), label='$Q_{optimal} - Q_{highest}$')
+    ax.plot(steps, np.zeros(len(steps)), label='Zero')
+    ax.legend()
+    # ax.set_ylim(-50, 50)
+    ax.set_title('Q value diff')
+    ax.set_xlabel('Train Step')
+    ax.set_ylabel('$\Delta Q$')
+    fig.savefig('Train Q Values diff New.png', dpi=300)
+
+    fig, ax = plt.subplots()
+    ax.plot(steps, best_x, 'v', label='$a_x$')
+    ax.plot(steps, best_y, 'x', label='$a_y$')
+    ax.plot(steps, best_z, '.', label='$a_z$')
+    ax.legend()
+    ax.set_title('Highest Q Value Action')
+    # ax.set_ylim(-2.5, 2.5)
+    ax.set_xlabel('Train Step')
+    ax.set_ylabel('Action Value')
+    fig.savefig('Train Action Values.png', dpi=300)
+
+
 if __name__ == '__main__':
-    generate_gif("render/curve1/curve10")
+    plot_q_value()
+    # generate_gif("render/curve1/curve11")
     # max_gradient_gif()
 
     # num_curve = 1
