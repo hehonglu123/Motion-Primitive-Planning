@@ -54,11 +54,11 @@ class abb6640(object):
 			q2_acc=[]
 			q3_acc=[]
 			for key, value in acc_dict.items():
-			   q2_config.append(key[0])
-			   q3_config.append(key[1])
-			   q1_acc.append(value[0])
-			   q2_acc.append(value[1])
-			   q3_acc.append(value[2])
+				q2_config.append(key[0])
+				q3_config.append(key[1])
+				q1_acc.append(value[0])
+				q2_acc.append(value[1])
+				q3_acc.append(value[2])
 			self.q2q3_config=np.array([q2_config,q3_config]).T
 			self.q1q2q3_acc=np.array([q1_acc,q2_acc,q3_acc]).T
 
@@ -144,11 +144,11 @@ class abb1200(object):
 			q2_acc=[]
 			q3_acc=[]
 			for key, value in acc_dict.items():
-			   q2_config.append(key[0])
-			   q3_config.append(key[1])
-			   q1_acc.append(value[0])
-			   q2_acc.append(value[1])
-			   q3_acc.append(value[2])
+				q2_config.append(key[0])
+				q3_config.append(key[1])
+				q1_acc.append(value[0])
+				q2_acc.append(value[1])
+				q3_acc.append(value[2])
 			self.q2q3_config=np.array([q2_config,q3_config]).T
 			self.q1q2q3_acc=np.array([q1_acc,q2_acc,q3_acc]).T
 
@@ -282,7 +282,7 @@ class m710ic(object):
 		
 		###updated range&vel limit
 		self.upper_limit=np.radians([180.,135,205.,360.,125.,360.])
-		self.lower_limit=np.radians([-180.,-80.,-80.,-360.,-125.,-360.])
+		self.lower_limit=np.radians([-180.,-90.,-80.,-360.,-125.,-360.])
 		self.joint_vel_limit=np.radians([160.,120.,120.,225.,225.,225.])
 		# self.joint_acc_limit=np.radians([640.,520.,700.,910.,910.,1207.])
 		self.joint_acc_limit=np.radians([285.741,214.286,214.286,401.786,401.786,401.786])
@@ -356,11 +356,11 @@ class arb_robot(object):
 			q2_acc=[]
 			q3_acc=[]
 			for key, value in acc_dict.items():
-			   q2_config.append(key[0])
-			   q3_config.append(key[1])
-			   q1_acc.append(value[0])
-			   q2_acc.append(value[1])
-			   q3_acc.append(value[2])
+				q2_config.append(key[0])
+				q3_config.append(key[1])
+				q1_acc.append(value[0])
+				q2_acc.append(value[1])
+				q3_acc.append(value[2])
 			self.q2q3_config=np.array([q2_config,q3_config]).T
 			self.q1q2q3_acc=np.array([q1_acc,q2_acc,q3_acc]).T
 
