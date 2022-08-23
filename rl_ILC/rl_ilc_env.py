@@ -56,6 +56,7 @@ class ILCEnv(object):
         self.state_q_dot = []
         self.state_q_ddot = []
         self.prev_state_max_error = None
+        self.init_max_error = None
         self.state_is_start = np.zeros(self.n)
         self.state_is_end = np.zeros(self.n)
         self.state_is_start[0] = 1
@@ -108,6 +109,7 @@ class ILCEnv(object):
         else:
             error_improve = max_errors
         self.prev_state_max_error = max_errors
+        error_improve = error_improve / self.init_max_error
 
         success = (max_errors <= self.success_error).astype(int)
         terminate = self.max_exec_error <= self.success_error or self.max_exec_error >= self.fail_error or self.itr >= self.max_itr
@@ -154,6 +156,7 @@ class ILCEnv(object):
             # for i, interval_error in enumerate(self.state_curve_error):
             #     max_errors[i] = (np.max(np.linalg.norm(interval_error, axis=1)))
             self.prev_state_max_error = np.array(state_max_error)
+            self.init_max_error = np.array(state_max_error)
 
             message = "[Max error {:.4f}.]".format(self.max_exec_error)
 

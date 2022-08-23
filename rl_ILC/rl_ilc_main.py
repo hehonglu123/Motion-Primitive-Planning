@@ -164,7 +164,7 @@ def train(agent: TD3Agent, data_dir, args):
             replayer.save_to_file('model/replayer_memory')
             print("[Model Saved]")
 
-        if episode % 10 == 0:
+        if (episode + 1) % 10 == 0:
             q_df = pd.DataFrame(q_values)
             q_df.to_csv('train_q_values.csv', index=False)
 

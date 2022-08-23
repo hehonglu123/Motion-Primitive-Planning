@@ -78,3 +78,31 @@ class Replayer(object):
 
         with open(dir_path + os.sep + 'success.npy', 'wb') as f:
             np.save(f, self.success)
+
+    def load(self, dir_path):
+        state_curve = np.load(dir_path + os.sep + 'state_curve.npy')
+        state_feature = np.load(dir_path + os.sep + 'state_feature.npy')
+        action = np.load(dir_path + os.sep + 'action.npy')
+        reward = np.load(dir_path + os.sep + 'reward.npy')
+        next_state_curve = np.load(dir_path + os.sep + 'next_state_curve.npy')
+        next_state_feature = np.load(dir_path + os.sep + 'next_state_feature.npy')
+        done = np.load(dir_path + os.sep + 'done.npy')
+        success = np.load(dir_path + os.sep + 'success.npy')
+
+        print("[Replayer Memory]: File has {} memory".format(state_curve.shape[0]))
+        memory_size = min(self.capacity, state_curve.shape[0])
+
+        self.state_curve[:memory_size, :] = state_curve[-memory_size:, :]
+        self.state_feature[:memory_size, :] = state_feature[-memory_size:, :]
+        self.action[:memory_size, :] = action[-memory_size:, :]
+        self.reward[:memory_size, :] = reward[-memory_size:, :]
+        self.next_state_curve[:memory_size, :] = next_state_curve[-memory_size:, :]
+        self.next_state_feature[:memory_size, :] = next_state_feature[-memory_size:, :]
+        self.done[:memory_size, :] = done[-memory_size:, :]
+        self.success[:memory_size, :] = success[-memory_size:, :]
+
+        self.size = memory_size
+        self.pointer = memory_size % self.capacity
+
+        print("[Replayer Memory]: load {} memory".format(memory_size))
+
