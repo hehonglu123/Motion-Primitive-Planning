@@ -116,15 +116,28 @@ def exec(q_d,joint):
 
 	if q_init[1] < radians(-54):
 		upper_limit[2] = radians(180)
-	
 	if q_end[1] > radians(20):
 		lower_limit[2] = radians(-80)+((q_end[1]-radians(20))/2)
 
+	if q_end[2] > radians(180):
+		lower_limit[1] = radians(-54)
+	if q_init[2] < radians(-45):
+		upper_limit[1] = radians(90)-((radians(-45)-q_init[2])*2)
 
 	###if end outside boundary, move in other direction
 	if q_end[joint]>upper_limit[joint]:
 		q_init[joint]=q_d[joint]+0.1
 		q_end[joint]=q_d[joint]-1
+		
+		# ensure the ending pose is smaller than limit
+		dang = 1
+		while q_end[joint]<lower_limit[joint]:
+			dang = dang*0.9
+			q_end[joint]=q_d[joint]-dang
+			if dang < 0.3:
+				print("dang too small")
+				raise AssertionError
+
 	###clip start within limits
 	if q_init[joint]<lower_limit[joint] or q_init[joint]>upper_limit[joint]:
 		q_init=np.clip(q_init,lower_limit,upper_limit)
@@ -146,8 +159,9 @@ resolution=0.05 ###rad
 dict_table={}
 
 #####################first & second joint acc both depends on second and third joint#####################################
-jog([0,0,0,0,0,0])
-q2_test_lower = robot.lower_limit[1]+resolution
+# jog([0,0,0,0,0,0])
+# q2_test_lower = robot.lower_limit[1]+resolution
+q2_test_lower = robot.lower_limit[1]+resolution*19
 q2_test_upper = robot.upper_limit[1]
 for q2 in np.arange(q2_test_lower,q2_test_upper,resolution):
 	
@@ -174,11 +188,14 @@ for q2 in np.arange(q2_test_lower,q2_test_upper,resolution):
 			###update dict
 			dict_table[(q2,q3)][joint]=copy.deepcopy(qdot_max)
 		print("===================================")
+		
+		# save when a qd is finished
+		with open('m710ic/acc2.txt','w+') as f:
+			f.write(str(dict_table))
+		pickle.dump(dict_table, open('m710ic/acc2.pickle','wb'))
 
 
-with open('m710ic/acc.txt','w+') as f:
-	f.write(str(dict_table))
-pickle.dump(dict_table, open('m710ic/acc.pickle','wb'))
+
 
 
 
