@@ -2,6 +2,7 @@ import sys
 import numpy as np
 from pandas import *
 import yaml
+from pathlib import Path
 from matplotlib import pyplot as plt
 sys.path.append('../../../constraint_solver')
 from constraint_solver import *
@@ -20,6 +21,9 @@ elif data_type=='wood':
 elif data_type=='blade_shift':
     curve_data_dir='../../../data/blade_shift/'
     data_dir='../data/curve_blade_shift/'
+
+robot2_type='dual_arm_qp/'
+Path(data_dir+robot2_type).mkdir(exist_ok=True)
 
 # read curve relative path
 relative_path=read_csv(curve_data_dir+"Curve_dense.csv",header=None).values
@@ -91,11 +95,12 @@ ldotdes = 1000 ## 1000 mm/sec
 
 KR = 1
 Kp = 1
-Kq = np.append([0.1,0.1,0.1,0.2,0.2,0.2],[0.2,0.2,0.2,0.4,0.4,0.4])
+# Kq = np.append([0.1,0.1,0.1,0.2,0.2,0.2],[0.2,0.2,0.2,0.4,0.4,0.4])
+Kq = np.ones(12)*0.01
 
 q_out1, q_out2=opt.dual_arm_qp_vel_track(q_init1,q_init2,ldotdes,Kq,KR,Kp)
-# q_out1 = np.array(read_csv(data_dir+'dual_arm/arm1.csv',header=None).values)
-# q_out2 = np.array(read_csv(data_dir+'dual_arm/arm2.csv',header=None).values)
+# q_out1 = np.array(read_csv(data_dir+robot2_type+'arm1.csv',header=None).values)
+# q_out2 = np.array(read_csv(data_dir+robot2_type+'arm2.csv',header=None).values)
 ##########path verification####################
 relative_path_out,relative_path_out_R=ms.form_relative_path(q_out1,q_out2,base2_R,base2_p)
 plt.plot(np.linalg.norm(relative_path[:,:3]-relative_path_out,axis=1))
@@ -109,9 +114,9 @@ plt.show()
 
 ####output to trajectory csv
 df=DataFrame({'q0':q_out1[:,0],'q1':q_out1[:,1],'q2':q_out1[:,2],'q3':q_out1[:,3],'q4':q_out1[:,4],'q5':q_out1[:,5]})
-df.to_csv(data_dir+'dual_arm/arm1.csv',header=False,index=False)
+df.to_csv(data_dir+robot2_type+'arm1.csv',header=False,index=False)
 df=DataFrame({'q0':q_out2[:,0],'q1':q_out2[:,1],'q2':q_out2[:,2],'q3':q_out2[:,3],'q4':q_out2[:,4],'q5':q_out2[:,5]})
-df.to_csv(data_dir+'dual_arm/arm2.csv',header=False,index=False)
+df.to_csv(data_dir+robot2_type+'arm2.csv',header=False,index=False)
 
 ###dual lambda_dot calc
 dlam=calc_lamdot_2arm(np.hstack((q_out1,q_out2)),opt.lam,ms.robot1,ms.robot2,step=1)
@@ -123,6 +128,15 @@ plt.ylabel("lambda_dot")
 plt.title("DUALARM max lambda_dot vs lambda (path index)")
 plt.ylim([0,3500])
 # plt.savefig("trajectory/results.png")
+plt.show()
+
+ax = plt.axes(projection='3d')
+ax.plot3D(relative_path[:,0], relative_path[:,1],relative_path[:,2], 'red',label='original')
+ax.plot3D(relative_path_out[:,0], relative_path_out[:,1],relative_path_out[:,2], 'green',label='qp')
+ax.view_init(61, -67)
+plt.legend()
+# plt.savefig(ilc_output+'traj_iteration_'+str(i))
+# plt.clf()
 plt.show()
 
 ########################## plot joint ##########################
@@ -144,18 +158,27 @@ if plot_joint:
             this_robot=robot2
             this_curve_js_exe=q_out2
         fig, ax = plt.subplots(4,6)
-        dt=np.gradient(timestamp)
+        dt=np.diff(timestamp)
+        dt=np.append(dt[0],dt)
         for j in range(6):
             ax[0,j].plot(timestamp,this_curve_js_exe[:,j])
             ax[0,j].axis(ymin=this_robot.lower_limit[j]*1.05,ymax=this_robot.upper_limit[j]*1.05)
-            dq=np.gradient(this_curve_js_exe[:,j])
+            # dq=np.gradient(this_curve_js_exe[:,j])
+            dq=np.diff(this_curve_js_exe[:,j])
+            dq=np.append(dq[0],dq)
             dqdt=dq/dt
             ax[1,j].plot(timestamp,dqdt)
             ax[1,j].axis(ymin=-this_robot.joint_vel_limit[j]*1.05,ymax=this_robot.joint_vel_limit[j]*1.05)
-            d2qdt2=np.gradient(dqdt)/dt
+            # d2qdt2=np.gradient(dqdt)/dt
+            ddqdt = np.diff(dqdt)
+            ddqdt=np.append(ddqdt[0],ddqdt)
+            d2qdt2=ddqdt/dt
             ax[2,j].plot(timestamp,d2qdt2)
             ax[2,j].axis(ymin=-this_robot.joint_acc_limit[j]*1.05,ymax=this_robot.joint_acc_limit[j]*1.05)
-            d3qdt3=np.gradient(d2qdt2)/dt
+            # d3qdt3=np.gradient(d2qdt2)/dt
+            d3qdt2=np.diff(d2qdt2)
+            d3qdt2=np.append(d3qdt2[0],d3qdt2)
+            d3qdt3=np.diff(d2qdt2)/dt
             ax[3,j].plot(timestamp,d3qdt3)
             ax[3,j].axis(ymin=-this_robot.joint_jrk_limit[j]*1.05,ymax=this_robot.joint_jrk_limit[j]*1.05)
         # plt.title('Robot '+str(i)+' joint trajectoy/velocity/acceleration.')

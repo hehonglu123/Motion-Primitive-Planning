@@ -1,4 +1,5 @@
 import numpy as np
+from math import acos
 from pandas import *
 import sys, traceback, time, copy
 from general_robotics_toolbox import *
@@ -43,9 +44,9 @@ class lambda_opt(object):
 		else:
 			###decrease curve density to simplify computation
 			self.num_per_step=int(len(curve)/steps)	
-			self.breakpoints=np.linspace(0,len(curve_normal),steps).astype(int)
+			# self.breakpoints=np.linspace(0,len(curve_normal),steps).astype(int)
+			self.breakpoints=np.arange(0,len(curve_normal),self.num_per_step).astype(int)
 			self.act_breakpoints=copy.deepcopy(self.breakpoints)
-			self.act_breakpoints[1:]=self.breakpoints[1:]-1
 			self.curve=curve[self.act_breakpoints]
 			self.curve_normal=curve_normal[self.act_breakpoints]
 
@@ -388,8 +389,9 @@ class lambda_opt(object):
 		dt_prev = 999 # assume plenty of time for acceleration
 
 		for i in range(0,len(self.curve)-1):
-			if (i%1000) == 0:
+			if (i%100) == 0:
 				print(i)
+			# print(i)
 			try:
 				pose1_now=self.robot1.fwd(q_all1[-1])
 				pose2_now=self.robot2.fwd(q_all2[-1])
@@ -420,17 +422,28 @@ class lambda_opt(object):
 
 				this_pos_act = np.dot(pose2_world_now.R.T,pose1_now.p-pose2_world_now.p)
 				this_ori_act = np.dot(pose2_world_now.R.T,pose1_now.R[:,-1])
-				nustar = np.append(ezdotdes,vTdes) - np.append(KR*(this_pos_act-self.curve[i]),Kp*(this_ori_act-self.curve_normal[i]))
+				# nustar = np.append(ezdotdes,vTdes) - np.append(KR*(this_ori_act-self.curve_normal[i]),Kp*(this_pos_act-self.curve[i]))
+				nustar = - np.append(KR*(this_ori_act-self.curve_normal[i]),Kp*(this_pos_act-self.curve[i]))
+
+				if (i%100) == 0:
+					print(round(np.linalg.norm(this_pos_act-self.curve[i])))
+					costh = np.dot(this_ori_act,self.curve_normal[i])/(np.linalg.norm(this_ori_act)*np.linalg.norm(self.curve_normal[i]))
+					costh = np.max([-1,np.min([1,costh])])
+					print(np.rad2deg(acos(costh)))
 
 				# H and f
 				H=np.dot(np.transpose(J_all_p),J_all_p)+Kq+Kw*np.dot(np.transpose(J_all_R),J_all_R)
 				H=(H+np.transpose(H))/2
-				f=-np.dot(np.transpose(J_all_p),nustar[:3])-Kw*np.dot(np.transpose(J_all_R),nustar[3:])
+				f=-np.dot(np.transpose(J_all_p),nustar[3:])-Kw*np.dot(np.transpose(J_all_R),nustar[:3])
 
 				# qdot max and min
 				q_prev = np.hstack((q_all1[-1],q_all2[-1]))
-				qddot_lb = np.max(np.vstack((-joint_acc_limit,qddot_prev-joint_jrk_limit*dt_prev)),0)
-				qddot_ub = np.min(np.vstack((joint_acc_limit,qddot_prev+joint_jrk_limit*dt_prev)),0)
+				if i>2:
+					qddot_lb = np.max(np.vstack((-joint_acc_limit,qddot_prev-joint_jrk_limit*dt_prev)),0)
+					qddot_ub = np.min(np.vstack((joint_acc_limit,qddot_prev+joint_jrk_limit*dt_prev)),0)
+				else:
+					qddot_lb = -joint_acc_limit
+					qddot_ub = joint_acc_limit
 				qdot_lb = np.max(np.vstack((-joint_vel_limit,qdot_prev+qddot_lb*dt_prev,(lower_limit-q_prev)/dt+self.lim_factor*np.ones(12))),0)
 				qdot_ub = np.min(np.vstack((joint_vel_limit,qdot_prev+qddot_ub*dt_prev,(upper_limit-q_prev)/dt-self.lim_factor*np.ones(12))),0)
 
@@ -439,21 +452,22 @@ class lambda_opt(object):
 				q_all1.append(q_all1[-1]+dt*qdot[:6])
 				q_all2.append(q_all2[-1]+dt*qdot[6:])
 				
-				qddot_prev = (q_all1[-2]-qdot_prev)/dt_prev
-				qdot_prev = q_all1[-2]
+				qddot_prev = (qdot-qdot_prev)/dt_prev
+				qdot_prev = qdot
 				dt_prev = dt
 			except:
 				traceback.print_exc()
+				print(i)
+				print(qdot)
+				print(nustar)
+				print(np.linalg.norm(this_pos_act-self.curve[i]))
 				q_out1.append(q_all1[-1])
 				q_out2.append(q_all2[-1])			
 				raise AssertionError
 				break
 
-			q_out1.append(q_all1[-1])
-			q_out2.append(q_all2[-1])
-
-		q_out1=np.array(q_out1)[1:]
-		q_out2=np.array(q_out2)[1:]
+		q_out1=np.array(q_all1)
+		q_out2=np.array(q_all2)
 		return q_out1, q_out2
 
 	def dual_arm_stepwise_optimize_separate(self,q_init1,q_init2):
