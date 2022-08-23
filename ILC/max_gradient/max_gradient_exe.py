@@ -24,7 +24,7 @@ from blending import *
 
 def main():
 	dataset='wood/'
-	solution_dir='curve_pose_opt1/'
+	solution_dir='curve_pose_opt7/'
 	data_dir="../../data/"+dataset+solution_dir
 	cmd_dir="../../data/"+dataset+solution_dir+'100L/'
 
@@ -36,7 +36,7 @@ def main():
 	multi_peak_threshold=0.2
 	robot=abb6640(d=50)
 
-	v=400
+	v=500
 	s = speeddata(v,9999999,9999999,999999)
 	z = z10
 

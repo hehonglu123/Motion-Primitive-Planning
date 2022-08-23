@@ -15,19 +15,20 @@ ms=MotionSend()
 robot=abb6640(d=50)
 
 
-dataset='wood/'
-data_dir="../../../data/"+dataset
+dataset='from_NX/'
+solution_dir='curve_pose_opt2/'
+data_dir="../../../data/"+dataset+solution_dir
+
 curve = read_csv(data_dir+"Curve_in_base_frame.csv",header=None).values
 
-exe_dir='../../../ILC/max_gradient/curve1_250_100L_multipeak/'
-df = read_csv(exe_dir+"curve_exe_v250_z10.csv")
+exe_dir='../../../ILC/all_gradient/curve2_pose_opt2_v1200_2/'
+df = read_csv(exe_dir+"curve_exe_v1200_z10.csv")
 
 ##############################data analysis#####################################
-lam, curve_exe, curve_exe_R,curve_exe_js, speed, timestamp=ms.logged_data_analysis(robot,df)
+lam, curve_exe, curve_exe_R,curve_exe_js, speed, timestamp=ms.logged_data_analysis(robot,df,realrobot=True)
 lam, curve_exe, curve_exe_R,curve_exe_js, speed, timestamp=ms.chop_extension(curve_exe, curve_exe_R,curve_exe_js, speed, timestamp,curve[0,:3],curve[-1,:3])
 
 error,angle_error=calc_all_error_w_normal(curve_exe,curve[:,:3],curve_exe_R[:,:,-1],curve[:,3:])
-
 
 start_idx=np.argmin(np.linalg.norm(curve[0,:3]-curve_exe,axis=1))
 end_idx=np.argmin(np.linalg.norm(curve[-1,:3]-curve_exe,axis=1))
