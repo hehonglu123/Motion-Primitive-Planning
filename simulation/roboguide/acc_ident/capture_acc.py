@@ -161,7 +161,7 @@ dict_table={}
 #####################first & second joint acc both depends on second and third joint#####################################
 # jog([0,0,0,0,0,0])
 # q2_test_lower = robot.lower_limit[1]+resolution
-q2_test_lower = robot.lower_limit[1]+resolution*19
+q2_test_lower = robot.lower_limit[1]+resolution*34
 q2_test_upper = robot.upper_limit[1]
 for q2 in np.arange(q2_test_lower,q2_test_upper,resolution):
 	
@@ -190,9 +190,9 @@ for q2 in np.arange(q2_test_lower,q2_test_upper,resolution):
 		print("===================================")
 		
 		# save when a qd is finished
-		with open('m710ic/acc2.txt','w+') as f:
+		with open('m710ic/acc3.txt','w+') as f:
 			f.write(str(dict_table))
-		pickle.dump(dict_table, open('m710ic/acc2.pickle','wb'))
+		pickle.dump(dict_table, open('m710ic/acc3.pickle','wb'))
 
 
 
