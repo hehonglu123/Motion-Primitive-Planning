@@ -19,7 +19,7 @@ def get_args(message=None):
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--eval_frequency", type=int, default=50)
     parser.add_argument("--train_episode_start", type=int, default=0)
-    parser.add_argument("--max_train_episode", type=int, default=int(1e3))
+    parser.add_argument("--max_train_episode", type=int, default=int(2e3))
     parser.add_argument("--curve_feature_dim", type=int, default=32)
     parser.add_argument("--state_robot_dim", type=int, default=4)
     parser.add_argument("--replayer_capacity", type=int, default=int(1e6))
@@ -49,7 +49,7 @@ def read_data(curve_idx, data_dir):
 def train(agent: TD3Agent, data_dir, args):
     train_timer = time.time()
 
-    eval_result = {"Max Error": [], "Iteration": [], 'Episode': []}
+    eval_result = {"Max Error": [], "Iteration": [], 'Episode': [], 'Reward': []}
 
     forward_data_dir = data_dir + os.sep + 'forward' + os.sep
     reverse_data_dir = data_dir + os.sep + 'reverse' + os.sep
@@ -150,10 +150,11 @@ def train(agent: TD3Agent, data_dir, args):
             print("[Episode {:>6}] Invalid curve. Skipped.".format(episode + 1))
 
         if episode == 0 or (episode + 1) % args.eval_frequency == 0:
-            eval_error, eval_itr = evaluate(agent, 'eval_data/curve1', render=True, render_dir='render/eval')
+            eval_error, eval_itr, eval_reward = evaluate(agent, 'eval_data/curve1', render=True, render_dir='render/eval')
             eval_result["Max Error"].append(eval_error)
             eval_result["Iteration"].append(eval_itr)
             eval_result["Episode"].append(episode + 1)
+            eval_result['Reward'].append(eval_reward)
             eval_df = pd.DataFrame(eval_result)
             eval_df.to_csv('Eval Result.csv', index=False)
 
@@ -182,6 +183,8 @@ def evaluate(agent, data_dir, render=False, render_dir="", env_mode='robot_studi
     all_q_policy = []
     all_itr = []
 
+    eval_reward = []
+
     for i in range(10, 11):
 
         curve, curve_normal, curve_js = read_data(i, data_dir)
@@ -194,6 +197,8 @@ def evaluate(agent, data_dir, render=False, render_dir="", env_mode='robot_studi
         opt_action[:, 0] = 1.
         extreme_action = np.ones((env.n, env.action_dim)) * -2.
         extreme_action[:, 0] = 2.
+
+        episode_reward = np.zeros(env.n)
 
         if status:
             num_curve += 1
@@ -213,10 +218,10 @@ def evaluate(agent, data_dir, render=False, render_dir="", env_mode='robot_studi
 
                 actions = agent.select_action(state_curve, state_robot, use_noise=False)
 
-                plot_action(actions, i_step)
                 # actions[:, 0] = 1
                 # actions[:, 1] = 0
                 # actions[:, 2] = 0
+                plot_action(actions, i_step)
 
                 q_optimal = agent.q_value(state_curve, state_robot, opt_action)
                 q_extreme = agent.q_value(state_curve, state_robot, extreme_action)
@@ -227,7 +232,7 @@ def evaluate(agent, data_dir, render=False, render_dir="", env_mode='robot_studi
                 all_itr.append(i_step)
 
                 next_state, reward, done, message, success = env.step(actions)
-
+                episode_reward += reward.flatten()
                 # plot_error_reward(curve_error, next_state, reward, i_step)
 
                 state = next_state
@@ -240,13 +245,15 @@ def evaluate(agent, data_dir, render=False, render_dir="", env_mode='robot_studi
 
             exec_error += env.max_exec_error
             num_itr += env.itr
+            eval_reward.append(np.sum(episode_reward))
+
         else:
             time.sleep(2)
             print("[EVAL] Invalid curve. Skipped.")
     exec_error /= num_curve
     num_itr /= num_curve
 
-    return exec_error, num_itr
+    return exec_error, num_itr, np.mean(eval_reward)
     # return all_q_optimal, all_q_extreme, all_q_policy, all_itr
 
 
@@ -287,15 +294,16 @@ def plot_error_reward(curve_error, next_state, reward, i_step):
 
 
 def evaluate_all(agent, data_dir):
-    all_eval_result = {'Max Error': [], 'Iteration': [], 'Episode': []}
+    all_eval_result = {'Max Error': [], 'Iteration': [], 'Episode': [], 'Reward': []}
 
-    for i in range(100, 1700, 100):
+    for i in range(50, 1000, 50):
         print('Evaluating Model at Episode {}'.format(i))
-        agent.load('model/{}'.format(i))
-        eval_error, eval_itr = evaluate(agent, data_dir, render=False, env_mode='robot_studio')
+        agent.load('model/norm_reward/{}'.format(i))
+        eval_error, eval_itr, eval_reward = evaluate(agent, data_dir, render=False, env_mode='robot_studio')
         all_eval_result['Max Error'].append(eval_error)
         all_eval_result['Iteration'].append(eval_itr)
         all_eval_result['Episode'].append(i)
+        all_eval_result['Reward'].append(eval_reward)
         df = pd.DataFrame(all_eval_result)
         df.to_csv('Eval Result New.csv', index=False)
 
@@ -306,13 +314,14 @@ def main():
     eval_dir = 'eval_data/curve1'
 
     agent = TD3Agent(args)
+    # evaluate_all(agent, eval_dir)
 
     # agent.load('model/gaussian_200/1500')
     # args.train_episode_start = 1400
-    train(agent, data_dir, args)
+    # train(agent, data_dir, args)
 
-    # agent.load('model/50')
-    # eval_error, eval_itr = evaluate(agent, eval_dir, render=True, render_dir='render/eval', env_mode='robot_studio')
+    # agent.load('model/norm_reward/200')
+    # eval_error, eval_itr, eval_reward = evaluate(agent, eval_dir, render=True, render_dir='render/eval', env_mode='robot_studio')
 
     # q_optimal = []
     # q_extreme = []
