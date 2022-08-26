@@ -114,78 +114,84 @@ def main():
 		curve_js_blended,curve_blended,curve_R_blended=blend_js_from_primitive(curve_interp, curve_js_interp, breakpoints_blended, primitives,robot,zone=10)
 
 		###find points on curve_exe closest to all p_bp's, and closest point on blended trajectory to all p_bp's
-		bp_exe_indices=[]		###breakpoints on curve_exe
-		curve_original_indices=[]
-		error_bps=[]			###error distance
-		error_bps_v=[]			###error vector
+		bp_exe_indices=np.zeros((len(p_bp),2,3))		###breakpoints on curve_exe
+		curve_original_indices=np.zeros((len(p_bp),2))	###breakpoint index on original curve
+		error_bps=np.zeros((len(p_bp),2))				###error distance
+		error_bps_v=np.zeros((len(p_bp),2,3))			###error vector
 		
-		grad=[]
+		grad=np.zeros((len(p_bp),2))
 		gamma=0.5
 		for bp_idx in range(len(p_bp)):
-			p_bp_temp=copy.deepcopy(p_bp)
-			q_bp_temp=np.array(copy.deepcopy(q_bp))
+			for bp_sub_idx in range(len(p_bp[bp_idx])):
+				p_bp_temp=copy.deepcopy(p_bp)
+				q_bp_temp=np.array(copy.deepcopy(q_bp))
 
-			###on blended trajectory
-			_,blended_idx=calc_error(p_bp[bp_idx][0],curve_blended)
+				if bp_idx==0 and bp_sub_idx==0:
+					_,blended_idx=calc_error(curve[0,:3],curve_blended)
+					curve_original_idx=0
+					error_bp,bp_exe_idx=calc_error(curve[0,:3],curve_exe)							###find closest point on curve_exe to bp
+				elif bp_idx==len(p_bp)-1 and bp_sub_idx==len(p_bp[bp_idx])-1:
+					_,blended_idx=calc_error(curve[-1,:3],curve_blended)
+					curve_original_idx=len(curve)-1
+					error_bp,bp_exe_idx=calc_error(curve[-1,:3],curve_exe)
+				else:
+					###on blended trajectory
+					_,blended_idx=calc_error(p_bp[bp_idx][bp_sub_idx],curve_blended)
+					_,bp_exe_idx=calc_error(p_bp[bp_idx][bp_sub_idx],curve_exe)							###find closest point on curve_exe to bp
+					error_bp,curve_original_idx=calc_error(curve_exe[bp_exe_idx],curve[:,:3])	###find closest point on curve_original to curve_exe[bp]
+				
+				bp_exe_indices[bp_idx][bp_sub_idx]=bp_exe_idx
+				curve_original_indices[bp_idx][bp_sub_idx]=curve_original_idx			
+				error_bps[bp_idx][bp_sub_idx]=error_bp
+				###error direction
+				vd=(curve[curve_original_idx,:3]-curve_exe[bp_exe_idx])
+				vd_temp=vd*gamma
+				error_bps_v[bp_idx][bp_sub_idx]=vd
 
-			_,bp_exe_idx=calc_error(p_bp[bp_idx][0],curve_exe)							###find closest point on curve_exe to bp
-			bp_exe_indices.append(bp_exe_idx)
-			error_bp,curve_original_idx=calc_error(curve_exe[bp_exe_idx],curve[:,:3])	###find closest point on curve_original to curve_exe[bp]
-			curve_original_indices.append(curve_original_idx)			
-			error_bps.append(error_bp)
-			###error direction
-			vd=(curve[curve_original_idx,:3]-curve_exe[bp_exe_idx])
-			vd_temp=vd*gamma
-			error_bps_v.append(vd)
+				###adjust breakpoint in error direction
+				p_bp_temp[bp_idx][bp_sub_idx]+=vd_temp
+				q_bp_temp[bp_idx][bp_sub_idx]=car2js(robot,q_bp[bp_idx][bp_sub_idx],p_bp_temp[bp_idx][bp_sub_idx],robot.fwd(q_bp[bp_idx][bp_sub_idx]).R)[0]
+				
+				#restore new trajectory, only for adjusted breakpoint, 1-bp change requires traj interp from 5 bp
+				short_version=range(max(bp_idx-2,0),min(bp_idx+3,len(breakpoints_blended)))
+				###start & end idx, choose points in the middle of breakpoints to avoid affecting previous/next blending segments, unless at the boundary (star/end of all curve)
+				###guard 5 breakpoints for short blending
+				if short_version[0]==0:
+					short_version=range(0,5)
+					start_idx=breakpoints_blended[short_version[0]]
+				else:
+					start_idx=int((breakpoints_blended[short_version[0]]+breakpoints_blended[short_version[1]])/2)
+				if short_version[-1]==len(breakpoints_blended)-1:
+					short_version=range(len(breakpoints_blended)-5,len(breakpoints_blended))
+					end_idx = breakpoints_blended[short_version[-1]]+1
+				else:
+					end_idx=int((breakpoints_blended[short_version[-1]]+breakpoints_blended[short_version[-2]])/2)+1
 
-			###adjust breakpoint in error direction
-			p_bp_temp[bp_idx][0]+=vd_temp
-			q_bp_temp[bp_idx][0]=car2js(robot,q_bp[bp_idx][0],p_bp_temp[bp_idx][0],robot.fwd(q_bp[bp_idx][0]).R)[0]
+
+				curve_interp_temp, curve_R_interp_temp, curve_js_interp_temp, breakpoints_blended_temp=form_traj_from_bp(q_bp_temp[short_version],[primitives[i] for i in short_version],robot)
+
+				curve_js_blended_temp,curve_blended_temp,curve_R_blended_temp=blend_js_from_primitive(curve_interp_temp, curve_js_interp_temp, breakpoints_blended_temp, [primitives[i] for i in short_version],robot,zone=10)
+				
+				curve_blended_new=copy.deepcopy(curve_blended)
+
+				curve_blended_new[start_idx:end_idx]=curve_blended_temp[start_idx-breakpoints_blended[short_version[0]]:len(curve_blended_temp)-(breakpoints_blended[short_version[-1]]+1-end_idx)]
+
+				###calculate relative gradient
+				worst_case_point_shift=curve_blended_new[blended_idx]-curve_blended[blended_idx]
+
+				###get new error - prev error
+				de=np.linalg.norm(curve[curve_original_idx,:3]-curve_exe[bp_exe_idx]+worst_case_point_shift)-error_bp
 			
-			#restore new trajectory, only for adjusted breakpoint, 1-bp change requires traj interp from 5 bp
-			short_version=range(max(bp_idx-2,0),min(bp_idx+3,len(breakpoints_blended)))
-			###start & end idx, choose points in the middle of breakpoints to avoid affecting previous/next blending segments, unless at the boundary (star/end of all curve)
-			###guard 5 breakpoints for short blending
-			if short_version[0]==0:
-				short_version=range(0,5)
-				start_idx=breakpoints_blended[short_version[0]]
-			else:
-				start_idx=int((breakpoints_blended[short_version[0]]+breakpoints_blended[short_version[1]])/2)
-			if short_version[-1]==len(breakpoints_blended)-1:
-				short_version=range(len(breakpoints_blended)-5,len(breakpoints_blended))
-				end_idx = breakpoints_blended[short_version[-1]]+1
-			else:
-				end_idx=int((breakpoints_blended[short_version[-1]]+breakpoints_blended[short_version[-2]])/2)+1
+				grad[bp_idx][bp_sub_idx]=de/gamma
 
-
-			curve_interp_temp, curve_R_interp_temp, curve_js_interp_temp, breakpoints_blended_temp=form_traj_from_bp(q_bp_temp[short_version],[primitives[i] for i in short_version],robot)
-
-			curve_js_blended_temp,curve_blended_temp,curve_R_blended_temp=blend_js_from_primitive(curve_interp_temp, curve_js_interp_temp, breakpoints_blended_temp, [primitives[i] for i in short_version],robot,zone=10)
-			
-			curve_blended_new=copy.deepcopy(curve_blended)
-
-			curve_blended_new[start_idx:end_idx]=curve_blended_temp[start_idx-breakpoints_blended[short_version[0]]:len(curve_blended_temp)-(breakpoints_blended[short_version[-1]]+1-end_idx)]
-
-			###calculate relative gradient
-			worst_case_point_shift=curve_blended_new[blended_idx]-curve_blended[blended_idx]
-
-			###get new error - prev error
-			de=np.linalg.norm(curve[curve_original_idx,:3]-curve_exe[bp_exe_idx]+worst_case_point_shift)-error_bp
-		
-			grad.append(de/gamma)
-
-		grad=np.reshape(grad,(-1,1))
-
-
-		grad_gamma_all=np.linalg.pinv(grad)*error_bps
 
 		###update all bp's
 		for bp_idx in range(len(p_bp)):
-			# gamma=grad_gamma_all[0][bp_idx]
-			gamma=error_bps[bp_idx]/grad[bp_idx]
-			###p_bp temp for numerical gradient
-			p_bp[bp_idx][0]+=gamma*error_bps_v[bp_idx]
-			q_bp[bp_idx][0]=car2js(robot,q_bp[bp_idx][0],p_bp[bp_idx][0],robot.fwd(q_bp[bp_idx][0]).R)[0]
+			for bp_sub_idx in range(len(p_bp[bp_idx])):
+				gamma=error_bps[bp_idx][bp_sub_idx]/grad[bp_idx][bp_sub_idx]
+				###p_bp temp for numerical gradient
+				p_bp[bp_idx][bp_sub_idx]+=gamma*error_bps_v[bp_idx]
+				q_bp[bp_idx][bp_sub_idx]=car2js(robot,q_bp[bp_idx][bp_sub_idx],p_bp[bp_idx][bp_sub_idx],robot.fwd(q_bp[bp_idx][bp_sub_idx]).R)[0]
 
 
 		# for m in breakpoint_interp_2tweak_indices:
