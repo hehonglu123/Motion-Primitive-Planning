@@ -191,24 +191,25 @@ def logged_data_analysis(robot,timestamp,curve_exe_js):
 	return lam, np.array(curve_exe), np.array(curve_exe_R), act_speed
 
 def form_relative_path(robot1,robot2,curve_js1,curve_js2,base2_R,base2_p):
-        relative_path_exe=[]
-        relative_path_exe_R=[]
-        curve_exe1=[]
-        curve_exe2=[]
-        curve_exe_R1=[]
-        curve_exe_R2=[]
-        for i in range(len(curve_js1)):
-            pose1_now=robot1.fwd(curve_js1[i])
-            pose2_now=robot2.fwd(curve_js2[i])
 
-            curve_exe1.append(pose1_now.p)
-            curve_exe2.append(pose2_now.p)
-            curve_exe_R1.append(pose1_now.R)
-            curve_exe_R2.append(pose2_now.R)
+	relative_path_exe=[]
+	relative_path_exe_R=[]
+	curve_exe1=[]
+	curve_exe2=[]
+	curve_exe_R1=[]
+	curve_exe_R2=[]
+	for i in range(len(curve_js1)):
+		pose1_now=robot1.fwd(curve_js1[i])
+		pose2_now=robot2.fwd(curve_js2[i])
 
-            pose2_world_now=robot2.fwd(curve_js2[i],base2_R,base2_p)
+		curve_exe1.append(pose1_now.p)
+		curve_exe2.append(pose2_now.p)
+		curve_exe_R1.append(pose1_now.R)
+		curve_exe_R2.append(pose2_now.R)
+
+		pose2_world_now=robot2.fwd(curve_js2[i],base2_R,base2_p)
 
 
-            relative_path_exe.append(np.dot(pose2_world_now.R.T,pose1_now.p-pose2_world_now.p))
-            relative_path_exe_R.append(pose2_world_now.R.T@pose1_now.R)
-        return np.array(relative_path_exe),np.array(relative_path_exe_R)
+		relative_path_exe.append(np.dot(pose2_world_now.R.T,pose1_now.p-pose2_world_now.p))
+		relative_path_exe_R.append(pose2_world_now.R.T@pose1_now.R)
+	return np.array(relative_path_exe),np.array(relative_path_exe_R)

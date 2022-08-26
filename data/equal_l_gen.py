@@ -15,7 +15,7 @@ from utils import *
 
 
 data_dir='from_NX/'
-solution_dir='curve_pose_opt2/'
+solution_dir='curve_pose_opt2_R/'
 
 num_ls=[100]
 robot=abb6640(d=50)
