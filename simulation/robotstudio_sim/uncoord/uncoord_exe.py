@@ -35,6 +35,7 @@ df1=None
 df2=None
 def move_robot1():
     global df1, ms1, robot1,primitives1,breakpoints1,p_bp1,q_bp1,v1_all,z1_all
+    print(v1_all)
     logged_data= ms1.exec_motions(robot1,primitives1,breakpoints1,p_bp1,q_bp1,v1_all,z1_all)
     StringData=StringIO(logged_data)
     df1 = read_csv(StringData, sep =",")
@@ -69,8 +70,6 @@ def main():
     for i in range(1,len(breakpoints1)):
         speed_ratio.append((lam1[breakpoints1[i]-1]-lam1[breakpoints1[i-1]-1])/(lam2[breakpoints1[i]-1]-lam2[breakpoints1[i-1]-1]))
 
-    
-
     ###specify speed here for robot2
     s2_all=[200]*len(breakpoints1)
     v2_all=[v200]*len(breakpoints1)
@@ -84,6 +83,12 @@ def main():
         s1_all.append(s1)
         v1 = speeddata(s1,9999999,9999999,999999)
         v1_all.append(v1)
+
+
+    ###move to start first 
+
+    ms1.exec_motions(robot1,[primitives1[0]],[breakpoints1[0]],[p_bp1[0]],[q_bp1[0]],vmax,fine)
+    ms2.exec_motions(robot2,[primitives2[0]],[breakpoints2[0]],[p_bp2[0]],[q_bp2[0]],vmax,fine)
 
     t1 = Thread(target=move_robot1)
     t2 = Thread(target=move_robot2)
@@ -99,9 +104,30 @@ def main():
     lam_exe1, curve_exe1, curve_exe_R1,curve_exe_js1, speed1, timestamp1=ms1.logged_data_analysis(robot1,df1,realrobot=True)
     lam_exe2, curve_exe2, curve_exe_R2,curve_exe_js2, speed2, timestamp2=ms2.logged_data_analysis(robot2,df2,realrobot=True)
 
+    if len(curve_exe_js1)>len(curve_exe_js2):
+        print('size mismatch, padding now')
+        # speed2=np.append(speed2,[0]*(len(curve_exe_js1)-len(curve_exe_js2)))
+        curve_exe_R1=np.append(curve_exe_R1,[curve_exe_R1[-1]]*(len(curve_exe_js1)-len(curve_exe_js2)))
+        curve_exe_js2=np.pad(curve_exe_js2,[(0,len(curve_exe_js1)-len(curve_exe_js2)),(0,0)], mode="edge")
+        curve_exe2=np.pad(curve_exe2,[(0,len(curve_exe1)-len(curve_exe2)),(0,0)], mode="edge")
+        
+    elif len(curve_exe_js1)<len(curve_exe_js2):
+        print('size mismatch, padding now')
+        # speed1=np.append(speed1,[0]*(len(curve_exe_js2)-len(curve_exe_js1)))
+        curve_exe_R2=np.append(curve_exe_R2,[curve_exe_R2[-1]]*(len(curve_exe_js2)-len(curve_exe_js1)))
+        curve_exe_js1=np.pad(curve_exe_js1,[(0,len(curve_exe_js2)-len(curve_exe_js1)),(0,0)], mode="edge")
+        curve_exe1=np.pad(curve_exe1,[(0,len(curve_exe2)-len(curve_exe1)),(0,0)], mode="edge")
+
     relative_path_exe,relative_path_exe_R=form_relative_path(robot1,robot2,curve_exe_js1,curve_exe_js2,base2_R,base2_p)
     lam=calc_lam_cs(relative_path_exe)
     speed=np.gradient(lam)/np.gradient(timestamp1)
+
+    lam, curve_exe1,curve_exe2,curve_exe_R1,curve_exe_R2,curve_exe_js1,curve_exe_js2, speed, timestamp, relative_path_exe, relative_path_exe_R=\
+            ms1.chop_extension_dual(lam, curve_exe1,curve_exe2,curve_exe_R1,curve_exe_R2,curve_exe_js1,curve_exe_js2, speed, timestamp1, relative_path_exe,relative_path_exe_R,relative_path[0,:3],relative_path[-1,:3])
+
+    speed1=get_speed(curve_exe1,timestamp)
+    speed2=get_speed(curve_exe2,timestamp)
+
     error,angle_error=calc_all_error_w_normal(relative_path_exe,relative_path[:,:3],relative_path_exe_R[:,:,-1],relative_path[:,3:])
 
 
@@ -117,7 +143,7 @@ def main():
     ax1.set_xlabel('lambda (mm)')
     ax1.set_ylabel('Speed/lamdot (mm/s)', color='g')
     ax2.set_ylabel('Error (mm)', color='b')
-    plt.title("Speed: "+dataset+'v'+str(s2)+'_z'+str(zone))
+    plt.title('Uncoordinated')
     ax1.legend(loc=0)
 
     ax2.legend(loc=0)

@@ -19,7 +19,7 @@ from MotionSend import *
 def main():
     ms = MotionSend()
     dataset='from_NX/'
-    solution_dir='curve_pose_opt2/'
+    solution_dir='curve_pose_opt2_R/'
     cmd_dir='../../../data/'+dataset+solution_dir+'100L/'
     data_dir='../../../data/'+dataset+solution_dir
 
