@@ -49,9 +49,12 @@ def generate_gif(dir_path):
 
 def plot_training_curve(file_path):
     data = pd.read_csv(file_path)
-    episode = data['Episode'].values[1:]
-    max_error = data['Max Error'].values[1:]
-    itr = data['Iteration'].values[1:]
+    data = data.loc[data['Episode'] < 400]
+    start_idx = 0
+    episode = data['Episode'].values[start_idx:]
+    max_error = data['Max Error'].values[start_idx:]
+    itr = data['Iteration'].values[start_idx:]
+    reward = data['Reward'].values[start_idx:]
 
     fig, ax1 = plt.subplots()
     ax2 = ax1.twinx()
@@ -68,6 +71,14 @@ def plot_training_curve(file_path):
     ax2.set_ylim(0, 12)
 
     fig.savefig('RL Train.png', dpi=300)
+
+    fig, ax = plt.subplots()
+    ax.plot(episode, reward, label="Reward")
+    fig.legend()
+    ax.set_xlabel('Training Episode')
+    ax.set_ylabel('Reward')
+    ax.set_ylim(1000, 1200)
+    fig.savefig('RL Train Reward.png', dpi=300)
 
 
 def max_gradient_gif():
@@ -99,7 +110,7 @@ def plot_q_value():
     ax.plot(steps, q_policy, label='policy')
     ax.legend()
     # ax.set_yscale('log')
-    ax.set_ylim(-25, 100)
+    # ax.set_ylim(-2.5, 10)
     ax.set_title('Q values')
     ax.set_xlabel('Train Step')
     ax.set_ylabel('Q Value')
@@ -141,8 +152,8 @@ def plot_q_value():
 
 
 if __name__ == '__main__':
-    plot_q_value()
-    # generate_gif("render/curve1/curve11")
+    # plot_q_value()
+    # generate_gif("render/eval/curve10")
     # max_gradient_gif()
 
     # num_curve = 1
@@ -150,5 +161,5 @@ if __name__ == '__main__':
     #     generate_gif("render/curve2/curve{}".format(i))
     #     print("{} / {}".format(i, num_curve))
 
-    # plot_training_curve('Eval Result.csv')
+    plot_training_curve('Eval Result New.csv')
 
