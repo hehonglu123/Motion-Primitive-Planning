@@ -24,8 +24,8 @@ from blending import *
 from realrobot import *
 
 def main():
-	dataset='wood/'
-	solution_dir='curve_pose_opt7/'
+	dataset='from_NX/'
+	solution_dir='curve_pose_opt2_R/'
 	data_dir="../../data/"+dataset+solution_dir
 	cmd_dir="../../data/"+dataset+solution_dir+'100L/'
 
@@ -40,17 +40,17 @@ def main():
 	alpha_default=1.
 	skip=False
 
-	v=400
+	v=1200
 	s = speeddata(v,9999999,9999999,999999)
 	z = z10
 
 
 	ms = MotionSend(url='http://192.168.55.1:80')
-	# breakpoints,primitives,p_bp,q_bp=ms.extract_data_from_cmd(cmd_dir+'command.csv')
-	###extension
-	# p_bp,q_bp=ms.extend(robot,q_bp,primitives,breakpoints,p_bp,extension_start=100,extension_end=100)
+	breakpoints,primitives,p_bp,q_bp=ms.extract_data_from_cmd(cmd_dir+'command.csv')
+	##extension
+	p_bp,q_bp=ms.extend(robot,q_bp,primitives,breakpoints,p_bp,extension_start=100,extension_end=100)
 	###########################################get cmd from simulation improved cmd################################
-	breakpoints,primitives,p_bp,q_bp=ms.extract_data_from_cmd('curve1_pose_opt7_v400/command.csv')
+	# breakpoints,primitives,p_bp,q_bp=ms.extract_data_from_cmd('curve2_pose_opt2_v400/command.csv')
 
 	
 	###ilc toolbox def

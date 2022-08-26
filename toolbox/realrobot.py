@@ -4,6 +4,7 @@ from sklearn.cluster import KMeans
 import numpy as np
 import scipy
 from utils import *
+import time
 
 def average_curve(curve_all,timestamp_all):
 	###get desired synced timestamp first
