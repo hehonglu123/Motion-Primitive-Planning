@@ -125,7 +125,9 @@ def exec(q_d,joint):
 		upper_limit[1] = radians(90)-((radians(-45)-q_init[2])*2)
 
 	###if end outside boundary, move in other direction
-	if q_end[joint]>upper_limit[joint]:
+	# if q_end[joint]>upper_limit[joint]:
+	if np.any(np.array(q_end)>np.array(upper_limit)) or np.any(np.array(q_end)<np.array(lower_limit)) or \
+		 np.any(np.array(q_init)>np.array(upper_limit)) or np.any(np.array(q_init)<np.array(lower_limit)):
 		q_init[joint]=q_d[joint]+0.1
 		q_end[joint]=q_d[joint]-1
 		
@@ -134,6 +136,7 @@ def exec(q_d,joint):
 		while q_end[joint]<lower_limit[joint]:
 			dang = dang*0.9
 			q_end[joint]=q_d[joint]-dang
+			
 			if dang < 0.3:
 				print("dang too small")
 				raise AssertionError
@@ -161,7 +164,7 @@ dict_table={}
 #####################first & second joint acc both depends on second and third joint#####################################
 # jog([0,0,0,0,0,0])
 # q2_test_lower = robot.lower_limit[1]+resolution
-q2_test_lower = robot.lower_limit[1]+resolution*34
+q2_test_lower = robot.lower_limit[1]+resolution*45
 q2_test_upper = robot.upper_limit[1]
 for q2 in np.arange(q2_test_lower,q2_test_upper,resolution):
 	
@@ -190,9 +193,9 @@ for q2 in np.arange(q2_test_lower,q2_test_upper,resolution):
 		print("===================================")
 		
 		# save when a qd is finished
-		with open('m710ic/acc3.txt','w+') as f:
+		with open('m710ic/acc4.txt','w+') as f:
 			f.write(str(dict_table))
-		pickle.dump(dict_table, open('m710ic/acc3.pickle','wb'))
+		pickle.dump(dict_table, open('m710ic/acc4.pickle','wb'))
 
 
 
