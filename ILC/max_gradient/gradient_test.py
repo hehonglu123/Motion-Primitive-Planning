@@ -65,7 +65,7 @@ def main():
 	_,peak_error_curve_idx=calc_error(curve_exe[peak],curve[:,:3])  # index of original curve closest to max error point
 
 	error_vector=np.reshape(curve[peak_error_curve_idx,:3]-curve_exe[peak],(3,1))
-	print('error vector: ',error_vector)
+	print('error vector normalized: ',error_vector/np.linalg.norm(error_vector))
 	grad=np.zeros((3,3))
 	delta=0.1
 	###get gradient in 3 direction
@@ -93,8 +93,7 @@ def main():
 		grad[:,m]=d/delta
 
 	print('gradient matrix: ',grad)
-	print('directional grad: ',error_vector.T@grad)
-	print('eig: ',np.linalg.eig(error_vector.T@grad))
+	print('eig: ',np.linalg.eig(grad.T))
 
 if __name__ == "__main__":
 	main()
