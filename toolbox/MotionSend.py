@@ -56,15 +56,43 @@ class MotionSend(object):
             if motion == 'movel_fit':
 
                 robt = self.moveL_target(robot,q_bp[i][0],p_bp[i][0])
-                mp.MoveL(robt,speed,zone)
+                if type(speed) is list:
+                    if type(zone) is list:
+                        mp.MoveL(robt,speed[i],zone[i])
+                    else:
+                        mp.MoveL(robt,speed[i],zone)
+                else:
+                    if type(zone) is list:
+                        mp.MoveL(robt,speed,zone[i])
+                    else:
+                        mp.MoveL(robt,speed,zone)
+                
 
             elif motion == 'movec_fit':
                 robt1, robt2 = self.moveC_target(robot,q_bp[i][0],q_bp[i][1],p_bp[i][0],p_bp[i][1])
-                mp.MoveC(robt1,robt2,speed,zone)
+                if type(speed) is list:
+                    if type(zone) is list:
+                        mp.MoveC(robt1,robt2,speed[i],zone[i])
+                    else:
+                        mp.MoveC(robt1,robt2,speed[i],zone)
+                else:
+                    if type(zone) is list:
+                        mp.MoveC(robt1,robt2,speed,zone[i])
+                    else:
+                        mp.MoveC(robt1,robt2,speed,zone)
 
             elif motion == 'movej_fit':
                 robt = self.moveL_target(robot,q_bp[i][0],p_bp[i][0])
-                mp.MoveJ(robt,speed,zone)
+                if type(speed) is list:
+                    if type(zone) is list:
+                        mp.MoveJ(robt,speed[i],zone[i])
+                    else:
+                        mp.MoveJ(robt,speed[i],zone)
+                else:
+                    if type(zone) is list:
+                        mp.MoveJ(robt,speed,zone[i])
+                    else:
+                        mp.MoveJ(robt,speed,zone)
 
             else: # moveabsj
                 jointt = self.moveJ_target(q_bp[i][0])
@@ -74,7 +102,16 @@ class MotionSend(object):
                     mp.MoveAbsJ(jointt,v500,fine)
                     mp.WaitTime(0.1)
                 else:
-                    mp.MoveAbsJ(jointt,speed,zone)
+                    if type(speed) is list:
+                        if type(zone) is list:
+                            mp.MoveAbsJ(jointt,speed[i],zone[i])
+                        else:
+                            mp.MoveAbsJ(jointt,speed[i],zone)
+                    else:
+                        if type(zone) is list:
+                            mp.MoveAbsJ(jointt,speed,zone[i])
+                        else:
+                            mp.MoveAbsJ(jointt,speed,zone)
         ###add sleep at the end to wait for train_data transmission
         mp.WaitTime(0.1)
         
@@ -120,21 +157,21 @@ class MotionSend(object):
             motion = primitives2[i]
             if motion == 'movel_fit':
                 robt = self.moveL_target(self.robot2,q_bp2[i][0],p_bp2[i][0])
-                if len(speed2)==4:
+                if type(speed2) is list:
                     mp2.MoveL(robt,speed2,zone2)
                 else:
                     mp2.MoveL(robt,speed2[i],zone2)
 
             elif motion == 'movec_fit':
                 robt1, robt2 = self.moveC_target(self.robot2,q_bp2[i][0],q_bp2[i][1],p_bp2[i][0],p_bp2[i][1])
-                if len(speed2)==4:
+                if type(speed2) is list:
                     mp2.MoveC(robt1,robt2,speed2,zone2)
                 else:
                     mp2.MoveC(robt1,robt2,speed2[i],zone2)
 
             elif motion == 'movej_fit':
                 robt = self.moveL_target(self.robot2,q_bp2[i][0],p_bp2[i][0])
-                if len(speed2)==4:
+                if type(speed2) is list:
                     mp2.MoveJ(robt,speed2,zone2)
                 else:
                     mp2.MoveJ(robt,speed2[i],zone2)
@@ -147,7 +184,7 @@ class MotionSend(object):
                     mp2.MoveAbsJ(jointt,v500,fine)
                     mp2.WaitTime(0.1)
                 else:
-                    if len(speed2)==4:
+                    if type(speed2) is list:
                         mp2.MoveAbsJ(jointt,speed2,zone2)
                     else:
                         mp2.MoveAbsJ(jointt,speed2[i],zone2)

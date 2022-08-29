@@ -23,10 +23,10 @@ from lambda_calc import *
 from blending import *
 
 def main():
-	dataset='wood/'
-	solution_dir='curve_pose_opt7/'
+	dataset='from_NX/'
+	solution_dir='curve_pose_opt2_R/'
 	data_dir="../../data/"+dataset+solution_dir
-	cmd_dir="../../data/"+dataset+solution_dir+'100L/'
+	cmd_dir="../../data/"+dataset+solution_dir+'50L/'
 
 
 
@@ -36,7 +36,7 @@ def main():
 	multi_peak_threshold=0.2
 	robot=abb6640(d=50)
 
-	v=400
+	v=1200
 	s = speeddata(v,9999999,9999999,999999)
 	z = z10
 
@@ -139,20 +139,23 @@ def main():
 			_,blended_idx=calc_error(p_bp[bp_idx][0],curve_blended)
 			bp_blended_indices.append(blended_idx)
 		
-		###restore trajectory from primitives with temp bp's
-		curve_interp_temp, curve_R_interp_temp, curve_js_interp_temp, breakpoints_blended_temp=form_traj_from_bp(q_bp_temp,primitives,robot)
-		curve_js_blended_temp,curve_blended_temp,curve_R_blended_temp=blend_js_from_primitive(curve_interp_temp, curve_js_interp_temp, breakpoints_blended_temp, primitives,robot,zone=10)
-		###find the gradient
-		shift_vectors=[]
-		de_dps=[]
-		for bp_idx in range(len(p_bp)):
-			shift_vector=curve_blended_temp[bp_blended_indices[bp_idx]]-curve_blended[bp_blended_indices[bp_idx]]
-			new_error=np.linalg.norm(curve[curve_original_indices[bp_idx],:3]-(curve_exe[bp_exe_indices[bp_idx]]+shift_vector))
-			de_dps.append(new_error-error_bps[bp_idx])
+		# ###restore trajectory from primitives with temp bp's
+		# curve_interp_temp, curve_R_interp_temp, curve_js_interp_temp, breakpoints_blended_temp=form_traj_from_bp(q_bp_temp,primitives,robot)
+		# curve_js_blended_temp,curve_blended_temp,curve_R_blended_temp=blend_js_from_primitive(curve_interp_temp, curve_js_interp_temp, breakpoints_blended_temp, primitives,robot,zone=10)
+		# ###find the gradient
+		# shift_vectors=[]
+		# de_dps=[]
+		# for bp_idx in range(len(p_bp)):
+		# 	shift_vector=curve_blended_temp[bp_blended_indices[bp_idx]]-curve_blended[bp_blended_indices[bp_idx]]
+		# 	new_error=np.linalg.norm(curve[curve_original_indices[bp_idx],:3]-(curve_exe[bp_exe_indices[bp_idx]]+shift_vector))
+		# 	de_dps.append(new_error-error_bps[bp_idx])
 
-		###find correct gamma
-		de_dps=np.reshape(de_dps,(-1,1))
-		gamma=np.linalg.pinv(de_dps)@error_bps
+		# ###find correct gamma
+		# de_dps=np.reshape(de_dps,(-1,1))
+		# gamma=np.linalg.pinv(de_dps)@error_bps
+
+		gamma=-1
+
 
 		###update all bp's
 		for bp_idx in range(len(p_bp)):

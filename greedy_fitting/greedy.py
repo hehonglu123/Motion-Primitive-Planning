@@ -177,8 +177,8 @@ class greedy_fit(fitting_toolbox):
 
 
 def main():
-	dataset='wood/'
-	solution_dir='curve_pose_opt1/'
+	dataset='from_NX/'
+	solution_dir='curve_pose_opt2_R/'
 	data_dir="../data/"+dataset+solution_dir
 
 	###read in points
@@ -187,7 +187,7 @@ def main():
 
 	robot=abb6640(d=50)
 
-	greedy_fit_obj=greedy_fit(robot,curve_js,0.02)
+	greedy_fit_obj=greedy_fit(robot,curve_js,0.01)
 
 
 	###set primitive choices, defaults are all 3
@@ -197,7 +197,7 @@ def main():
 	# greedy_fit_obj.primitives={'movel_fit':greedy_fit_obj.movel_fit_greedy}
 	# greedy_fit_obj.primitives={'movec_fit':greedy_fit_obj.movec_fit_greedy}
 
-	greedy_fit_obj.primitives={'movel_fit':greedy_fit_obj.movel_fit_greedy,'movej_fit':greedy_fit_obj.movej_fit_greedy}
+	# greedy_fit_obj.primitives={'movel_fit':greedy_fit_obj.movel_fit_greedy,'movej_fit':greedy_fit_obj.movej_fit_greedy}
 
 	breakpoints,primitives_choices,points,q_bp=greedy_fit_obj.fit_under_error()
 	# breakpoints,primitives_choices,points=greedy_fit_obj.smooth_slope(greedy_fit_obj.curve_fit,greedy_fit_obj.curve_fit_R,breakpoints,primitives_choices,points)
@@ -215,7 +215,7 @@ def main():
 	plt.show()
 
 	############insert initial configuration#################
-	primitives_choices.insert(0,'movej_fit')
+	primitives_choices.insert(0,'moveabsj_fit')
 	points.insert(0,[greedy_fit_obj.curve_fit[0]])
 	q_bp.insert(0,[greedy_fit_obj.curve_fit_js[0]])
 

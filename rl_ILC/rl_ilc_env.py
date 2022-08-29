@@ -20,7 +20,7 @@ from blending import *
 
 from general_robotics_toolbox import *
 from abb_motion_program_exec_client import *
-from curve_normalization import PCA_normalization
+from curve_normalization import PCA_normalization, curve_interpolation
 
 ### fanuc robot
 from fanuc_motion_program_exec_client import *
@@ -66,6 +66,10 @@ class ILCEnv(object):
         self.state_error = []
         self.state_q_dot = []
         self.state_q_ddot = []
+        self.prev_state_max_error = None
+        self.prev_state_angle_error = None
+        self.init_max_error = None
+        self.init_max_angle_error = None
         self.state_is_start = np.zeros(self.n)
         self.state_is_end = np.zeros(self.n)
         self.state_is_start[0] = 1
@@ -73,13 +77,13 @@ class ILCEnv(object):
         self.itr = 0
         self.max_itr = 10
 
-        self.reward_error_gain = -100
-        self.fail_reward = -1000
-        self.success_reward = 100
-        self.step_reward = -1
+        self.reward_error_gain = -10
+        self.fail_reward = -100
+        self.success_reward = 10
+        self.step_reward = 0
         self.fail_error = 5
         self.success_error = 0.25
-        self.success_decay_factor = 0.9
+        self.success_decay_factor = 0.5
         self.q_dot_reward_factor = -10
         self.q_ddot_reward_factor = -10
 
@@ -102,38 +106,56 @@ class ILCEnv(object):
         self.next_p_bp = self.p_bp
         self.next_q_bp = self.q_bp
 
-    def reward(self, curve_error, q_dot, q_ddot):
-        max_errors = np.zeros(len(curve_error))
-        for i, interval_error in enumerate(curve_error):
-            max_errors[i] = (np.max(np.linalg.norm(interval_error, axis=1)))
+    def reward(self, curve_max_error, curve_angle_error, q_dot, q_ddot):
+        # max_errors = np.zeros(len(curve_error))
+        max_errors = np.array(curve_max_error)
+        max_angle_errors = np.array(curve_angle_error)
+        success_rewards = np.zeros(len(curve_max_error))
+        fail_rewards = np.zeros(len(curve_max_error))
+        # for i, interval_error in enumerate(curve_error):
+        #     max_errors[i] = (np.max(np.linalg.norm(interval_error, axis=-1)))
+        #     fail_rewards[i] = 1 if max_errors[i] >= self.fail_error else 0
+        fail_rewards = max_errors >= self.fail_error
+        fail_rewards = fail_rewards.astype(int)
+        if self.prev_state_max_error is not None:
+            error_improve = max_errors - self.prev_state_max_error
+            angle_error_improve = max_angle_errors - self.prev_state_angle_error
+            success_rewards = (max_errors <= self.success_error) * (self.prev_state_max_error > self.success_error) + (-1) * (max_errors > self.success_error) * (self.prev_state_max_error <= self.success_error)
+            success_rewards = success_rewards.astype(int)
+        else:
+            error_improve = max_errors
+            angle_error_improve = max_angle_errors
+        self.prev_state_max_error = max_errors
+        error_improve = error_improve / (self.init_max_error + 1e-8)
+        angle_error_improve = angle_error_improve / (self.init_max_angle_error + 1e-8)
 
-        fail = self.max_exec_error >= self.fail_error
-        success = self.max_exec_error <= self.success_error
-        done = success or fail or self.itr >= self.max_itr
+        success = (max_errors <= self.success_error).astype(int)
+        terminate = self.max_exec_error <= self.success_error or self.max_exec_error >= self.fail_error or self.itr >= self.max_itr
 
-        reward = self.reward_error_gain * max_errors + fail * self.fail_reward + success * self.success_reward * self.success_decay_factor**self.itr
-        done = np.ones(len(curve_error)) if done else np.zeros(len(curve_error))
+        # reward = self.reward_error_gain * error_improve + fail * self.fail_reward + success * self.success_reward * self.success_decay_factor**self.itr
+        reward = self.step_reward + self.reward_error_gain * (error_improve + 0.*angle_error_improve) + fail_rewards * self.fail_reward + success_rewards * self.success_reward * self.success_decay_factor**self.itr
+        done = np.ones(len(curve_max_error)) if terminate else np.zeros(len(curve_max_error))
 
-        q_dot, q_ddot = np.array(q_dot), np.array(q_ddot)
-        q_dot_norm, q_ddot_norm = 1 - np.abs(q_ddot) / self.robot.joint_vel_limit, 1 - np.abs(q_ddot) / self.robot.joint_acc_limit
-        q_dot_reward = 1/(q_dot_norm * 10) * self.q_dot_reward_factor
-        q_dot_reward[q_dot_norm > 0.2] = 0
-        q_dot_reward[q_dot_norm < 0] = -10
-        q_dot_reward = np.clip(q_dot_reward, a_min=-10, a_max=0)
-        q_ddot_reward = 1/(q_ddot_norm * 10) * self.q_ddot_reward_factor
-        q_ddot_reward[q_ddot_norm > 0.2] = 0
-        q_ddot_reward[q_ddot_norm < 0] = -10
-        q_ddot_reward = np.clip(q_ddot_reward, a_min=-10, a_max=0)
-
-        reward += np.sum(q_dot_reward, axis=1) + np.sum(q_ddot_reward, axis=1)
+        # q_dot, q_ddot = np.array(q_dot), np.array(q_ddot)
+        # q_dot_norm, q_ddot_norm = 1 - np.abs(q_ddot) / self.robot.joint_vel_limit, 1 - np.abs(q_ddot) / self.robot.joint_acc_limit
+        # q_dot_reward = 1/(q_dot_norm * 10) * self.q_dot_reward_factor
+        # q_dot_reward[q_dot_norm > 0.2] = 0
+        # q_dot_reward[q_dot_norm < 0] = -10
+        # q_dot_reward = np.clip(q_dot_reward, a_min=-10, a_max=0)
+        # q_ddot_reward = 1/(q_ddot_norm * 10) * self.q_ddot_reward_factor
+        # q_ddot_reward[q_ddot_norm > 0.2] = 0
+        # q_ddot_reward[q_ddot_norm < 0] = -10
+        # q_ddot_reward = np.clip(q_ddot_reward, a_min=-10, a_max=0)
+        #
+        # reward += np.sum(q_dot_reward, axis=1) + np.sum(q_ddot_reward, axis=1)
 
         message = "[Max error {:.4f}.]".format(self.max_exec_error)
-        if success:
+        if self.max_exec_error <= self.success_error:
             message = "[SUCCESS. Max error {:.4f}.]".format(self.max_exec_error)
-        elif fail:
+        elif self.max_exec_error >= self.fail_error:
             message = "[Fail. Max error {:.4f}.]".format(self.max_exec_error)
 
-        return reward, done, message
+        return reward, done, message, success
 
     def reset(self):
         try:
@@ -143,12 +165,23 @@ class ILCEnv(object):
         except:
             # traceback.print_exc()
             print("[Reset] Initialization Fail. Skipped Curve.")
-            return None, False
+            return None, False, ''
         else:
             self.curve_exe = curve_exe
-            self.state_curve_error, self.state_curve_target, self.state_robot, self.state_error, self.state_q_dot, self.state_q_ddot = self.get_state(error, curve_target, q_dot, q_ddot)
+            self.state_curve_error, self.state_curve_target, self.state_robot, self.state_error, self.state_q_dot, self.state_q_ddot, state_max_error, state_angle_error = self.get_state(error, curve_target, q_dot, q_ddot, angle_error)
+
+            # max_errors = np.zeros(len(self.state_curve_error))
+            # for i, interval_error in enumerate(self.state_curve_error):
+            #     max_errors[i] = (np.max(np.linalg.norm(interval_error, axis=1)))
+            self.prev_state_max_error = np.array(state_max_error)
+            self.prev_state_angle_error = np.array(state_angle_error)
+            self.init_max_error = np.array(state_max_error)
+            self.init_max_angle_error = np.array(state_angle_error)
+
+            message = "[Max error {:.4f}.]".format(self.max_exec_error)
+
             state = (self.state_curve_error, self.state_curve_target, self.state_robot, self.state_is_start, self.state_is_end)
-            return state, True
+            return state, True, message
 
     def step(self, actions):
         self.itr += 1
@@ -161,35 +194,40 @@ class ILCEnv(object):
             # traceback.print_exc()
             print("[Fail. Unreachable joint position.]")
             next_state = (np.zeros((self.n, 50, 3)), np.zeros((self.n, 50, 3)), np.zeros((self.n, 2)), self.state_is_start, self.state_is_end)
-            return next_state, self.fail_reward*np.ones(self.n), np.ones(self.n).astype(bool), "Error"
+            return next_state, self.fail_reward*np.ones(self.n), np.ones(self.n).astype(bool), "Error", np.zeros(self.n)
         else:
             self.p_bp = self.next_p_bp
             self.q_bp = self.next_q_bp
 
-            # self.extend(init=False)
-            self.update_ori_bp()
-
             try:
-                error, angle_error, curve_exe, curve_exe_R, curve_target, curve_target_R, q_dot, q_ddot = self.execution_method[self.execution_mode]()
+                # self.extend(init=False)
+                pass
             except:
-                traceback.print_exc()
-                print("[Fail. RobotSudio Execution Error.]")
-                next_state = (
-                np.zeros((self.n, 50, 3)), np.zeros((self.n, 50, 3)), np.zeros((self.n, 2)), self.state_is_start,
-                self.state_is_end)
-                return next_state, self.fail_reward*np.ones(self.n), np.ones(self.n).astype(bool), "Error"
+                print("[Extension Fail]")
+                next_state = (np.zeros((self.n, 50, 3)), np.zeros((self.n, 50, 3)), np.zeros((self.n, 2)), self.state_is_start, self.state_is_end)
+                return next_state, np.zeros(self.n), np.ones(self.n).astype(bool), "Error", np.zeros(self.n)
             else:
-                self.curve_exe = curve_exe
-                next_state_curve_error, next_state_curve_target, next_state_robot, next_state_error, next_state_q_dot, next_state_q_ddot = self.get_state(error, curve_target, q_dot, q_ddot)
+                self.update_ori_bp()
 
-                reward, done, message = self.reward(next_state_curve_error, next_state_q_dot, next_state_q_ddot)
+                try:
+                    error, angle_error, curve_exe, curve_exe_R, curve_target, curve_target_R, q_dot, q_ddot = self.execution_method[self.execution_mode]()
+                except:
+                    traceback.print_exc()
+                    print("[Fail. RobotSudio Execution Error.]")
+                    next_state = (np.zeros((self.n, 50, 3)), np.zeros((self.n, 50, 3)), np.zeros((self.n, 2)), self.state_is_start, self.state_is_end)
+                    return next_state, self.fail_reward*np.ones(self.n), np.ones(self.n).astype(bool), "Error", np.zeros(self.n)
+                else:
+                    self.curve_exe = curve_exe
+                    next_state_curve_error, next_state_curve_target, next_state_robot, next_state_error, next_state_q_dot, next_state_q_ddot, next_state_max_error, next_state_angle_error = self.get_state(error, curve_target, q_dot, q_ddot, angle_error)
 
-                self.state_curve_error, self.state_curve_target, self.state_robot, self.state_error = next_state_curve_error, next_state_curve_target, next_state_robot, next_state_error
-                self.state_q_dot, self.state_q_ddot = next_state_q_dot, next_state_q_ddot
+                    reward, done, message, success = self.reward(next_state_max_error, next_state_angle_error, next_state_q_dot, next_state_q_ddot)
 
-                next_state = (next_state_curve_error, next_state_curve_target, next_state_robot, self.state_is_start, self.state_is_end)
+                    self.state_curve_error, self.state_curve_target, self.state_robot, self.state_error = next_state_curve_error, next_state_curve_target, next_state_robot, next_state_error
+                    self.state_q_dot, self.state_q_ddot = next_state_q_dot, next_state_q_ddot
 
-                return next_state, reward, done, message
+                    next_state = (next_state_curve_error, next_state_curve_target, next_state_robot, self.state_is_start, self.state_is_end)
+
+                    return next_state, reward, done, message, success
 
     def render(self, idx, save=False, render_profile=True, save_dir=''):
         save_dir = 'render' if save_dir == "" else save_dir
@@ -202,10 +240,14 @@ class ILCEnv(object):
         breakpoints = np.zeros((self.n, 3))
         for i in range(1, len(self.p_bp) - 1):
             breakpoints[i-1, :] = self.p_bp[i][-1]
+        extend_points = np.zeros((2, 3))
+        extend_points[0, :] = self.p_bp[0][-1]
+        extend_points[1, :] = self.p_bp[-1][-1]
         ax.plot3D(breakpoints[:, 0], breakpoints[:, 1], breakpoints[:, 2], 'b.', label='Breakpoints')
-        ax.set_xlim(1000, 1150)
-        ax.set_ylim(-500, 500)
-        ax.set_zlim(980, 1000)
+        ax.plot3D(extend_points[:, 0], extend_points[:, 1], extend_points[:, 2], 'rx', label='Extend Points')
+        # ax.set_xlim(1000, 1150)
+        # ax.set_ylim(-500, 500)
+        # ax.set_zlim(980, 1000)
 
         ax.legend()
         ax.set_title("Iteration {} (Max Error {:.3f})".format(self.itr, self.max_exec_error))
@@ -248,6 +290,41 @@ class ILCEnv(object):
 
             plt.close()
 
+            # for i in range(6):
+            #     fig, ax = plt.subplots()
+            #     ax2 = ax.twinx()
+            #     ax2.plot(self.exe_profile['lambda'], self.exe_profile['Speed'], 'g-', label='Speed')
+            #     ax.plot(self.exe_profile['lambda'], np.degrees(np.ones_like(self.exe_profile['lambda']) * self.robot.joint_vel_limit[i]), 'r-', label='limit')
+            #     ax.plot(self.exe_profile['lambda'], np.degrees(self.exe_profile['qdot'][:, i]), label='$\dot{{q_{}}}$'.format(i+1))
+            #
+            #     ax.set_xlabel('lambda (mm)')
+            #     ax.set_ylabel('$\dot{{q}}$ (deg/s)')
+            #     ax2.set_ylabel('Speed (mm/s)')
+            #     ax.legend()
+            #     if save:
+            #         if not os.path.isdir('{}/curve{}/qdot'.format(save_dir, idx, i+1)):
+            #             os.mkdir('{}/curve{}/qdot'.format(save_dir, idx, i+1))
+            #         fig.savefig('{}/curve{}/qdot/qdot{}_itr_{}.png'.format(save_dir, idx, i+1, self.itr), dpi=300)
+            #
+            #     plt.close()
+            #
+            # for i in range(6):
+            #     fig, ax = plt.subplots()
+            #     ax2 = ax.twinx()
+            #     ax2.plot(self.exe_profile['lambda'], self.exe_profile['Speed'], 'g-', label='Speed')
+            #     ax.plot(self.exe_profile['lambda'], np.degrees(np.ones_like(self.exe_profile['lambda']) * self.robot.joint_acc_limit[i]), 'r-', label='limit')
+            #     ax.plot(self.exe_profile['lambda'], np.degrees(self.exe_profile['qddot'][:, i]), label='$\ddot{{q_{}}}$'.format(i+1))
+            #     ax.set_xlabel('lambda (mm)')
+            #     ax.set_ylabel('$\ddot{{q}}$ (deg/s)')
+            #     ax2.set_ylabel('Speed (mm/s)')
+            #     ax.legend()
+            #     if save:
+            #         if not os.path.isdir('{}/curve{}/qddot'.format(save_dir, idx, i+1)):
+            #             os.mkdir('{}/curve{}/qddot'.format(save_dir, idx, i+1))
+            #         fig.savefig('{}/curve{}/qddot/qddot{}_itr_{}.png'.format(save_dir, idx, i+1, self.itr), dpi=300)
+            #     plt.close()
+
+
     def step_breakpoint(self, bp_idx, action):
         cur_bp = self.p_bp[bp_idx][-1]
         prev_bp = self.p_bp[bp_idx - 1][-1]
@@ -273,13 +350,15 @@ class ILCEnv(object):
             q_bp.append(car2js(self.robot, self.q_bp[i][-1], p_bp[i][-1], self.robot.fwd(self.q_bp[i][-1]).R))
         return q_bp
 
-    def get_state(self, error, curve_target, q_dot, q_ddot):
+    def get_state(self, error, curve_target, q_dot, q_ddot, angle_error):
         state_curve_error = []
         state_curve_target = []
         state_robot = []
         state_error = []
         state_qdot = []
         state_qddot = []
+        state_error_raw = []
+        state_angle_error = []
 
         if len(error) != len(curve_target):
             raise Exception("ERROR in env.get_state(): error curve and target curve do not have the same length.")
@@ -301,12 +380,18 @@ class ILCEnv(object):
 
             local_error_traj = error[prev_point_idx:next_point_idx]
             local_target_traj = curve_target[prev_point_idx:next_point_idx]
-            local_error_traj = PCA_normalization(local_error_traj, n_points=50, rescale=False)
-            local_target_traj = PCA_normalization(local_target_traj, n_points=50, rescale=True)
+            local_angle_error_traj = angle_error[prev_point_idx:next_point_idx]
+            # local_error_traj_normalized = curve_interpolation(local_error_traj, n_points=50) / np.linalg.norm(state_error[i])
+            local_error_traj_normalized = curve_interpolation(local_error_traj, n_points=50) / state_error[i]
+            # local_target_traj_normalized = PCA_normalization(local_target_traj, n_points=50, rescale=True)
+            local_target_traj_normalized = curve_interpolation(local_target_traj, n_points=50)
+            local_target_traj_normalized = local_target_traj_normalized - self.p_bp[i+1][-1]
 
             # state_curve.append(np.hstack([local_error_traj.flatten(), local_target_traj.flatten()]))
-            state_curve_error.append(local_error_traj)
-            state_curve_target.append(local_target_traj)
+            state_curve_error.append(local_error_traj_normalized)
+            state_curve_target.append(local_target_traj_normalized)
+            state_error_raw.append(np.max(np.linalg.norm(local_error_traj, axis=-1)))
+            state_angle_error.append(np.degrees(np.max(local_angle_error_traj)))
 
         for i in range(1, len(self.p_bp) - 1):
             prev_robot_feature = 0
@@ -327,23 +412,26 @@ class ILCEnv(object):
                 next_robot_feature = np.linalg.norm(np.matmul(jac_inv, p_diff))
             state_robot.append([prev_robot_feature, next_robot_feature])
 
-        return state_curve_error, state_curve_target, state_robot, state_error, state_qdot, state_qddot
+        return state_curve_error, state_curve_target, state_robot, state_error, state_qdot, state_qddot, state_error_raw, state_angle_error
 
-    def get_error_speed(self, error, angle_error, speed, lam):
+    def get_error_speed(self, error, angle_error, speed, lam, qdot, qddot):
         error_profile = np.linalg.norm(error, axis=-1)
 
         self.max_exec_error = np.max(error_profile)
+        self.max_exec_error_idx = np.argmax(error_profile)
         self.exe_profile['Error'] = error_profile
         self.exe_profile['Angle Error'] = angle_error
         self.exe_profile['Speed'] = speed
         self.exe_profile['lambda'] = lam
+        self.exe_profile['qdot'] = qdot
+        self.exe_profile['qddot'] = qddot
 
         return self.exe_profile
 
     def execute_robot_studio(self):
         ms = MotionSend()
         primitives = self.primitives.copy()
-        primitives.insert(0, 'movej_fit')
+        primitives.insert(0, 'moveabsj')
         primitives.append('movel_fit')
 
         breakpoints = np.hstack([-1, self.breakpoints, -1])
@@ -363,7 +451,7 @@ class ILCEnv(object):
         lam, curve_exe, curve_exe_R, curve_exe_js, speed, timestamp, qdot, qddot = self.chop_extension(curve_exe, curve_exe_R, curve_exe_js, speed, timestamp, qdot, qddot)
         curve_exe, curve_exe_R, curve_target, curve_target_R = self.interpolate_curve(curve_exe, curve_exe_R)
         error, angle_error = self.calculate_error(curve_exe, curve_exe_R, curve_target, curve_target_R)
-        self.get_error_speed(error, angle_error, speed, lam)
+        self.get_error_speed(error, angle_error, speed, lam, qdot, qddot)
         return error, angle_error, curve_exe, curve_exe_R, curve_target, curve_target_R, qdot, qddot
 
     def execute_abb_robot(self):
@@ -403,7 +491,7 @@ class ILCEnv(object):
             plt.savefig('recorded_data/'+str(self.itr)+'_run_'+str(r))
             plt.clf()
             ###throw bad curves
-            _, _, _,_, _, timestamp_temp=self.chop_extension(curve_exe, curve_exe_R, curve_exe_js, speed, timestamp)
+            _, _, _, _, _, _, _, _ = timestamp_temp = self.chop_extension(curve_exe, curve_exe_R, curve_exe_js, speed, timestamp)
             total_time_all.append(timestamp_temp[-1]-timestamp_temp[0])
 
             timestamp=timestamp-timestamp[0]
@@ -422,7 +510,7 @@ class ILCEnv(object):
         ###calculat data with average curve
         lam, curve_exe, curve_exe_R, speed=logged_data_analysis(self.robot,timestamp_d,avg_curve_js)
 
-        lam, curve_exe, curve_exe_R, curve_exe_js, speed, timestamp = self.chop_extension(curve_exe, curve_exe_R, curve_exe_js, speed, timestamp_d)
+        lam, curve_exe, curve_exe_R, curve_exe_js, speed, timestamp, q_dot, qddot = self.chop_extension(curve_exe, curve_exe_R, curve_exe_js, speed, timestamp_d)
         curve_exe, curve_exe_R, curve_target, curve_target_R = self.interpolate_curve(curve_exe, curve_exe_R)
         error, angle_error = self.calculate_error(curve_exe, curve_exe_R, curve_target, curve_target_R)
         self.get_error_speed(error, angle_error, speed, lam)
@@ -599,4 +687,4 @@ class ILCEnv(object):
         q_ddot = q_ddot[start_idx:end_idx+1]
         lam = calc_lam_cs(curve_exe)
 
-        return lam, curve_exe, curve_exe_R,curve_exe_js, speed, timestamp[start_idx:end_idx+1]-timestamp[start_idx], q_dot, q_ddot
+        return lam, curve_exe, curve_exe_R, curve_exe_js, speed, timestamp[start_idx:end_idx+1]-timestamp[start_idx], q_dot, q_ddot
