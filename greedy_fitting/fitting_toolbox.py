@@ -266,10 +266,6 @@ class fitting_toolbox(object):
 
 
 	def movej_fit(self,curve,curve_js,curve_R,p_constraint=[],R_constraint=[],dqdlam_prev=[], rl=False):
-		###convert orientation to w first
-		curve_w=self.R2w(curve_R,R_constraint)
-
-
 		curve_fit_js=self.linear_fit(curve_js,p_constraint)
 
 		###necessary to fwd every point search to get error calculation

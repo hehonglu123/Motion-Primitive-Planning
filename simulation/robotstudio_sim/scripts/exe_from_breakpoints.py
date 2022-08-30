@@ -20,10 +20,11 @@ def main():
     ms = MotionSend()
     dataset='from_NX/'
     solution_dir='curve_pose_opt2_R/'
-    cmd_dir='../../../data/'+dataset+solution_dir+'100L/'
+    cmd_dir='../../../data/'+dataset+solution_dir+'greedy0.02/'
     data_dir='../../../data/'+dataset+solution_dir
 
     curve = read_csv(data_dir+"Curve_in_base_frame.csv",header=None).values
+    lam_original=calc_lam_cs(curve[:,:3])
 
     robot=abb6640(d=50)
 
@@ -39,7 +40,7 @@ def main():
     # speed={'v800':v800,'v900':v900,'v1000':v1000,'v1100':v1100,'v1200':v1200,'v1300':v1300,'v1400':v1400}
     # speed={'v800':v800,'v1000':v1000,'v1200':v1200,'v1500':v1500,'v2000':v2000}
     speed={'v1200':v1200}
-    zone={'z10':z10}
+    zone={'z100':z100}
 
     for s in speed:
         for z in zone: 
@@ -72,6 +73,10 @@ def main():
             ax1.legend(loc="upper right")
 
             ax2.legend(loc="upper left")
+
+            ###plot breakpoints index
+            for bp in breakpoints:
+                plt.axvline(x=lam_original[bp])
 
             plt.legend()
             plt.show()
