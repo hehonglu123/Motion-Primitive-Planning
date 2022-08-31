@@ -24,8 +24,8 @@ from blending import *
 from realrobot import *
 
 def main():
-	dataset='from_NX/'
-	solution_dir='curve_pose_opt2_R/'
+	dataset='wood/'
+	solution_dir='curve_pose_opt7/'
 	data_dir="../../data/"+dataset+solution_dir
 	cmd_dir="../../data/"+dataset+solution_dir+'100L/'
 
@@ -40,7 +40,7 @@ def main():
 	alpha_default=1.
 	skip=False
 
-	v=1200
+	v=400
 	s = speeddata(v,9999999,9999999,999999)
 	z = z10
 
