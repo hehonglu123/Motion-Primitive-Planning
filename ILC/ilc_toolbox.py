@@ -54,219 +54,220 @@ class ilc_toolbox(object):
 
 		###len(primitives)==len(breakpoints)==len(breakpoints_blended)==len(points_list)
 		for m in breakpoint_interp_2tweak_indices:  #3 breakpoints
-			for n in range(3): #3DOF, xyz
-				q_bp_temp=np.array(copy.deepcopy(q_bp))
-				p_bp_temp=copy.deepcopy(p_bp)
-				p_bp_temp[m][0][n]+=delta
+			for bp_sub_idx in range(len(p_bp[m])):
+				for n in range(3): #3DOF, xyz
+					q_bp_temp=np.array(copy.deepcopy(q_bp))
+					p_bp_temp=copy.deepcopy(p_bp)
+					p_bp_temp[m][bp_sub_idx][n]+=delta
 
-				q_bp_temp[m][0]=car2js(self.robot,q_bp[m][0],np.array(p_bp_temp[m][0]),self.robot.fwd(q_bp[m][0]).R)[0]###TODO:ADD MOVEC SUPPORT
+					q_bp_temp[m][bp_sub_idx]=car2js(self.robot,q_bp[m][bp_sub_idx],np.array(p_bp_temp[m][bp_sub_idx]),self.robot.fwd(q_bp[m][bp_sub_idx]).R)[0]###TODO:ADD MOVEC SUPPORT
 
-				#restore new trajectory, only for adjusted breakpoint, 1-bp change requires traj interp from 5 bp
-				short_version=range(max(m-2,0),min(m+3,len(breakpoints_blended)))
-				###start & end idx, choose points in the middle of breakpoints to avoid affecting previous/next blending segments, unless at the boundary (star/end of all curve)
-				###guard 5 breakpoints for short blending
-				if short_version[0]==0:
-					short_version=range(0,5)
-					start_idx=breakpoints_blended[short_version[0]]
-				else:
-					start_idx=int((breakpoints_blended[short_version[0]]+breakpoints_blended[short_version[1]])/2)
-				if short_version[-1]==len(breakpoints_blended)-1:
-					short_version=range(len(breakpoints_blended)-5,len(breakpoints_blended))
-					end_idx = breakpoints_blended[short_version[-1]]+1
-				else:
-					end_idx=int((breakpoints_blended[short_version[-1]]+breakpoints_blended[short_version[-2]])/2)+1
+					#restore new trajectory, only for adjusted breakpoint, 1-bp change requires traj interp from 5 bp
+					short_version=range(max(m-2,0),min(m+3,len(breakpoints_blended)))
+					###start & end idx, choose points in the middle of breakpoints to avoid affecting previous/next blending segments, unless at the boundary (star/end of all curve)
+					###guard 5 breakpoints for short blending
+					if short_version[0]==0:
+						short_version=range(0,5)
+						start_idx=breakpoints_blended[short_version[0]]
+					else:
+						start_idx=int((breakpoints_blended[short_version[0]]+breakpoints_blended[short_version[1]])/2)
+					if short_version[-1]==len(breakpoints_blended)-1:
+						short_version=range(len(breakpoints_blended)-5,len(breakpoints_blended))
+						end_idx = breakpoints_blended[short_version[-1]]+1
+					else:
+						end_idx=int((breakpoints_blended[short_version[-1]]+breakpoints_blended[short_version[-2]])/2)+1
 
 
-				curve_interp_temp, curve_R_interp_temp, curve_js_interp_temp, breakpoints_blended_temp=form_traj_from_bp(q_bp_temp[short_version],[self.primitives[i] for i in short_version],self.robot)
+					curve_interp_temp, curve_R_interp_temp, curve_js_interp_temp, breakpoints_blended_temp=form_traj_from_bp(q_bp_temp[short_version],[self.primitives[i] for i in short_version],self.robot)
 
-				curve_js_blended_temp,curve_blended_temp,curve_R_blended_temp=blend_js_from_primitive(curve_interp_temp, curve_js_interp_temp, breakpoints_blended_temp, [self.primitives[i] for i in short_version],self.robot,zone=10)
-				
-				curve_blended_new=copy.deepcopy(curve_blended)
+					curve_js_blended_temp,curve_blended_temp,curve_R_blended_temp=blend_js_from_primitive(curve_interp_temp, curve_js_interp_temp, breakpoints_blended_temp, [self.primitives[i] for i in short_version],self.robot,zone=10)
+					
+					curve_blended_new=copy.deepcopy(curve_blended)
 
-				
+					
 
-				curve_blended_new[start_idx:end_idx]=curve_blended_temp[start_idx-breakpoints_blended[short_version[0]]:len(curve_blended_temp)-(breakpoints_blended[short_version[-1]]+1-end_idx)]
+					curve_blended_new[start_idx:end_idx]=curve_blended_temp[start_idx-breakpoints_blended[short_version[0]]:len(curve_blended_temp)-(breakpoints_blended[short_version[-1]]+1-end_idx)]
 
-				###calculate relative gradient
-				worst_case_point_shift=curve_blended_new[max_error_curve_blended_idx]-curve_blended[max_error_curve_blended_idx]
+					###calculate relative gradient
+					worst_case_point_shift=curve_blended_new[max_error_curve_blended_idx]-curve_blended[max_error_curve_blended_idx]
 
-				###get new error - prev error
-				de=np.linalg.norm(worst_point_pose.p+worst_case_point_shift-closest_p)-np.linalg.norm(worst_point_pose.p-closest_p)
+					###get new error - prev error
+					de=np.linalg.norm(worst_point_pose.p+worst_case_point_shift-closest_p)-np.linalg.norm(worst_point_pose.p-closest_p)
 
-				de_dp.append(de/delta)
+					de_dp.append(de/delta)
 
 		de_dp=np.reshape(de_dp,(-1,1))
 
 		return de_dp
 
-	def get_speed_gradient_from_model(self,q_bp,breakpoints_blended,curve_js_blended,curve_blended,min_speed_curve_blended_idx,breakpoint_interp_2tweak_indices,speed_est,vd):
+	# def get_speed_gradient_from_model(self,q_bp,breakpoints_blended,curve_js_blended,curve_blended,min_speed_curve_blended_idx,breakpoint_interp_2tweak_indices,speed_est,vd):
 		
-		###q_bp:								joint configs at breakpoints
-		###breakpoints_blended:					breakpoints of blended trajectory
-		###curve_js_blended:					blended trajectory js
-		###curve_blended:						blended trajectory
-		###min_speed_curve_blended_idx:	p', 	closest point to worst case error on blended trajectory
-		###breakpoint_interp_2tweak_indices:	closest N breakpoints
-		###speed_est:							estimated speed for blended trajectory
-		###vd:									desired TCP velocity
+	# 	###q_bp:								joint configs at breakpoints
+	# 	###breakpoints_blended:					breakpoints of blended trajectory
+	# 	###curve_js_blended:					blended trajectory js
+	# 	###curve_blended:						blended trajectory
+	# 	###min_speed_curve_blended_idx:	p', 	closest point to worst case error on blended trajectory
+	# 	###breakpoint_interp_2tweak_indices:	closest N breakpoints
+	# 	###speed_est:							estimated speed for blended trajectory
+	# 	###vd:									desired TCP velocity
 
-		###TODO:ADD MOVEC SUPPORT
-		dv_dq=[]    #ds_dp1q1,dv_dp1q2,...,dev_dp3q6
-		delta=0.01 	#rad
+	# 	###TODO:ADD MOVEC SUPPORT
+	# 	dv_dq=[]    #ds_dp1q1,dv_dp1q2,...,dev_dp3q6
+	# 	delta=0.01 	#rad
 
-		###len(primitives)==len(breakpoints)==len(breakpoints_blended)==len(points_list)
-		for m in breakpoint_interp_2tweak_indices:  #3 breakpoints
-			for n in range(len(q_bp[0][0])): #6DOF joints
-				q_bp_temp=np.array(copy.deepcopy(q_bp))
-				q_bp_temp[m][0][n]+=delta
+	# 	###len(primitives)==len(breakpoints)==len(breakpoints_blended)==len(points_list)
+	# 	for m in breakpoint_interp_2tweak_indices:  #3 breakpoints
+	# 		for n in range(len(q_bp[0][0])): #6DOF joints
+	# 			q_bp_temp=np.array(copy.deepcopy(q_bp))
+	# 			q_bp_temp[m][0][n]+=delta
 
-				#restore new trajectory, only for adjusted breakpoint, 1-bp change requires traj interp from 5 bp
-				short_version=range(max(m-2,0),min(m+3,len(breakpoints_blended)))
-				###start & end idx, choose points in the middle of breakpoints to avoid affecting previous/next blending segments, unless at the boundary (star/end of all curve)
-				###guard 5 breakpoints for short blending
-				if short_version[0]==0:
-					short_version=range(0,5)
-					start_idx=breakpoints_blended[short_version[0]]
-				else:
-					start_idx=int((breakpoints_blended[short_version[0]]+breakpoints_blended[short_version[1]])/2)
-				if short_version[-1]==len(breakpoints_blended)-1:
-					short_version=range(len(breakpoints_blended)-5,len(breakpoints_blended))
-					end_idx = breakpoints_blended[short_version[-1]]+1
-				else:
-					end_idx=int((breakpoints_blended[short_version[-1]]+breakpoints_blended[short_version[-2]])/2)+1
+	# 			#restore new trajectory, only for adjusted breakpoint, 1-bp change requires traj interp from 5 bp
+	# 			short_version=range(max(m-2,0),min(m+3,len(breakpoints_blended)))
+	# 			###start & end idx, choose points in the middle of breakpoints to avoid affecting previous/next blending segments, unless at the boundary (star/end of all curve)
+	# 			###guard 5 breakpoints for short blending
+	# 			if short_version[0]==0:
+	# 				short_version=range(0,5)
+	# 				start_idx=breakpoints_blended[short_version[0]]
+	# 			else:
+	# 				start_idx=int((breakpoints_blended[short_version[0]]+breakpoints_blended[short_version[1]])/2)
+	# 			if short_version[-1]==len(breakpoints_blended)-1:
+	# 				short_version=range(len(breakpoints_blended)-5,len(breakpoints_blended))
+	# 				end_idx = breakpoints_blended[short_version[-1]]+1
+	# 			else:
+	# 				end_idx=int((breakpoints_blended[short_version[-1]]+breakpoints_blended[short_version[-2]])/2)+1
 
-				###form new blended trajectory
-				curve_interp_temp, curve_R_interp_temp, curve_js_interp_temp, breakpoints_blended_temp=form_traj_from_bp(q_bp_temp[short_version],[self.primitives[i] for i in short_version],self.robot)
-				curve_js_blended_temp,curve_blended_temp,curve_R_blended_temp=blend_js_from_primitive(curve_interp_temp, curve_js_interp_temp, breakpoints_blended_temp, [self.primitives[i] for i in short_version],self.robot,zone=10)
-				curve_blended_new=copy.deepcopy(curve_blended)
-				curve_blended_new[start_idx:end_idx]=curve_blended_temp[start_idx-breakpoints_blended[short_version[0]]:len(curve_blended_temp)-(breakpoints_blended[short_version[-1]]+1-end_idx)]
-				curve_js_blended_new=copy.deepcopy(curve_js_blended)
-				curve_js_blended_new[start_idx:end_idx]=curve_js_blended_temp[start_idx-breakpoints_blended[short_version[0]]:len(curve_js_blended_temp)-(breakpoints_blended[short_version[-1]]+1-end_idx)]
+	# 			###form new blended trajectory
+	# 			curve_interp_temp, curve_R_interp_temp, curve_js_interp_temp, breakpoints_blended_temp=form_traj_from_bp(q_bp_temp[short_version],[self.primitives[i] for i in short_version],self.robot)
+	# 			curve_js_blended_temp,curve_blended_temp,curve_R_blended_temp=blend_js_from_primitive(curve_interp_temp, curve_js_interp_temp, breakpoints_blended_temp, [self.primitives[i] for i in short_version],self.robot,zone=10)
+	# 			curve_blended_new=copy.deepcopy(curve_blended)
+	# 			curve_blended_new[start_idx:end_idx]=curve_blended_temp[start_idx-breakpoints_blended[short_version[0]]:len(curve_blended_temp)-(breakpoints_blended[short_version[-1]]+1-end_idx)]
+	# 			curve_js_blended_new=copy.deepcopy(curve_js_blended)
+	# 			curve_js_blended_new[start_idx:end_idx]=curve_js_blended_temp[start_idx-breakpoints_blended[short_version[0]]:len(curve_js_blended_temp)-(breakpoints_blended[short_version[-1]]+1-end_idx)]
 
-				###get new speed
-				lam_blended_new=calc_lam_cs(curve_blended_new)
-				speed_est_new=traj_speed_est(self.robot,curve_js_blended_new,lam_blended_new,vd)
-
-
-				###get new est speed - prev est speed
-				dv=np.average(speed_est_new[min_speed_curve_blended_idx-5:min_speed_curve_blended_idx+5])-np.average(speed_est[min_speed_curve_blended_idx-5:min_speed_curve_blended_idx+5])
-
-				dv_dq.append(dv/delta)
-
-		dv_dq=np.reshape(dv_dq,(-1,1))
-		print(dv_dq)
-
-		return dv_dq
+	# 			###get new speed
+	# 			lam_blended_new=calc_lam_cs(curve_blended_new)
+	# 			speed_est_new=traj_speed_est(self.robot,curve_js_blended_new,lam_blended_new,vd)
 
 
-	def get_speed_gradient_from_traj_exe(self,p_bp,q_bp,curve_exe,curve_exe_js,timestamp,lam_exe,valley,vd):
+	# 			###get new est speed - prev est speed
+	# 			dv=np.average(speed_est_new[min_speed_curve_blended_idx-5:min_speed_curve_blended_idx+5])-np.average(speed_est[min_speed_curve_blended_idx-5:min_speed_curve_blended_idx+5])
+
+	# 			dv_dq.append(dv/delta)
+
+	# 	dv_dq=np.reshape(dv_dq,(-1,1))
+	# 	print(dv_dq)
+
+	# 	return dv_dq
+
+
+	# def get_speed_gradient_from_traj_exe(self,p_bp,q_bp,curve_exe,curve_exe_js,timestamp,lam_exe,valley,vd):
 		
-		###p_bp:								xyz of breakpoints
-		###q_bp:								joint configs at breakpoints
-		###curve_exe:							exe_trajectory
-		###curve_exe_js:						exe trajectory in js
-		###timestamp:							exe timestamp
-		###lam_exe:								path length of curve_exe
-		###valley:								index of curve_exe at speed valley
-		###vd:									desired TCP velocity
+	# 	###p_bp:								xyz of breakpoints
+	# 	###q_bp:								joint configs at breakpoints
+	# 	###curve_exe:							exe_trajectory
+	# 	###curve_exe_js:						exe trajectory in js
+	# 	###timestamp:							exe timestamp
+	# 	###lam_exe:								path length of curve_exe
+	# 	###valley:								index of curve_exe at speed valley
+	# 	###vd:									desired TCP velocity
 
-		dq_exe=np.gradient(curve_exe_js,axis=0)
-		qdot_exe=np.divide(dq_exe,np.tile(np.array([np.gradient(timestamp)]).T,(1,6)))
+	# 	dq_exe=np.gradient(curve_exe_js,axis=0)
+	# 	qdot_exe=np.divide(dq_exe,np.tile(np.array([np.gradient(timestamp)]).T,(1,6)))
 
-		###find closest breakpoint to the valley
-		p_bp_np=np.squeeze(np.array(p_bp))
-		_,closest_bp=calc_error(curve_exe[valley],p_bp_np)  # index of breakpoints closest to speed valley point
+	# 	###find closest breakpoint to the valley
+	# 	p_bp_np=np.squeeze(np.array(p_bp))
+	# 	_,closest_bp=calc_error(curve_exe[valley],p_bp_np)  # index of breakpoints closest to speed valley point
 
-		###find closest points on curve_exe of neightbor breakpoints
-		_,valley_prev=calc_error(p_bp[closest_bp-1],curve_exe)
-		_,valley_next=calc_error(p_bp[closest_bp+1],curve_exe)
-
-
-		###form trajectory model from curve_exe_js 
-		curve_js_model=copy.deepcopy(curve_exe_js[valley_prev:valley_next])
-
-		for j in range(len(curve_exe_js[0])):	
-			poly = BPoly.from_derivatives([lam_exe[valley_prev],lam_exe[valley],lam_exe[valley_next]], \
-				[[curve_exe_js[valley_prev,j],(curve_exe_js[valley_prev,j]-curve_exe_js[valley_prev-1,j])/(lam_exe[valley_prev]-lam_exe[valley_prev-1])], \
-				[curve_exe_js[valley,j]],\
-				[curve_exe_js[valley_next,j],(curve_exe_js[valley_next,j]-curve_exe_js[valley_next-1,j])/(lam_exe[valley_next]-lam_exe[valley_next-1])]])
-
-			curve_js_model[:,j]=poly(lam_exe[valley_prev:valley_next])
-
-		# speed_est=traj_speed_est(self.robot,curve_js_model,lam_exe[valley_prev:valley_next],vd,qdot_init=qdot_exe[valley_prev])
-		speed_est=traj_speed_est(self.robot,curve_exe_js[valley_prev:valley_next],lam_exe[valley_prev:valley_next],vd,qdot_init=qdot_exe[valley_prev])
-
-		speed_act=np.linalg.norm(np.gradient(curve_exe,axis=0),axis=1)/np.gradient(timestamp)
-		plt.plot(lam_exe[valley_prev:valley_next],speed_act[valley_prev:valley_next],label='original')
-		plt.plot(lam_exe[valley_prev:valley_next],speed_est,label='estimated')
-		plt.legend()
-		plt.show()
-
-		###TODO:ADD MOVEC SUPPORT
-		dv_dq=[]    #dv_dp1q1,dv_dp1q2,...,dv_dp1q6
-		delta=0.01 	#rad
+	# 	###find closest points on curve_exe of neightbor breakpoints
+	# 	_,valley_prev=calc_error(p_bp[closest_bp-1],curve_exe)
+	# 	_,valley_next=calc_error(p_bp[closest_bp+1],curve_exe)
 
 
-		for n in range(len(q_bp[0][0])): #6DOF joints
-			q_bp_temp=np.array(copy.deepcopy(q_bp))
-			q_bp_temp[m][0][n]+=delta
+	# 	###form trajectory model from curve_exe_js 
+	# 	curve_js_model=copy.deepcopy(curve_exe_js[valley_prev:valley_next])
 
-			#restore new trajectory, only for adjusted breakpoint, 1-bp change requires traj interp from 5 bp
-			short_version=range(max(m-2,0),min(m+3,len(breakpoints_blended)))
-			###start & end idx, choose points in the middle of breakpoints to avoid affecting previous/next blending segments, unless at the boundary (star/end of all curve)
-			###guard 5 breakpoints for short blending
-			if short_version[0]==0:
-				short_version=range(0,5)
-				start_idx=breakpoints_blended[short_version[0]]
-			else:
-				start_idx=int((breakpoints_blended[short_version[0]]+breakpoints_blended[short_version[1]])/2)
-			if short_version[-1]==len(breakpoints_blended)-1:
-				short_version=range(len(breakpoints_blended)-5,len(breakpoints_blended))
-				end_idx = breakpoints_blended[short_version[-1]]+1
-			else:
-				end_idx=int((breakpoints_blended[short_version[-1]]+breakpoints_blended[short_version[-2]])/2)+1
+	# 	for j in range(len(curve_exe_js[0])):	
+	# 		poly = BPoly.from_derivatives([lam_exe[valley_prev],lam_exe[valley],lam_exe[valley_next]], \
+	# 			[[curve_exe_js[valley_prev,j],(curve_exe_js[valley_prev,j]-curve_exe_js[valley_prev-1,j])/(lam_exe[valley_prev]-lam_exe[valley_prev-1])], \
+	# 			[curve_exe_js[valley,j]],\
+	# 			[curve_exe_js[valley_next,j],(curve_exe_js[valley_next,j]-curve_exe_js[valley_next-1,j])/(lam_exe[valley_next]-lam_exe[valley_next-1])]])
 
-			###form new blended trajectory
-			curve_interp_temp, curve_R_interp_temp, curve_js_interp_temp, breakpoints_blended_temp=form_traj_from_bp(q_bp_temp[short_version],[self.primitives[i] for i in short_version],self.robot)
-			curve_js_blended_temp,curve_blended_temp,curve_R_blended_temp=blend_js_from_primitive(curve_interp_temp, curve_js_interp_temp, breakpoints_blended_temp, [self.primitives[i] for i in short_version],self.robot,zone=10)
-			curve_blended_new=copy.deepcopy(curve_blended)
-			curve_blended_new[start_idx:end_idx]=curve_blended_temp[start_idx-breakpoints_blended[short_version[0]]:len(curve_blended_temp)-(breakpoints_blended[short_version[-1]]+1-end_idx)]
-			curve_js_blended_new=copy.deepcopy(curve_js_blended)
-			curve_js_blended_new[start_idx:end_idx]=curve_js_blended_temp[start_idx-breakpoints_blended[short_version[0]]:len(curve_js_blended_temp)-(breakpoints_blended[short_version[-1]]+1-end_idx)]
+	# 		curve_js_model[:,j]=poly(lam_exe[valley_prev:valley_next])
 
-			###get new speed
-			lam_blended_new=calc_lam_cs(curve_blended_new)
-			speed_est_new=traj_speed_est2(self.robot,curve_js_blended_new,lam_blended_new,vd)
+	# 	# speed_est=traj_speed_est(self.robot,curve_js_model,lam_exe[valley_prev:valley_next],vd,qdot_init=qdot_exe[valley_prev])
+	# 	speed_est=traj_speed_est(self.robot,curve_exe_js[valley_prev:valley_next],lam_exe[valley_prev:valley_next],vd,qdot_init=qdot_exe[valley_prev])
+
+	# 	speed_act=np.linalg.norm(np.gradient(curve_exe,axis=0),axis=1)/np.gradient(timestamp)
+	# 	plt.plot(lam_exe[valley_prev:valley_next],speed_act[valley_prev:valley_next],label='original')
+	# 	plt.plot(lam_exe[valley_prev:valley_next],speed_est,label='estimated')
+	# 	plt.legend()
+	# 	plt.show()
+
+	# 	###TODO:ADD MOVEC SUPPORT
+	# 	dv_dq=[]    #dv_dp1q1,dv_dp1q2,...,dv_dp1q6
+	# 	delta=0.01 	#rad
 
 
-			###get new est speed - prev est speed
-			dv=np.average(speed_est_new[min_speed_curve_blended_idx-5:min_speed_curve_blended_idx+5])-np.average(speed_est[min_speed_curve_blended_idx-5:min_speed_curve_blended_idx+5])
+	# 	for n in range(len(q_bp[0][0])): #6DOF joints
+	# 		q_bp_temp=np.array(copy.deepcopy(q_bp))
+	# 		q_bp_temp[m][0][n]+=delta
 
-			dv_dq.append(dv/delta)
+	# 		#restore new trajectory, only for adjusted breakpoint, 1-bp change requires traj interp from 5 bp
+	# 		short_version=range(max(m-2,0),min(m+3,len(breakpoints_blended)))
+	# 		###start & end idx, choose points in the middle of breakpoints to avoid affecting previous/next blending segments, unless at the boundary (star/end of all curve)
+	# 		###guard 5 breakpoints for short blending
+	# 		if short_version[0]==0:
+	# 			short_version=range(0,5)
+	# 			start_idx=breakpoints_blended[short_version[0]]
+	# 		else:
+	# 			start_idx=int((breakpoints_blended[short_version[0]]+breakpoints_blended[short_version[1]])/2)
+	# 		if short_version[-1]==len(breakpoints_blended)-1:
+	# 			short_version=range(len(breakpoints_blended)-5,len(breakpoints_blended))
+	# 			end_idx = breakpoints_blended[short_version[-1]]+1
+	# 		else:
+	# 			end_idx=int((breakpoints_blended[short_version[-1]]+breakpoints_blended[short_version[-2]])/2)+1
 
-		dv_dq=np.reshape(dv_dq,(-1,1))
-		print(dv_dq)
+	# 		###form new blended trajectory
+	# 		curve_interp_temp, curve_R_interp_temp, curve_js_interp_temp, breakpoints_blended_temp=form_traj_from_bp(q_bp_temp[short_version],[self.primitives[i] for i in short_version],self.robot)
+	# 		curve_js_blended_temp,curve_blended_temp,curve_R_blended_temp=blend_js_from_primitive(curve_interp_temp, curve_js_interp_temp, breakpoints_blended_temp, [self.primitives[i] for i in short_version],self.robot,zone=10)
+	# 		curve_blended_new=copy.deepcopy(curve_blended)
+	# 		curve_blended_new[start_idx:end_idx]=curve_blended_temp[start_idx-breakpoints_blended[short_version[0]]:len(curve_blended_temp)-(breakpoints_blended[short_version[-1]]+1-end_idx)]
+	# 		curve_js_blended_new=copy.deepcopy(curve_js_blended)
+	# 		curve_js_blended_new[start_idx:end_idx]=curve_js_blended_temp[start_idx-breakpoints_blended[short_version[0]]:len(curve_js_blended_temp)-(breakpoints_blended[short_version[-1]]+1-end_idx)]
 
-		return dv_dq
+	# 		###get new speed
+	# 		lam_blended_new=calc_lam_cs(curve_blended_new)
+	# 		speed_est_new=traj_speed_est2(self.robot,curve_js_blended_new,lam_blended_new,vd)
+
+
+	# 		###get new est speed - prev est speed
+	# 		dv=np.average(speed_est_new[min_speed_curve_blended_idx-5:min_speed_curve_blended_idx+5])-np.average(speed_est[min_speed_curve_blended_idx-5:min_speed_curve_blended_idx+5])
+
+	# 		dv_dq.append(dv/delta)
+
+	# 	dv_dq=np.reshape(dv_dq,(-1,1))
+	# 	print(dv_dq)
+
+	# 	return dv_dq
 
 
 
-	def update_bp_speed(self,p_bp,q_bp,dv_dq,min_speed,breakpoint_interp_2tweak_indices,vd,alpha=0.5):
-		###p_bp:								xyz of breakpoints
-		###q_bp:								joint configs of breakpoints
-		###dv_dq								gradient of speed and each breakpoints
-		###min_speed:							lowest speed value
-		###breakpoint_interp_2tweak_indices:	closest N breakpoints
-		###alpha:								stepsize
+	# def update_bp_speed(self,p_bp,q_bp,dv_dq,min_speed,breakpoint_interp_2tweak_indices,vd,alpha=0.5):
+	# 	###p_bp:								xyz of breakpoints
+	# 	###q_bp:								joint configs of breakpoints
+	# 	###dv_dq								gradient of speed and each breakpoints
+	# 	###min_speed:							lowest speed value
+	# 	###breakpoint_interp_2tweak_indices:	closest N breakpoints
+	# 	###alpha:								stepsize
 
-		q_adjustment=alpha*np.linalg.pinv(dv_dq)*(min_speed-vd)
+	# 	q_adjustment=alpha*np.linalg.pinv(dv_dq)*(min_speed-vd)
 
-		for i in range(len(breakpoint_interp_2tweak_indices)):  #3 breakpoints
-			q_bp[breakpoint_interp_2tweak_indices[i]][0]+=q_adjustment[0][6*i:6*(i+1)]
-			###TODO:ADD MOVEC SUPPORT
-			p_bp[breakpoint_interp_2tweak_indices[i]][0]=self.robot.fwd(q_bp[breakpoint_interp_2tweak_indices[i]][0]).p
+	# 	for i in range(len(breakpoint_interp_2tweak_indices)):  #3 breakpoints
+	# 		q_bp[breakpoint_interp_2tweak_indices[i]][0]+=q_adjustment[0][6*i:6*(i+1)]
+	# 		###TODO:ADD MOVEC SUPPORT
+	# 		p_bp[breakpoint_interp_2tweak_indices[i]][0]=self.robot.fwd(q_bp[breakpoint_interp_2tweak_indices[i]][0]).p
 
-		return p_bp, q_bp
+	# 	return p_bp, q_bp
 
 	def get_gradient_from_model_xyz_dual(self,\
 											p_bp,q_bp,breakpoints_blended,curve_blended,max_error_curve_blended_idx,worst_point_joints,closest_p,breakpoint_interp_2tweak_indices):
@@ -360,12 +361,15 @@ class ilc_toolbox(object):
 		###alpha:								stepsize
 
 		point_adjustment=-alpha*np.linalg.pinv(de_dp)*max_error
+		# print(max_error,point_adjustment)
+		idx=0
+		for m in breakpoint_interp_2tweak_indices:  #3 breakpoints
+			for bp_sub_idx in range(len(p_bp[m])):
 
-		for i in range(len(breakpoint_interp_2tweak_indices)):  #3 breakpoints
-			p_bp[breakpoint_interp_2tweak_indices[i]][0]+=point_adjustment[0][3*i:3*(i+1)]
-			###TODO:ADD MOVEC SUPPORT
-			q_bp[breakpoint_interp_2tweak_indices[i]][0]=car2js(self.robot,q_bp[breakpoint_interp_2tweak_indices[i]][0],p_bp[breakpoint_interp_2tweak_indices[i]][0],self.robot.fwd(q_bp[breakpoint_interp_2tweak_indices[i]][0]).R)[0]
-
+				p_bp[m][bp_sub_idx]+=point_adjustment[0][3*idx:3*(idx+1)]
+				###TODO:ADD MOVEC SUPPORT
+				q_bp[m][bp_sub_idx]=car2js(self.robot,q_bp[m][bp_sub_idx],p_bp[m][bp_sub_idx],self.robot.fwd(q_bp[m][bp_sub_idx]).R)[0]
+				idx+=1
 		return p_bp, q_bp
 
 	def update_bp_xyz_dual(self,p_bp,q_bp,de_dp,max_error,breakpoint_interp_2tweak_indices,alpha=0.5):
@@ -457,53 +461,6 @@ class ilc_toolbox(object):
 			p_bp[breakpoint_interp_2tweak_indices[i]][0]=self.robot.fwd(q_bp[breakpoint_interp_2tweak_indices[i]][0]).p
 
 		return p_bp, q_bp
-
-	def get_error_bp(self,p_bp,q_bp,curve_exe,curve_exe_R,curve_bp,curve_R_bp):
-		###p_bp:								xyz of breakpoints, u
-		###q_bp:								joint configs of breakpoints, u
-		###curve_exe:							execution curve
-		###curve_exe_R:							execution curve R
-		###curve_bp:							"breakpoints" on original curve, y_d
-		###curve_R_bp:							"breakpoints" on original curve R, y_d
-
-
-		exe_bp_idx=[]
-		ep=[]
-		eR=[]
-		###calculate error excluding start & end
-		for i in range(1,len(p_bp)-1):
-			###get output y index by finding closest on curve_exe
-			exe_bp_idx.append(calc_error(p_bp[i][0],curve_exe)[1])
-			###find error y-y_d
-			ep.append(curve_exe[exe_bp_idx[-1]]-curve_bp[i][0])
-			# eR.append(curve_exe_R[exe_bp_idx[-1]]@self.robot.fwd(q_bp[i][0]).R.T)
-
-		return np.array(ep), np.array(eR), curve_exe[exe_bp_idx],curve_exe_R[exe_bp_idx]
-
-	def get_error_bp2(self,p_bp,q_bp,curve_exe,curve_exe_R,curve,curve_R):
-		###p_bp:								xyz of breakpoints, u
-		###q_bp:								joint configs of breakpoints, u
-		###curve_exe:							execution curve
-		###curve_exe_R:							execution curve R
-		###curve:								original curve
-		###curve:								original curve_R
-
-
-		exe_bp_idx=[]
-		ep=[]
-		eR=[]
-		###calculate error excluding start & end
-		for i in range(1,len(p_bp)-1):
-			###get output y index by finding closest on curve_exe
-			exe_bp_idx.append(calc_error(p_bp[i][0],curve_exe)[1])
-			###get y_d by finding closest on original curve
-			y_d=curve[calc_error(curve_exe[exe_bp_idx[-1]],curve)[1]]
-
-			ep.append(curve_exe[exe_bp_idx[-1]]-y_d)
-			# eR.append(curve_exe_R[exe_bp_idx[-1]]@self.robot.fwd(q_bp[i][0]).R.T)
-
-		return np.array(ep), np.array(eR), curve_exe[exe_bp_idx],curve_exe_R[exe_bp_idx]
-
 
 
 	def update_bp_ilc_cart(self,p_bp,q_bp,exe_bp_p,exe_bp_R,exe_bp_p_new, exe_bp_R_new,alpha1=0.5,alpha2=0.5):

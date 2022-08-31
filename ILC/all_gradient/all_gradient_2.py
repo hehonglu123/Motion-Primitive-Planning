@@ -26,7 +26,7 @@ def main():
 	dataset='from_NX/'
 	solution_dir='curve_pose_opt2_R/'
 	data_dir="../../data/"+dataset+solution_dir
-	cmd_dir="../../data/"+dataset+solution_dir+'30L/'
+	cmd_dir="../../data/"+dataset+solution_dir+'greedy0.02/'
 
 
 
