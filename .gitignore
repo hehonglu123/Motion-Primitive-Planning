@@ -410,6 +410,8 @@ simulation/roboguide/ilc_fanuc/data/from_NX/results/*.npy
 
 simulation/roboguide/ilc_fanuc/data/blade/results*
 simulation/roboguide/ilc_fanuc/data/blade_dual/results*
+simulation/roboguide/ilc_fanuc/data/blade_arm_shift_dual/results*
+simulation/roboguide/ilc_fanuc/data/blade_base_shift_dual/results*
 simulation/roboguide/ilc_fanuc/data/kink_30/results*
 simulation/roboguide/ilc_fanuc/data/wood/results*
 simulation/roboguide/ilc_fanuc/data/wood_dual/results*

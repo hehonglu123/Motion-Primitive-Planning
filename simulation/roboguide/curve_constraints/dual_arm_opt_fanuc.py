@@ -1,3 +1,4 @@
+from math import acos,degrees,radians
 import sys
 import numpy as np
 from pandas import *
@@ -9,7 +10,9 @@ sys.path.append('../fanuc_toolbox')
 from fanuc_utils import *
 
 # data_type='blade_shift'
-data_type='blade'
+# data_type='blade'
+# data_type='blade_arm_shift'
+data_type='blade_base_shift'
 
 if data_type=='blade':
     curve_data_dir='../../../data/from_NX/'
@@ -20,6 +23,12 @@ elif data_type=='wood':
 elif data_type=='blade_shift':
     curve_data_dir='../../../data/blade_shift/'
     data_dir='../data/curve_blade_shift/'
+elif data_type=='blade_arm_shift':
+    curve_data_dir='../../../data/from_NX/'
+    data_dir='../data/curve_blade_arm_shift/'
+elif data_type=='blade_base_shift':
+    curve_data_dir='../../../data/from_NX/'
+    data_dir='../data/curve_blade_base_shift/'
 
 # read curve relative path
 relative_path=read_csv(curve_data_dir+"Curve_dense.csv",header=None).values
@@ -27,9 +36,11 @@ relative_path=read_csv(curve_data_dir+"Curve_dense.csv",header=None).values
 
 # load relative position of robot 2
 with open(data_dir+'m900ia.yaml') as file:
+    # H_robot2 = np.array(yaml.safe_load(file)['H'],dtype=np.float64)
     H_robot2 = np.array(yaml.safe_load(file)['H'],dtype=np.float64)
 base2_R=H_robot2[:3,:3]
 base2_p=1000*H_robot2[:-1,-1]
+print(H_robot2)
 
 # robot1, holding spray gun
 robot1=m710ic(d=50)
@@ -46,12 +57,14 @@ with open(data_dir+'blade_pose.yaml') as file:
 ###### get tcp
 # import general_robotics_toolbox as rox
 # bT = rox.Transform(blade_pose[:3,:3],blade_pose[:3,3])
-# bT=rox.Transform(R=rox.rot([0,0,1],np.pi),p=[3500,0,0])*bT
+# bT=rox.Transform(R=base2_R,p=base2_p).inv()*bT
 # # print(bT)
 # # print(R2wpr(bT.R))
 # # exit()
 # robot=m900ia(R_tool=np.matmul(Ry(np.radians(90)),Rz(np.radians(180))),p_tool=np.array([0,0,0])*1000.,d=0)
-# T_tool=robot.fwd(np.deg2rad([0,49.8,-17.2,0,65.4,0])) # blade
+# # T_tool=robot.fwd(np.deg2rad([0,49.8,-17.2,0,65.4,0])) # blade
+# # T_tool=robot.fwd(np.deg2rad([-19.8,65,13.2,20.9,67.8,-13.1])) # blade new
+# T_tool=robot.fwd(np.deg2rad([0,29.3,-45.8,0,74.5,0])) # blade base shift
 # # T_tool=robot.fwd(np.deg2rad([0,48.3,-7,0,55.8,0])) # wood
 # # T_tool=robot.fwd(np.deg2rad([0,0,0,0,0,0]))
 # # print(T_tool)
@@ -87,25 +100,38 @@ q_init1=curve_js1[0]
 q_init2=ms.calc_robot2_q_from_blade_pose(blade_pose,base2_R,base2_p)
 print(np.rad2deg(q_init2))
 
-q_out1, q_out2=opt.dual_arm_stepwise_optimize(q_init1,q_init2,w1=0.01,w2=0.1)
+q_out1, q_out2=opt.dual_arm_stepwise_optimize(q_init1,q_init2,w1=0.01,w2=0.02)
 # q_out1 = np.array(read_csv(data_dir+'dual_arm/arm1.csv',header=None).values)
 # q_out2 = np.array(read_csv(data_dir+'dual_arm/arm2.csv',header=None).values)
-##########path verification####################
-relative_path_out,relative_path_out_R=ms.form_relative_path(q_out1,q_out2,base2_R,base2_p)
-plt.plot(np.linalg.norm(relative_path[:,:3]-relative_path_out,axis=1))
-plt.title('error plot')
-plt.show()
-
-dlam=np.linalg.norm(np.diff(relative_path_out,axis=0),2,1)
-plt.plot(dlam)
-plt.title('dlam')
-plt.show()
 
 ####output to trajectory csv
 df=DataFrame({'q0':q_out1[:,0],'q1':q_out1[:,1],'q2':q_out1[:,2],'q3':q_out1[:,3],'q4':q_out1[:,4],'q5':q_out1[:,5]})
 df.to_csv(data_dir+'dual_arm/arm1.csv',header=False,index=False)
 df=DataFrame({'q0':q_out2[:,0],'q1':q_out2[:,1],'q2':q_out2[:,2],'q3':q_out2[:,3],'q4':q_out2[:,4],'q5':q_out2[:,5]})
 df.to_csv(data_dir+'dual_arm/arm2.csv',header=False,index=False)
+
+##########path verification####################
+relative_path_out,relative_path_out_R=ms.form_relative_path(q_out1,q_out2,base2_R,base2_p)
+plt.plot(np.linalg.norm(relative_path[:,:3]-relative_path_out,axis=1))
+plt.title('error plot')
+plt.show()
+
+error_n=[]
+for i in range(len(relative_path_out_R)):
+    cos_value=np.dot(relative_path_out_R[i][:,-1],relative_path[i,3:])/(np.linalg.norm(relative_path_out_R[i][:,-1])*np.linalg.norm(relative_path[i,3:]))
+    if cos_value>0.99999999:
+        cos_value=1
+    this_error_n=acos(cos_value)
+    error_n.append(degrees(this_error_n))
+
+plt.plot(error_n)
+plt.title('error n plot')
+plt.show()
+
+dlam=np.linalg.norm(np.diff(relative_path_out,axis=0),2,1)
+plt.plot(dlam)
+plt.title('dlam')
+plt.show()
 
 ###dual lambda_dot calc
 dlam=calc_lamdot_2arm(np.hstack((q_out1,q_out2)),opt.lam,ms.robot1,ms.robot2,step=1)

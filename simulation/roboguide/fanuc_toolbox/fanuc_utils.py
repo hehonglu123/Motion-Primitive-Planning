@@ -144,7 +144,7 @@ class MotionSendFANUC(object):
         tp_lead.moveJ(j0,50,'%',-1)
         tp_lead.moveJ(j0,5,'%',-1)
         self.client.execute_motion_program_multi(tp_follow,tp_lead)
-    
+        
         #### for speed1 regulation
         if (type(speed1) is int) or (type(speed1) is float):
             all_speed=np.ones(len(primitives1))*int(speed1)
@@ -398,6 +398,51 @@ class MotionSendFANUC(object):
             start_idx+=1
         if np.linalg.norm(curve_chop_target[end_idx]-p_end)>0.5:
             end_idx-=1
+
+        curve_exe1=curve_exe1[start_idx:end_idx+1]
+        curve_exe2=curve_exe2[start_idx:end_idx+1]
+        curve_exe_R1=curve_exe_R1[start_idx:end_idx+1]
+        curve_exe_R2=curve_exe_R2[start_idx:end_idx+1]
+        curve_exe_js1=curve_exe_js1[start_idx:end_idx+1]
+        curve_exe_js2=curve_exe_js2[start_idx:end_idx+1]
+        timestamp=timestamp[start_idx:end_idx+1]
+
+        relative_path_exe=relative_path_exe[start_idx:end_idx+1]
+        relative_path_exe_R=relative_path_exe_R[start_idx:end_idx+1]
+
+        speed=speed[start_idx:end_idx+1]
+        lam=calc_lam_cs(relative_path_exe)
+
+        return lam, curve_exe1,curve_exe2,curve_exe_R1,curve_exe_R2,curve_exe_js1,curve_exe_js2, speed, timestamp, relative_path_exe,relative_path_exe_R
+    
+    def chop_extension_dual_extend(self,lam, curve_exe1,curve_exe2,curve_exe_R1,curve_exe_R2,curve_exe_js1,curve_exe_js2, speed, timestamp, relative_path_exe,relative_path_exe_R,p_start_all,p_end_all,curve_chop_target_all):
+        
+        start_idx_all=[]
+        end_idx_all=[]
+        for i in range(len(p_start_all)):
+            p_start=p_start_all[i]
+            p_end=p_end_all[i]
+            curve_chop_target=curve_chop_target_all[i]
+            # print(p_start)
+            # print(p_end)
+            # print(curve_chop_target)
+
+            start_idx=np.argmin(np.linalg.norm(p_start-curve_chop_target,axis=1))+1
+            end_idx=np.argmin(np.linalg.norm(p_end-curve_chop_target,axis=1))
+
+            #make sure extension doesn't introduce error
+            if np.linalg.norm(curve_chop_target[start_idx]-p_start)>0.5:
+                start_idx+=1
+            if np.linalg.norm(curve_chop_target[end_idx]-p_end)>0.5:
+                end_idx-=1
+            
+            start_idx_all.append(start_idx)
+            end_idx_all.append(end_idx)
+
+        print(start_idx_all)
+        print(end_idx_all)
+        start_idx=np.min(start_idx_all)
+        end_idx=np.max(end_idx_all)
 
         curve_exe1=curve_exe1[start_idx:end_idx+1]
         curve_exe2=curve_exe2[start_idx:end_idx+1]
@@ -730,6 +775,7 @@ class MotionSendFANUC(object):
         primitives2,p_bp2,q_bp2=self.extend_start_end(robot2,q_bp2,primitives2,breakpoints,p_bp2,extension_start=extension_d,extension_end=extension_d)
         ### Then, extend the follower (tool robot) in the workpiece (i.e. leader robot workpiece) frame.
         primitives1,p_bp1,q_bp1=self.extend_start_end(robot1,q_bp1,primitives1,breakpoints,p_bp1,extension_start=extension_d*d1_start/d2_start,extension_end=extension_d*d1_end/d2_end)
+        # primitives1,p_bp1,q_bp1=self.extend_start_end(robot1,q_bp1,primitives1,breakpoints,p_bp1,extension_start=extension_d,extension_end=extension_d)
 
         return p_bp1,q_bp1,p_bp2,q_bp2
     

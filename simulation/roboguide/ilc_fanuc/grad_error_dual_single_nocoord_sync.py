@@ -27,8 +27,10 @@ from blending import *
 
 def main():
     # curve
-    data_type='blade'
+    # data_type='blade'
     # data_type='wood'
+    # data_type='blade_arm_shift'
+    data_type='blade_base_shift'
 
     # data and curve directory
     if data_type=='blade':
@@ -39,6 +41,14 @@ def main():
         curve_data_dir='../../../data/wood/'
         cmd_dir='../data/curve_wood/'
         data_dir='data/wood_dual/'
+    elif data_type=='blade_arm_shift':
+        curve_data_dir='../../../data/from_NX/'
+        cmd_dir='../data/curve_blade_arm_shift/'
+        data_dir='data/blade_arm_shift_dual/'
+    elif data_type=='blade_base_shift':
+        curve_data_dir='../../../data/from_NX/'
+        cmd_dir='../data/curve_blade_base_shift/'
+        data_dir='data/blade_base_shift_dual/'
 
     test_type='dual_arm'
     # test_type='dual_single_arm'
@@ -47,6 +57,7 @@ def main():
     # test_type='dual_single_arm_straight_min' # robot2 is multiple user defined straight line
     # test_type='dual_single_arm_straight_min10' # robot2 is multiple user defined straight line
     # test_type='dual_arm_10'
+    # test_type='dual_arm_qp'
 
     cmd_dir=cmd_dir+test_type+'/'
 
@@ -66,6 +77,7 @@ def main():
     # define robot
     robot1=m710ic(d=50)
     robot2=m900ia(R_tool=H_tcp[:3,:3],p_tool=H_tcp[:-1,-1])
+    # robot2=m900ia(R_tool=np.matmul(Ry(np.radians(90)),Rz(np.radians(180))),p_tool=np.array([0,0,0])*1000.,d=0)
 
     # arm path
     curve_js1 = read_csv(cmd_dir+"/arm1.csv", header=None).values
@@ -107,9 +119,13 @@ def main():
         ms = MotionSendFANUC(robot1=robot1,robot2=robot2)
     elif data_type=='wood':
         ms = MotionSendFANUC(robot1=robot1,robot2=robot2,utool2=3)
+    elif data_type=='blade_arm_shift':
+        ms = MotionSendFANUC(robot1=robot1,robot2=robot2,utool2=6)
+    elif data_type=='blade_base_shift':
+        ms = MotionSendFANUC(robot1=robot1,robot2=robot2,utool2=2)
 
     # s=int(1600/2.) # mm/sec in leader frame
-    s=1200 # mm/sec
+    s=1000 # mm/sec
     # s=16 # mm/sec in leader frame
     z=100 # CNT100
     ilc_output=data_dir+'results_'+str(s)+'_'+test_type+'/'
@@ -117,6 +133,9 @@ def main():
 
     breakpoints1,primitives1,p_bp1,q_bp1=ms.extract_data_from_cmd(os.getcwd()+'/'+cmd_dir+'command1.csv')
     breakpoints2,primitives2,p_bp2,q_bp2=ms.extract_data_from_cmd(os.getcwd()+'/'+cmd_dir+'command2.csv')
+
+    # for i in range(len(q_bp2)):
+    #     p_bp2[i][-1] = robot2.fwd(q_bp2[i][-1]).p
 
     ### dlam analysis
     # fig, ax = plt.subplots(1, 2)
@@ -159,38 +178,38 @@ def main():
     q_bp2_start = q_bp2[0][0]
     q_bp2_end = q_bp2[-1][-1]
 
-    p_bp1,q_bp1,p_bp2,q_bp2=ms.extend_dual(ms.robot1,p_bp1,q_bp1,primitives1,ms.robot2,p_bp2,q_bp2,primitives2,breakpoints1,base2_T,extension_d=150)
+    p_bp1,q_bp1,p_bp2,q_bp2=ms.extend_dual(ms.robot1,p_bp1,q_bp1,primitives1,ms.robot2,p_bp2,q_bp2,primitives2,breakpoints1,base2_T,extension_d=50)
 
     ## calculate step at start and end
-    step_start=None
-    step_end=None
+    step_start1=None
+    step_end1=None
     for i in range(len(q_bp1)):
         if np.all(q_bp1[i][0]==q_bp1_start):
-            step_start=i
+            step_start1=i
         if np.all(q_bp1[i][-1]==q_bp1_end):
-            step_end=i
+            step_end1=i
 
-    assert step_start is not None,'Cant find step start'
-    assert step_end is not None,'Cant find step start'
-    print(step_start,step_end)
+    assert step_start1 is not None,'Cant find step start'
+    assert step_end1 is not None,'Cant find step start'
+    print(step_start1,step_end1)
 
-    step_start=None
-    step_end=None
+    step_start2=None
+    step_end2=None
     for i in range(len(q_bp2)):
         if np.all(q_bp2[i][0]==q_bp2_start):
-            step_start=i
+            step_start2=i
         if np.all(q_bp2[i][-1]==q_bp2_end):
-            step_end=i
+            step_end2=i
 
-    assert step_start is not None,'Cant find step start'
-    assert step_end is not None,'Cant find step start'
-    print(step_start,step_end)
+    assert step_start2 is not None,'Cant find step start'
+    assert step_end2 is not None,'Cant find step start'
+    print(step_start2,step_end2)
 
     ## extend speed
-    s1_start = np.ones(step_start)*s1_movel[0]
-    s2_start = np.ones(step_start)*s2_movel[0]
-    s1_end = np.ones(len(primitives1)-step_end-1)*s1_movel[-1]
-    s2_end = np.ones(len(primitives2)-step_end-1)*s2_movel[-1]
+    s1_start = np.ones(step_start1)*s1_movel[0]
+    s2_start = np.ones(step_start2)*s2_movel[0]
+    s1_end = np.ones(len(primitives1)-step_end1-1)*s1_movel[-1]
+    s2_end = np.ones(len(primitives2)-step_end2-1)*s2_movel[-1]
     s1_movel=np.append(np.append(s1_start,s1_movel),s1_end)
     s2_movel=np.append(np.append(s2_start,s2_movel),s2_end)
 
@@ -225,7 +244,7 @@ def main():
     all_speed_std = []
     all_max_error = []
 
-    iteration=210
+    iteration=30
     speed_iteration = 10
     draw_speed_max=None
     draw_error_max=None
@@ -283,12 +302,14 @@ def main():
                 # new robot data
                 lam_exe1 = np.append(0,np.cumsum(np.linalg.norm(np.diff(curve_exe1,axis=0),2,1)))
                 speed_exe1 = np.divide(np.linalg.norm(np.diff(curve_exe1,axis=0),2,1),np.diff(timestamp,axis=0))
-                speed_exe1=np.append(speed_exe1[0],speed_exe1)
+                # speed_exe1=np.append(speed_exe1[0],speed_exe1)
+                speed_exe1=np.append(speed_exe1,speed_exe1[-1])
                 lam_exe2 = np.append(0,np.cumsum(np.linalg.norm(np.diff(curve_exe2,axis=0),2,1)))
                 speed_exe2 = np.divide(np.linalg.norm(np.diff(curve_exe2,axis=0),2,1),np.diff(timestamp,axis=0))
-                speed_exe2=np.append(speed_exe2[0],speed_exe2)
-                p_bp1_sq = np.squeeze(p_bp1[step_start:step_end+1])
-                p_bp2_sq = np.squeeze(p_bp2[step_start:step_end+1])
+                # speed_exe2=np.append(speed_exe2[0],speed_exe2)
+                speed_exe2=np.append(speed_exe2,speed_exe2[-1])
+                p_bp1_sq = np.squeeze(p_bp1[step_start1:step_end1+1])
+                p_bp2_sq = np.squeeze(p_bp2[step_start2:step_end2+1])
                 lam1=np.cumsum(np.linalg.norm(np.diff(p_bp1_sq,axis=0),2,1))
                 lam1=np.append(0,lam1)
                 lam2=np.cumsum(np.linalg.norm(np.diff(p_bp2_sq,axis=0),2,1))
@@ -296,26 +317,44 @@ def main():
                 
                 if i < speed_iteration+start_iteration:
                     ### update speed
-                    for j in range(step_start+1,step_end+1):
-                        if np.argmin(np.abs(lam_exe1-lam1[j-step_start]))>np.argmin(np.abs(lam_exe1-lam1[j-1-step_start])):
-                            # print("update speed 1")
-                            this_speed_exe1 = np.mean(speed_exe1[np.argmin(np.abs(lam_exe1-lam1[j-1-step_start])):np.argmin(np.abs(lam_exe1-lam1[j-step_start]))])
+                    # print(curve_exe1)
+                    for j in range(step_start1+1,step_end1+1):
+                        ###### update speed 1
+                        # if np.argmin(np.abs(lam_exe1-lam1[j-step_start]))>np.argmin(np.abs(lam_exe1-lam1[j-1-step_start])):
+                        #     # print("update speed 1")
+                        #     this_speed_exe1 = np.mean(speed_exe1[np.argmin(np.abs(lam_exe1-lam1[j-1-step_start])):np.argmin(np.abs(lam_exe1-lam1[j-step_start]))])
+                        #     s1_movel[j] = (s1_movel_des[j]/this_speed_exe1)*s1_movel[j]
+                        
+                        error_temp,id_prev=calc_error(p_bp1[j-1][-1],curve_exe1)
+                        error_temp,id_now=calc_error(p_bp1[j][-1],curve_exe1)
+                        if id_prev<id_now+1:
+                            this_speed_exe1 = np.mean(speed_exe1[id_prev:id_now+1])
+                            # print(p_bp1[j][-1],id_prev,id_now,this_speed_exe1)
                             s1_movel[j] = (s1_movel_des[j]/this_speed_exe1)*s1_movel[j]
-                        if np.argmin(np.abs(lam_exe2-lam2[j-step_start]))>np.argmin(np.abs(lam_exe2-lam2[j-1-step_start])):
-                            # print("update speed 2")
-                            this_speed_exe2 = np.mean(speed_exe2[np.argmin(np.abs(lam_exe2-lam2[j-1-step_start])):np.argmin(np.abs(lam_exe2-lam2[j-step_start]))])
+                    # print(curve_exe2)
+                    for j in range(step_start2+1,step_end2+1):
+                        ###### update speed 2
+                        # if np.argmin(np.abs(lam_exe2-lam2[j-step_start]))>np.argmin(np.abs(lam_exe2-lam2[j-1-step_start])):
+                        #     # print("update speed 2")
+                        #     this_speed_exe2 = np.mean(speed_exe2[np.argmin(np.abs(lam_exe2-lam2[j-1-step_start])):np.argmin(np.abs(lam_exe2-lam2[j-step_start]))])
+                        #     s2_movel[j] = (s2_movel_des[j]/this_speed_exe2)*s2_movel[j]
+                        error_temp,id_prev=calc_error(p_bp2[j-1][-1],curve_exe2)
+                        error_temp,id_now=calc_error(p_bp2[j][-1],curve_exe2)
+                        if id_prev<id_now+1:
+                            this_speed_exe2 = np.mean(speed_exe2[id_prev:id_now+1])
+                            # print(p_bp2[j][-1],id_prev,id_now,this_speed_exe2)
                             s2_movel[j] = (s2_movel_des[j]/this_speed_exe2)*s2_movel[j]
-                    s1_movel[:step_start+1] = s1_movel[step_start+1]
-                    s1_movel[step_end+1:] = s1_movel[step_end]
-                    s2_movel[:step_start+1] = s2_movel[step_start+1]
-                    s2_movel[step_end+1:] = s2_movel[step_end]
+                    s1_movel[:step_start1+1] = s1_movel[step_start1+1]
+                    s1_movel[step_end1+1:] = s1_movel[step_end1]
+                    s2_movel[:step_start2+1] = s2_movel[step_start2+1]
+                    s2_movel[step_end2+1:] = s2_movel[step_end2]
 
                     ## show speed of each robot
                     f, ax = plt.subplots(1, 2)
-                    ax[0].scatter(lam1,s1_movel_des[step_start:step_end+1],label='Motion Program',c='tab:green')
+                    ax[0].scatter(lam1,s1_movel_des[step_start1:step_end1+1],label='Motion Program',c='tab:green')
                     ax[0].plot(lam_exe1_old,speed_exe1_old,label='Prev Execution')
                     ax[0].plot(lam_exe1,speed_exe1,label='Execution')
-                    ax[1].scatter(lam2,s2_movel_des[step_start:step_end+1],label='Motion Program',c='tab:green')
+                    ax[1].scatter(lam2,s2_movel_des[step_start2:step_end2+1],label='Motion Program',c='tab:green')
                     ax[1].plot(lam_exe2_old,speed_exe2_old,label='Prev Execution')
                     ax[1].plot(lam_exe2,speed_exe2,label='Execution')
                     plt.legend()
@@ -331,10 +370,10 @@ def main():
                     print(alpha)
                     if max(error_prev) > max_error_all_thres:
                         ### update all p_bp1
-                        for j in range(step_start,step_end+1):
-                            p_bp1_update[j][-1] = np.array(p_bp1[j][-1]) + alpha*p_bp1_error_dir[j-step_start]
+                        for j in range(step_start1,step_end1+1):
+                            p_bp1_update[j][-1] = np.array(p_bp1[j][-1]) + alpha*p_bp1_error_dir[j-step_start1]
                             bp1_R = robot1.fwd(q_bp1[j][-1]).R
-                            bp1_R[:,-1] = (bp1_R[:,-1] + alpha*p_bp1_ang_error_dir[j-step_start])/np.linalg.norm((bp1_R[:,-1] + alpha*p_bp1_ang_error_dir[j-step_start]))
+                            bp1_R[:,-1] = (bp1_R[:,-1] + alpha*p_bp1_ang_error_dir[j-step_start1])/np.linalg.norm((bp1_R[:,-1] + alpha*p_bp1_ang_error_dir[j-step_start1]))
                             q_bp1_update[j][-1] = car2js(robot1, q_bp1[j][-1], p_bp1_update[j][-1], bp1_R)[0]
                     else:
                         ### update only the max
@@ -350,8 +389,8 @@ def main():
                     # ax.scatter3D(relative_path_exe[peaks,0], relative_path_exe[peaks,1], relative_path_exe[peaks,2],c='orange',label='worst case')
                     # ax.scatter3D(all_new_bp[:,0], all_new_bp[:,1], all_new_bp[:,2], c='magenta',label='new breakpoints')
                     ax.plot3D(relative_path_exe[:,0], relative_path_exe[:,1],relative_path_exe[:,2], 'green',label='execution')
-                    ax.scatter3D(p_bp_relative[step_start:step_end+1,0], p_bp_relative[step_start:step_end+1,1],p_bp_relative[step_start:step_end+1,2], 'blue', label='old bps')
-                    ax.scatter3D(p_bp_relative_new[step_start:step_end+1,0], p_bp_relative_new[step_start:step_end+1,1],p_bp_relative_new[step_start:step_end+1,2], 'magenta', label='new bps')
+                    ax.scatter3D(p_bp_relative[step_start1:step_end1+1,0], p_bp_relative[step_start1:step_end1+1,1],p_bp_relative[step_start1:step_end1+1,2], 'blue', label='old bps')
+                    ax.scatter3D(p_bp_relative_new[step_start1:step_end1+1,0], p_bp_relative_new[step_start1:step_end1+1,1],p_bp_relative_new[step_start1:step_end1+1,2], 'magenta', label='new bps')
                     ax.view_init(61, -67)
                     plt.legend()
                     if save_fig:
@@ -390,6 +429,7 @@ def main():
             lam, curve_exe1,curve_exe2,curve_exe_R1,curve_exe_R2,curve_exe_js1,curve_exe_js2, speed, timestamp, relative_path_exe, relative_path_exe_R = ms.logged_data_analysis_multimove(df,base2_R,base2_p,realrobot=False)
             #############################chop extension off##################################
             if i >= speed_iteration+start_iteration:
+            # if 1:
                 curve_exe_js1_prev = deepcopy(curve_exe_js1[-1])
                 curve_exe_js2_prev = deepcopy(curve_exe_js2[-1])
                 chop_first = False
@@ -412,8 +452,10 @@ def main():
                     lam, curve_exe1,curve_exe2,curve_exe_R1,curve_exe_R2,curve_exe_js1,curve_exe_js2, speed, timestamp, relative_path_exe, relative_path_exe_R=\
                         ms.chop_extension_dual_singel(lam, curve_exe1,curve_exe2,curve_exe_R1,curve_exe_R2,curve_exe_js1,curve_exe_js2, speed, timestamp, relative_path_exe,relative_path_exe_R,curve2[0],curve2[-1],curve_exe2)
             else:
+                # lam, curve_exe1,curve_exe2,curve_exe_R1,curve_exe_R2,curve_exe_js1,curve_exe_js2, speed, timestamp, relative_path_exe, relative_path_exe_R=\
+                #     ms.chop_extension_dual(lam, curve_exe1,curve_exe2,curve_exe_R1,curve_exe_R2,curve_exe_js1,curve_exe_js2, speed, timestamp, relative_path_exe,relative_path_exe_R,relative_path[0,:3],relative_path[-1,:3])
                 lam, curve_exe1,curve_exe2,curve_exe_R1,curve_exe_R2,curve_exe_js1,curve_exe_js2, speed, timestamp, relative_path_exe, relative_path_exe_R=\
-                    ms.chop_extension_dual(lam, curve_exe1,curve_exe2,curve_exe_R1,curve_exe_R2,curve_exe_js1,curve_exe_js2, speed, timestamp, relative_path_exe,relative_path_exe_R,relative_path[0,:3],relative_path[-1,:3])
+                        ms.chop_extension_dual_extend(lam, curve_exe1,curve_exe2,curve_exe_R1,curve_exe_R2,curve_exe_js1,curve_exe_js2, speed, timestamp, relative_path_exe,relative_path_exe_R,[curve1[0],curve2[0]],[curve1[-1],curve2[-1]],[curve_exe1,curve_exe2])
             
             ##############################calcualte error########################################
             ave_speed=np.mean(speed)
@@ -505,82 +547,83 @@ def main():
         df=DataFrame({'primitives':primitives2,'points':p_bp2,'q_bp':q_bp2})
         df.to_csv(ilc_output+'command_arm2_'+str(i)+'.csv',header=True,index=False)
 
-        if max(error) > max_error_all_thres:
-            ##########################################calculate error direction and push######################################
-            ### interpolate curve (get gradient direction)
-            curve_target = np.zeros((len(relative_path_exe), 3))
-            curve_target_R = np.zeros((len(relative_path_exe), 3))
-            for j in range(len(relative_path_exe)):
-                dist = np.linalg.norm(relative_path[:,:3] - relative_path_exe[j], axis=1)
-                closest_point_idx = np.argmin(dist)
-                curve_target[j, :] = relative_path[closest_point_idx, :3]
-                curve_target_R[j, :] = relative_path[closest_point_idx, 3:]
+        if i >= speed_iteration:
+            if max(error) > max_error_all_thres:
+                ##########################################calculate error direction and push######################################
+                ### interpolate curve (get gradient direction)
+                curve_target = np.zeros((len(relative_path_exe), 3))
+                curve_target_R = np.zeros((len(relative_path_exe), 3))
+                for j in range(len(relative_path_exe)):
+                    dist = np.linalg.norm(relative_path[:,:3] - relative_path_exe[j], axis=1)
+                    closest_point_idx = np.argmin(dist)
+                    curve_target[j, :] = relative_path[closest_point_idx, :3]
+                    curve_target_R[j, :] = relative_path[closest_point_idx, 3:]
 
-            ### get error (and transfer into robot1 frame)
-            curve_target1 = []
-            curve_target_R1 = []
-            error1 = []
-            angle_error1 = []
-            for j in range(len(relative_path_exe)):
-                ## transfer to robot1 frame
-                tool_in_base1 = rox.Transform(base2_R,base2_p)*robot2.fwd(curve_exe_js2[j])
-                this_curve_target1_T = tool_in_base1*rox.Transform(np.eye(3),curve_target[j])
-                this_curve_target_R1 = np.matmul(tool_in_base1.R,curve_target_R[j])
-                curve_target1.append(this_curve_target1_T.p)
-                curve_target_R1.append(this_curve_target_R1)
-                ## calculate error
-                error1.append(this_curve_target1_T.p-curve_exe1[j])
-                # angle_error1.append(get_angle(curve_exe_R1[j][:,-1], this_curve_target_R1))
-                angle_error1.append(this_curve_target_R1-curve_exe_R1[j][:,-1])
+                ### get error (and transfer into robot1 frame)
+                curve_target1 = []
+                curve_target_R1 = []
+                error1 = []
+                angle_error1 = []
+                for j in range(len(relative_path_exe)):
+                    ## transfer to robot1 frame
+                    tool_in_base1 = rox.Transform(base2_R,base2_p)*robot2.fwd(curve_exe_js2[j])
+                    this_curve_target1_T = tool_in_base1*rox.Transform(np.eye(3),curve_target[j])
+                    this_curve_target_R1 = np.matmul(tool_in_base1.R,curve_target_R[j])
+                    curve_target1.append(this_curve_target1_T.p)
+                    curve_target_R1.append(this_curve_target_R1)
+                    ## calculate error
+                    error1.append(this_curve_target1_T.p-curve_exe1[j])
+                    # angle_error1.append(get_angle(curve_exe_R1[j][:,-1], this_curve_target_R1))
+                    angle_error1.append(this_curve_target_R1-curve_exe_R1[j][:,-1])
 
-            ### get closets bp index
-            p_bp_relative,_=ms.form_relative_path(np.squeeze(q_bp1),np.squeeze(q_bp2),base2_R,base2_p)
-            p_bp1_error_dir=[]
-            p_bp1_ang_error_dir=[]
-            # find error direction
-            for j in range(step_start, step_end+1): # exclude first and the last bp and the bp for extension
-                p_bp = p_bp_relative[j]
-                closest_point_idx = np.argmin(np.linalg.norm(curve_target - p_bp, axis=1))
-                error_dir = error1[closest_point_idx]
-                p_bp1_error_dir.append(error_dir)
-                ang_error_dir = angle_error1[closest_point_idx]
-                p_bp1_ang_error_dir.append(ang_error_dir)
-            # p_bp1_error_dir.append(np.array([0,0,0])) # no update on the end breakpoints
-            # p_bp1_error_dir.insert(0,np.array([0,0,0])) # no update on the first breakpoints
-            # p_bp1_ang_error_dir.append(np.array([0,0,0])) # no update on the end breakpoints
-            # p_bp1_ang_error_dir.insert(0,np.array([0,0,0])) # no update on the first breakpoints
-        else:
-            all_dedp = []
-            ##########################################calculate gradient for peaks######################################
-            ###restore trajectory from primitives
-            curve_interp1, curve_R_interp1, curve_js_interp1, breakpoints_blended=form_traj_from_bp(q_bp1,primitives1,robot1)
-            curve_interp2, curve_R_interp2, curve_js_interp2, breakpoints_blended=form_traj_from_bp(q_bp2,primitives2,robot2)
-            curve_js_blended1,curve_blended1,curve_R_blended1=blend_js_from_primitive(curve_interp1, curve_js_interp1, breakpoints_blended, primitives1,robot1,zone=10)
-            curve_js_blended2,curve_blended2,curve_R_blended2=blend_js_from_primitive(curve_interp2, curve_js_interp2, breakpoints_blended, primitives2,robot2,zone=10)
+                ### get closets bp index
+                p_bp_relative,_=ms.form_relative_path(np.squeeze(q_bp1),np.squeeze(q_bp2),base2_R,base2_p)
+                p_bp1_error_dir=[]
+                p_bp1_ang_error_dir=[]
+                # find error direction
+                for j in range(step_start1, step_end1+1): # exclude first and the last bp and the bp for extension
+                    p_bp = p_bp_relative[j]
+                    closest_point_idx = np.argmin(np.linalg.norm(curve_target - p_bp, axis=1))
+                    error_dir = error1[closest_point_idx]
+                    p_bp1_error_dir.append(error_dir)
+                    ang_error_dir = angle_error1[closest_point_idx]
+                    p_bp1_ang_error_dir.append(ang_error_dir)
+                # p_bp1_error_dir.append(np.array([0,0,0])) # no update on the end breakpoints
+                # p_bp1_error_dir.insert(0,np.array([0,0,0])) # no update on the first breakpoints
+                # p_bp1_ang_error_dir.append(np.array([0,0,0])) # no update on the end breakpoints
+                # p_bp1_ang_error_dir.insert(0,np.array([0,0,0])) # no update on the first breakpoints
+            else:
+                all_dedp = []
+                ##########################################calculate gradient for peaks######################################
+                ###restore trajectory from primitives
+                curve_interp1, curve_R_interp1, curve_js_interp1, breakpoints_blended=form_traj_from_bp(q_bp1,primitives1,robot1)
+                curve_interp2, curve_R_interp2, curve_js_interp2, breakpoints_blended=form_traj_from_bp(q_bp2,primitives2,robot2)
+                curve_js_blended1,curve_blended1,curve_R_blended1=blend_js_from_primitive(curve_interp1, curve_js_interp1, breakpoints_blended, primitives1,robot1,zone=10)
+                curve_js_blended2,curve_blended2,curve_R_blended2=blend_js_from_primitive(curve_interp2, curve_js_interp2, breakpoints_blended, primitives2,robot2,zone=10)
 
-            ###establish relative trajectory from blended trajectory
-            relative_path_blended,relative_path_blended_R=ms.form_relative_path(curve_js_blended1,curve_js_blended2,base2_R,base2_p)
+                ###establish relative trajectory from blended trajectory
+                relative_path_blended,relative_path_blended_R=ms.form_relative_path(curve_js_blended1,curve_js_blended2,base2_R,base2_p)
 
-            # all_new_bp=[]
-            for peak in peaks:
-                ######gradient calculation related to nearest 3 points from primitive blended trajectory, not actual one
-                _,peak_error_curve_idx=calc_error(relative_path_exe[peak],relative_path[:,:3])  # index of original curve closest to max error point
+                # all_new_bp=[]
+                for peak in peaks:
+                    ######gradient calculation related to nearest 3 points from primitive blended trajectory, not actual one
+                    _,peak_error_curve_idx=calc_error(relative_path_exe[peak],relative_path[:,:3])  # index of original curve closest to max error point
 
-                ###get closest to worst case point on blended trajectory
-                _,peak_error_curve_blended_idx=calc_error(relative_path_exe[peak],relative_path_blended)
+                    ###get closest to worst case point on blended trajectory
+                    _,peak_error_curve_blended_idx=calc_error(relative_path_exe[peak],relative_path_blended)
 
-                ###############get numerical gradient#####
-                ###find closest 3 breakpoints
-                order=np.argsort(np.abs(breakpoints_blended-peak_error_curve_blended_idx))
-                breakpoint_interp_2tweak_indices=order[:3]
+                    ###############get numerical gradient#####
+                    ###find closest 3 breakpoints
+                    order=np.argsort(np.abs(breakpoints_blended-peak_error_curve_blended_idx))
+                    breakpoint_interp_2tweak_indices=order[:3]
 
-                # calculate desired robot1 point
-                tool_in_base1 = rox.Transform(base2_R,base2_p)*robot2.fwd(curve_exe_js2[peak])
-                closest_T = tool_in_base1*rox.Transform(np.eye(3),relative_path[peak_error_curve_idx,:3])
-                closest_p=closest_T.p
-                
-                de_dp=ilc.get_gradient_from_model_xyz_fanuc(p_bp1,q_bp1,breakpoints_blended,curve_blended1,peak_error_curve_blended_idx,robot1.fwd(curve_exe_js1[peak]),closest_p,breakpoint_interp_2tweak_indices,ave_speed)
-                all_dedp.append(de_dp)
+                    # calculate desired robot1 point
+                    tool_in_base1 = rox.Transform(base2_R,base2_p)*robot2.fwd(curve_exe_js2[peak])
+                    closest_T = tool_in_base1*rox.Transform(np.eye(3),relative_path[peak_error_curve_idx,:3])
+                    closest_p=closest_T.p
+                    
+                    de_dp=ilc.get_gradient_from_model_xyz_fanuc(p_bp1,q_bp1,breakpoints_blended,curve_blended1,peak_error_curve_blended_idx,robot1.fwd(curve_exe_js1[peak]),closest_p,breakpoint_interp_2tweak_indices,ave_speed)
+                    all_dedp.append(de_dp)
 
 
 if __name__ == "__main__":
