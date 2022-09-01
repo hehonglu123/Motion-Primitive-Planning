@@ -51,7 +51,7 @@ for num_l in num_ls:
 		
 	primitives_choices=['moveabsj']+['movel_fit']*num_l
 
-	breakpoints[1:]=breakpoints[1:]-1
+	# breakpoints[1:]=breakpoints[1:]-1
 	df=DataFrame({'breakpoints':breakpoints,'primitives':primitives_choices,'points':points,'q_bp':q_bp})
 	df.to_csv(cmd_dir+'command.csv',header=True,index=False)
 

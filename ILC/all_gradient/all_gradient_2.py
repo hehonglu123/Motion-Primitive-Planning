@@ -36,8 +36,8 @@ def main():
 
 	v=1200
 	s = speeddata(v,9999999,9999999,999999)
-	z = z50
-
+	zone=50
+	z = zonedata(False,zone,1.5*zone,1.5*zone,0.15*zone,1.5*zone,0.15*zone)
 
 	ms = MotionSend()
 	breakpoints,primitives,p_bp,q_bp=ms.extract_data_from_cmd(cmd_dir+'command.csv')

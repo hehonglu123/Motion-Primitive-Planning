@@ -27,7 +27,7 @@ def main():
 	dataset='from_NX/'
 	solution_dir='curve_pose_opt2_R/'
 	data_dir="../../data/"+dataset+solution_dir
-	cmd_dir="../../data/"+dataset+solution_dir+'30L/'
+	cmd_dir="../../data/"+dataset+solution_dir+'greedy0.02/'
 
 
 
@@ -37,7 +37,8 @@ def main():
 
 	v=1200
 	s = speeddata(v,9999999,9999999,999999)
-	z = z50
+	zone=50
+	z = zonedata(False,zone,1.5*zone,1.5*zone,0.15*zone,1.5*zone,0.15*zone)
 
 
 	ms = MotionSend(url='http://192.168.55.1:80')

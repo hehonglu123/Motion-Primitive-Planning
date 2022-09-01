@@ -194,8 +194,8 @@ class greedy_fit(fitting_toolbox):
 		if len(breakpoints)-2 in close_indices:
 			close_indices=close_indices[:-1]
 
+		fit_primitives={'movel_fit':movel_fit,'movec_fit':movec_fit,'movej_fit':movej_fit}
 		###merge closely programmed points
-		# fit_primitives={'movel_fit':movel_fit,'movec_fit':movec_fit,'movej_fit':movej_fit}
 		# for idx in close_indices:
 		# 	new_bp=int((breakpoints[idx]+breakpoints[idx+1])/2)
 		# 	if primitives_choices=='movej_fit':
@@ -217,9 +217,24 @@ class greedy_fit(fitting_toolbox):
 
 		#second last point removal
 		if breakpoints[-1]-breakpoints[-2]<self.min_step_start_end:
-			points[-2][-1]=points[-1][-1]
-			q_bp[-2][-1]=q_bp[-1][-1]
-			breakpoints[-2]=breakpoints[-1]
+			if primitives_choices[-2]=='movej_fit':
+				curve_fit,curve_fit_R,curve_fit_js,_,_=self.movej_fit(curve[breakpoints[-2]:],curve_js[breakpoints[-2]:],curve_R[breakpoints[-2]:],p_constraint=points[-2][-1],R_constraint=self.robot.fwd(q_bp[-2][-1]).R)
+				points[-2][-1]=curve_fit[-1]
+				q_bp[-2][-1]=curve_fit_js[-1]
+			elif primitives_choices[-2]=='movel_fit':
+				curve_fit,curve_fit_R,_,_,_=self.movel_fit(curve[breakpoints[-2]:],curve_js[breakpoints[-2]:],curve_R[breakpoints[-2]:],p_constraint=points[-2][-1],R_constraint=self.robot.fwd(q_bp[-2][-1]).R)
+				points[-2][-1]=curve_fit[-1]
+				q_bp[-2][-1]=car2js(self.robot,self.curve_fit_js[breakpoints[-1]],points[-2][-1],curve_fit_R[-1])[0]
+			else:
+				curve_fit,curve_fit_R,_,_,_=self.movec_fit(curve[breakpoints[-2]:],curve_js[breakpoints[-2]:],curve_R[breakpoints[-2]:],p_constraint=points[-2][-1],R_constraint=self.robot.fwd(q_bp[-2][-1]).R)
+				points[-2][0]=curve_fit[int(len(curve_fit)/2)]
+				points[-2][-1]=curve_fit[-1]
+				q_bp[-2][0]=car2js(self.robot,self.curve_fit_js[breakpoints[-2]],points[-2][0],curve_fit_R[int(len(curve_fit)/2)])[0]
+				q_bp[-2][-1]=car2js(self.robot,self.curve_fit_js[breakpoints[-1]],points[-2][-1],curve_fit_R[-1])[0]
+
+			# points[-2][-1]=points[-1][-1]
+			# q_bp[-2][-1]=q_bp[-1][-1]
+			# breakpoints[-2]=breakpoints[-1]
 
 			del breakpoints[-1]
 			del primitives_choices[-1]

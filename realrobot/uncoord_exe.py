@@ -13,9 +13,10 @@ from MotionSend import *
 
 dataset='wood/'
 solution_dir='diffevo3/'
-data_dir="../../../data/"+dataset
+data_dir="../data/"+dataset
 cmd_dir=data_dir+'dual_arm/'+solution_dir+'50L/'
 relative_path = read_csv(data_dir+"/Curve_dense.csv", header=None).values
+lam_relative=calc_lam_cs(relative_path)
 
 with open(data_dir+'dual_arm/'+solution_dir+'abb1200.yaml') as file:
     H_1200 = np.array(yaml.safe_load(file)['H'],dtype=np.float64)
@@ -27,8 +28,8 @@ with open(data_dir+'dual_arm/'+solution_dir+'tcp.yaml') as file:
     H_tcp = np.array(yaml.safe_load(file)['H'],dtype=np.float64)
 robot1=abb6640(d=50)
 robot2=abb1200(R_tool=H_tcp[:3,:3],p_tool=H_tcp[:-1,-1])
-ms1 = MotionSend(robot1=robot1,robot2=robot2,base2_R=base2_R,base2_p=base2_p)
-ms2=MotionSend(robot1=robot2, url="http://192.168.68.68:80")
+ms1 = MotionSend(robot1=robot1,robot2=robot2,base2_R=base2_R,base2_p=base2_p,url='http://192.168.55.1:80')
+ms2=MotionSend(robot1=robot2, url='http://192.168.55.3:80')
 
 
 df1=None
