@@ -124,8 +124,10 @@ class greedy_fit(fitting_toolbox):
 		self.breakpoints=[0]
 		primitives_choices1=[]
 		points1=[]
+		q_bp1=[]
 		primitives_choices2=[]
 		points2=[]
+		q_bp2=[]
 
 		self.curve_fit1=[]
 		self.curve_fit_R1=[]
@@ -158,17 +160,23 @@ class greedy_fit(fitting_toolbox):
 			###generate output
 			if primitive1=='movec_fit':
 				points1.append([curve_fit1[int(len(curve_fit1)/2)],curve_fit1[-1]])
+				q_bp1.append([curve_fit_js1[int(len(curve_fit_R1)/2)],curve_fit_js1[-1]])
 			elif primitive1=='movel_fit':
 				points1.append([curve_fit1[-1]])
+				q_bp1.append([curve_fit_js1[-1]])
 			else:
-				points1.append([curve_fit_js1[-1]])
+				points1.append([curve_fit1[-1]])
+				q_bp1.append([curve_fit_js1[-1]])
 
 			if primitive2=='movec_fit':
 				points2.append([curve_fit2[int(len(curve_fit2)/2)],curve_fit2[-1]])
+				q_bp2.append([curve_fit_js2[int(len(curve_fit_R2)/2)],curve_fit_js2[-1]])
 			elif primitive2=='movel_fit':
 				points2.append([curve_fit2[-1]])
+				q_bp2.append([curve_fit_js2[-1]])
 			else:
-				points2.append([curve_fit_js2[-1]])
+				points2.append([curve_fit2[-1]])
+				q_bp2.append([curve_fit_js2[-1]])
 			
 			primitives_choices1.append(primitive1)
 			primitives_choices2.append(primitive2)
@@ -202,28 +210,33 @@ class greedy_fit(fitting_toolbox):
 
 
 
-		return self.breakpoints,primitives_choices1,points1,primitives_choices2,points2
+		return self.breakpoints,primitives_choices1,points1,q_bp1,primitives_choices2,points2,q_bp2
 
 
 
 def main():
 	###read in points
-	curve_js1 = read_csv("../constraint_solver/dual_arm/trajectory/arm1.csv",header=None).values
-	curve_js2 = read_csv("../constraint_solver/dual_arm/trajectory/arm2.csv",header=None).values
-	###define robots
-	robot1=abb1200(d=50)
-	robot2=abb6640()
-	###read in robot2 pose
-	with open('../constraint_solver/dual_arm/trajectory/abb6640.yaml') as file:
-		H_6640 = np.array(yaml.safe_load(file)['H'],dtype=np.float64)
+	dataset='from_NX/'
+	solution_dir='diffevo3/'
+	data_dir='../data/'+dataset+'/dual_arm/'+solution_dir
 
-	greedy_fit_obj=greedy_fit(robot1,robot2,curve_js1[::10],curve_js2[::10],1000.*H_6640[:-1,-1],H_6640[:-1,:-1],0.5)
+
+	curve_js1 = read_csv(data_dir+'arm1.csv',header=None).values
+	curve_js2 = read_csv(data_dir+'arm2.csv',header=None).values
+	###define robots
+	robot1=abb6640(d=50)
+	robot2=abb1200()
+	###read in robot2 pose
+	with open(data_dir+'abb1200.yaml') as file:
+		H_1200 = np.array(yaml.safe_load(file)['H'],dtype=np.float64)
+
+	greedy_fit_obj=greedy_fit(robot1,robot2,curve_js1[::10],curve_js2[::10],1000.*H_1200[:-1,-1],H_1200[:-1,:-1],0.5)
 
 
 	###set primitive choices, defaults are all 3
 	greedy_fit_obj.primitives={'movel_fit':greedy_fit_obj.movel_fit,'movec_fit':greedy_fit_obj.movec_fit}
 
-	breakpoints,primitives_choices1,points1,primitives_choices2,points2=greedy_fit_obj.fit_under_error()
+	breakpoints,primitives_choices1,points1,q_bp1,primitives_choices2,points2,q_bp2=greedy_fit_obj.fit_under_error()
 
 	###plt
 	###3D plot in global frame
@@ -250,10 +263,10 @@ def main():
 	plt.show()
 
 	############insert initial configuration#################
-	primitives_choices1.insert(0,'movej_fit')
+	primitives_choices1.insert(0,'moveabsj_fit')
 	points1.insert(0,[greedy_fit_obj.curve_fit_js1[0]])
 
-	primitives_choices2.insert(0,'movej_fit')
+	primitives_choices2.insert(0,'moveabsj_fit')
 	points2.insert(0,[greedy_fit_obj.curve_fit_js2[0]])
 
 

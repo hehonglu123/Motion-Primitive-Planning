@@ -154,13 +154,13 @@ def main():
 		# de_dps=np.reshape(de_dps,(-1,1))
 		# gamma=np.linalg.pinv(de_dps)@error_bps
 
-		gamma=-1
+		gamma=1
 
 
 		###update all bp's
 		for bp_idx in range(len(p_bp)):
 			###p_bp temp for numerical gradient
-			p_bp[bp_idx][0]-=gamma*v_d[bp_idx]
+			p_bp[bp_idx][0]+=gamma*v_d[bp_idx]
 			q_bp[bp_idx][0]=car2js(robot,q_bp[bp_idx][0],p_bp[bp_idx][0],robot.fwd(q_bp[bp_idx][0]).R)[0]
 
 

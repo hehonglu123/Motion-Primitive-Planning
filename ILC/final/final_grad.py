@@ -23,10 +23,10 @@ from lambda_calc import *
 from blending import *
 
 def main():
-	dataset='wood/'
-	solution_dir='curve_pose_opt7/'
+	dataset='from_NX/'
+	solution_dir='curve_pose_opt2_R/'
 	data_dir="../../data/"+dataset+solution_dir
-	cmd_dir="../../data/"+dataset+solution_dir+'100L/'
+	cmd_dir="../../data/"+dataset+solution_dir+'50L/'
 
 
 
@@ -36,18 +36,19 @@ def main():
 	multi_peak_threshold=0.2
 	robot=abb6640(d=50)
 
-	v=500
+	v=1200
 	s = speeddata(v,9999999,9999999,999999)
-	zone=10
+	zone=50
 	z = zonedata(False,zone,1.5*zone,1.5*zone,0.15*zone,1.5*zone,0.15*zone)
 
+	all_bp_threshold=0.8
 
+	
 	ms = MotionSend()
 	breakpoints,primitives,p_bp,q_bp=ms.extract_data_from_cmd(cmd_dir+'command.csv')
 
 	###extension
 	p_bp,q_bp=ms.extend(robot,q_bp,primitives,breakpoints,p_bp,extension_start=100,extension_end=100)
-
 	###ilc toolbox def
 	ilc=ilc_toolbox(robot,primitives)
 
@@ -61,7 +62,7 @@ def main():
 		###execution with plant
 		logged_data=ms.exec_motions(robot,primitives,breakpoints,p_bp,q_bp,s,z)
 		# Write log csv to file
-		with open("recorded_data/curve_exe_v"+str(v)+'_z'+str(zone)+'.csv',"w") as f:
+		with open("recorded_data/curve_exe_v"+str(v)+"_z10.csv","w") as f:
 			f.write(logged_data)
 
 		ms.write_data_to_cmd('recorded_data/command.csv',breakpoints,primitives, p_bp,q_bp)
@@ -76,6 +77,7 @@ def main():
 		##############################calcualte error########################################
 		error,angle_error=calc_all_error_w_normal(curve_exe,curve[:,:3],curve_exe_R[:,:,-1],curve[:,3:])
 		print(max(error))
+
 		#############################error peak detection###############################
 		peaks,_=find_peaks(error,height=multi_peak_threshold,prominence=0.05,distance=20/(lam[int(len(lam)/2)]-lam[int(len(lam)/2)-1]))		###only push down peaks higher than height, distance between each peak is 20mm, threshold to filter noisy peaks
 		
@@ -117,38 +119,36 @@ def main():
 		# ax.scatter(curve_exe[max_error_idx,0], curve_exe[max_error_idx,1], curve_exe[max_error_idx,2],c='orange',label='worst case')
 		
 		
-		##########################################calculate gradient for peaks######################################
-		###restore trajectory from primitives
-		curve_interp, curve_R_interp, curve_js_interp, breakpoints_blended=form_traj_from_bp(q_bp,primitives,robot)
+		
+		if max(error)>all_bp_threshold:
+			print('all bps adjustment')
+			##########################################adjust bp's toward error direction######################################
+			error_bps_v,error_bps_w=ilc.get_error_direction(curve,p_bp,q_bp,curve_exe,curve_exe_R)
+			p_bp, q_bp=ilc.update_error_direction(curve,p_bp,q_bp,error_bps_v,error_bps_w)
+		else:
+			print('max gradient')
+			##########################################Multipeak Max Gradient######################################
+			###restore trajectory from primitives
+			curve_interp, curve_R_interp, curve_js_interp, breakpoints_blended=form_traj_from_bp(q_bp,primitives,robot)
 
-		curve_js_blended,curve_blended,curve_blended_R=blend_js_from_primitive(curve_interp, curve_js_interp, breakpoints_blended, primitives,robot,zone=10)
+			curve_js_blended,curve_blended,curve_R_blended=blend_js_from_primitive(curve_interp, curve_js_interp, breakpoints_blended, primitives,robot,zone=10)
 
-		for peak in peaks:
-			######gradient calculation related to nearest 3 points from primitive blended trajectory, not actual one
-			_,peak_error_curve_idx=calc_error(curve_exe[peak],curve[:,:3])  # index of original curve closest to max error point
+			for peak in peaks:
+				######gradient calculation related to nearest 3 points from primitive blended trajectory, not actual one
+				_,peak_error_curve_idx=calc_error(curve_exe[peak],curve[:,:3])  # index of original curve closest to max error point
 
-			###get closest to worst case point on blended trajectory
-			_,peak_error_curve_blended_idx=calc_error(curve_exe[peak],curve_blended)
+				###get closest to worst case point on blended trajectory
+				_,peak_error_curve_blended_idx=calc_error(curve_exe[peak],curve_blended)
 
-			###############get numerical gradient#####
-			###find closest 3 breakpoints
-			order=np.argsort(np.abs(breakpoints_blended-peak_error_curve_blended_idx))
-			breakpoint_interp_2tweak_indices=order[:3]
+				###############get numerical gradient#####
+				###find closest 3 breakpoints
+				order=np.argsort(np.abs(breakpoints_blended-peak_error_curve_blended_idx))
+				breakpoint_interp_2tweak_indices=order[:3]
 
-			peak_pose=robot.fwd(curve_exe_js[peak])
-			##################################################################XYZ Gradient######################################################################
-			de_dp=ilc.get_gradient_from_model_xyz(p_bp,q_bp,breakpoints_blended,curve_blended,peak_error_curve_blended_idx,peak_pose,curve[peak_error_curve_idx,:3],breakpoint_interp_2tweak_indices)
-			p_bp, q_bp=ilc.update_bp_xyz(p_bp,q_bp,de_dp,error[peak],breakpoint_interp_2tweak_indices)
-
-
-			##################################################################Ori Gradient######################################################################
-			de_ori_dp=ilc.get_gradient_from_model_ori(p_bp,q_bp,breakpoints_blended,curve_blended_R,peak_error_curve_blended_idx,peak_pose,curve[peak_error_curve_idx,3:],breakpoint_interp_2tweak_indices)
-			q_bp=ilc.update_bp_ori(p_bp,q_bp,de_ori_dp,angle_error[peak],breakpoint_interp_2tweak_indices)
-
-
-			##################################################################Joint Gradiant####################################################################
-			# de_dp, _=ilc.get_gradient_from_model_6j(q_bp,breakpoints_blended,curve_blended,curve_R_blended,peak_error_curve_blended_idx,robot.fwd(curve_exe_js[peak]),curve[peak_error_curve_idx,:3],curve[peak_error_curve_idx,3:],breakpoint_interp_2tweak_indices)
-			# p_bp, q_bp=ilc.update_bp_6j(p_bp,q_bp,de_dp,np.zeros(len(de_dp))[np.newaxis],error[peak],0,breakpoint_interp_2tweak_indices)
+				##################################################################XYZ Gradient######################################################################
+				de_dp=ilc.get_gradient_from_model_xyz(p_bp,q_bp,breakpoints_blended,curve_blended,peak_error_curve_blended_idx,robot.fwd(curve_exe_js[peak]),curve[peak_error_curve_idx,:3],breakpoint_interp_2tweak_indices)
+				p_bp, q_bp=ilc.update_bp_xyz(p_bp,q_bp,de_dp,error[peak],breakpoint_interp_2tweak_indices)
+		
 
 
 		# for m in breakpoint_interp_2tweak_indices:
