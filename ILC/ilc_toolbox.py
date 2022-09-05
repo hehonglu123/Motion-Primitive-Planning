@@ -15,6 +15,8 @@ from blending import *
 
 class ilc_toolbox(object):
 	def __init__(self,robot,primitives,base2_R=np.eye(3),base2_p=np.zeros(3)):
+		#robot: single robot or tuple
+		#primitives: series of primitives or list of 2 
 		self.robot=robot
 		self.primitives=primitives
 		self.base2_R=base2_R
@@ -650,7 +652,7 @@ class ilc_toolbox(object):
 					curve_original_idx=len(curve)-1
 					error_bp,bp_exe_idx=calc_error(curve[curve_original_idx,:3],curve_exe)
 				else:
-					_,bp_exe_idx=calc_error(p_bp[bp_idx][0],curve_exe)							###find closest point on curve_exe to bp
+					_,bp_exe_idx=calc_error(p_bp[bp_idx][bp_sub_idx],curve_exe)							###find closest point on curve_exe to bp
 					bp_exe_indices.append(bp_exe_idx)
 					error_bp,curve_original_idx=calc_error(curve_exe[bp_exe_idx],curve[:,:3])	###find closest point on curve_original to curve_exe[bp]
 					curve_original_indices.append(curve_original_idx)			
@@ -679,11 +681,13 @@ class ilc_toolbox(object):
 					step_w=1*gamma_w
 				#push toward error direction
 				p_bp[bp_idx][bp_sub_idx]+=step_v*error_bps_v[bp_idx][bp_sub_idx]
+
+
 				R_old=self.robot.fwd(q_bp[bp_idx][bp_sub_idx]).R
 
 				theta_temp=np.linalg.norm(error_bps_w[bp_idx][bp_sub_idx])
 				
-				if theta_temp==0:
+				if theta_temp==0 or bp_sub_idx==1:	###if no angle error or it's movec mid point
 					R_new=R_old
 				else:
 					k_temp=error_bps_w[bp_idx][bp_sub_idx]/theta_temp
@@ -693,4 +697,112 @@ class ilc_toolbox(object):
 
 		return p_bp, q_bp
 
+
+	def get_error_direction_dual(self,relative_path,p_bp1,q_bp1,p_bp2,q_bp2,relative_path_exe,relative_path_exe_R,curve_exe1,curve_exe_R1,curve_exe2,curve_exe_R2):
+		###find points on curve_exe closest to all p_bp's, and closest point on blended trajectory to all p_bp's
+		error_bps1=[]			#in robot2 tool frame
+		error_bps2=[]			#in robot2 tool frame
+		error_bps_v1=np.zeros((len(p_bp1),2,3))		#in global frame
+		error_bps_w1=np.zeros((len(p_bp1),2,3))
+		error_bps_v2=np.zeros((len(p_bp2),2,3))
+		error_bps_w2=np.zeros((len(p_bp2),2,3))
+
+		###get error direction for robot1
+		for bp_idx in range(len(p_bp1)):
+			for bp_sub_idx in range(len(p_bp1[bp_idx])):
+				if bp_idx==0 and bp_sub_idx==0:
+					curve_original_idx=0
+					error_bp,bp_exe_idx=calc_error(relative_path[curve_original_idx,:3],relative_path_exe)
+				elif bp_idx==len(p_bp1)-1 and bp_sub_idx==len(p_bp1[bp_idx])-1:
+					curve_original_idx=len(relative_path)-1
+					error_bp,bp_exe_idx=calc_error(relative_path[curve_original_idx,:3],relative_path_exe)
+				else:
+					_,bp_exe_idx=calc_error(p_bp1[bp_idx][bp_sub_idx],curve_exe1)							###find closest point on curve_exe to bp
+					error_bp,curve_original_idx=calc_error(relative_path_exe[bp_exe_idx],relative_path[:,:3])	###find closest point on curve_original to curve_exe[bp]
+				
+				error_bps1.append(error_bp)
+				###error direction in global frame (robot1 frame)
+				error_bps_v1[bp_idx][bp_sub_idx]=(self.base2_R@curve_exe_R2[bp_exe_idx])@(relative_path[curve_original_idx,:3]-relative_path_exe[bp_exe_idx])
+				###normal error direction
+				R_temp=(self.base2_R@curve_exe_R2[bp_exe_idx])@rotation_matrix_from_vectors(relative_path_exe_R[bp_exe_idx][:,-1],relative_path[curve_original_idx,3:])
+
+				k_temp,theta_temp=R2rot(R_temp)
+				if theta_temp!=0:
+					error_bps_w1[bp_idx][bp_sub_idx]=k_temp*theta_temp
+
+
+		###get error direction for robot2
+		for bp_idx in range(len(p_bp2)):
+			for bp_sub_idx in range(len(p_bp2[bp_idx])):
+				if bp_idx==0 and bp_sub_idx==0:
+					curve_original_idx=0
+					error_bp,bp_exe_idx=calc_error(relative_path[curve_original_idx,:3],relative_path_exe)
+				elif bp_idx==len(p_bp2)-1 and bp_sub_idx==len(p_bp2[bp_idx])-1:
+					curve_original_idx=len(relative_path)-1
+					error_bp,bp_exe_idx=calc_error(relative_path[curve_original_idx,:3],relative_path_exe)
+				else:
+					_,bp_exe_idx=calc_error(p_bp2[bp_idx][bp_sub_idx],curve_exe2)							###find closest point on curve_exe to bp
+					error_bp,curve_original_idx=calc_error(relative_path_exe[bp_exe_idx],relative_path[:,:3])	###find closest point on curve_original to curve_exe[bp]
+				
+				error_bps2.append(error_bp)
+				###error direction in robot2 base frame, negate
+				error_bps_v2[bp_idx][bp_sub_idx]=-curve_exe_R2[bp_exe_idx]@(relative_path[curve_original_idx,:3]-relative_path_exe[bp_exe_idx])
+				###normal error direction
+				R_temp=curve_exe_R2[bp_exe_idx]@rotation_matrix_from_vectors(relative_path_exe_R[bp_exe_idx][:,-1],relative_path[curve_original_idx,3:]).T
+				k_temp,theta_temp=R2rot(R_temp)
+				if theta_temp!=0:
+					error_bps_w2[bp_idx][bp_sub_idx]=k_temp*theta_temp
+
+
+		return error_bps_v1,error_bps_w1,error_bps_v2,error_bps_w2
+
+
+	def update_error_direction_dual(self,relative_path,p_bp1,q_bp1,p_bp2,q_bp2,error_bps_v1,error_bps_w1,error_bps_v2,error_bps_w2,gamma_v=0.2,gamma_w=0.1,extension=True):
+		
+		for bp_idx in range(len(p_bp1)):
+			for bp_sub_idx in range(len(p_bp1[bp_idx])):				
+				if (bp_idx==0 and bp_sub_idx==0) or (bp_idx==len(p_bp1)-1 and bp_sub_idx==len(p_bp1[bp_idx])-1) and extension:
+					step_v=2*gamma_v
+					step_w=2*gamma_w
+				else:
+					step_v=1*gamma_v
+					step_w=1*gamma_w
+				#push toward error direction
+				p_bp1[bp_idx][bp_sub_idx]+=step_v*error_bps_v1[bp_idx][bp_sub_idx]
+				R_old=self.robot[0].fwd(q_bp1[bp_idx][bp_sub_idx]).R
+
+				theta_temp=np.linalg.norm(error_bps_w1[bp_idx][bp_sub_idx])
+				
+				if theta_temp==0 or bp_sub_idx==1:	###if no angle error or it's movec mid point
+					R_new=R_old
+				else:
+					k_temp=error_bps_w1[bp_idx][bp_sub_idx]/theta_temp
+					R_new=rot(k_temp,step_w*theta_temp)@R_old
+
+				q_bp1[bp_idx][bp_sub_idx]=car2js(self.robot[0],q_bp1[bp_idx][bp_sub_idx],p_bp1[bp_idx][bp_sub_idx],R_new)[0]
+
+		for bp_idx in range(len(p_bp2)):
+			for bp_sub_idx in range(len(p_bp2[bp_idx])):				
+				if (bp_idx==0 and bp_sub_idx==0) or (bp_idx==len(p_bp1)-1 and bp_sub_idx==len(p_bp1[bp_idx])-1) and extension:
+					step_v=2*gamma_v
+					step_w=2*gamma_w
+				else:
+					step_v=1*gamma_v
+					step_w=1*gamma_w
+				#push toward error direction
+				p_bp2[bp_idx][bp_sub_idx]+=step_v*error_bps_v2[bp_idx][bp_sub_idx]
+				R_old=self.robot[1].fwd(q_bp2[bp_idx][bp_sub_idx]).R
+
+				theta_temp=np.linalg.norm(error_bps_w2[bp_idx][bp_sub_idx])
+				
+				if theta_temp==0 or bp_sub_idx==1:	###if no angle error or it's movec mid point
+					R_new=R_old
+				else:
+					k_temp=error_bps_w2[bp_idx][bp_sub_idx]/theta_temp
+					R_new=rot(k_temp,step_w*theta_temp)@R_old
+
+				q_bp2[bp_idx][bp_sub_idx]=car2js(self.robot[1],q_bp2[bp_idx][bp_sub_idx],p_bp2[bp_idx][bp_sub_idx],R_new)[0]
+
+
+		return p_bp1, q_bp1, p_bp2, q_bp2
 

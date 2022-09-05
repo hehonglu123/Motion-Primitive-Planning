@@ -42,12 +42,13 @@ def main():
 	###get lambda at each breakpoint
 	lam_bp=lam_relative_path[np.append(breakpoints1[0],breakpoints1[1:]-1)]
 
-	vd_relative=1200
+	vd_relative=1500
 
 	s1_all,s2_all=calc_individual_speed(vd_relative,lam1,lam2,lam_relative_path,breakpoints1)
 	v2_all=[]
 	for i in range(len(breakpoints1)):
-		v2_all.append(speeddata(s2_all[i],9999999,9999999,999999))
+		# v2_all.append(speeddata(s2_all[i],9999999,9999999,999999))
+		v2_all.append(v5000)
 	
 
 
@@ -68,7 +69,7 @@ def main():
 
 		ms = MotionSend(robot1=robot1,robot2=robot2,base2_R=base2_R,base2_p=base2_p)
 		###execution with plant
-		logged_data=ms.exec_motions_multimove(breakpoints1,primitives1,primitives2,p_bp1,p_bp2,q_bp1,q_bp2,vmax,v2_all,z50,z10)
+		logged_data=ms.exec_motions_multimove(breakpoints1,primitives1,primitives2,p_bp1,p_bp2,q_bp1,q_bp2,vmax,v2_all,z10,z10)
 		with open('recorded_data/dual_iteration_'+str(i)+'.csv',"w") as f:
 			f.write(logged_data)
 		###save commands
@@ -128,52 +129,16 @@ def main():
 		
 		# plt.show()
 
-		##########################################calculate gradient for peaks######################################
-		###restore trajectory from primitives
-		curve_interp1, curve_R_interp1, curve_js_interp1, breakpoints_blended=form_traj_from_bp(q_bp1,primitives1,robot1)
-		curve_interp2, curve_R_interp2, curve_js_interp2, breakpoints_blended=form_traj_from_bp(q_bp2,primitives2,robot2)
-		curve_js_blended1,curve_blended1,curve_R_blended1=blend_js_from_primitive(curve_interp1, curve_js_interp1, breakpoints_blended, primitives1,robot1,zone=10)
-		curve_js_blended2,curve_blended2,curve_R_blended2=blend_js_from_primitive(curve_interp2, curve_js_interp2, breakpoints_blended, primitives2,robot2,zone=10)
+		##########################################move towards error direction######################################
+		error_bps_v1,error_bps_w1,error_bps_v2,error_bps_w2=ilc.get_error_direction_dual(relative_path,p_bp1,q_bp1,p_bp2,q_bp2,relative_path_exe,relative_path_exe_R,curve_exe1,curve_exe_R1,curve_exe2,curve_exe_R2)
 
-		###establish relative trajectory from blended trajectory
-		relative_path_blended,relative_path_blended_R=ms.form_relative_path(curve_js_blended1,curve_js_blended2,base2_R,base2_p)
-
-		for peak in peaks:
-			######gradient calculation related to nearest 3 points from primitive blended trajectory, not actual one
-			_,peak_error_curve_idx=calc_error(relative_path_exe[peak],relative_path[:,:3])  # index of original curve closest to max error point
-
-			###get closest to worst case point on blended trajectory
-			_,peak_error_curve_blended_idx=calc_error(relative_path_exe[peak],relative_path_blended)
-
-			###############get numerical gradient#####
-			###find closest 3 breakpoints
-			order=np.argsort(np.abs(breakpoints_blended-peak_error_curve_blended_idx))
-			breakpoint_interp_2tweak_indices=order[:3]
-
-			de_dp=ilc.get_gradient_from_model_xyz_dual(\
-				[p_bp1,p_bp2],[q_bp1,q_bp2],breakpoints_blended,[curve_blended1,curve_blended2],peak_error_curve_blended_idx,[curve_exe_js1[peak],curve_exe_js2[peak]],relative_path[peak_error_curve_idx,:3],breakpoint_interp_2tweak_indices)
-
-
-			p_bp1_new, q_bp1_new,p_bp2_new,q_bp2_new=ilc.update_bp_xyz_dual([p_bp1,p_bp2],[q_bp1,q_bp2],de_dp,error[peak],breakpoint_interp_2tweak_indices)
-			
-
-
-			#########plot adjusted breakpoints
-			p_bp_relative_new,_=ms.form_relative_path(np.squeeze(q_bp1_new),np.squeeze(q_bp2_new),base2_R,base2_p)
-
-
-			# ax.scatter3D(p_bp_relative_new[breakpoint_interp_2tweak_indices,0], p_bp_relative_new[breakpoint_interp_2tweak_indices,1], p_bp_relative_new[breakpoint_interp_2tweak_indices,2], c='blue',label='new breakpoints')
-			# plt.legend()
-			# plt.show()
-
-			###update
-			p_bp1=p_bp1_new
-			q_bp1=q_bp1_new
-			p_bp2=p_bp2_new
-			q_bp2=q_bp2_new
+		###FIX ERROR_W!
+		error_bps_w1=np.zeros(error_bps_w1.shape)
+		error_bps_w2=np.zeros(error_bps_w2.shape)
+		p_bp1, q_bp1, p_bp2, q_bp2=ilc.update_error_direction_dual(relative_path,p_bp1,q_bp1,p_bp2,q_bp2,error_bps_v1,error_bps_w1,error_bps_v2,error_bps_w2)
 
 		###cmd speed adjustment
-		speed_alpha=0.5
+		speed_alpha=0.1
 
 		for m in range(1,len(lam_bp)):
 			###get segment average speed

@@ -16,24 +16,15 @@ sys.path.append('../../../toolbox')
 from robots_def import *
 from error_check import *
 from MotionSend import *
+from dual_arm import *
 
 def main():
     dataset='from_NX/'
-    solution_dir='diffevo3/'
     data_dir="../../../data/"+dataset
-    cmd_dir=data_dir+'/dual_arm/'+solution_dir+'30L/'
-    relative_path = read_csv(data_dir+"/Curve_dense.csv", header=None).values
-
-    with open(data_dir+'dual_arm/'+solution_dir+'abb1200.yaml') as file:
-        H_1200 = np.array(yaml.safe_load(file)['H'],dtype=np.float64)
-
-    base2_R=H_1200[:3,:3]
-    base2_p=1000*H_1200[:-1,-1]
-
-    with open(data_dir+'dual_arm/'+solution_dir+'tcp.yaml') as file:
-        H_tcp = np.array(yaml.safe_load(file)['H'],dtype=np.float64)
-    robot1=abb6640(d=50)
-    robot2=abb1200(R_tool=H_tcp[:3,:3],p_tool=H_tcp[:-1,-1])
+    solution_dir=data_dir+'dual_arm/'+'diffevo3/'
+    cmd_dir=solution_dir+'greedy0.2/'
+    
+    relative_path,robot1,robot2,base2_R,base2_p,lam_relative_path,lam1,lam2,curve_js1,curve_js2=initialize_data(dataset,data_dir,solution_dir,cmd_dir)
 
     ms = MotionSend(robot1=robot1,robot2=robot2,base2_R=base2_R,base2_p=base2_p)
 
@@ -52,7 +43,7 @@ def main():
         breakpoints2,primitives2,p_bp2,q_bp2=ms.extract_data_from_cmd(cmd_dir+'command2.csv')
 
         ###extension
-        p_bp1,q_bp1,p_bp2,q_bp2=ms.extend_dual(ms.robot1,p_bp1,q_bp1,primitives1,ms.robot2,p_bp2,q_bp2,primitives2,breakpoints1)
+        # p_bp1,q_bp1,p_bp2,q_bp2=ms.extend_dual(ms.robot1,p_bp1,q_bp1,primitives1,ms.robot2,p_bp2,q_bp2,primitives2,breakpoints1)
 
         logged_data=ms.exec_motions_multimove(breakpoints1,primitives1,primitives2,p_bp1,p_bp2,q_bp1,q_bp2,v1,v2,z,z)
         # Write log csv to file
