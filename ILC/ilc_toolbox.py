@@ -48,11 +48,12 @@ class ilc_toolbox(object):
 		###breakpoint_interp_2tweak_indices:	closest N breakpoints
 
 		de_dp=[]    #de_dp1q1,de_dp1q2,...,de_dp3q6
-		delta=0.1 	#mm
+		delta=0.2 	#mm
 
 		###len(primitives)==len(breakpoints)==len(breakpoints_blended)==len(points_list)
 		for m in breakpoint_interp_2tweak_indices:  #3 breakpoints
 			for bp_sub_idx in range(len(p_bp[m])):
+				# print(np.linalg.norm(p_bp[m][bp_sub_idx]-closest_p))
 				for n in range(3): #3DOF, xyz
 					q_bp_temp=np.array(copy.deepcopy(q_bp))
 					p_bp_temp=copy.deepcopy(p_bp)
@@ -95,6 +96,7 @@ class ilc_toolbox(object):
 					de_dp.append(de/delta)
 
 		de_dp=np.reshape(de_dp,(-1,1))
+		# print(de_dp)
 
 		return de_dp
 
@@ -448,6 +450,9 @@ class ilc_toolbox(object):
 			R_old=self.robot.fwd(q_bp[m][-1]).R
 			w_temp=ori_adjustment[0][3*idx:3*(idx+1)]
 			theta_temp=np.linalg.norm(w_temp)
+			if theta_temp==0:
+				continue
+
 			k_temp=w_temp/theta_temp
 			R_new=rot(k_temp,alpha*theta_temp)@R_old
 			q_bp[m][-1]=car2js(self.robot,q_bp[m][-1],p_bp[m][-1],R_new)[0]

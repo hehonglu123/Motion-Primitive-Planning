@@ -45,10 +45,12 @@ def main():
 
 	
 	ms = MotionSend()
-	breakpoints,primitives,p_bp,q_bp=ms.extract_data_from_cmd(cmd_dir+'command.csv')
+	# breakpoints,primitives,p_bp,q_bp=ms.extract_data_from_cmd(cmd_dir+'command.csv')
 
-	###extension
-	p_bp,q_bp=ms.extend(robot,q_bp,primitives,breakpoints,p_bp,extension_start=100,extension_end=100)
+	# ###extension
+	# p_bp,q_bp=ms.extend(robot,q_bp,primitives,breakpoints,p_bp,extension_start=100,extension_end=100)
+
+	breakpoints,primitives,p_bp,q_bp=ms.extract_data_from_cmd('recorded_data/command.csv')
 	###ilc toolbox def
 	ilc=ilc_toolbox(robot,primitives)
 
