@@ -21,10 +21,10 @@ from error_check import *
 from MotionSend import *
 from lambda_calc import *
 from blending import *
-
+from realrobot import *
 def main():
-	dataset='wood/'
-	solution_dir='curve_pose_opt7/'
+	dataset='from_NX/'
+	solution_dir='curve_pose_opt2_R/'
 	data_dir="../../data/"+dataset+solution_dir
 	cmd_dir="../../data/"+dataset+solution_dir+'greedy0.02/'
 
@@ -36,20 +36,19 @@ def main():
 	multi_peak_threshold=0.2
 	robot=abb6640(d=50)
 
-	v=400
+	v=1200
 	s = speeddata(v,9999999,9999999,999999)
-	zone=20
+	zone=40
 	z = zonedata(False,zone,1.5*zone,1.5*zone,0.15*zone,1.5*zone,0.15*zone)
 
 	all_bp_threshold=0.8
 
 	
 	ms = MotionSend()
-	# breakpoints,primitives,p_bp,q_bp=ms.extract_data_from_cmd(cmd_dir+'command.csv')
-
-	# ###extension
-	# p_bp,q_bp=ms.extend(robot,q_bp,primitives,breakpoints,p_bp,extension_start=100,extension_end=100)
-	breakpoints,primitives,p_bp,q_bp=ms.extract_data_from_cmd('curve1_pose_opt7_v400/command.csv')
+	breakpoints,primitives,p_bp,q_bp=ms.extract_data_from_cmd(cmd_dir+'command.csv')
+	###extension
+	p_bp,q_bp=ms.extend(robot,q_bp,primitives,breakpoints,p_bp,extension_start=150,extension_end=100)
+	# breakpoints,primitives,p_bp,q_bp=ms.extract_data_from_cmd('curve2_pose_opt2_v1200/command.csv')
 
 	
 	###ilc toolbox def
@@ -76,7 +75,7 @@ def main():
 		print(max(error))
 
 		#############################error peak detection###############################
-		peaks,_=find_peaks(error,height=multi_peak_threshold,prominence=0.05,distance=20/(lam[int(len(lam)/2)]-lam[int(len(lam)/2)-1]))		###only push down peaks higher than height, distance between each peak is 20mm, threshold to filter noisy peaks
+		peaks,_=find_peaks(error,height=multi_peak_threshold,prominence=0.2,distance=20/(lam[int(len(lam)/2)]-lam[int(len(lam)/2)-1]))		###only push down peaks higher than height, distance between each peak is 20mm, threshold to filter noisy peaks
 		
 		if len(peaks)==0 or np.argmax(error) not in peaks:
 			peaks=np.append(peaks,np.argmax(error))
@@ -121,11 +120,31 @@ def main():
 		
 		
 		
-		if max(error)<max_error_prev and not max_grad:
+		if not max_grad:
 			print('all bps adjustment')
 			##########################################adjust bp's toward error direction######################################
 			error_bps_v,error_bps_w=ilc.get_error_direction(curve,p_bp,q_bp,curve_exe,curve_exe_R)
-			p_bp, q_bp=ilc.update_error_direction(curve,p_bp,q_bp,error_bps_v,error_bps_w)
+			###line search on gamma
+			max_error=[]
+			gamma_all=np.linspace(0.2,1,num=5)
+			for gamma_v in gamma_all:
+				p_bp_temp, q_bp_temp=ilc.update_error_direction(curve,p_bp,q_bp,error_bps_v,error_bps_w,gamma_v=gamma_v,gamma_w=0.1)
+				ms = MotionSend(url='http://192.168.55.1:80')
+				curve_js_all_new, avg_curve_js, timestamp_d=average_5_exe(ms,robot,primitives,breakpoints,p_bp_temp,q_bp_temp,s,z,curve,"recorded_data")
+				###calculat data with average curve
+				lam, curve_exe, curve_exe_R, speed=logged_data_analysis(robot,timestamp_d,avg_curve_js)
+				#############################chop extension off##################################
+				lam, curve_exe, curve_exe_R,curve_exe_js, speed, timestamp=ms.chop_extension(curve_exe, curve_exe_R,avg_curve_js, speed, timestamp_d,curve[0,:3],curve[-1,:3])
+				##############################calcualte error########################################
+				error_temp,angle_error_temp=calc_all_error_w_normal(curve_exe,curve[:,:3],curve_exe_R[:,:,-1],curve[:,3:])
+				max_error.append(max(error_temp))
+			min_error_idx=np.argmin(max_error)
+			gamma_v=gamma_all[min_error_idx]
+			if min(max_error)>max(error):
+				gamma_v=0
+				max_grad=True
+			print("FINAL GAMMA",gamma_v)
+			p_bp, q_bp=ilc.update_error_direction(curve,p_bp,q_bp,error_bps_v,error_bps_w,gamma_v=gamma_v,gamma_w=0.1)
 		else:
 			max_grad=True
 			print('max gradient')
@@ -150,12 +169,12 @@ def main():
 				peak_pose=robot.fwd(curve_exe_js[peak])
 				##################################################################XYZ Gradient######################################################################
 				de_dp=ilc.get_gradient_from_model_xyz(p_bp,q_bp,breakpoints_blended,curve_blended,peak_error_curve_blended_idx,peak_pose,curve[peak_error_curve_idx,:3],breakpoint_interp_2tweak_indices)
-				p_bp, q_bp=ilc.update_bp_xyz(p_bp,q_bp,de_dp,error[peak],breakpoint_interp_2tweak_indices)
+				p_bp, q_bp=ilc.update_bp_xyz(p_bp,q_bp,de_dp,error[peak],breakpoint_interp_2tweak_indices,alpha=0.25)
 
 
 				##################################################################Ori Gradient######################################################################
 				de_ori_dp=ilc.get_gradient_from_model_ori(p_bp,q_bp,breakpoints_blended,curve_blended_R,peak_error_curve_blended_idx,peak_pose,curve[peak_error_curve_idx,3:],breakpoint_interp_2tweak_indices)
-				q_bp=ilc.update_bp_ori(p_bp,q_bp,de_ori_dp,angle_error[peak],breakpoint_interp_2tweak_indices)
+				q_bp=ilc.update_bp_ori(p_bp,q_bp,de_ori_dp,angle_error[peak],breakpoint_interp_2tweak_indices,alpha=0.1)
 
 			# for m in breakpoint_interp_2tweak_indices:
 			# 	for bp_sub_idx in range(len(p_bp[m]))

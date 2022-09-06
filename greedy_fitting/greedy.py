@@ -194,7 +194,19 @@ class greedy_fit(fitting_toolbox):
 		if len(breakpoints)-2 in close_indices:
 			close_indices=close_indices[:-1]
 
-		fit_primitives={'movel_fit':movel_fit,'movec_fit':movec_fit,'movej_fit':movej_fit}
+		#multi-merging
+		remove_idx=[]
+		for i in range(len(close_indices)-1):
+			if close_indices[i+1] - close_indices[i]==1:
+				for m in range(i+1,len(close_indices)-1):
+					if breakpoints[close_indices[m]]-breakpoints[close_indices[i]]<self.min_step:
+						remove_idx.append(m)
+					else:
+						break
+				i=remove_idx[-1]+1
+		close_indices=np.delete(close_indices,remove_idx)
+
+		# fit_primitives={'movel_fit':movel_fit,'movec_fit':movec_fit,'movej_fit':movej_fit}
 		###merge closely programmed points
 		# for idx in close_indices:
 		# 	new_bp=int((breakpoints[idx]+breakpoints[idx+1])/2)
@@ -246,8 +258,8 @@ class greedy_fit(fitting_toolbox):
 		return breakpoints,primitives_choices,points,q_bp
 
 def main():
-	dataset='from_NX/'
-	solution_dir='curve_pose_opt2_R/'
+	dataset='wood/'
+	solution_dir='curve_pose_opt7/'
 	data_dir="../data/"+dataset+solution_dir
 
 	###read in points
@@ -257,7 +269,7 @@ def main():
 	robot=abb6640(d=50)
 
 	max_error_threshold=0.02
-	min_length=50
+	min_length=10
 	greedy_fit_obj=greedy_fit(robot,curve_js, min_length=min_length,max_error_threshold=max_error_threshold)
 
 	###set primitive choices, defaults are all 3

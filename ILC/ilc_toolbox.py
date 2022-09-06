@@ -670,6 +670,9 @@ class ilc_toolbox(object):
 		return error_bps_v,error_bps_w
 
 	def update_error_direction(self,curve,p_bp,q_bp,error_bps_v,error_bps_w,gamma_v=0.8,gamma_w=0.1,extension=True):
+		p_bp_new=copy.deepcopy(p_bp)
+		q_bp_new=copy.deepcopy(q_bp)
+
 		for bp_idx in range(len(p_bp)):
 			for bp_sub_idx in range(len(p_bp[bp_idx])):
 				
@@ -680,7 +683,7 @@ class ilc_toolbox(object):
 					step_v=1*gamma_v
 					step_w=1*gamma_w
 				#push toward error direction
-				p_bp[bp_idx][bp_sub_idx]+=step_v*error_bps_v[bp_idx][bp_sub_idx]
+				p_bp_new[bp_idx][bp_sub_idx]+=step_v*error_bps_v[bp_idx][bp_sub_idx]
 
 
 				R_old=self.robot.fwd(q_bp[bp_idx][bp_sub_idx]).R
@@ -693,9 +696,9 @@ class ilc_toolbox(object):
 					k_temp=error_bps_w[bp_idx][bp_sub_idx]/theta_temp
 					R_new=rot(k_temp,step_w*theta_temp)@R_old
 
-				q_bp[bp_idx][bp_sub_idx]=car2js(self.robot,q_bp[bp_idx][bp_sub_idx],p_bp[bp_idx][bp_sub_idx],R_new)[0]
+				q_bp_new[bp_idx][bp_sub_idx]=car2js(self.robot,q_bp[bp_idx][bp_sub_idx],p_bp[bp_idx][bp_sub_idx],R_new)[0]
 
-		return p_bp, q_bp
+		return p_bp_new, q_bp_new
 
 
 	def get_error_direction_dual(self,relative_path,p_bp1,q_bp1,p_bp2,q_bp2,relative_path_exe,relative_path_exe_R,curve_exe1,curve_exe_R1,curve_exe2,curve_exe_R2):
