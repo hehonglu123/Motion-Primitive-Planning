@@ -245,7 +245,7 @@ def main():
     all_max_error = []
 
     iteration=30
-    speed_iteration = 10
+    speed_iteration = 3
     draw_speed_max=None
     draw_error_max=None
     max_error_tolerance = 0.5
@@ -271,8 +271,10 @@ def main():
             print(np.array(all_max_error))
             min_err_id = np.squeeze(np.argwhere(np.array(all_max_error)==np.min(np.array(all_max_error)[std_id])))
             print(min_err_id)
-            s1_movel = all_speed_profile1[min_err_id]
-            s2_movel = all_speed_profile2[min_err_id]
+            s1_movel = deepcopy(all_speed_profile1[min_err_id])
+            s2_movel = deepcopy(all_speed_profile2[min_err_id])
+            print(s1_movel)
+            print(s2_movel)
         
         if i>speed_iteration+start_iteration:
             error_prev = deepcopy(error)
@@ -465,11 +467,15 @@ def main():
             print(max(error),max_error,max(np.degrees(angle_error)),max_ang_error)
 
             if i <= speed_iteration+start_iteration:
-                all_speed_profile1.append(s1_movel)
-                all_speed_profile2.append(s2_movel)
+                all_speed_profile1.append(deepcopy(s1_movel))
+                all_speed_profile2.append(deepcopy(s2_movel))
                 all_speed_std.append(np.std(speed)/ave_speed*100)
                 all_max_error.append(max(error))
+                if i==1:
+                    print(s1_movel)
+                    print(s2_movel)
                 break
+            
             
             # if max(error) < max_error and max(np.degrees(angle_error)) < max_ang_error:
             if (max(error) < max_error) or alpha_flag:
