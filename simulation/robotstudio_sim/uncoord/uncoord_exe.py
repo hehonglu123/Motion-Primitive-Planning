@@ -55,7 +55,12 @@ def main():
     ###extract data commands
     breakpoints1,primitives1,p_bp1,q_bp1=ms1.extract_data_from_cmd(cmd_dir+'command1.csv')
     breakpoints2,primitives2,p_bp2,q_bp2=ms2.extract_data_from_cmd(cmd_dir+'command2.csv')
-
+    breakpoints1[1:]=breakpoints1[1:]-1
+    breakpoints2[2:]=breakpoints2[2:]-1
+    ###get dt per segment
+    v_relative=800
+    dt=(lam_relative[breakpoints1[5]]-lam_relative[breakpoints1[4]])/v_relative
+    print('dt',dt)
     ###extension
     p_bp1,q_bp1,p_bp2,q_bp2=ms1.extend_dual(robot1,p_bp1,q_bp1,primitives1,robot2,p_bp2,q_bp2,primitives2,breakpoints1)
 
@@ -71,14 +76,17 @@ def main():
         speed_ratio.append((lam1[breakpoints1[i]-1]-lam1[breakpoints1[i-1]-1])/(lam2[breakpoints1[i]-1]-lam2[breakpoints1[i-1]-1]))
 
     ###specify speed here for robot2
-    s2_all=[200]*len(breakpoints1)
-    v2_all=[v200]*len(breakpoints1)
+    s2_all=[200]
+    v2_all=[v200]
     z1_all=[z10]*len(breakpoints1)
     z2_all=[z10]*len(breakpoints2)
 
     v1_all=[v200]
     s1_all=[200]
     for v_idx in range(len(s2_all)-1):
+
+        s2_all.append((lam2[breakpoints2[v_idx+1]]-lam2[breakpoints2[v_idx]])/dt)
+        v2_all.append(speeddata(s2_all[v_idx+1],9999999,9999999,999999))
         s1=s2_all[v_idx+1]*speed_ratio[v_idx]
         s1_all.append(s1)
         v1 = speeddata(s1,9999999,9999999,999999)

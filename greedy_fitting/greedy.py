@@ -16,12 +16,14 @@ from lambda_calc import *
 #####################3d curve-fitting with MoveL, MoveJ, MoveC; stepwise incremental bi-section searched self.breakpoints###############################
 
 class greedy_fit(fitting_toolbox):
-	def __init__(self,robot,curve_js,max_error_threshold,max_ori_threshold=np.radians(3)):
+	def __init__(self,robot,curve_js,min_length,max_error_threshold,max_ori_threshold=np.radians(3)):
 		super().__init__(robot,curve_js[:])
 		self.max_error_threshold=max_error_threshold
 		self.max_ori_threshold=max_ori_threshold
 		self.step=int(len(curve_js)/25)
 		self.c_min_length=50
+		self.min_step=int(min_length/np.average(np.diff(self.lam)))
+		self.min_step_start_end=200
 
 		self.slope_constraint=np.radians(360)
 		self.dqdlam_slope=999
@@ -43,7 +45,6 @@ class greedy_fit(fitting_toolbox):
 	def movec_fit_greedy(self,curve,curve_js,curve_R, rl=False):
 		return self.movec_fit(curve,curve_js,curve_R,self.curve_fit[-1] if len(self.curve_fit)>0 else [],self.curve_fit_R[-1] if len(self.curve_fit_R)>0 else [], dqdlam_prev=(self.curve_fit_js[-1]-self.curve_fit_js[-2])/(self.lam[len(self.curve_fit_js)-1]-self.lam[len(self.curve_fit_js)-2]) if len(self.curve_fit_js)>1 else [], rl=rl)
 
-	##TODO: guard moveC longer than 50mm
 	def bisect(self,primitive,cur_idx, rl=False):
 
 		next_point = min(self.step,len(self.curve)-self.breakpoints[-1])
@@ -51,7 +52,7 @@ class greedy_fit(fitting_toolbox):
 		prev_possible_point=0
 
 		while True:
-			###end condition
+			###end condition, bisection bp converges
 			if next_point==prev_point:
 				if rl:
 					if np.max(max_error)<self.max_error_threshold and np.max(max_ori_error)<self.max_ori_threshold:
@@ -65,6 +66,12 @@ class greedy_fit(fitting_toolbox):
 					else:
 						next_point=max(prev_possible_point,2)
 						return primitive(self.curve[cur_idx:cur_idx+next_point],self.curve_js[cur_idx:cur_idx+next_point],self.curve_R[cur_idx:cur_idx+next_point], rl=rl)
+			
+			###end condition2, gurantee minimum segment length, excluding first and last points
+			# if prev_point<self.min_step and next_point<self.min_step and self.breakpoints[-1]>0:
+			# 	next_point=self.min_step
+			# 	return primitive(self.curve[cur_idx:cur_idx+next_point],self.curve_js[cur_idx:cur_idx+next_point],self.curve_R[cur_idx:cur_idx+next_point], rl=rl)
+
 			###fitting
 			curve_fit,curve_fit_R,curve_fit_js,max_error,max_ori_error=primitive(self.curve[cur_idx:cur_idx+next_point],self.curve_js[cur_idx:cur_idx+next_point],self.curve_R[cur_idx:cur_idx+next_point], rl=rl)
 
@@ -121,7 +128,10 @@ class greedy_fit(fitting_toolbox):
 				curve_fit[key],curve_fit_R[key],curve_fit_js[key],max_errors[key],max_ori_errors[key]=self.bisect(self.primitives[key],self.breakpoints[-1])
 				length[key]=len(curve_fit[key])
 			###find best primitive
-			key=max(length, key=length.get)
+			if length['movec_fit']==length['movel_fit'] and length['movel_fit']==length['movej_fit']:
+				key=min(max_errors, key=max_errors.get)
+			else:
+				key=max(length, key=length.get)
 
 			###moveC length thresholding (>50mm)
 			if key=='movec_fit' and np.linalg.norm(curve_fit['movec_fit'][-1]-curve_fit['movec_fit'][0])<self.c_min_length:
@@ -174,7 +184,66 @@ class greedy_fit(fitting_toolbox):
 
 		return self.breakpoints,primitives_choices,points,q_bp
 
+	def merge_bp(self,breakpoints,primitives_choices,points,q_bp):
+		###merge closely programmed bp's
+		bp_diff=np.diff(breakpoints)
+		close_indices=np.argwhere(bp_diff<self.min_step).flatten().astype(int)
+		#remove first and last bp if there
+		if 0 in close_indices and breakpoints[1]>self.min_step_start_end:
+			close_indices=close_indices[1:]
+		if len(breakpoints)-2 in close_indices:
+			close_indices=close_indices[:-1]
 
+		fit_primitives={'movel_fit':movel_fit,'movec_fit':movec_fit,'movej_fit':movej_fit}
+		###merge closely programmed points
+		# for idx in close_indices:
+		# 	new_bp=int((breakpoints[idx]+breakpoints[idx+1])/2)
+		# 	if primitives_choices=='movej_fit':
+		# 		curve_fit,curve_fit_R,curve_fit_js,_,_=fit_primitives[primitives_choices[idx]](curve[breakpoints[idx-1]:new_bp],curve_js[breakpoints[idx-1]:new_bp],curve_R[breakpoints[idx-1]:new_bp],p_constraint=curve_fit_js[breakpoints[idx-1]])
+		# 	else:
+		# 		curve_fit,curve_fit_R,_,_,_=fit_primitives[primitives_choices[idx]](curve[breakpoints[idx-1]:new_bp],curve_js[breakpoints[idx-1]:new_bp],curve_R[breakpoints[idx-1]:new_bp],p_constraint=curve_fit[breakpoints[idx-1]],R_constraint=self.robot.fwd(curve_fit_js[breakpoints[idx-1]]).R)
+		# 		curve_fit_js=car2js(self.robot,curve_fit_js[breakpoints[idx-1]],curve_fit,curve_fit_R)
+		# 	points[idx][-1]=curve_fit[-1]
+		# 	q_bp[idx][-1]=curve_fit_js[-1]
+
+		###remove old breakpoints
+		indicies2remove=(close_indices+1).tolist()
+		indicies2remove.reverse()
+		for i in indicies2remove:
+			del breakpoints[i]
+			del primitives_choices[i]
+			del points[i]
+			del q_bp[i]
+
+		#second last point removal
+		if breakpoints[-1]-breakpoints[-2]<self.min_step_start_end:
+			if primitives_choices[-2]=='movej_fit':
+				curve_fit,curve_fit_R,curve_fit_js,_,_=self.movej_fit(curve[breakpoints[-2]:],curve_js[breakpoints[-2]:],curve_R[breakpoints[-2]:],p_constraint=points[-2][-1],R_constraint=self.robot.fwd(q_bp[-2][-1]).R)
+				points[-2][-1]=curve_fit[-1]
+				q_bp[-2][-1]=curve_fit_js[-1]
+			elif primitives_choices[-2]=='movel_fit':
+				curve_fit,curve_fit_R,_,_,_=self.movel_fit(curve[breakpoints[-2]:],curve_js[breakpoints[-2]:],curve_R[breakpoints[-2]:],p_constraint=points[-2][-1],R_constraint=self.robot.fwd(q_bp[-2][-1]).R)
+				points[-2][-1]=curve_fit[-1]
+				q_bp[-2][-1]=car2js(self.robot,self.curve_fit_js[breakpoints[-1]],points[-2][-1],curve_fit_R[-1])[0]
+			else:
+				curve_fit,curve_fit_R,_,_,_=self.movec_fit(curve[breakpoints[-2]:],curve_js[breakpoints[-2]:],curve_R[breakpoints[-2]:],p_constraint=points[-2][-1],R_constraint=self.robot.fwd(q_bp[-2][-1]).R)
+				points[-2][0]=curve_fit[int(len(curve_fit)/2)]
+				points[-2][-1]=curve_fit[-1]
+				q_bp[-2][0]=car2js(self.robot,self.curve_fit_js[breakpoints[-2]],points[-2][0],curve_fit_R[int(len(curve_fit)/2)])[0]
+				q_bp[-2][-1]=car2js(self.robot,self.curve_fit_js[breakpoints[-1]],points[-2][-1],curve_fit_R[-1])[0]
+
+			# points[-2][-1]=points[-1][-1]
+			# q_bp[-2][-1]=q_bp[-1][-1]
+			# breakpoints[-2]=breakpoints[-1]
+
+			del breakpoints[-1]
+			del primitives_choices[-1]
+			del points[-1]
+			del q_bp[-1]
+
+
+
+		return breakpoints,primitives_choices,points,q_bp
 
 def main():
 	dataset='from_NX/'
@@ -187,8 +256,9 @@ def main():
 
 	robot=abb6640(d=50)
 
-	greedy_fit_obj=greedy_fit(robot,curve_js,0.01)
-
+	max_error_threshold=0.02
+	min_length=50
+	greedy_fit_obj=greedy_fit(robot,curve_js, min_length=min_length,max_error_threshold=max_error_threshold)
 
 	###set primitive choices, defaults are all 3
 	# greedy_fit_obj.primitives={'movel_fit':greedy_fit_obj.movel_fit_greedy,'movec_fit':greedy_fit_obj.movec_fit_greedy}
@@ -200,10 +270,16 @@ def main():
 	# greedy_fit_obj.primitives={'movel_fit':greedy_fit_obj.movel_fit_greedy,'movej_fit':greedy_fit_obj.movej_fit_greedy}
 
 	breakpoints,primitives_choices,points,q_bp=greedy_fit_obj.fit_under_error()
-	# breakpoints,primitives_choices,points=greedy_fit_obj.smooth_slope(greedy_fit_obj.curve_fit,greedy_fit_obj.curve_fit_R,breakpoints,primitives_choices,points)
-
 	print('slope diff js (deg): ', greedy_fit_obj.get_slope_js(greedy_fit_obj.curve_fit_js,breakpoints))
+	
+	############insert initial configuration#################
+	primitives_choices.insert(0,'moveabsj_fit')
+	points.insert(0,[greedy_fit_obj.curve_fit[0]])
+	q_bp.insert(0,[greedy_fit_obj.curve_fit_js[0]])
 
+
+	breakpoints,primitives_choices,points,q_bp=greedy_fit_obj.merge_bp(breakpoints,primitives_choices,points,q_bp)
+	# print(breakpoints)
 	###plt
 	###3D plot
 	plt.figure()
@@ -214,10 +290,7 @@ def main():
 	plt.legend()
 	plt.show()
 
-	############insert initial configuration#################
-	primitives_choices.insert(0,'moveabsj_fit')
-	points.insert(0,[greedy_fit_obj.curve_fit[0]])
-	q_bp.insert(0,[greedy_fit_obj.curve_fit_js[0]])
+	
 
 	print(len(breakpoints))
 	print(len(primitives_choices))

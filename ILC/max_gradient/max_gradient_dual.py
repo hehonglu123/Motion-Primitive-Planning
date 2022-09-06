@@ -20,43 +20,34 @@ from error_check import *
 from MotionSend import *
 from lambda_calc import *
 from blending import *
+from dual_arm import *
 
 def main():
 	dataset='from_NX/'
-	
-
 	data_dir="../../data/"+dataset
 	solution_dir=data_dir+'dual_arm/'+'diffevo3/'
 	cmd_dir=solution_dir+'30L/'
-	relative_path = read_csv(data_dir+"/Curve_dense.csv", header=None).values
+	
+	relative_path,robot1,robot2,base2_R,base2_p,lam_relative_path,lam1,lam2,curve_js1,curve_js2=initialize_data(dataset,data_dir,solution_dir,cmd_dir)
 
-	lam_relative_path=calc_lam_cs(relative_path)
-
-	with open(solution_dir+'abb1200.yaml') as file:
-		H_1200 = np.array(yaml.safe_load(file)['H'],dtype=np.float64)
-
-	base2_R=H_1200[:3,:3]
-	base2_p=1000*H_1200[:-1,-1]
-
-	with open(solution_dir+'tcp.yaml') as file:
-		H_tcp = np.array(yaml.safe_load(file)['H'],dtype=np.float64)
-	robot1=abb6640(d=50)
-	robot2=abb1200(R_tool=H_tcp[:3,:3],p_tool=H_tcp[:-1,-1])
 
 	ms = MotionSend(robot1=robot1,robot2=robot2,base2_R=base2_R,base2_p=base2_p)
 
 	breakpoints1,primitives1,p_bp1,q_bp1=ms.extract_data_from_cmd(cmd_dir+'command1.csv')
 	breakpoints2,primitives2,p_bp2,q_bp2=ms.extract_data_from_cmd(cmd_dir+'command2.csv')
 
+	breakpoints1[1:]=breakpoints1[1:]-1
+	breakpoints2[2:]=breakpoints2[2:]-1
+
 	###get lambda at each breakpoint
 	lam_bp=lam_relative_path[np.append(breakpoints1[0],breakpoints1[1:]-1)]
 
-	vd=2000
+	vd_relative=1200
 
-	s1=9999
-	s2=[vd]*len(primitives2)
-	z=10
-	v1 = speeddata(s1,9999999,9999999,999999)
+	s1_all,s2_all=calc_individual_speed(vd_relative,lam1,lam2,lam_relative_path,breakpoints1)
+	v2_all=[]
+	for i in range(len(breakpoints1)):
+		v2_all.append(speeddata(s2_all[i],9999999,9999999,999999))
 	
 
 
@@ -73,14 +64,11 @@ def main():
 	inserted_points=[]
 	iteration=100
 	for i in range(iteration):
-		###format speed for second arm
-		v2=[]
-		for m in range(len(s2)):
-			v2.append(speeddata(s2[m],9999999,9999999,999999))
+
 
 		ms = MotionSend(robot1=robot1,robot2=robot2,base2_R=base2_R,base2_p=base2_p)
 		###execution with plant
-		logged_data=ms.exec_motions_multimove(breakpoints1,primitives1,primitives2,p_bp1,p_bp2,q_bp1,q_bp2,v1,v2,z10,z10)
+		logged_data=ms.exec_motions_multimove(breakpoints1,primitives1,primitives2,p_bp1,p_bp2,q_bp1,q_bp2,vmax,v2_all,z50,z10)
 		with open('recorded_data/dual_iteration_'+str(i)+'.csv',"w") as f:
 			f.write(logged_data)
 		###save commands
@@ -113,7 +101,7 @@ def main():
 		ax2.plot(lam, error, 'b-',label='Error')
 		ax2.scatter(lam[peaks],error[peaks],label='peaks')
 		ax2.plot(lam, np.degrees(angle_error), 'y-',label='Normal Error')
-		ax1.axis(ymin=0,ymax=2.*vd)
+		ax1.axis(ymin=0,ymax=2.*vd_relative)
 		ax2.axis(ymin=0,ymax=4)
 
 		ax1.set_xlabel('lambda (mm)')
@@ -191,8 +179,9 @@ def main():
 			###get segment average speed
 			segment_avg=np.average(speed[np.argmin(np.abs(lam-lam_bp[m-1])):np.argmin(np.abs(lam-lam_bp[m]))])
 			###cap above 100m/s for robot2
-			s2[m]+=speed_alpha*(vd-segment_avg)
-			s2[m]=max(s2[m],100)
+			s2_all[m]+=speed_alpha*(vd_relative-segment_avg)
+			s2_all[m]=max(s2_all[m],100)
+			v2_all[m]=speeddata(s2_all[m],9999999,9999999,999999)
 
 		if max(error)<0.5:
 			break

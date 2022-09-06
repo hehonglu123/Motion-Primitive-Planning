@@ -158,23 +158,23 @@ class MotionSend(object):
             if motion == 'movel_fit':
                 robt = self.moveL_target(self.robot2,q_bp2[i][0],p_bp2[i][0])
                 if type(speed2) is list:
-                    mp2.MoveL(robt,speed2,zone2)
-                else:
                     mp2.MoveL(robt,speed2[i],zone2)
+                else:
+                    mp2.MoveL(robt,speed2,zone2)
 
             elif motion == 'movec_fit':
                 robt1, robt2 = self.moveC_target(self.robot2,q_bp2[i][0],q_bp2[i][1],p_bp2[i][0],p_bp2[i][1])
                 if type(speed2) is list:
-                    mp2.MoveC(robt1,robt2,speed2,zone2)
-                else:
                     mp2.MoveC(robt1,robt2,speed2[i],zone2)
+                else:
+                    mp2.MoveC(robt1,robt2,speed2,zone2)
 
             elif motion == 'movej_fit':
                 robt = self.moveL_target(self.robot2,q_bp2[i][0],p_bp2[i][0])
                 if type(speed2) is list:
-                    mp2.MoveJ(robt,speed2,zone2)
-                else:
                     mp2.MoveJ(robt,speed2[i],zone2)
+                else:
+                    mp2.MoveJ(robt,speed2,zone2)
 
             else: # moveabsj
                 jointt = self.moveJ_target(q_bp2[i][0])
@@ -185,9 +185,9 @@ class MotionSend(object):
                     mp2.WaitTime(0.1)
                 else:
                     if type(speed2) is list:
-                        mp2.MoveAbsJ(jointt,speed2,zone2)
-                    else:
                         mp2.MoveAbsJ(jointt,speed2[i],zone2)
+                    else:
+                        mp2.MoveAbsJ(jointt,speed2,zone2)
 
         ###add sleep at the end to wait for train_data transmission
         mp1.WaitTime(0.1)
