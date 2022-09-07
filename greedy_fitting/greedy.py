@@ -107,7 +107,7 @@ class greedy_fit(fitting_toolbox):
 		###initialize
 		self.breakpoints=[0]
 		primitives=[]
-		points=[]
+		p_bp=[]
 		q_bp=[]
 
 		self.curve_fit=[]
@@ -374,7 +374,7 @@ def merging():
 	robot=abb6640(d=50)
 
 	max_error_threshold=0.02
-	min_length=10
+	min_length=8			##mm
 	greedy_fit_obj=greedy_fit(robot,curve_js, min_length=min_length,max_error_threshold=max_error_threshold)
 
 
@@ -383,10 +383,10 @@ def merging():
 	ms = MotionSend()
 	breakpoints,primitives,p_bp,q_bp=ms.extract_data_from_cmd(cmd_dir+'command.csv')
 
-	breakpoints,primitives,p_bp,q_bp=greedy_fit_obj.merge_bp2(breakpoints,primitives,p_bp,q_bp)
+	breakpoints,primitives,p_bp,q_bp=greedy_fit_obj.merge_bp2(breakpoints,primitives,p_bp,q_bp,d=min_length)
 
 	df=DataFrame({'breakpoints':breakpoints,'primitives':primitives,'p_bp':p_bp,'q_bp':q_bp})
-	df.to_csv('greedy_output/command.csv',header=True,index=False)
+	df.to_csv('greedy_output/command_merged.csv',header=True,index=False)
 
 if __name__ == "__main__":
 	merging()
