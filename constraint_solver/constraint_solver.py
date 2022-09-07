@@ -31,7 +31,7 @@ class lambda_opt(object):
 		self.steps=steps
 
 		# self.lim_factor=0.0000001###avoid fwd error on joint limit
-		self.lim_factor=np.deg2rad(0.1) ###avoid fwd error on joint limit
+		self.lim_factor=np.deg2rad(5) ###avoid fwd error on joint limit
 
 		#prespecified primitives
 		self.primitives=primitives
@@ -79,7 +79,7 @@ class lambda_opt(object):
 				error_fb=999
 				error_fb_prev=999
 
-				while error_fb>0.01:
+				while error_fb>0.1:
 					if time.time()-now>10:
 						print('qp timeout')
 						raise AssertionError

@@ -651,6 +651,176 @@ class MotionSendFANUC(object):
             points_list[-1][0]=robot.fwd(q_bp[-1][-1]).p
 
         return primitives,points_list,q_bp
+    
+    def extend_start_end_qp(self,robot,q_bp,primitives,breakpoints,points_list,extension_start=100,extension_end=100):
+        
+        dist_bp = np.linalg.norm(np.array(points_list[0][0])-np.array(points_list[1][0]))
+        if dist_bp > extension_start:
+            dist_bp=extension_start
+        step_to_extend=round(extension_start/dist_bp)
+        extend_step_d_start=float(extension_start)/step_to_extend
+        
+        ###initial point extension
+        pose_start=robot.fwd(q_bp[0][-1])
+        p_start=pose_start.p
+        R_start=pose_start.R
+        pose_end=robot.fwd(q_bp[1][-1])
+        p_end=pose_end.p
+        R_end=pose_end.R
+
+        if primitives[1]=='movel_fit':
+            #find new start point
+            slope_p=p_end-p_start
+            slope_p=slope_p/np.linalg.norm(slope_p)
+            p_start_new=p_start-extension_start*slope_p        ###extend 5cm backward
+
+            #find new start orientation
+            k,theta=R2rot(R_end@R_start.T)
+            theta_new=-extension_start*theta/np.linalg.norm(p_end-p_start)
+            # R_start_new=rot(k,theta_new)@R_start
+
+            # adding extension with uniform space
+            steps_opt=round(extension_start/np.linalg.norm(pose_start.p-pose_end.p))*500
+            steps=round(extension_start/np.linalg.norm(pose_start.p-pose_end.p))
+            relative_path=[]
+            extend_step=extension_start/steps_opt
+            for i in range(1,steps_opt+1):
+                pn=np.array([])
+                p_extend=p_start-i*extend_step*slope_p
+                theta_extend=-np.linalg.norm(p_extend-p_start)*theta/np.linalg.norm(p_end-p_start)
+                R_extend=rot(k,theta_extend)@R_start
+                pn = np.append(pn,p_extend)
+                pn = np.append(pn,R_extend[:,-1])
+                relative_path.append(pn)
+            relative_path=np.array(relative_path)
+            ## extend in relative
+            opt=lambda_opt(relative_path[:,:3],relative_path[:,3:],robot1=robot,steps=steps_opt)
+            q_out=opt.single_arm_stepwise_optimize(q_bp[0][-1])
+            # adding extension with uniform space
+            for i in range(1,steps+1):
+                points_list.insert(0,[robot.fwd(q_out[int(i*(steps_opt/steps))-1]).p])
+                q_bp.insert(0,[q_out[int(i*(steps_opt/steps))-1]])
+                primitives.insert(1,'movel_fit')
+
+        elif  primitives[1]=='movec_fit':
+            #define circle first
+            pose_mid=robot.fwd(q_bp[0][0])
+            p_mid=pose_mid.p
+            R_mid=pose_mid.R
+            center, radius=circle_from_3point(p_start,p_end,p_mid)
+
+            #find desired rotation angle
+            angle=extension_start/radius
+
+            #find new start point
+            plane_N=np.cross(p_end-center,p_start-center)
+            plane_N=plane_N/np.linalg.norm(plane_N)
+            R_temp=rot(plane_N,angle)
+            p_start_new=center+R_temp@(p_start-center)
+
+            #find new start orientation
+            k,theta=R2rot(R_end@R_start.T)
+            theta_new=-extension_start*theta/np.linalg.norm(p_end-p_start)
+            R_start_new=rot(k,theta_new)@R_start
+
+            #solve invkin for initial point
+            points_list[0][0]=p_start_new
+            q_bp[0][0]=car2js(robot,q_bp[0][0],p_start_new,R_start_new)[0]
+
+        else:
+            #find new start point
+            J_start=robot.jacobian(q_bp[0][0])
+            qdot=q_bp[1][0]-q_bp[0][0]
+            v=J_start[3:,:]@qdot
+            t=extension_start/np.linalg.norm(v)
+            
+            q_bp[0][0]=q_bp[0][0]+qdot*t
+            points_list[0][0]=robot.fwd(q_bp[0][0]).p
+
+        ###end point extension
+        pose_start=robot.fwd(q_bp[-2][-1])
+        p_start=pose_start.p
+        R_start=pose_start.R
+        pose_end=robot.fwd(q_bp[-1][-1])
+        p_end=pose_end.p
+        R_end=pose_end.R
+
+        dist_bp = np.linalg.norm(np.array(points_list[-1][-1])-np.array(points_list[-2][-1]))
+        if dist_bp > extension_end:
+            dist_bp=extension_end
+        step_to_extend=round(extension_end/dist_bp)
+        extend_step_d_end=float(extension_end)/step_to_extend
+
+        if primitives[-1]=='movel_fit':
+            #find new end point
+            slope_p=p_end-p_start
+            slope_p=slope_p/np.linalg.norm(slope_p)
+            # p_end_new=p_end+extension_d*slope_p        ###extend 5cm backward
+
+            #find new end orientation
+            k,theta=R2rot(R_end@R_start.T)
+            # theta_new=extension_d*theta/np.linalg.norm(p_end-p_start)
+            # R_end_new=rot(k,theta_new)@R_end
+
+            # adding extension with uniform space
+            steps_opt=round(extension_end/np.linalg.norm(pose_start.p-pose_end.p))*500
+            steps=round(extension_end/np.linalg.norm(pose_start.p-pose_end.p))
+            relative_path=[]
+            extend_step=extension_end/steps_opt
+            for i in range(1,steps_opt+1):
+                pn=np.array([])
+                p_extend=p_end+i*extend_step*slope_p
+                theta_extend=np.linalg.norm(p_extend-p_end)*theta/np.linalg.norm(p_end-p_start)
+                R_extend=rot(k,theta_extend)@R_end
+                pn = np.append(pn,p_extend)
+                pn = np.append(pn,R_extend[:,-1])
+                relative_path.append(pn)
+            relative_path=np.array(relative_path)
+            ## extend in relative
+            opt=lambda_opt(relative_path[:,:3],relative_path[:,3:],robot1=robot,steps=steps_opt)
+            q_out=opt.single_arm_stepwise_optimize(q_bp[-1][-1])
+            # adding extension with uniform space
+            for i in range(1,steps+1):
+                points_list.append([robot.fwd(q_out[int(i*(steps_opt/steps))-1]).p])
+                q_bp.append([q_out[int(i*(steps_opt/steps))-1]])
+                primitives.append('movel_fit')
+
+        elif  primitives[1]=='movec_fit':
+            #define circle first
+            pose_mid=robot.fwd(q_bp[-1][0])
+            p_mid=pose_mid.p
+            R_mid=pose_mid.R
+            center, radius=circle_from_3point(p_start,p_end,p_mid)
+
+            #find desired rotation angle
+            angle=extension_end/radius
+
+            #find new end point
+            plane_N=np.cross(p_start-center,p_end-center)
+            plane_N=plane_N/np.linalg.norm(plane_N)
+            R_temp=rot(plane_N,angle)
+            p_end_new=center+R_temp@(p_end-center)
+
+            #find new end orientation
+            k,theta=R2rot(R_end@R_start.T)
+            theta_new=extension_end*theta/np.linalg.norm(p_end-p_start)
+            R_end_new=rot(k,theta_new)@R_end
+
+            #solve invkin for end point
+            q_bp[-1][-1]=car2js(robot,q_bp[-1][-1],p_end_new,R_end_new)[0]
+            points_list[-1][-1]=p_end_new   #midpoint not changed
+
+        else:
+            #find new end point
+            J_end=robot.jacobian(q_bp[-1][0])
+            qdot=q_bp[-1][0]-q_bp[-2][0]
+            v=J_end[3:,:]@qdot
+            t=extension_end/np.linalg.norm(v)
+            
+            q_bp[-1][-1]=q_bp[-1][-1]+qdot*t
+            points_list[-1][0]=robot.fwd(q_bp[-1][-1]).p
+
+        return primitives,points_list,q_bp
 
     def extend_start_end_relative(self,robot1,q_bp1,primitives1,p_bp1,robot2,q_bp2,primitives2,p_bp2,base2_T,extension_d,steps_opt,steps):
         ##### extend tool start
@@ -776,6 +946,13 @@ class MotionSendFANUC(object):
         ### Then, extend the follower (tool robot) in the workpiece (i.e. leader robot workpiece) frame.
         primitives1,p_bp1,q_bp1=self.extend_start_end(robot1,q_bp1,primitives1,breakpoints,p_bp1,extension_start=extension_d*d1_start/d2_start,extension_end=extension_d*d1_end/d2_end)
         # primitives1,p_bp1,q_bp1=self.extend_start_end(robot1,q_bp1,primitives1,breakpoints,p_bp1,extension_start=extension_d,extension_end=extension_d)
+
+        # ### First, extend the leader (workpiece robot).
+        # primitives2,p_bp2,q_bp2=self.extend_start_end_qp(robot2,q_bp2,primitives2,breakpoints,p_bp2,extension_start=extension_d,extension_end=extension_d)
+        # ### Then, extend the follower (tool robot) in the workpiece (i.e. leader robot workpiece) frame.
+        # primitives1,p_bp1,q_bp1=self.extend_start_end_qp(robot1,q_bp1,primitives1,breakpoints,p_bp1,extension_start=extension_d*d1_start/d2_start,extension_end=extension_d*d1_end/d2_end)
+        # # primitives1,p_bp1,q_bp1=self.extend_start_end(robot1,q_bp1,primitives1,breakpoints,p_bp1,extension_start=extension_d,extension_end=extension_d)
+
 
         return p_bp1,q_bp1,p_bp2,q_bp2
     
