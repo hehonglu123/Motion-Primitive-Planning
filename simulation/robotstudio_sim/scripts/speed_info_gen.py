@@ -15,14 +15,14 @@ ms=MotionSend()
 robot=abb6640(d=50)
 
 
-dataset='from_NX/'
-solution_dir='curve_pose_opt2/'
+dataset='wood/'
+solution_dir='curve_pose_opt7/'
 data_dir="../../../data/"+dataset+solution_dir
 
 curve = read_csv(data_dir+"Curve_in_base_frame.csv",header=None).values
 
-exe_dir='../../../ILC/all_gradient/curve2_pose_opt2_v1200_2/'
-df = read_csv(exe_dir+"curve_exe_v1200_z10.csv")
+exe_dir='../../../ILC/final/curve1_pose_opt7_v400/'
+df = read_csv(exe_dir+"curve_exe_v400_z10.csv")
 
 ##############################data analysis#####################################
 lam, curve_exe, curve_exe_R,curve_exe_js, speed, timestamp=ms.logged_data_analysis(robot,df,realrobot=True)

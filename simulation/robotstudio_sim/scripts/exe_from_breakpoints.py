@@ -18,8 +18,8 @@ from MotionSend import *
 
 def main():
     ms = MotionSend()
-    dataset='from_NX/'
-    solution_dir='curve_pose_opt2_R/'
+    dataset='wood/'
+    solution_dir='curve_pose_opt7/'
     cmd_dir='../../../data/'+dataset+solution_dir+'greedy0.02/'
     data_dir='../../../data/'+dataset+solution_dir
 
@@ -39,7 +39,7 @@ def main():
     # speed={'v200':v200,'v250':v250,'v300':v300,'v350':v350,'v400':v400,'v450':v450,'v500':v500}
     # speed={'v800':v800,'v900':v900,'v1000':v1000,'v1100':v1100,'v1200':v1200,'v1300':v1300,'v1400':v1400}
     # speed={'v800':v800,'v1000':v1000,'v1200':v1200,'v1500':v1500,'v2000':v2000}
-    speed={'v1200':v1200}
+    speed={'v400':v400}
     zone={'z100':z100}
 
     for s in speed:

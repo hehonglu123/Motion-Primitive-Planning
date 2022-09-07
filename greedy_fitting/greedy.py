@@ -106,7 +106,7 @@ class greedy_fit(fitting_toolbox):
 
 		###initialize
 		self.breakpoints=[0]
-		primitives_choices=[]
+		primitives=[]
 		points=[]
 		q_bp=[]
 
@@ -139,7 +139,7 @@ class greedy_fit(fitting_toolbox):
 
 
 			
-			primitives_choices.append(key)
+			primitives.append(key)
 			self.breakpoints.append(min(self.breakpoints[-1]+len(curve_fit[key]),len(self.curve)))
 			self.curve_fit.extend(curve_fit[key])
 			self.curve_fit_R.extend(curve_fit_R[key])
@@ -158,18 +158,18 @@ class greedy_fit(fitting_toolbox):
 				self.curve_fit_js.extend(curve_fit_js)
 
 			if key=='movec_fit':
-				points.append([curve_fit[key][int(len(curve_fit[key])/2)],curve_fit[key][-1]])
+				p_bp.append([curve_fit[key][int(len(curve_fit[key])/2)],curve_fit[key][-1]])
 				q_bp.append([curve_fit_js[int(len(curve_fit_R[key])/2)],curve_fit_js[-1]])
 			elif key=='movel_fit':
-				points.append([curve_fit[key][-1]])
+				p_bp.append([curve_fit[key][-1]])
 				q_bp.append([curve_fit_js[-1]])
 			else:
-				points.append([curve_fit[key][-1]])
+				p_bp.append([curve_fit[key][-1]])
 				q_bp.append([curve_fit_js[key][-1]])
 
 
 			print(self.breakpoints)
-			print(primitives_choices)
+			print(primitives)
 			print(max_errors[key],max_ori_errors[key])
 			
 
@@ -182,9 +182,9 @@ class greedy_fit(fitting_toolbox):
 		self.curve_fit_R=np.array(self.curve_fit_R)
 		self.curve_fit_js=np.array(self.curve_fit_js)
 
-		return self.breakpoints,primitives_choices,points,q_bp
+		return self.breakpoints,primitives,p_bp,q_bp
 
-	def merge_bp(self,breakpoints,primitives_choices,points,q_bp):
+	def merge_bp(self,breakpoints,primitives,p_bp,q_bp):
 		###merge closely programmed bp's
 		bp_diff=np.diff(breakpoints)
 		close_indices=np.argwhere(bp_diff<self.min_step).flatten().astype(int)
@@ -210,10 +210,10 @@ class greedy_fit(fitting_toolbox):
 		###merge closely programmed points
 		# for idx in close_indices:
 		# 	new_bp=int((breakpoints[idx]+breakpoints[idx+1])/2)
-		# 	if primitives_choices=='movej_fit':
-		# 		curve_fit,curve_fit_R,curve_fit_js,_,_=fit_primitives[primitives_choices[idx]](curve[breakpoints[idx-1]:new_bp],curve_js[breakpoints[idx-1]:new_bp],curve_R[breakpoints[idx-1]:new_bp],p_constraint=curve_fit_js[breakpoints[idx-1]])
+		# 	if primitives=='movej_fit':
+		# 		curve_fit,curve_fit_R,curve_fit_js,_,_=fit_primitives[primitives[idx]](curve[breakpoints[idx-1]:new_bp],curve_js[breakpoints[idx-1]:new_bp],curve_R[breakpoints[idx-1]:new_bp],p_constraint=curve_fit_js[breakpoints[idx-1]])
 		# 	else:
-		# 		curve_fit,curve_fit_R,_,_,_=fit_primitives[primitives_choices[idx]](curve[breakpoints[idx-1]:new_bp],curve_js[breakpoints[idx-1]:new_bp],curve_R[breakpoints[idx-1]:new_bp],p_constraint=curve_fit[breakpoints[idx-1]],R_constraint=self.robot.fwd(curve_fit_js[breakpoints[idx-1]]).R)
+		# 		curve_fit,curve_fit_R,_,_,_=fit_primitives[primitives[idx]](curve[breakpoints[idx-1]:new_bp],curve_js[breakpoints[idx-1]:new_bp],curve_R[breakpoints[idx-1]:new_bp],p_constraint=curve_fit[breakpoints[idx-1]],R_constraint=self.robot.fwd(curve_fit_js[breakpoints[idx-1]]).R)
 		# 		curve_fit_js=car2js(self.robot,curve_fit_js[breakpoints[idx-1]],curve_fit,curve_fit_R)
 		# 	points[idx][-1]=curve_fit[-1]
 		# 	q_bp[idx][-1]=curve_fit_js[-1]
@@ -223,39 +223,82 @@ class greedy_fit(fitting_toolbox):
 		indicies2remove.reverse()
 		for i in indicies2remove:
 			del breakpoints[i]
-			del primitives_choices[i]
-			del points[i]
+			del primitives[i]
+			del p_bp[i]
 			del q_bp[i]
 
 		#second last point removal
 		if breakpoints[-1]-breakpoints[-2]<self.min_step_start_end:
-			if primitives_choices[-2]=='movej_fit':
+			if primitives[-2]=='movej_fit':
 				curve_fit,curve_fit_R,curve_fit_js,_,_=self.movej_fit(curve[breakpoints[-2]:],curve_js[breakpoints[-2]:],curve_R[breakpoints[-2]:],p_constraint=points[-2][-1],R_constraint=self.robot.fwd(q_bp[-2][-1]).R)
 				points[-2][-1]=curve_fit[-1]
 				q_bp[-2][-1]=curve_fit_js[-1]
-			elif primitives_choices[-2]=='movel_fit':
+			elif primitives[-2]=='movel_fit':
 				curve_fit,curve_fit_R,_,_,_=self.movel_fit(curve[breakpoints[-2]:],curve_js[breakpoints[-2]:],curve_R[breakpoints[-2]:],p_constraint=points[-2][-1],R_constraint=self.robot.fwd(q_bp[-2][-1]).R)
 				points[-2][-1]=curve_fit[-1]
-				q_bp[-2][-1]=car2js(self.robot,self.curve_fit_js[breakpoints[-1]],points[-2][-1],curve_fit_R[-1])[0]
+				q_bp[-2][-1]=car2js(self.robot,self.curve_fit_js[breakpoints[-1]],p_bp[-2][-1],curve_fit_R[-1])[0]
 			else:
 				curve_fit,curve_fit_R,_,_,_=self.movec_fit(curve[breakpoints[-2]:],curve_js[breakpoints[-2]:],curve_R[breakpoints[-2]:],p_constraint=points[-2][-1],R_constraint=self.robot.fwd(q_bp[-2][-1]).R)
 				points[-2][0]=curve_fit[int(len(curve_fit)/2)]
 				points[-2][-1]=curve_fit[-1]
-				q_bp[-2][0]=car2js(self.robot,self.curve_fit_js[breakpoints[-2]],points[-2][0],curve_fit_R[int(len(curve_fit)/2)])[0]
-				q_bp[-2][-1]=car2js(self.robot,self.curve_fit_js[breakpoints[-1]],points[-2][-1],curve_fit_R[-1])[0]
+				q_bp[-2][0]=car2js(self.robot,self.curve_fit_js[breakpoints[-2]],p_bp[-2][0],curve_fit_R[int(len(curve_fit)/2)])[0]
+				q_bp[-2][-1]=car2js(self.robot,self.curve_fit_js[breakpoints[-1]],p_bp[-2][-1],curve_fit_R[-1])[0]
 
 			# points[-2][-1]=points[-1][-1]
 			# q_bp[-2][-1]=q_bp[-1][-1]
 			# breakpoints[-2]=breakpoints[-1]
 
 			del breakpoints[-1]
-			del primitives_choices[-1]
-			del points[-1]
+			del primitives[-1]
+			del p_bp[-1]
 			del q_bp[-1]
 
 
 
-		return breakpoints,primitives_choices,points,q_bp
+		return breakpoints,primitives,p_bp,q_bp
+
+	def merge_bp2(self,breakpoints,primitives,p_bp,q_bp,d=10):
+
+		#merging breakpoints within d
+		p_bp_np=np.array([item[-1] for item in p_bp])
+		bp_diff=np.linalg.norm(np.diff(p_bp_np,axis=0),axis=1)
+		close_indices=np.argwhere(bp_diff<d).flatten().astype(int)
+
+		close_indices=close_indices+1### delete later one
+		#remove first and last bp if there
+		if 1 in close_indices:
+			close_indices=close_indices[1:]
+		if len(breakpoints)-1 in close_indices:
+			close_indices[-1]=len(breakpoints)-2
+
+
+		#multi-merging
+		remove_idx=[]
+
+		i=0
+		while i<len(close_indices)-1:
+			if close_indices[i+1] - close_indices[i]==1:
+				###remove last of consecutive bp's that's greater than d
+				for m in range(i+2,len(close_indices)-1):
+					if np.linalg.norm(p_bp[close_indices[m]][-1]-p_bp[close_indices[i]][-1])>d:
+						remove_idx.append(m)
+						i=remove_idx[-1]
+						break
+			i+=1
+
+		close_indices=np.delete(close_indices,remove_idx)
+
+		breakpoints=np.delete(breakpoints,close_indices)
+		primitives=np.delete(primitives,close_indices).tolist()
+		q_bp=np.delete(q_bp,close_indices).tolist()
+		p_bp=np.delete(p_bp,close_indices).tolist()
+
+		# p_bp_np=np.array([item[-1] for item in p_bp])
+		# bp_diff=np.linalg.norm(np.diff(p_bp_np,axis=0),axis=1)
+		# print(bp_diff)
+		return breakpoints,primitives,p_bp,q_bp
+
+
 
 def main():
 	dataset='wood/'
@@ -281,16 +324,16 @@ def main():
 
 	# greedy_fit_obj.primitives={'movel_fit':greedy_fit_obj.movel_fit_greedy,'movej_fit':greedy_fit_obj.movej_fit_greedy}
 
-	breakpoints,primitives_choices,points,q_bp=greedy_fit_obj.fit_under_error()
+	breakpoints,primitives,p_bp,q_bp=greedy_fit_obj.fit_under_error()
 	print('slope diff js (deg): ', greedy_fit_obj.get_slope_js(greedy_fit_obj.curve_fit_js,breakpoints))
 	
 	############insert initial configuration#################
-	primitives_choices.insert(0,'moveabsj_fit')
-	points.insert(0,[greedy_fit_obj.curve_fit[0]])
+	primitives.insert(0,'moveabsj_fit')
+	p_bp.insert(0,[greedy_fit_obj.curve_fit[0]])
 	q_bp.insert(0,[greedy_fit_obj.curve_fit_js[0]])
 
 
-	breakpoints,primitives_choices,points,q_bp=greedy_fit_obj.merge_bp(breakpoints,primitives_choices,points,q_bp)
+	# breakpoints,primitives,p_bp,q_bp=greedy_fit_obj.merge_bp(breakpoints,primitives,p_bp,q_bp)
 	# print(breakpoints)
 	###plt
 	###3D plot
@@ -305,11 +348,11 @@ def main():
 	
 
 	print(len(breakpoints))
-	print(len(primitives_choices))
-	print(len(points))
+	print(len(primitives))
+	print(len(p_bp))
 	print(len(q_bp))
 
-	df=DataFrame({'breakpoints':breakpoints,'primitives':primitives_choices,'points':points,'q_bp':q_bp})
+	df=DataFrame({'breakpoints':breakpoints,'primitives':primitives,'p_bp':p_bp,'q_bp':q_bp})
 	df.to_csv('greedy_output/command.csv',header=True,index=False)
 	df=DataFrame({'x':greedy_fit_obj.curve_fit[:,0],'y':greedy_fit_obj.curve_fit[:,1],'z':greedy_fit_obj.curve_fit[:,2],\
 		'R1':greedy_fit_obj.curve_fit_R[:,0,0],'R2':greedy_fit_obj.curve_fit_R[:,0,1],'R3':greedy_fit_obj.curve_fit_R[:,0,2],\
@@ -318,44 +361,34 @@ def main():
 	df.to_csv('greedy_output/curve_fit.csv',header=True,index=False)
 	DataFrame(greedy_fit_obj.curve_fit_js).to_csv('greedy_output/curve_fit_js.csv',header=False,index=False)
 
-def greedy_execute():
-	ms = MotionSend()
+
+def merging():
+	dataset='wood/'
+	solution_dir='curve_pose_opt7/'
+	data_dir="../data/"+dataset+solution_dir
+
 	###read in points
-	# curve_js=read_csv("../train_data/from_NX/Curve_js.csv",header=None).values
-	curve_js = read_csv("../data/wood/Curve_js.csv", header=None).values
+	# curve_js = read_csv("../train_data/wood/Curve_js.csv",header=None).values
+	curve_js = read_csv(data_dir+'Curve_js.csv',header=None).values
 
 	robot=abb6640(d=50)
 
-	greedy_fit_obj=greedy_fit(robot,curve_js[::10],0.5)
-	# greedy_fit_obj.primitives={'movel_fit':greedy_fit_obj.movel_fit_greedy}
-	greedy_fit_obj.primitives={'movej_fit':greedy_fit_obj.movej_fit_greedy}
-	# greedy_fit_obj.primitives={'movec_fit':greedy_fit_obj.movec_fit_greedy}
+	max_error_threshold=0.02
+	min_length=10
+	greedy_fit_obj=greedy_fit(robot,curve_js, min_length=min_length,max_error_threshold=max_error_threshold)
 
-	###greedy fitting
-	breakpoints,primitives_choices,points, q_bp=greedy_fit_obj.fit_under_error()
 
-	############insert initial configuration#################
-	primitives_choices.insert(0,'movej_fit')
-	points.insert(0,[greedy_fit_obj.curve_fit[0]])
-	q_bp.insert(0,[greedy_fit_obj.curve_fit_js[0]])
+	cmd_dir='greedy_output/'
 
-	###extension
-	points,q_bp=ms.extend(robot,q_bp,primitives_choices,breakpoints,points)
+	ms = MotionSend()
+	breakpoints,primitives,p_bp,q_bp=ms.extract_data_from_cmd(cmd_dir+'command.csv')
 
-	#######################RS execution################################
-	from io import StringIO
-	
-	logged_data=ms.exec_motions(robot,primitives_choices,breakpoints,points,q_bp,v500,z10)
-	StringData=StringIO(logged_data)
-	df = read_csv(StringData, sep =",")
-	##############################train_data analysis#####################################
-	lam, curve_exe, curve_exe_R,curve_exe_js, speed, timestamp=ms.logged_data_analysis(robot,df,realrobot=False)
-	#############################chop extension off##################################
-	lam, curve_exe, curve_exe_R,curve_exe_js, speed, timestamp=ms.chop_extension(curve_exe, curve_exe_R,curve_exe_js, speed, timestamp,greedy_fit_obj.curve[0,:3],greedy_fit_obj.curve[-1,:3])
-	error,angle_error=calc_all_error_w_normal(curve_exe,greedy_fit_obj.curve,curve_exe_R[:,:,-1],greedy_fit_obj.curve_R[:,:,-1])
+	breakpoints,primitives,p_bp,q_bp=greedy_fit_obj.merge_bp2(breakpoints,primitives,p_bp,q_bp)
 
-	print('time: ',timestamp[-1]-timestamp[0],'error: ',np.max(error),'normal error: ',np.max(angle_error))
+	df=DataFrame({'breakpoints':breakpoints,'primitives':primitives,'p_bp':p_bp,'q_bp':q_bp})
+	df.to_csv('greedy_output/command.csv',header=True,index=False)
 
 if __name__ == "__main__":
+	merging()
 	# greedy_execute()
-	main()
+	# main()
