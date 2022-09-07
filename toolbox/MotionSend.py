@@ -342,7 +342,7 @@ class MotionSend(object):
         data = read_csv(filename)
         breakpoints=np.array(data['breakpoints'].tolist())
         primitives=data['primitives'].tolist()
-        points=data['points'].tolist()
+        points=data['p_bp'].tolist()
         qs=data['q_bp'].tolist()
 
         p_bp=[]
@@ -378,7 +378,7 @@ class MotionSend(object):
             else:
                 p_bp_new.append([np.array(p_bp[i][0])])
                 q_bp_new.append([np.array(q_bp[i][0])])
-        df=DataFrame({'breakpoints':breakpoints,'primitives':primitives,'points':p_bp_new,'q_bp':q_bp_new})
+        df=DataFrame({'breakpoints':breakpoints,'primitives':primitives,'p_bp':p_bp_new,'q_bp':q_bp_new})
         df.to_csv(filename,header=True,index=False)
 
 

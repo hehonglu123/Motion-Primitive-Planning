@@ -42,14 +42,13 @@ def main():
 
 
 	ms = MotionSend(url='http://192.168.55.1:80')
-	# breakpoints,primitives,p_bp,q_bp=ms.extract_data_from_cmd(cmd_dir+'command.csv')
-	# ##extension
-	# p_bp,q_bp=ms.extend(robot,q_bp,primitives,breakpoints,p_bp,extension_start=100,extension_end=100)
+	breakpoints,primitives,p_bp,q_bp=ms.extract_data_from_cmd(cmd_dir+'command.csv')
+	##extension
+	p_bp,q_bp=ms.extend(robot,q_bp,primitives,breakpoints,p_bp,extension_start=150,extension_end=100)
 	###########################################get cmd from simulation improved cmd################################
-	breakpoints,primitives,p_bp,q_bp=ms.extract_data_from_cmd('curve2_pose_opt2_v1200_30L/command.csv')
+	# breakpoints,primitives,p_bp,q_bp=ms.extract_data_from_cmd('curve2_pose_opt2_v1200_30L/command.csv')
 
-	###extension
-	p_bp,q_bp=ms.extend(robot,q_bp,primitives,breakpoints,p_bp,extension_start=100,extension_end=100)
+	
 	###ilc toolbox def
 	ilc=ilc_toolbox(robot,primitives)
 
@@ -86,11 +85,10 @@ def main():
 		ax1.set_ylabel('Speed/lamdot (mm/s)', color='g')
 		ax2.set_ylabel('Error/Normal Error (mm/deg)', color='b')
 		plt.title("Speed and Error Plot")
-		ax1.legend(loc="upper right")
-
-		ax2.legend(loc="upper left")
-
-		plt.legend()
+		h1, l1 = ax1.get_legend_handles_labels()
+		h2, l2 = ax2.get_legend_handles_labels()
+		ax1.legend(h1+h2, l1+l2, loc=1)
+		
 		plt.savefig('recorded_data/iteration_'+str(i))
 		plt.clf()
 		# plt.show()

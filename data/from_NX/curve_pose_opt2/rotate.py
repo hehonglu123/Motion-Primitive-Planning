@@ -1,0 +1,32 @@
+import sys, yaml, copy
+import numpy as np
+from general_robotics_toolbox import *
+from pandas import read_csv, DataFrame
+
+original_dir='../curve_pose_opt2/'
+with open(original_dir+'curve_pose.yaml') as file:
+	curve_pose = np.array(yaml.safe_load(file)['H'],dtype=np.float64)
+curve_js = read_csv(original_dir+'Curve_js.csv',header=None).values
+curve_dense = read_csv('../Curve_dense.csv',header=None).values
+
+
+rotate_angle=-np.pi/2
+
+H_R=np.eye(4)
+H_R[:3,:3]=rot([0,0,1],rotate_angle)
+curve_pose_new=H_R@curve_pose
+
+with open(r'../curve_pose_opt2_R/curve_pose.yaml', 'w') as file:
+	documents = yaml.dump({'H':curve_pose_new.tolist()}, file)
+
+curve_js_new=copy.deepcopy(curve_js)
+curve_js_new[:,0]=curve_js[:,0]+rotate_angle
+
+curve_new=np.dot(curve_pose_new[:3,:3],curve_dense[:,:3].T).T+np.tile(curve_pose_new[:-1,-1],(len(curve_dense),1))
+curve_normal_new=np.dot(curve_pose_new[:3,:3],curve_dense[:,3:].T).T
+
+
+df=DataFrame({'q0':curve_js_new[:,0],'q1':curve_js_new[:,1],'q2':curve_js_new[:,2],'q3':curve_js_new[:,3],'q4':curve_js_new[:,4],'q5':curve_js_new[:,5]})
+df.to_csv('Curve_js.csv',header=False,index=False)
+df=DataFrame({'x':curve_new[:,0],'y':curve_new[:,1],'z':curve_new[:,2],'nx':curve_normal_new[:,0],'ny':curve_normal_new[:,1],'nz':curve_normal_new[:,2]})
+df.to_csv('Curve_in_base_frame.csv',header=False,index=False)
