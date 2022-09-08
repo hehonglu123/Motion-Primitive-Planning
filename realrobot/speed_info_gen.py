@@ -10,17 +10,21 @@ from error_check import *
 from MotionSend import *
 from utils import *
 from lambda_calc import *
+from realrobot import *
 
 ms=MotionSend()
 robot=abb6640(d=50)
 
 
-dataset='from_NX/'
-data_dir="../data/"+dataset
+dataset='wood/'
+
+solution_dir='curve_pose_opt7/'
+cmd_dir='../data/'+dataset+solution_dir+'greedy0.02/'
+data_dir='../data/'+dataset+solution_dir
+
 curve = read_csv(data_dir+"Curve_in_base_frame.csv",header=None).values
 
-# exe_dir='../ILC/max_gradient/curve1_250_100L_multipeak_real/'
-exe_dir='../ILC/max_gradient/curve2_1100_100L_multipeak_real/'
+exe_dir='../ILC/final/curve1_pose_opt7_v400_real/'
 
 ###5 run execute
 curve_exe_all=[]

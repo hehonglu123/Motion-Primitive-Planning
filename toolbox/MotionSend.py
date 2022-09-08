@@ -326,16 +326,15 @@ class MotionSend(object):
 
         return points_list,q_bp
 
-    def extend_dual(self,robot1,p_bp1,q_bp1,primitives1,robot2,p_bp2,q_bp2,primitives2,breakpoints):
+    def extend_dual(self,robot1,p_bp1,q_bp1,primitives1,robot2,p_bp2,q_bp2,primitives2,breakpoints,extension_start2=100,extension_end2=100):
         #extend porpotionally
         d1_start=np.linalg.norm(p_bp1[1][-1]-p_bp1[0][-1])
         d2_start=np.linalg.norm(p_bp2[1][-1]-p_bp2[0][-1])
         d1_end=np.linalg.norm(p_bp1[-1][-1]-p_bp1[-2][-1])
         d2_end=np.linalg.norm(p_bp2[-1][-1]-p_bp2[-2][-1])
 
-        extension_d=100
-        p_bp1,q_bp1=self.extend(robot1,q_bp1,primitives1,breakpoints,p_bp1,extension_start=extension_d*d1_start/d2_start,extension_end=extension_d*d1_end/d2_end)
-        p_bp2,q_bp2=self.extend(robot2,q_bp2,primitives2,breakpoints,p_bp2,extension_start=extension_d,extension_end=extension_d)
+        p_bp1,q_bp1=self.extend(robot1,q_bp1,primitives1,breakpoints,p_bp1,extension_start=extension_start2*d1_start/d2_start,extension_end=extension_end2*d1_end/d2_end)
+        p_bp2,q_bp2=self.extend(robot2,q_bp2,primitives2,breakpoints,p_bp2,extension_start=extension_start2,extension_end=extension_end2)
 
         return p_bp1,q_bp1,p_bp2,q_bp2
     def extract_data_from_cmd(self,filename):
