@@ -56,7 +56,6 @@ def get_acc(log_results,q,joint,clipped=False):
 	q6=df['J6'].tolist()[1:]
 	curve_exe_js=np.radians(np.vstack((q1,q2,q3,q4,q5,q6)).T.astype(float))
 	timestamp=np.array(df['timestamp'].tolist()[1:]).astype(float)*1e-3 # from msec to sec
-
 	curve_exe_js_act=[]
 	timestamp_act = []
 	dont_show_id=[]
@@ -107,48 +106,69 @@ def exec(q_d,joint):
 	###move joint at q_d configuration
 	q_init=copy.deepcopy(q_d)
 	q_end=copy.deepcopy(q_d)
-	q_init[joint]-=0.1
-	q_end[joint]+=1
 
 	### configuration depend upper/lower limits
 	lower_limit = copy.deepcopy(robot.lower_limit)
 	upper_limit = copy.deepcopy(robot.upper_limit)
 
-	if q_init[1] < radians(-54):
-		upper_limit[2] = radians(180)
-	if q_end[1] > radians(20):
-		lower_limit[2] = radians(-80)+((q_end[1]-radians(20))/2)
+	if np.abs(q_d[joint]-lower_limit[joint]) < np.abs(q_d[joint]-upper_limit[joint]):
+		q_init[joint]-=0.1
+		q_end[joint]+=1
 
-	if q_end[2] > radians(180):
-		lower_limit[1] = radians(-54)
-	if q_init[2] < radians(-45):
-		upper_limit[1] = radians(90)-((radians(-45)-q_init[2])*2)
+		if q_init[1] < radians(-54):
+			upper_limit[2] = radians(180)
+		if q_end[1] > radians(20):
+			lower_limit[2] = radians(-80)+((q_end[1]-radians(20))/2)
 
-	###if end outside boundary, move in other direction
-	# if q_end[joint]>upper_limit[joint]:
-	if np.any(np.array(q_end)>np.array(upper_limit)) or np.any(np.array(q_end)<np.array(lower_limit)) or \
-		 np.any(np.array(q_init)>np.array(upper_limit)) or np.any(np.array(q_init)<np.array(lower_limit)):
-		q_init[joint]=q_d[joint]+0.1
-		q_end[joint]=q_d[joint]-1
+		if q_end[2] > radians(180):
+			lower_limit[1] = radians(-54)
+		if q_init[2] < radians(-45):
+			upper_limit[1] = radians(90)-((radians(-45)-q_init[2])*2)
+		
+		# ensure the ending pose is smaller than limit
+		dang = 1
+		while q_end[joint]<lower_limit[joint]:
+			dang = dang*0.9
+			q_end[joint]=q_d[joint]+dang
+			# print(q_end[joint])
+			if dang < 0.3:
+				print("dang too small")
+				raise AssertionError
+	else:
+		q_init[joint]+=0.1
+		q_end[joint]-=1
+
+		if q_end[1] < radians(-54):
+			upper_limit[2] = radians(180)
+		if q_init[1] > radians(20):
+			lower_limit[2] = radians(-80)+((q_init[1]-radians(20))/2)
+
+		if q_init[2] > radians(180):
+			lower_limit[1] = radians(-54)
+		if q_end[2] < radians(-45):
+			upper_limit[1] = radians(90)-((radians(-45)-q_end[2])*2)
 		
 		# ensure the ending pose is smaller than limit
 		dang = 1
 		while q_end[joint]<lower_limit[joint]:
 			dang = dang*0.9
 			q_end[joint]=q_d[joint]-dang
-			
+			# print(q_end[joint])
 			if dang < 0.3:
 				print("dang too small")
 				raise AssertionError
 
 	###clip start within limits
-	if q_init[joint]<lower_limit[joint] or q_init[joint]>upper_limit[joint]:
+	# if q_init[joint]<lower_limit[joint] or q_init[joint]>upper_limit[joint]:
+	if np.any(q_init<lower_limit) or np.any(q_init>upper_limit):
 		q_init=np.clip(q_init,lower_limit,upper_limit)
 		clipped=True
 	else:
 		clipped=False
+	print(q_init)
 	jog(q_init)
-	time.sleep(0.1)
+	time.sleep(0.01)
+	print(q_end)
 	log_results=jog(q_end)
 	qdot_max=get_acc(log_results,q_d,joint,clipped)
 
@@ -161,10 +181,14 @@ resolution=0.05 ###rad
 
 dict_table={}
 
+# print(robot.lower_limit[1],resolution)
+# print(robot.lower_limit[1]+resolution*63)
+# exit()
+
 #####################first & second joint acc both depends on second and third joint#####################################
 # jog([0,0,0,0,0,0])
 # q2_test_lower = robot.lower_limit[1]+resolution
-q2_test_lower = robot.lower_limit[1]+resolution*45
+q2_test_lower = robot.lower_limit[1]+resolution*63
 q2_test_upper = robot.upper_limit[1]
 for q2 in np.arange(q2_test_lower,q2_test_upper,resolution):
 	
@@ -193,9 +217,9 @@ for q2 in np.arange(q2_test_lower,q2_test_upper,resolution):
 		print("===================================")
 		
 		# save when a qd is finished
-		with open('m710ic/acc4.txt','w+') as f:
+		with open('m900ia/acc6.txt','w+') as f:
 			f.write(str(dict_table))
-		pickle.dump(dict_table, open('m710ic/acc4.pickle','wb'))
+		pickle.dump(dict_table, open('m900ia/acc6.pickle','wb'))
 
 
 

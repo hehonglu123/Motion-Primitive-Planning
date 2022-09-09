@@ -8,8 +8,11 @@ import numpy as np
 #             dic=i #string
 # dic = eval(dic) # this is orignal dict with instace dict
 
-dic = pickle.load(open('1200/1200acc.pickle','rb'))
+dic = pickle.load(open('m710ic/acc.pickle','rb'))
 
+for i in range(1,7):
+   this_dic=pickle.load(open('m710ic/acc'+str(i)+'.pickle','rb'))
+   dic.update(this_dic)
 
 
 ###surface plots of accleration limits, x as q2, y as q3

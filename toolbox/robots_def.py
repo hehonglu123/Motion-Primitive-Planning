@@ -217,8 +217,8 @@ class m900ia(object):
 		self.joint_type=np.zeros(6)
 		
 		###updated range&vel limit
-		self.upper_limit=np.radians([180.,66.,66.,360.,125.,360.])
-		self.lower_limit=np.radians([-180.,-65.,-66.,-360.,-125.,-360.])
+		self.upper_limit=np.radians([180.,75.,65.,360.,125.,360.])
+		self.lower_limit=np.radians([-180.,-75.,-58.,-360.,-125.,-360.])
 		self.joint_vel_limit=np.radians([100.,95.,95.,105.,105.,170.])
 		# self.joint_acc_limit=np.radians([300.,561.,743.,244.,319.,243.])
 		self.joint_acc_limit=np.radians([183.333,175,166.666,183.333,183.333,300])

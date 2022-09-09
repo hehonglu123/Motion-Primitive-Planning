@@ -260,7 +260,7 @@ def main():
     all_speed_std = []
     all_max_error = []
 
-    iteration=31
+    iteration=41
     speed_iteration = 2
     draw_speed_max=None
     draw_error_max=None
@@ -342,6 +342,8 @@ def main():
                             # print(p_bp2[j][-1],id_prev,id_now,this_speed_exe2)
                             s2_movel[j] = (s2_movel_des[j]/this_speed_exe2)*s2_movel[j]
                             # s2_movel[j] = (s2_movel_des[j]-this_speed_exe2)+s2_movel[j]
+                    s1_movel[step_end1+1:]=s1_movel[step_end1]
+                    s2_movel[step_end2+1:]=s1_movel[step_end2]
                     s1_movel_update = deepcopy(s1_movel)
                     s2_movel_update = deepcopy(s2_movel)
 
@@ -364,11 +366,11 @@ def main():
                             p_bp1_update, q_bp1_update=ilc.update_bp_xyz(p_bp1,q_bp1,de_dp,error_prev[peak],breakpoint_interp_2tweak_indices,alpha=alpha)
 
                     #### update speed base on bp change
-                    # p_bp1_sq = np.squeeze(p_bp1_update[step_start1:step_end1+1])
-                    # dlam1_movel=np.linalg.norm(np.diff(p_bp1_sq,axis=0),2,1)
-                    # update_ratio = np.divide(np.divide(dlam1_movel,dt_movel), s1_movel_des[step_start1+1:step_end1+1])
-                    # s1_movel_update[step_start1+1:step_end1+1] = np.multiply(update_ratio,s1_movel[step_start1+1:step_end1+1])
-                    # s1_movel_update = np.append(s1_movel[0],s1_movel)
+                    p_bp1_sq = np.squeeze(p_bp1_update[step_start1:step_end1+1])
+                    dlam1_movel=np.linalg.norm(np.diff(p_bp1_sq,axis=0),2,1)
+                    update_ratio = np.divide(np.divide(dlam1_movel,dt_movel), s1_movel_des[step_start1+1:step_end1+1])
+                    s1_movel_update[step_start1+1:step_end1+1] = np.multiply(update_ratio,s1_movel[step_start1+1:step_end1+1])
+                    s1_movel_update[step_end1+1:]=s1_movel[step_end1]
                     ###################################
 
                     p_bp_relative_new,_=ms.form_relative_path(np.squeeze(q_bp1_update),np.squeeze(q_bp2),base2_R,base2_p)
@@ -424,27 +426,29 @@ def main():
             #############################chop extension off##################################
             if i >= speed_iteration+start_iteration:
             # if 1:
-                curve_exe_js1_prev = deepcopy(curve_exe_js1[-1])
-                curve_exe_js2_prev = deepcopy(curve_exe_js2[-1])
-                chop_first = False
-                chop_second = False
-                for j in range(len(curve_exe_js1)-2,0,-1):
-                    if np.any(curve_exe_js1[j] != curve_exe_js1_prev):
-                        chop_first = True
-                        break
-                    if np.any(curve_exe_js2[j] != curve_exe_js2_prev):
-                        chop_second = True
-                        break
-                    curve_exe_js1_prev = deepcopy(curve_exe_js1[j])
-                    curve_exe_js2_prev = deepcopy(curve_exe_js2[j])
-                if chop_first:
-                    print("First robot is slower")
-                    lam, curve_exe1,curve_exe2,curve_exe_R1,curve_exe_R2,curve_exe_js1,curve_exe_js2, speed, timestamp, relative_path_exe, relative_path_exe_R=\
-                        ms.chop_extension_dual_singel(lam, curve_exe1,curve_exe2,curve_exe_R1,curve_exe_R2,curve_exe_js1,curve_exe_js2, speed, timestamp, relative_path_exe,relative_path_exe_R,curve1[0],curve1[-1],curve_exe1)
-                if chop_second:
-                    print("Second robot is slower")
-                    lam, curve_exe1,curve_exe2,curve_exe_R1,curve_exe_R2,curve_exe_js1,curve_exe_js2, speed, timestamp, relative_path_exe, relative_path_exe_R=\
-                        ms.chop_extension_dual_singel(lam, curve_exe1,curve_exe2,curve_exe_R1,curve_exe_R2,curve_exe_js1,curve_exe_js2, speed, timestamp, relative_path_exe,relative_path_exe_R,curve2[0],curve2[-1],curve_exe2)
+                # curve_exe_js1_prev = deepcopy(curve_exe_js1[-1])
+                # curve_exe_js2_prev = deepcopy(curve_exe_js2[-1])
+                # chop_first = False
+                # chop_second = False
+                # for j in range(len(curve_exe_js1)-2,0,-1):
+                #     if np.any(curve_exe_js1[j] != curve_exe_js1_prev):
+                #         chop_first = True
+                #         break
+                #     if np.any(curve_exe_js2[j] != curve_exe_js2_prev):
+                #         chop_second = True
+                #         break
+                #     curve_exe_js1_prev = deepcopy(curve_exe_js1[j])
+                #     curve_exe_js2_prev = deepcopy(curve_exe_js2[j])
+                # if chop_first:
+                #     print("First robot is slower")
+                #     lam, curve_exe1,curve_exe2,curve_exe_R1,curve_exe_R2,curve_exe_js1,curve_exe_js2, speed, timestamp, relative_path_exe, relative_path_exe_R=\
+                #         ms.chop_extension_dual_singel(lam, curve_exe1,curve_exe2,curve_exe_R1,curve_exe_R2,curve_exe_js1,curve_exe_js2, speed, timestamp, relative_path_exe,relative_path_exe_R,curve1[0],curve1[-1],curve_exe1)
+                # if chop_second:
+                #     print("Second robot is slower")
+                #     lam, curve_exe1,curve_exe2,curve_exe_R1,curve_exe_R2,curve_exe_js1,curve_exe_js2, speed, timestamp, relative_path_exe, relative_path_exe_R=\
+                #         ms.chop_extension_dual_singel(lam, curve_exe1,curve_exe2,curve_exe_R1,curve_exe_R2,curve_exe_js1,curve_exe_js2, speed, timestamp, relative_path_exe,relative_path_exe_R,curve2[0],curve2[-1],curve_exe2)
+                lam, curve_exe1,curve_exe2,curve_exe_R1,curve_exe_R2,curve_exe_js1,curve_exe_js2, speed, timestamp, relative_path_exe, relative_path_exe_R=\
+                    ms.chop_extension_dual(lam, curve_exe1,curve_exe2,curve_exe_R1,curve_exe_R2,curve_exe_js1,curve_exe_js2, speed, timestamp, relative_path_exe,relative_path_exe_R,relative_path[0,:3],relative_path[-1,:3])
                 timestamp1 = timestamp
                 timestamp2 = timestamp
                 lam1=np.append(0,np.cumsum(np.linalg.norm(np.diff(curve_exe1,axis=0),2,1)))
@@ -475,6 +479,7 @@ def main():
                 all_speed_profile2.append(deepcopy(s2_movel))
                 all_speed_std.append(np.std(speed)/ave_speed*100)
                 all_max_error.append(max(error))
+                max_error=max(error)
                 if i==1:
                     print(s1_movel)
                     print(s2_movel)

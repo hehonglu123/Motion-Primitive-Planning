@@ -1,3 +1,4 @@
+from copy import deepcopy
 import numpy as np
 from general_robotics_toolbox import *
 from pandas import read_csv
@@ -497,6 +498,9 @@ class ilc_toolbox(object):
 		###breakpoint_interp_2tweak_indices:	closest N breakpoints
 		###alpha:								stepsize
 
+		p_bp_temp = deepcopy(p_bp)
+		q_bp_temp = deepcopy(q_bp)
+
 		if type(self.robot) is list:
 			robot=self.robot[0]
 		else:
@@ -508,10 +512,10 @@ class ilc_toolbox(object):
 		for m in breakpoint_interp_2tweak_indices:  #3 breakpoints
 			for bp_sub_idx in range(len(p_bp[m])):
 
-				p_bp[m][bp_sub_idx]+=point_adjustment[0][3*idx:3*(idx+1)]
-				q_bp[m][bp_sub_idx]=car2js(self.robot,q_bp[m][bp_sub_idx],p_bp[m][bp_sub_idx],self.robot.fwd(q_bp[m][bp_sub_idx]).R)[0]
+				p_bp_temp[m][bp_sub_idx]+=point_adjustment[0][3*idx:3*(idx+1)]
+				q_bp_temp[m][bp_sub_idx]=car2js(robot,q_bp[m][bp_sub_idx],p_bp[m][bp_sub_idx],robot.fwd(q_bp[m][bp_sub_idx]).R)[0]
 				idx+=1
-		return p_bp, q_bp
+		return p_bp_temp, q_bp_temp
 
 
 	def update_bp_ori(self,p_bp,q_bp,de_ori_dp,max_angle,breakpoint_interp_2tweak_indices,alpha=0.5):
