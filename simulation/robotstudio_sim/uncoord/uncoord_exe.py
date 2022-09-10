@@ -6,7 +6,6 @@ from io import StringIO
 from threading import Thread
 
 from abb_motion_program_exec_client import *
-sys.path.append('../../../toolbox')
 from robots_def import *
 from error_check import *
 from MotionSend import *

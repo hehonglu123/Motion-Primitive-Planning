@@ -1,19 +1,12 @@
-########
-# This module utilized https://github.com/johnwason/abb_motion_program_exec
-# and send whatever the motion primitives that algorithms generate
-# to RobotStudio
-########
-
 import numpy as np
 from general_robotics_toolbox import *
 from pandas import read_csv
-import sys
+import sys, traceback
 from io import StringIO
-from scipy.signal import find_peaks
-# sys.path.append('../abb_motion_program_exec')
-from abb_motion_program_exec_client import *
+from threading import Thread
 sys.path.append('../')
 
+from abb_motion_program_exec_client import *
 from ilc_toolbox import *
 from robots_def import *
 from error_check import *
@@ -22,121 +15,153 @@ from lambda_calc import *
 from blending import *
 from dual_arm import *
 
+dataset='wood/'
+data_dir="../../data/"+dataset
+solution_dir=data_dir+'dual_arm/'+'diffevo3/'
+cmd_dir=solution_dir+'50L/'
+relative_path,robot1,robot2,base2_R,base2_p,lam_relative_path,lam1,lam2,curve_js1,curve_js2=initialize_data(dataset,data_dir,solution_dir,cmd_dir)
+
+
+ms1 = MotionSend(robot1=robot1,robot2=robot2,base2_R=base2_R,base2_p=base2_p)
+ms2=MotionSend(robot1=robot2, url="http://192.168.68.68:80")
+
+
+df1=None
+df2=None
+def move_robot1():
+	global df1, ms1, robot1,primitives1,breakpoints1,p_bp1,q_bp1,v1_all,z1_all
+
+	try:
+		logged_data= ms1.exec_motions(robot1,primitives1,breakpoints1,p_bp1,q_bp1,v1_all,z1_all)
+		StringData=StringIO(logged_data)
+		df1 = read_csv(StringData, sep =",")
+	except:
+		traceback.print_exc()
+
+def move_robot2():
+	global df2, ms2, robot2,primitives2,breakpoints2,p_bp2,q_bp2,v2_all,z2_all
+	try:
+		logged_data= ms2.exec_motions(robot2,primitives2,breakpoints2,p_bp2,q_bp2,v2_all,z2_all)
+		StringData=StringIO(logged_data)
+		df2 = read_csv(StringData, sep =",")
+	except:
+		traceback.print_exc()
+
 def main():
-	dataset='from_NX/'
-	data_dir="../../data/"+dataset
-	solution_dir=data_dir+'dual_arm/'+'diffevo3/'
-	cmd_dir=solution_dir+'30L/'
-	
-	relative_path,robot1,robot2,base2_R,base2_p,lam_relative_path,lam1,lam2,curve_js1,curve_js2=initialize_data(dataset,data_dir,solution_dir,cmd_dir)
+	global ms1,ms2,df1, df2, robot1,primitives1,breakpoints1,p_bp1,q_bp1,v1_all,z1_all, robot2,primitives2,breakpoints2,p_bp2,q_bp2,v2_all,z2_all
 
-
-	ms = MotionSend(robot1=robot1,robot2=robot2,base2_R=base2_R,base2_p=base2_p)
-
-	breakpoints1,primitives1,p_bp1,q_bp1=ms.extract_data_from_cmd(cmd_dir+'command1.csv')
-	breakpoints2,primitives2,p_bp2,q_bp2=ms.extract_data_from_cmd(cmd_dir+'command2.csv')
+	###extract data commands
+	breakpoints1,primitives1,p_bp1,q_bp1=ms1.extract_data_from_cmd(cmd_dir+'command1.csv')
+	breakpoints2,primitives2,p_bp2,q_bp2=ms2.extract_data_from_cmd(cmd_dir+'command2.csv')
 
 	breakpoints1[1:]=breakpoints1[1:]-1
 	breakpoints2[2:]=breakpoints2[2:]-1
 
-	###get lambda at each breakpoint
-	lam_bp=lam_relative_path[np.append(breakpoints1[0],breakpoints1[1:]-1)]
-
-	vd_relative=1500
-
-	s1_all,s2_all=calc_individual_speed(vd_relative,lam1,lam2,lam_relative_path,breakpoints1)
-	v2_all=[]
-	for i in range(len(breakpoints1)):
-		# v2_all.append(speeddata(s2_all[i],9999999,9999999,999999))
-		v2_all.append(v5000)
-	
-
-
-	###extension
-	p_bp1,q_bp1,p_bp2,q_bp2=ms.extend_dual(ms.robot1,p_bp1,q_bp1,primitives1,ms.robot2,p_bp2,q_bp2,primitives2,breakpoints1)
-
-
 	###ilc toolbox def
 	ilc=ilc_toolbox([robot1,robot2],[primitives1,primitives2],base2_R,base2_p)
 
-	multi_peak_threshold=0.2
-	###TODO: extension fix start point, moveC support
-	max_error=999
-	inserted_points=[]
+	z1_all=[z10]*len(breakpoints1)
+	z2_all=[z10]*len(breakpoints2)
+
+	###get lambda at each breakpoint
+	lam_bp=lam_relative_path[np.append(breakpoints1[0],breakpoints1[1:]-1)]
+
+	vd_relative=700
+
+	s1_all,s2_all=calc_individual_speed(vd_relative,lam1,lam2,lam_relative_path,breakpoints1)
+	v1_all=[]
+	v2_all=[]
+	for i in range(len(breakpoints1)):
+		v1_all.append(speeddata(s1_all[i],9999999,9999999,999999))
+		v2_all.append(speeddata(s2_all[i],9999999,9999999,999999))
+	
+
+	###extension
+	p_bp1,q_bp1,p_bp2,q_bp2=ms1.extend_dual(robot1,p_bp1,q_bp1,primitives1,robot2,p_bp2,q_bp2,primitives2,breakpoints1,extension_start2=150,extension_end2=100)
+
 	iteration=100
 	for i in range(iteration):
 
+		###move to start first 
 
-		ms = MotionSend(robot1=robot1,robot2=robot2,base2_R=base2_R,base2_p=base2_p)
-		###execution with plant
-		logged_data=ms.exec_motions_multimove(breakpoints1,primitives1,primitives2,p_bp1,p_bp2,q_bp1,q_bp2,vmax,v2_all,z10,z10)
-		with open('recorded_data/dual_iteration_'+str(i)+'.csv',"w") as f:
-			f.write(logged_data)
-		###save commands
-		ms.write_data_to_cmd('recorded_data/command1.csv',breakpoints1,primitives1, p_bp1,q_bp1)
-		ms.write_data_to_cmd('recorded_data/command2.csv',breakpoints2,primitives2, p_bp2,q_bp2)
+		ms1.exec_motions(robot1,[primitives1[0]],[breakpoints1[0]],[p_bp1[0]],[q_bp1[0]],vmax,fine)
+		ms2.exec_motions(robot2,[primitives2[0]],[breakpoints2[0]],[p_bp2[0]],[q_bp2[0]],vmax,fine)
 
-		StringData=StringIO(logged_data)
-		df = read_csv(StringData, sep =",")
-		##############################data analysis#####################################
-		lam, curve_exe1,curve_exe2,curve_exe_R1,curve_exe_R2,curve_exe_js1,curve_exe_js2, speed, timestamp, relative_path_exe, relative_path_exe_R = ms.logged_data_analysis_multimove(df,base2_R,base2_p,realrobot=True)
-		#############################chop extension off##################################
+		t1 = Thread(target=move_robot1)
+		t2 = Thread(target=move_robot2)
+
+		# start the threads
+		t1.start()
+		t2.start()
+
+		# wait for the threads to complete
+		t1.join()
+		t2.join()
+
+		df1.to_csv('recorded_data/r1_dual_iteration_'+str(i)+'.csv',header=True,index=False)
+		df2.to_csv('recorded_data/r2_dual_iteration_'+str(i)+'.csv',header=True,index=False)
+
+		lam_exe1, curve_exe1, curve_exe_R1,curve_exe_js1, speed1, timestamp1=ms1.logged_data_analysis(robot1,df1,realrobot=True)
+		lam_exe2, curve_exe2, curve_exe_R2,curve_exe_js2, speed2, timestamp2=ms2.logged_data_analysis(robot2,df2,realrobot=True)
+
+		if len(curve_exe_js1)>len(curve_exe_js2):
+			print('size mismatch, padding now')
+			# speed2=np.append(speed2,[0]*(len(curve_exe_js1)-len(curve_exe_js2)))
+			curve_exe_R1=np.append(curve_exe_R1,[curve_exe_R1[-1]]*(len(curve_exe_js1)-len(curve_exe_js2)))
+			curve_exe_js2=np.pad(curve_exe_js2,[(0,len(curve_exe_js1)-len(curve_exe_js2)),(0,0)], mode="edge")
+			curve_exe2=np.pad(curve_exe2,[(0,len(curve_exe1)-len(curve_exe2)),(0,0)], mode="edge")
+			
+		elif len(curve_exe_js1)<len(curve_exe_js2):
+			print('size mismatch, padding now')
+			# speed1=np.append(speed1,[0]*(len(curve_exe_js2)-len(curve_exe_js1)))
+			curve_exe_R2=np.append(curve_exe_R2,[curve_exe_R2[-1]]*(len(curve_exe_js2)-len(curve_exe_js1)))
+			curve_exe_js1=np.pad(curve_exe_js1,[(0,len(curve_exe_js2)-len(curve_exe_js1)),(0,0)], mode="edge")
+			curve_exe1=np.pad(curve_exe1,[(0,len(curve_exe2)-len(curve_exe1)),(0,0)], mode="edge")
+
+		relative_path_exe,relative_path_exe_R=form_relative_path(robot1,robot2,curve_exe_js1,curve_exe_js2,base2_R,base2_p)
+		lam=calc_lam_cs(relative_path_exe)
+		speed=np.gradient(lam)/np.gradient(timestamp1)
+
 		lam, curve_exe1,curve_exe2,curve_exe_R1,curve_exe_R2,curve_exe_js1,curve_exe_js2, speed, timestamp, relative_path_exe, relative_path_exe_R=\
-			ms.chop_extension_dual(lam, curve_exe1,curve_exe2,curve_exe_R1,curve_exe_R2,curve_exe_js1,curve_exe_js2, speed, timestamp, relative_path_exe,relative_path_exe_R,relative_path[0,:3],relative_path[-1,:3])
+				ms1.chop_extension_dual(lam, curve_exe1,curve_exe2,curve_exe_R1,curve_exe_R2,curve_exe_js1,curve_exe_js2, speed, timestamp1, relative_path_exe,relative_path_exe_R,relative_path[0,:3],relative_path[-1,:3])
 
-		##############################calcualte error########################################
+		speed1=get_speed(curve_exe1,timestamp)
+		speed2=get_speed(curve_exe2,timestamp)
+
 		error,angle_error=calc_all_error_w_normal(relative_path_exe,relative_path[:,:3],relative_path_exe_R[:,:,-1],relative_path[:,3:])
-		print(max(error))
 
-		#############################error peak detection###############################
-		peaks,_=find_peaks(error,height=multi_peak_threshold,prominence=0.05,distance=20/(lam[int(len(lam)/2)]-lam[int(len(lam)/2)-1]))		###only push down peaks higher than height, distance between each peak is 20mm, threshold to filter noisy peaks
-		if len(peaks)==0 or np.argmax(error) not in peaks:
-			peaks=np.append(peaks,np.argmax(error))
-
-		# peaks=np.array([np.argmax(error)])
-		##############################plot error#####################################
 
 		fig, ax1 = plt.subplots()
+
 		ax2 = ax1.twinx()
-		ax1.plot(lam, speed, 'g-', label='Speed')
+		ax1.plot(lam,speed, 'g-', label='Relative Speed')
+		ax1.plot(lam,speed1, 'r-', label='TCP1 Speed')
+		ax1.plot(lam,speed2, 'm-', label='TCP2 Speed')
 		ax2.plot(lam, error, 'b-',label='Error')
-		ax2.scatter(lam[peaks],error[peaks],label='peaks')
 		ax2.plot(lam, np.degrees(angle_error), 'y-',label='Normal Error')
-		ax1.axis(ymin=0,ymax=2.*vd_relative)
-		ax2.axis(ymin=0,ymax=4)
 
 		ax1.set_xlabel('lambda (mm)')
 		ax1.set_ylabel('Speed/lamdot (mm/s)', color='g')
-		ax2.set_ylabel('Error/Normal Error (mm/deg)', color='b')
-		plt.title("Speed and Error Plot")
-		ax1.legend(loc=0)
+		ax2.set_ylabel('Error (mm)', color='b')
+		plt.title('Uncoordinated')
 
-		ax2.legend(loc=0)
-
-		plt.legend()
+		h1, l1 = ax1.get_legend_handles_labels()
+		h2, l2 = ax2.get_legend_handles_labels()
+		ax1.legend(h1+h2, l1+l2, loc=1)
 		plt.savefig('recorded_data/iteration_'+str(i))
 		plt.clf()
-		# plt.show()
 
-		###########################plot for verification###################################
-		# p_bp_relative,_=ms.form_relative_path(np.squeeze(q_bp1),np.squeeze(q_bp2),base2_R,base2_p)
-		# plt.figure()
-		# ax = plt.axes(projection='3d')
-		# ax.plot3D(relative_path[:,0], relative_path[:,1], relative_path[:,2], c='gray',label='original')
-		# ax.plot3D(relative_path_exe[:,0], relative_path_exe[:,1], relative_path_exe[:,2], c='red',label='execution')
-		# ax.scatter3D(p_bp_relative[:,0], p_bp_relative[:,1], p_bp_relative[:,2], c=p_bp_relative[:,2], cmap='Greens',label='breakpoints')
-		# ax.scatter(relative_path_exe[peaks,0], relative_path_exe[peaks,1], relative_path_exe[peaks,2],c='orange',label='worst case')
+
+
+		# ##########################################move towards error direction######################################
+		# error_bps_v1,error_bps_w1,error_bps_v2,error_bps_w2=ilc.get_error_direction_dual(relative_path,p_bp1,q_bp1,p_bp2,q_bp2,relative_path_exe,relative_path_exe_R,curve_exe1,curve_exe_R1,curve_exe2,curve_exe_R2)
+
+		# ###FIX ERROR_W!
+		# error_bps_w1=np.zeros(error_bps_w1.shape)
+		# error_bps_w2=np.zeros(error_bps_w2.shape)
+		# p_bp1, q_bp1, p_bp2, q_bp2=ilc.update_error_direction_dual(relative_path,p_bp1,q_bp1,p_bp2,q_bp2,error_bps_v1,error_bps_w1,error_bps_v2,error_bps_w2,gamma_v=0.2,gamma_w=0.)
+
 		
-		# plt.show()
-
-		##########################################move towards error direction######################################
-		error_bps_v1,error_bps_w1,error_bps_v2,error_bps_w2=ilc.get_error_direction_dual(relative_path,p_bp1,q_bp1,p_bp2,q_bp2,relative_path_exe,relative_path_exe_R,curve_exe1,curve_exe_R1,curve_exe2,curve_exe_R2)
-
-		###FIX ERROR_W!
-		error_bps_w1=np.zeros(error_bps_w1.shape)
-		error_bps_w2=np.zeros(error_bps_w2.shape)
-		p_bp1, q_bp1, p_bp2, q_bp2=ilc.update_error_direction_dual(relative_path,p_bp1,q_bp1,p_bp2,q_bp2,error_bps_v1,error_bps_w1,error_bps_v2,error_bps_w2)
-
 		###cmd speed adjustment
 		speed_alpha=0.1
 
@@ -148,8 +173,7 @@ def main():
 			s2_all[m]=max(s2_all[m],100)
 			v2_all[m]=speeddata(s2_all[m],9999999,9999999,999999)
 
-		if max(error)<0.5:
-			break
+
 
 if __name__ == "__main__":
 	main()

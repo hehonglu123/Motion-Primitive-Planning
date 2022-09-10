@@ -14,8 +14,8 @@ from lambda_calc import *
 from utils import *
 
 
-data_dir='from_NX/'
-solution_dir='curve_pose_opt2_R/'
+data_dir='wood/'
+solution_dir='baseline/'
 
 num_ls=[30]
 robot=abb6640(d=50)
@@ -51,8 +51,8 @@ for num_l in num_ls:
 		
 	primitives_choices=['moveabsj']+['movel_fit']*num_l
 
-	# breakpoints[1:]=breakpoints[1:]-1
-	df=DataFrame({'breakpoints':breakpoints,'primitives':primitives_choices,'points':points,'q_bp':q_bp})
+	breakpoints[1:]=breakpoints[1:]-1
+	df=DataFrame({'breakpoints':breakpoints,'primitives':primitives_choices,'p_bp':points,'q_bp':q_bp})
 	df.to_csv(cmd_dir+'command.csv',header=True,index=False)
 
 	# curve_fit_js=car2js(robot,curve_js[0],curve_fit,curve_fit_R)

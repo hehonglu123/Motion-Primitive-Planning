@@ -182,7 +182,7 @@ class greedy_fit(fitting_toolbox):
 		self.curve_fit_R=np.array(self.curve_fit_R)
 		self.curve_fit_js=np.array(self.curve_fit_js)
 
-		return self.breakpoints,primitives,p_bp,q_bp
+		return np.array(self.breakpoints),primitives,p_bp,q_bp
 
 	def merge_bp(self,breakpoints,primitives,p_bp,q_bp):
 		###merge closely programmed bp's
@@ -302,7 +302,7 @@ class greedy_fit(fitting_toolbox):
 
 def main():
 	dataset='wood/'
-	solution_dir='curve_pose_opt7/'
+	solution_dir='baseline/'
 	data_dir="../data/"+dataset+solution_dir
 
 	###read in points
@@ -311,7 +311,7 @@ def main():
 
 	robot=abb6640(d=50)
 
-	max_error_threshold=0.02
+	max_error_threshold=0.3
 	min_length=10
 	greedy_fit_obj=greedy_fit(robot,curve_js, min_length=min_length,max_error_threshold=max_error_threshold)
 
@@ -345,7 +345,8 @@ def main():
 	plt.legend()
 	plt.show()
 
-	
+	###adjust breakpoint index
+	breakpoints[1:]=breakpoints[1:]-1
 
 	print(len(breakpoints))
 	print(len(primitives))
@@ -389,6 +390,6 @@ def merging():
 	df.to_csv('greedy_output/command_merged.csv',header=True,index=False)
 
 if __name__ == "__main__":
-	merging()
+	# merging()
 	# greedy_execute()
-	# main()
+	main()
