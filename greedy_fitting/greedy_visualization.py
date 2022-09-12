@@ -14,7 +14,7 @@ def main():
 	dataset='wood/'
 	solution_dir='baseline/'
 	data_dir="../data/"+dataset+solution_dir
-	cmd_dir="../data/"+dataset+solution_dir+'30L/'
+	cmd_dir="../data/"+dataset+solution_dir+'0.3/'
 
 	curve = read_csv(data_dir+"Curve_in_base_frame.csv",header=None).values
 
@@ -23,6 +23,10 @@ def main():
 	breakpoints,primitives,p_bp,q_bp=ms.extract_data_from_cmd(cmd_dir+'command.csv')
 
 	curve_fit, curve_R_fit, curve_js_fit, _=form_traj_from_bp(q_bp,primitives,robot)
+
+	error,angle_error=calc_all_error_w_normal(curve_fit,curve[:,:3],curve_R_fit[:,:,-1],curve[:,3:])
+
+	print(max(error))
 
 	p_bp_np=np.array([item[-1] for item in p_bp])
 	plt.figure()
