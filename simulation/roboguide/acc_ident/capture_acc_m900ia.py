@@ -130,8 +130,8 @@ def exec(q_d,joint):
 		
 		# ensure the ending pose is smaller than limit
 		dang = 1
-		# while q_end[joint]<lower_limit[joint]:
-		while np.any(q_end<lower_limit) or np.any(q_end>upper_limit):
+		while q_end[joint]>upper_limit[joint]:
+		# while np.any(q_end<lower_limit) or np.any(q_end>upper_limit):
 			dang = dang*0.9
 			q_end[joint]=q_d[joint]+dang
 			if q_end[2] > radians(15):
@@ -160,8 +160,8 @@ def exec(q_d,joint):
 		
 		# ensure the ending pose is smaller than limit
 		dang = 1
-		# while q_end[joint]<lower_limit[joint]:
-		while np.any(q_end<lower_limit) or np.any(q_end>upper_limit):
+		while q_end[joint]<lower_limit[joint]:
+		# while np.any(q_end<lower_limit) or np.any(q_end>upper_limit):
 			dang = dang*0.9
 			q_end[joint]=q_d[joint]-dang
 			if q_end[1] < radians(-25):
@@ -185,6 +185,11 @@ def exec(q_d,joint):
 		clipped=True
 	else:
 		clipped=False
+	
+	for j in range(6):
+		if j!=joint:
+			q_end[j]=q_init[j]
+
 	print(q_init)
 	jog(q_init)
 	time.sleep(0.01)
@@ -206,13 +211,15 @@ dict_table={}
 #####################first & second joint acc both depends on second and third joint#####################################
 # jog([0,0,0,0,0,0])
 # q2_test_lower = robot.lower_limit[1]+resolution
-count=0
-q2_test_lower = robot.lower_limit[1]+count
+count=17
+q2_test_lower = robot.lower_limit[1]+count*resolution
 q2_test_upper = robot.upper_limit[1]
 for q2 in np.arange(q2_test_lower,q2_test_upper,resolution):
 	print("count:",count)
 	if q2 < radians(-25):
 		q3_test_upper = robot.upper_limit[2]+(q2-radians(-25))
+	else:
+		q3_test_upper = robot.upper_limit[2]
 	
 	q3_test_lower = robot.lower_limit[2]
 
@@ -231,9 +238,9 @@ for q2 in np.arange(q2_test_lower,q2_test_upper,resolution):
 		print("===================================")
 		
 		# save when a qd is finished
-		with open('m900ia/acc.txt','w+') as f:
+		with open('m900ia/acc1.txt','w+') as f:
 			f.write(str(dict_table))
-		pickle.dump(dict_table, open('m900ia/acc.pickle','wb'))
+		pickle.dump(dict_table, open('m900ia/acc1.pickle','wb'))
 	
 	count += 1
 
