@@ -1,8 +1,3 @@
-########
-# This module utilized https://github.com/johnwason/abb_motion_program_exec
-# and send whatever the motion primitives that algorithms generate
-# to RobotStudio
-########
 
 from copy import deepcopy
 import numpy as np
@@ -447,6 +442,9 @@ def main():
     df1.to_csv(cmd_folder+'iter_'+str(use_iteration)+'_curve_exe_js1.csv',header=False,index=False)
     df2=DataFrame({'q0':curve_exe_js2[:,0],'q1':curve_exe_js2[:,1],'q2':curve_exe_js2[:,2],'q3':curve_exe_js2[:,3],'q4':curve_exe_js2[:,4],'q5':curve_exe_js2[:,5]})
     df2.to_csv(cmd_folder+'iter_'+str(use_iteration)+'_curve_exe_js2.csv',header=False,index=False)
+    dft=DataFrame({'t':timestamp})
+    dft.to_csv(cmd_folder+'iter_'+str(use_iteration)+'_timestamp.csv',header=False,index=False)
+    
 
     ##############################plot error#####################################
     fig, ax1 = plt.subplots()
