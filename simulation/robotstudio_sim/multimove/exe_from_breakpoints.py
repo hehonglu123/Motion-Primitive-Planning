@@ -40,7 +40,7 @@ def main():
     ###get lambda at each breakpoint
     lam_bp=lam_relative_path[np.append(breakpoints1[0],breakpoints1[1:]-1)]
 
-    vd_relative=1500
+    vd_relative=2000
 
     s1_all,s2_all=calc_individual_speed(vd_relative,lam1,lam2,lam_relative_path,breakpoints1)
     v2_all=[]
@@ -49,7 +49,7 @@ def main():
         v2_all.append(speeddata(s2_all[i],9999999,9999999,999999))
         # v2_all.append(v5000)
 
-    zone=50
+    zone=100
     z= zonedata(False,zone,1.5*zone,1.5*zone,0.15*zone,1.5*zone,0.15*zone)
 
 

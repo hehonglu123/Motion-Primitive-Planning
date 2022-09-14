@@ -39,9 +39,9 @@ def main():
 	lower_limit=np.append(robot2.lower_limit,[-np.pi])
 	upper_limit=np.append(robot2.upper_limit,[np.pi])
 	bnds=tuple(zip(lower_limit,upper_limit))
-	res = differential_evolution(opt.dual_arm_opt, bnds, args=None,workers=-1,
+	res = differential_evolution(opt.dual_arm_init_opt, bnds, args=None,workers=-1,
 									x0 = np.append(q_init2,[0]),
-									strategy='best1bin', maxiter=500,
+									strategy='best1bin', maxiter=1,
 									popsize=15, tol=1e-10,
 									mutation=(0.5, 1), recombination=0.7,
 									seed=None, callback=None, disp=False,

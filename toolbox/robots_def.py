@@ -87,8 +87,9 @@ class abb6640(object):
 			pose_temp=fwdkin(robot_def,q)
 		else:
 			pose_temp=fwdkin(self.robot_def,q)
-		pose_temp.p=np.dot(base_R,pose_temp.p)+base_p
-		pose_temp.R=np.dot(base_R,pose_temp.R)
+
+		pose_temp.p=base_R@pose_temp.p+base_p
+		pose_temp.R=base_R@pose_temp.R
 		return pose_temp
 
 	def fwd_all(self,q_all,base_R=np.eye(3),base_p=np.array([0,0,0])):
@@ -177,9 +178,9 @@ class abb1200(object):
 		else:
 			pose_temp=fwdkin(self.robot_def,q)
 
-		pose_temp=fwdkin(self.robot_def,q)
-		pose_temp.p=np.dot(base_R,pose_temp.p)+base_p
-		pose_temp.R=np.dot(base_R,pose_temp.R)
+		
+		pose_temp.p=base_R@pose_temp.p+base_p
+		pose_temp.R=base_R@pose_temp.R
 		return pose_temp
 
 	def fwd_all(self,q_all,base_R=np.eye(3),base_p=np.array([0,0,0])):

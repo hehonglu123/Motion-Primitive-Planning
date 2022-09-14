@@ -32,7 +32,7 @@ def main():
 
 
 	###read in curve_exe
-	df = read_csv('recorded_data/curve_exe_v1500_z10.csv')
+	df = read_csv('recorded_data/curve_exe_v2000_z100.csv')
 
 	lam, curve_exe1,curve_exe2,curve_exe_R1,curve_exe_R2,curve_exe_js1,curve_exe_js2, speed, timestamp, relative_path_exe,relative_path_exe_R =ms.logged_data_analysis_multimove(df,base2_R,base2_p,realrobot=True)
 
