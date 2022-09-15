@@ -285,11 +285,11 @@ def main():
             s2_movel_update = deepcopy(s2_movel)
 
             #### update speed base on bp change
-            p_bp1_sq = np.squeeze(p_bp1_update[step_start1:step_end1+1])
-            dlam1_movel=np.linalg.norm(np.diff(p_bp1_sq,axis=0),2,1)
-            update_ratio = np.divide(np.divide(dlam1_movel,dt_movel), s1_movel_des[step_start1+1:step_end1+1])
-            s1_movel_update[step_start1+1:step_end1+1] = np.multiply(update_ratio,s1_movel[step_start1+1:step_end1+1])
-            s1_movel_update[step_end1+1:]=s1_movel[step_end1]
+            # p_bp1_sq = np.squeeze(p_bp1_update[step_start1:step_end1+1])
+            # dlam1_movel=np.linalg.norm(np.diff(p_bp1_sq,axis=0),2,1)
+            # update_ratio = np.divide(np.divide(dlam1_movel,dt_movel), s1_movel_des[step_start1+1:step_end1+1])
+            # s1_movel_update[step_start1+1:step_end1+1] = np.multiply(update_ratio,s1_movel[step_start1+1:step_end1+1])
+            # s1_movel_update[step_end1+1:]=s1_movel[step_end1]
             ###################################
 
             p_bp_relative_new,_=ms.form_relative_path(np.squeeze(q_bp1_update),np.squeeze(q_bp2),base2_R,base2_p)
@@ -415,8 +415,8 @@ def main():
     ########## read data ##############
     use_iteration=28
     cmd_folder = data_dir+'results_1000_dual_arm_extend1_nospeedreg/'
-    _,primitives1,p_bp1,q_bp1=ms.extract_data_from_cmd(os.getcwd()+'/'+cmd_folder+'command_arm1_'+str(use_iteration)+'.csv')
-    _,primitives2,p_bp2,q_bp2=ms.extract_data_from_cmd(os.getcwd()+'/'+cmd_folder+'command_arm2_'+str(use_iteration)+'.csv')
+    _,primitives1,p_bp1,q_bp1,_=ms.extract_data_from_cmd(os.getcwd()+'/'+cmd_folder+'command_arm1_'+str(use_iteration)+'.csv')
+    _,primitives2,p_bp2,q_bp2,_=ms.extract_data_from_cmd(os.getcwd()+'/'+cmd_folder+'command_arm2_'+str(use_iteration)+'.csv')
 
     ###execution with plant
     logged_data=ms.exec_motions_multimove_nocoord(robot1,robot2,primitives1,primitives2,p_bp1,p_bp2,q_bp1,q_bp2,s1_movel_update,s2_movel_update,z,z)

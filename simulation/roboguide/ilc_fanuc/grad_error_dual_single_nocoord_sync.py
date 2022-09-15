@@ -1,7 +1,7 @@
 ########
-# This module utilized https://github.com/johnwason/abb_motion_program_exec
+# This module utilized https://github.com/eric565648/fanuc_motion_program_exec_client
 # and send whatever the motion primitives that algorithms generate
-# to RobotStudio
+# to Roboguide
 ########
 
 from copy import deepcopy
@@ -260,7 +260,7 @@ def main():
     all_speed_std = []
     all_max_error = []
 
-    iteration=41
+    iteration=3
     speed_iteration = 2
     draw_speed_max=None
     draw_error_max=None
@@ -366,11 +366,11 @@ def main():
                             p_bp1_update, q_bp1_update=ilc.update_bp_xyz(p_bp1,q_bp1,de_dp,error_prev[peak],breakpoint_interp_2tweak_indices,alpha=alpha)
 
                     #### update speed base on bp change
-                    p_bp1_sq = np.squeeze(p_bp1_update[step_start1:step_end1+1])
-                    dlam1_movel=np.linalg.norm(np.diff(p_bp1_sq,axis=0),2,1)
-                    update_ratio = np.divide(np.divide(dlam1_movel,dt_movel), s1_movel_des[step_start1+1:step_end1+1])
-                    s1_movel_update[step_start1+1:step_end1+1] = np.multiply(update_ratio,s1_movel[step_start1+1:step_end1+1])
-                    s1_movel_update[step_end1+1:]=s1_movel[step_end1]
+                    # p_bp1_sq = np.squeeze(p_bp1_update[step_start1:step_end1+1])
+                    # dlam1_movel=np.linalg.norm(np.diff(p_bp1_sq,axis=0),2,1)
+                    # update_ratio = np.divide(np.divide(dlam1_movel,dt_movel), s1_movel_des[step_start1+1:step_end1+1])
+                    # s1_movel_update[step_start1+1:step_end1+1] = np.multiply(update_ratio,s1_movel[step_start1+1:step_end1+1])
+                    # s1_movel_update[step_end1+1:]=s1_movel[step_end1]
                     ###################################
 
                     p_bp_relative_new,_=ms.form_relative_path(np.squeeze(q_bp1_update),np.squeeze(q_bp2),base2_R,base2_p)
@@ -557,9 +557,9 @@ def main():
             plt.show()
         # exit()
 
-        df=DataFrame({'primitives':primitives1,'points':p_bp1,'q_bp':q_bp1})
+        df=DataFrame({'primitives':primitives1,'points':p_bp1,'q_bp':q_bp1,'speed':s1_movel})
         df.to_csv(ilc_output+'command_arm1_'+str(i)+'.csv',header=True,index=False)
-        df=DataFrame({'primitives':primitives2,'points':p_bp2,'q_bp':q_bp2})
+        df=DataFrame({'primitives':primitives2,'points':p_bp2,'q_bp':q_bp2,'speed':s2_movel})
         df.to_csv(ilc_output+'command_arm2_'+str(i)+'.csv',header=True,index=False)
 
         if i >= speed_iteration:
