@@ -116,18 +116,21 @@ def main():
     elif data_type=='blade_arm_shift':
         ms = MotionSendFANUC(robot1=robot1,robot2=robot2,group2=1,utool2=6,robot_ip2='127.0.0.3')
     elif data_type=='blade_base_shift':
-        ms = MotionSendFANUC(robot1=robot1,robot2=robot2,group2=1,utool2=2,robot_ip2='127.0.0.3')
+        # ms = MotionSendFANUC(robot1=robot1,robot2=robot2,group2=1,utool2=2,robot_ip2='127.0.0.3')
+        ms = MotionSendFANUC(robot1=robot1,robot2=robot2,utool2=2)
 
     # s=int(1600/2.) # mm/sec in leader frame
     s=1000 # mm/sec
     # s=16 # mm/sec in leader frame
     z=100 # CNT100
-    ilc_output=data_dir+'results_'+str(s)+'_'+test_type+'/'
-    Path(ilc_output).mkdir(exist_ok=True)
+    save_output='data/separate_controller_notsparate/'
+    Path(save_output).mkdir(exist_ok=True)
 
     breakpoints1,primitives1,p_bp1,q_bp1,_=ms.extract_data_from_cmd(os.getcwd()+'/'+cmd_dir+'command1.csv')
     breakpoints2,primitives2,p_bp2,q_bp2,_=ms.extract_data_from_cmd(os.getcwd()+'/'+cmd_dir+'command2.csv')
     
+    multi_peak_threshold=0.2
+    save_fig=True
     ########## read data ##############
     use_iteration=27
     cmd_folder = data_dir+'results_1000_dual_arm_extend1_nospeedreg/'
@@ -140,8 +143,74 @@ def main():
     step_start1,step_start2,step_end1,step_end2=1,1,len(p_bp1)-2,len(p_bp2)-2
 
     ###execution with plant
+    draw_speed_max=None
+    draw_error_max=None
     print("moving robot")
-    logged_data1,logged_data2=ms.exec_motions_multimove_separate(robot1,robot2,primitives1,primitives2,p_bp1,p_bp2,q_bp1,q_bp2,s1_movel,s2_movel,z,z)
+    for i in range(5):
+        # # thread base motion
+        # logged_data1,logged_data2=ms.exec_motions_multimove_separate(robot1,robot2,primitives1,primitives2,p_bp1,p_bp2,q_bp1,q_bp2,s1_movel,s2_movel,z,z)
+        # connecting DI DO motion
+        # logged_data1,logged_data2=ms.exec_motions_multimove_separate2(robot1,robot2,primitives1,primitives2,p_bp1,p_bp2,q_bp1,q_bp2,s1_movel,s2_movel,z,z)
+        # StringData=StringIO(logged_data1.decode('utf-8'))
+        # df1 = read_csv(StringData, sep =",")
+        # StringData=StringIO(logged_data2.decode('utf-8'))
+        # df2 = read_csv(StringData, sep =",")
+        # ##############################data analysis#####################################
+        # lam, curve_exe1,curve_exe2,curve_exe_R1,curve_exe_R2,curve_exe_js1,curve_exe_js2, speed, timestamp, relative_path_exe, relative_path_exe_R = ms.logged_data_analysis_multimove_connect(df1,df2,base2_R,base2_p,realrobot=False)
+        
+        logged_data=ms.exec_motions_multimove_nocoord(robot1,robot2,primitives1,primitives2,p_bp1,p_bp2,q_bp1,q_bp2,s1_movel,s2_movel,z,z)
+        StringData=StringIO(logged_data.decode('utf-8'))
+        df = read_csv(StringData, sep =",")
+        ##############################data analysis#####################################
+        lam, curve_exe1,curve_exe2,curve_exe_R1,curve_exe_R2,curve_exe_js1,curve_exe_js2, speed, timestamp, relative_path_exe, relative_path_exe_R = ms.logged_data_analysis_multimove(df,base2_R,base2_p,realrobot=False)
+    
+        # save js
+        dfj=DataFrame({'timestamp':timestamp,\
+            'q11':curve_exe_js1[:,0],'q12':curve_exe_js1[:,1],'q13':curve_exe_js1[:,2],'q14':curve_exe_js1[:,3],'q15':curve_exe_js1[:,4],'q16':curve_exe_js1[:,5],\
+            'q21':curve_exe_js2[:,0],'q22':curve_exe_js2[:,1],'q23':curve_exe_js2[:,2],'q24':curve_exe_js2[:,3],'q25':curve_exe_js2[:,4],'q26':curve_exe_js2[:,5]})
+        dfj.to_csv(save_output+'iter_'+str(i)+'_curve_exe_js.csv',header=False,index=False)
+        #############################chop extension off##################################
+        lam, curve_exe1,curve_exe2,curve_exe_R1,curve_exe_R2,curve_exe_js1,curve_exe_js2, speed, timestamp, relative_path_exe, relative_path_exe_R=\
+            ms.chop_extension_dual(lam, curve_exe1,curve_exe2,curve_exe_R1,curve_exe_R2,curve_exe_js1,curve_exe_js2, speed, timestamp, relative_path_exe,relative_path_exe_R,relative_path[0,:3],relative_path[-1,:3])
+
+        error,angle_error=calc_all_error_w_normal(relative_path_exe,relative_path[:,:3],relative_path_exe_R[:,:,-1],relative_path[:,3:])
+        #############################error peak detection###############################
+        find_peak_dist = 20/(lam[int(len(lam)/2)]-lam[int(len(lam)/2)-1])
+        if find_peak_dist<1:
+            find_peak_dist=1
+        peaks,_=find_peaks(error,height=multi_peak_threshold,prominence=0.05,distance=find_peak_dist)		###only push down peaks higher than height, distance between each peak is 20mm, threshold to filter noisy peaks
+        if len(peaks)==0 or np.argmax(error) not in peaks:
+            peaks=np.append(peaks,np.argmax(error))\
+        
+        ##############################plot error#####################################
+        fig, ax1 = plt.subplots()
+        ax2 = ax1.twinx()
+        ax1.plot(lam, speed, 'g-', label='Speed')
+        ax2.plot(lam, error, 'b-',label='Error')
+        ax2.scatter(lam[peaks],error[peaks],label='peaks')
+        ax2.plot(lam, np.degrees(angle_error), 'y-',label='Normal Error')
+        if draw_speed_max is None:
+            draw_speed_max=max(speed)*1.05
+        if max(speed) >= draw_speed_max or max(speed) < draw_speed_max*0.1:
+            draw_speed_max=max(speed)*1.05
+        ax1.axis(ymin=0,ymax=draw_speed_max)
+        if draw_error_max is None:
+            draw_error_max=max(error)*1.05
+        if max(error) >= draw_error_max or max(error) < draw_error_max*0.1:
+            draw_error_max=max(error)*1.05
+        ax2.axis(ymin=0,ymax=draw_error_max)
+        ax1.set_xlabel('lambda (mm)')
+        ax1.set_ylabel('Speed/lamdot (mm/s)', color='g')
+        ax2.set_ylabel('Error/Normal Error (mm/deg)', color='b')
+        plt.title("Speed and Error Plot")
+        ax1.legend(loc=0)
+        ax2.legend(loc=0)
+        plt.legend()
+        if save_fig:
+            plt.savefig(save_output+'iteration_'+str(i))
+            plt.clf()
+        else:
+            plt.show()
 
 if __name__ == "__main__":
     main()

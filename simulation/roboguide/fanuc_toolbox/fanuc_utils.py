@@ -322,6 +322,91 @@ class MotionSendFANUC(object):
         
         return self.client.execute_motion_program_thread(tp_follow,tp_lead)
     
+    def exec_motions_multimove_separate2(self,robot1,robot2,primitives1,primitives2,p_bp1,p_bp2,q_bp1,q_bp2,speed1,speed2,zone1,zone2):
+        
+        tp_follow = TPMotionProgram(self.utool,self.uframe)
+        tp_lead = TPMotionProgram(self.utool2,self.uframe2)
+        #### move to start
+        # robot1
+        j0 = joint2robtarget(q_bp1[0][0],robot1,self.group,self.uframe,self.utool)
+        tp_follow.moveJ(j0,50,'%',-1)
+        tp_follow.moveJ(j0,5,'%',-1)
+        # robot2
+        j0 = joint2robtarget(q_bp2[0][0],robot2,self.group2,self.uframe2,self.utool2)
+        tp_lead.moveJ(j0,50,'%',-1)
+        tp_lead.moveJ(j0,5,'%',-1)
+        self.client.execute_motion_program_connect(tp_follow,tp_lead)
+        
+        #### for speed1 regulation
+        if (type(speed1) is int) or (type(speed1) is float):
+            all_speed=np.ones(len(primitives1))*int(speed1)
+        else:
+            assert len(speed1) == len(primitives1), "Speed list must have the same length as primitives"
+            all_speed=np.array(speed1)
+
+        #### start traj, follower, robot1
+        tp_follow = TPMotionProgram(self.utool,self.uframe)
+        for i in range(1,len(primitives1)):
+            if i == len(primitives1)-1:
+                # this_zone = zone1
+                this_zone = -1
+            else:
+                this_zone = zone1
+            option=''
+            # speed
+            this_speed=int(all_speed[i])
+
+            if primitives1[i]=='movel_fit':
+                # robot1
+                robt1 = joint2robtarget(q_bp1[i][0],robot1,self.group,self.uframe,self.utool)
+                tp_follow.moveL(robt1,this_speed,'mmsec',this_zone,option)
+                # tp_follow.moveL(robt1,this_speed,'msec',this_zone,option)
+            elif primitives1[i]=='movec_fit':
+                # robot1
+                robt_mid1 = joint2robtarget(q_bp1[i][0],robot1,self.group,self.uframe,self.utool)
+                robt1 = joint2robtarget(q_bp1[i][1],robot1,self.group,self.uframe,self.utool)
+                tp_follow.moveC(robt_mid1,robt1,this_speed,'mmsec',this_zone,option)
+            else: #moveJ
+                robt1 = joint2robtarget(q_bp1[i][0],robot1,self.group,self.uframe,self.utool)
+                tp_follow.moveJ(robt1,this_speed,'%',this_zone)
+                # tp_follow.moveJ(robt1,this_speed,'msec',this_zone)
+        
+        #### for speed2 regulation
+        if (type(speed2) is int) or (type(speed2) is float):
+            all_speed=np.ones(len(primitives2))*int(speed2)
+        else:
+            assert len(speed2) == len(primitives2), "Speed list must have the same length as primitives"
+            all_speed=np.array(speed2)
+        
+        #### start traj, leader, robot2
+        tp_lead = TPMotionProgram(self.utool2,self.uframe2)
+        for i in range(1,len(primitives2)):
+            if i == len(primitives2)-1:
+                # this_zone = zone2
+                this_zone = -1
+            else:
+                this_zone = zone2
+            option=''
+            # speed
+            this_speed=int(all_speed[i])
+
+            if primitives2[i]=='movel_fit':
+                # robot2
+                robt2 = joint2robtarget(q_bp2[i][0],robot2,self.group2,self.uframe2,self.utool2)
+                tp_lead.moveL(robt2,this_speed,'mmsec',this_zone,option)
+                # tp_lead.moveL(robt2,this_speed,'msec',this_zone,option)
+            elif primitives2[i]=='movec_fit':
+                # robot2
+                robt_mid2 = joint2robtarget(q_bp2[i][0],robot2,self.group2,self.uframe2,self.utool2)
+                robt2 = joint2robtarget(q_bp2[i][1],robot2,self.group2,self.uframe2,self.utool2)
+                tp_lead.moveC(robt_mid2,robt2,this_speed,'mmsec',this_zone,option)
+            else: #moveJ
+                robt2 = joint2robtarget(q_bp2[i][0],robot2,self.group2,self.uframe2,self.utool2)
+                tp_lead.moveJ(robt2,this_speed,'%',this_zone)
+                # tp_lead.moveJ(robt2,this_speed,'msec',this_zone)
+        
+        return self.client.execute_motion_program_connect(tp_follow,tp_lead)
+    
     def logged_data_analysis(self,robot,df):
 
         q1=df['J1'].tolist()[1:]
@@ -450,7 +535,70 @@ class MotionSendFANUC(object):
                 pass
             last_cont = False
 
-        return np.array(lam), np.array(curve_exe1),np.array(curve_exe2), np.array(curve_exe_R1),np.array(curve_exe_R2),curve_exe_js1_act,curve_exe_js2_act, act_speed, timestamp_act, np.array(relative_path_exe), np.array(relative_path_exe_R)
+        return np.array(lam), np.array(curve_exe1),np.array(curve_exe2), np.array(curve_exe_R1),np.array(curve_exe_R2),np.array(curve_exe_js1_act),\
+            np.array(curve_exe_js2_act), np.array(act_speed), np.array(timestamp_act), np.array(relative_path_exe), np.array(relative_path_exe_R)
+
+    def logged_data_analysis_multimove_connect(self,df1,df2,base2_R,base2_p,realrobot=False):
+        
+        lam_exec1, curve_exe1, curve_exe_R1,curve_exe_js_act1, act_speed1, timestamp_act1 = self.logged_data_analysis(self.robot1,df1)
+        lam_exec2, curve_exe2, curve_exe_R2,curve_exe_js_act2, act_speed2, timestamp_act2 = self.logged_data_analysis(self.robot2,df2)
+
+        timestamp_act1=list(timestamp_act1)
+        timestamp_act2=list(timestamp_act2)
+        curve_exe_js_act1=list(curve_exe_js_act1)
+        curve_exe_js_act2=list(curve_exe_js_act2)
+        curve_exe_R1=list(curve_exe_R1)
+        curve_exe_R2=list(curve_exe_R2)
+        curve_exe1=list(curve_exe1)
+        curve_exe2=list(curve_exe2)
+        dt=0.008
+        while timestamp_act1[-1]>timestamp_act2[-1]:
+            timestamp_act2.append(timestamp_act2[-1]+0.008)
+            curve_exe2.append(curve_exe2[-1])
+            curve_exe_R2.append(curve_exe_R2[-1])
+            curve_exe_js_act2.append(curve_exe_js_act2[-1])
+        while timestamp_act1[-1]<timestamp_act2[-1]:
+            timestamp_act1.append(timestamp_act1[-1]+0.008)
+            curve_exe1.append(curve_exe1[-1])
+            curve_exe_R1.append(curve_exe_R1[-1])
+            curve_exe_js_act1.append(curve_exe_js_act1[-1])
+
+        timestamp_comb=[]
+        curve_exe1_comb=[]
+        curve_exe2_comb=[]
+        curve_exe_R1_comb=[]
+        curve_exe_R2_comb=[]
+        curve_exe_js1_comb=[]
+        curve_exe_js2_comb=[]
+        speed=[0]
+        relative_path_exe=[]
+        relative_path_exe_R=[]
+        lam=[0]
+
+        for i in range(len(timestamp_act1)):
+            if timestamp_act1[i] not in timestamp_act2:
+                continue
+            id_2 = np.argwhere(timestamp_act2==timestamp_act1[i])[0][0]
+            timestamp_comb.append(timestamp_act1[i])
+            curve_exe1_comb.append(curve_exe1[i])
+            curve_exe2_comb.append(curve_exe2[id_2])
+            curve_exe_R1_comb.append(curve_exe_R1[i])
+            curve_exe_R2_comb.append(curve_exe_R2[id_2])
+            curve_exe_js1_comb.append(curve_exe_js_act1[i])
+            curve_exe_js2_comb.append(curve_exe_js_act2[id_2])
+
+            pose1_now=self.robot1.fwd(curve_exe_js_act1[i])
+            pose2_world_now=self.robot2.fwd(curve_exe_js_act2[id_2],base2_R,base2_p)
+            relative_path_exe.append(np.dot(pose2_world_now.R.T,pose1_now.p-pose2_world_now.p))
+            relative_path_exe_R.append(pose2_world_now.R.T@pose1_now.R)
+
+            if i>0:
+                lam.append(lam[-1]+np.linalg.norm(relative_path_exe[-1]-relative_path_exe[-2]))
+                timestep=timestamp_comb[-1]-timestamp_comb[-2]
+                speed.append(np.linalg.norm(relative_path_exe[-1]-relative_path_exe[-2])/timestep)
+        
+        return np.array(lam),np.array(curve_exe1_comb),np.array(curve_exe2_comb),np.array(curve_exe_R1_comb),np.array(curve_exe_R2_comb),\
+            np.array(curve_exe_js1_comb),np.array(curve_exe_js2_comb), np.array(speed), np.array(timestamp_comb), np.array(relative_path_exe), np.array(relative_path_exe_R)
 
     def chop_extension(self,curve_exe, curve_exe_R,curve_exe_js, speed, timestamp,curve,curve_normal):
         start_idx=np.argmin(np.linalg.norm(curve[0,:]-curve_exe,axis=1))+1

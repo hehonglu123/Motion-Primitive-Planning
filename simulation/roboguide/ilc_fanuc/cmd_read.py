@@ -434,6 +434,14 @@ def main():
     lam1=np.append(0,np.cumsum(np.linalg.norm(np.diff(curve_exe1,axis=0),2,1)))
     lam2=np.append(0,np.cumsum(np.linalg.norm(np.diff(curve_exe2,axis=0),2,1)))
     error,angle_error=calc_all_error_w_normal(relative_path_exe,relative_path[:,:3],relative_path_exe_R[:,:,-1],relative_path[:,3:])
+    
+    #############################error peak detection###############################
+    find_peak_dist = 20/(lam[int(len(lam)/2)]-lam[int(len(lam)/2)-1])
+    if find_peak_dist<1:
+        find_peak_dist=1
+    peaks,_=find_peaks(error,height=multi_peak_threshold,prominence=0.05,distance=find_peak_dist)		###only push down peaks higher than height, distance between each peak is 20mm, threshold to filter noisy peaks
+    if len(peaks)==0 or np.argmax(error) not in peaks:
+        peaks=np.append(peaks,np.argmax(error))
 
     curve_exe_js1=np.array(curve_exe_js1)
     curve_exe_js2=np.array(curve_exe_js2)
