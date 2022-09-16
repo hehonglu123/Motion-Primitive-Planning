@@ -6,7 +6,7 @@ from robots_def import *
 from error_check import *
 from lambda_calc import *
 from EGM_toolbox import *
-
+from realrobot import *
 
 def main():
 	robot=abb6640(d=50)
@@ -16,16 +16,18 @@ def main():
 	idx_delay=int(et.delay/et.ts)
 
 	dataset='wood/'
-	data_dir='../data/'
-	curve_js = read_csv(data_dir+dataset+'Curve_js.csv',header=None).values
-	curve = read_csv(data_dir+dataset+'Curve_in_base_frame.csv',header=None).values
+	solution_dir='baseline/'
+	data_dir="../../data/"+dataset+solution_dir
+	curve = read_csv(data_dir+"Curve_in_base_frame.csv",header=None).values
+	curve_js = read_csv(data_dir+"Curve_js.csv",header=None).values
+
 	curve_R=[]
 	for q in curve_js:
 		curve_R.append(robot.fwd(q).R)
 	curve_R=np.array(curve_R)
 
 
-	vd=250
+	vd=50
 	max_error_threshold=0.1
 	
 	lam=calc_lam_cs(curve[:,:3])
@@ -54,23 +56,7 @@ def main():
 		curve_cmd_ext,curve_cmd_R_ext=et.add_extension_egm_cartesian(curve_cmd,curve_cmd_R,extension_num=extension_num)
 
 		###5 run execute
-		curve_exe_js_all=[]
-		timestamp_all=[]
-		for r in range(5):
-			###move to start first
-			print('moving to start point')
-			et.jog_joint_cartesian(curve_cmd_ext[0],curve_cmd_R_ext[0])
-			
-			###traverse the curve
-			timestamp,curve_exe_js=et.traverse_curve_cartesian(curve_cmd_ext,curve_cmd_R_ext)
-
-			timestamp=timestamp-timestamp[0]
-			curve_exe_js_all.append(curve_exe_js)
-			timestamp_all.append(timestamp)
-			time.sleep(0.5)
-
-		###infer average curve from linear interplateion
-		curve_js_all_new, avg_curve_js, timestamp_d=average_curve(curve_exe_js_all,timestamp_all)
+		curve_js_all_new,avg_curve_js, timestamp_d=average_5_egm_car_exe(et,curve_cmd_ext,curve_cmd_R_ext)
 
 		df=DataFrame({'timestamp':timestamp_d,'q0':avg_curve_js[:,0],'q1':avg_curve_js[:,1],'q2':avg_curve_js[:,2],'q3':avg_curve_js[:,3],'q4':avg_curve_js[:,4],'q5':avg_curve_js[:,5]})
 		df.to_csv('recorded_data/iteration'+str(i)+'.csv',header=False,index=False)
@@ -85,16 +71,14 @@ def main():
 		error_distance=np.linalg.norm(error,axis=1)
 		
 		##add weights based on error
-		if i==0:
-			weights_p=np.ones(len(error))
-		# weights_p=np.linalg.norm(error,axis=1)
-		# weights_p=(len(error)/4)*weights_p/weights_p.sum()
-		
+		# if i==0:
+		# 	weights_p=np.ones(len(error))
+		# if i>adjust_weigt_it and not weight_adjusted:
+		# 	weights_p[np.where(error_distance>0.5*np.max(error_distance))]=5
+		# 	weight_adjusted=True
+		# 	print('weight adjusted')
 
-		if i>adjust_weigt_it and not weight_adjusted:
-			weights_p[np.where(error_distance>0.5*np.max(error_distance))]=5
-			weight_adjusted=True
-			print('weight adjusted')
+		weights_p=np.ones(len(error))
 
 			
 
@@ -118,11 +102,9 @@ def main():
 
 		###add extension
 		curve_cmd_ext_aug,curve_cmd_R_ext_aug=et.add_extension_egm_cartesian(curve_cmd_aug,curve_cmd_R_aug,extension_num=extension_num)
-		###move to start first
-		print('moving to start point')
-		et.jog_joint_cartesian(curve_cmd_ext_aug[0],curve_cmd_R_ext_aug[0])
-		###traverse the curve
-		timestamp_aug,curve_exe_js_aug=et.traverse_curve_cartesian(curve_cmd_ext_aug,curve_cmd_R_ext_aug)
+		
+		###5 run execute
+		curve_js_all_new,curve_exe_js_aug, timestamp_aug=average_5_egm_car_exe(et,curve_cmd_ext_aug,curve_cmd_R_ext_aug)
 
 		_, curve_exe_aug, curve_exe_R_aug, _=logged_data_analysis(robot,timestamp_aug[extension_num+idx_delay:-extension_num+idx_delay],curve_exe_js_aug[extension_num+idx_delay:-extension_num+idx_delay])
 

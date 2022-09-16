@@ -80,3 +80,26 @@ def average_5_exe(ms,robot,primitives,breakpoints,p_bp,q_bp,s,z,curve,log_path='
 	curve_js_all_new, avg_curve_js, timestamp_d=average_curve(curve_exe_js_all,timestamp_all)
 
 	return curve_js_all_new, avg_curve_js, timestamp_d
+
+
+def average_5_egm_car_exe(et,curve_cmd,curve_cmd_R):
+	###5 run execute egm Cartesian
+	curve_exe_js_all=[]
+	timestamp_all=[]
+	for r in range(5):
+		###move to start first
+		print('moving to start point')
+		et.jog_joint_cartesian(curve_cmd[0],curve_cmd_R[0])
+		
+		###traverse the curve
+		timestamp,curve_exe_js=et.traverse_curve_cartesian(curve_cmd,curve_cmd_R)
+
+		timestamp=timestamp-timestamp[0]
+		curve_exe_js_all.append(curve_exe_js)
+		timestamp_all.append(timestamp)
+		time.sleep(0.5)
+
+	###infer average curve from linear interplateion
+	curve_js_all_new, avg_curve_js, timestamp_d=average_curve(curve_exe_js_all,timestamp_all)
+
+	return curve_js_all_new,avg_curve_js, timestamp_d

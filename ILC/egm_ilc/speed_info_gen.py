@@ -17,13 +17,13 @@ robot=abb6640(d=50)
 
 
 dataset='wood/'
-solution_dir='curve_pose_opt7/'
+solution_dir='baseline/'
 data_dir="../../data/"+dataset+solution_dir
 curve = read_csv(data_dir+"Curve_in_base_frame.csv",header=None).values
 curve_js = read_csv(data_dir+"Curve_js.csv",header=None).values
 
 exe_dir='recorded_data/'
-data=read_csv(exe_dir+"iteration12.csv",header=None).values
+data=read_csv(exe_dir+"curve1_baseline_egm_real.csv",header=None).values
 
 
 idx_delay=50
