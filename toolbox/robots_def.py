@@ -64,7 +64,7 @@ class abb6640(object):
 
 	def get_acc(self,q_all):
 		#if a single point
-		if q_all.shape==(len(self.upper_limit),):
+		if q_all.ndim==1:
 			###find closest q2q3 config, along with constant last 3 joints acc
 			idx=np.argmin(np.linalg.norm(self.q2q3_config-q_all[1:3],axis=1))
 			return np.append(self.q1q2q3_acc[idx],self.joint_acc_limit[-3:])
@@ -155,7 +155,7 @@ class abb1200(object):
 
 	def get_acc(self,q_all):
 		#if a single point
-		if q_all.shape==(len(self.upper_limit),):
+		if q_all.ndim==1:
 			###find closest q2q3 config, along with constant last 3 joints acc
 			idx=np.argmin(np.linalg.norm(self.q2q3_config-q_all[1:3],axis=1))
 			return np.append(self.q1q2q3_acc[idx],self.joint_acc_limit[-3:])
@@ -238,7 +238,7 @@ class arb_robot(object):
 
 	def get_acc(self,q_all):
 		#if a single point
-		if q_all.shape==(len(self.upper_limit),):
+		if q_all.ndim==1:
 			###find closest q2q3 config, along with constant last 3 joints acc
 			idx=np.argmin(np.linalg.norm(self.q2q3_config-q_all[1:3],axis=1))
 			return np.append(self.q1q2q3_acc[idx],self.joint_acc_limit[-3:])

@@ -23,7 +23,7 @@ from blending import *
 
 def main():
 	robot1=abb6640(d=50,acc_dict_path='../../toolbox/robot_info/6640acc.pickle')
-	robot2=abb1200(acc_dict_path='../../toolbox/robot_info/6640acc.pickle')
+	robot2=abb1200(acc_dict_path='../../toolbox/robot_info/1200acc.pickle')
 
 	robot=robot1
 	ms=MotionSend()
@@ -37,9 +37,10 @@ def main():
 	qdot_all=np.gradient(curve_exe_js,axis=0)/np.tile([np.gradient(timestamp)],(6,1)).T
 	qddot_all=np.gradient(qdot_all,axis=0)/np.tile([np.gradient(timestamp)],(6,1)).T
 
+	joint_acc_limit=robot.get_acc(curve_exe_js)
+
 	for i in range(len(curve_exe_js[0])):
-		joint_acc_limit=robot.get_acc(curve_exe_js[i])
-		qddot_violate_idx=np.argwhere(np.abs(qddot_all[:,i])>joint_acc_limit[i])
+		qddot_violate_idx=np.argwhere(np.abs(qddot_all[:,i])>joint_acc_limit[:,i])
 
 		plt.scatter(lam[qddot_violate_idx],qdot_all[qddot_violate_idx,i],label='acc limit')
 		plt.plot(lam,qdot_all[:,i],label='joint '+str(i+1))

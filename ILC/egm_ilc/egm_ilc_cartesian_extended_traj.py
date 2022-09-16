@@ -19,9 +19,10 @@ def main():
 	idx_delay=int(et.delay/et.ts)
 
 	dataset='wood/'
-	data_dir='../data/'
-	curve_js = read_csv(data_dir+dataset+'Curve_js.csv',header=None).values
-	curve = read_csv(data_dir+dataset+'Curve_in_base_frame.csv',header=None).values
+	solution_dir='baseline/'
+	data_dir="../../data/"+dataset+solution_dir
+	curve = read_csv(data_dir+"Curve_in_base_frame.csv",header=None).values
+	curve_js = read_csv(data_dir+"Curve_js.csv",header=None).values
 	curve_R=[]
 	for q in curve_js:
 		curve_R.append(robot.fwd(q).R)

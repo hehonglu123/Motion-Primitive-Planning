@@ -9,7 +9,7 @@ def main():
 	data_dir='../../data/wood/'
 	relative_path=read_csv(data_dir+"Curve_dense.csv",header=None).values
 
-	v_cmd=1100
+	v_cmd=1500
 
 	with open(data_dir+'dual_arm/abb1200.yaml') as file:
 	    H_1200 = np.array(yaml.safe_load(file)['H'],dtype=np.float64)
@@ -44,7 +44,7 @@ def main():
 	bnds=tuple(zip(lower_limit,upper_limit))
 	res = differential_evolution(opt.dual_arm_opt_w_pose, bnds, args=None,workers=-1,
 									x0 = np.hstack((q_init2,base2_p,base2_w,[0])),
-									strategy='best1bin', maxiter=1,
+									strategy='best1bin', maxiter=500,
 									popsize=15, tol=1e-10,
 									mutation=(0.5, 1), recombination=0.7,
 									seed=None, callback=None, disp=False,

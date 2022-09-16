@@ -13,10 +13,10 @@ from lambda_calc import *
 from utils import *
 
 
-data_dir='from_NX/dual_arm/'
-solution_dir='diffevo3/'
-cmd_dir=data_dir+solution_dir+'30L/'
-num_ls=[30]
+data_dir='wood/dual_arm/'
+solution_dir='diffevo_pose1/'
+cmd_dir=data_dir+solution_dir+'50L/'
+num_ls=[50]
 robot=abb6640(d=50)
 curve_js = read_csv(data_dir+solution_dir+'arm1.csv',header=None).values
 
@@ -53,7 +53,7 @@ for num_l in num_ls:
 		
 	primitives_choices=['moveabsj']+['moveabsj']*num_l
 
-	df=DataFrame({'breakpoints':breakpoints,'primitives':primitives_choices,'points':points,'q_bp':q_bp})
+	df=DataFrame({'breakpoints':breakpoints,'primitives':primitives_choices,'p_bp':points,'q_bp':q_bp})
 	df.to_csv(cmd_dir+'command1.csv',header=True,index=False)
 
 	# curve_fit_js=car2js(robot,curve_js[0],curve_fit,curve_fit_R)
@@ -101,7 +101,7 @@ for num_l in num_ls:
 		
 	primitives_choices=['moveabsj']+['moveabsj']*num_l
 
-	df=DataFrame({'breakpoints':breakpoints,'primitives':primitives_choices,'points':points,'q_bp':q_bp})
+	df=DataFrame({'breakpoints':breakpoints,'primitives':primitives_choices,'p_bp':points,'q_bp':q_bp})
 	df.to_csv(cmd_dir+'command2.csv',header=True,index=False)
 
 	# curve_fit_js=car2js(robot,curve_js[0],curve_fit,curve_fit_R)

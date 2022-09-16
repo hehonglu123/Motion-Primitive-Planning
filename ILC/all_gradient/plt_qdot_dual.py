@@ -28,7 +28,7 @@ def main():
 
 
 	robot1=abb6640(d=50,acc_dict_path='../../toolbox/robot_info/6640acc.pickle')
-	robot2=abb1200(acc_dict_path='../../toolbox/robot_info/6640acc.pickle')
+	robot2=abb1200(acc_dict_path='../../toolbox/robot_info/1200acc.pickle')
 
 
 	###read in curve_exe
@@ -43,12 +43,12 @@ def main():
 	qdot2_all=np.gradient(curve_exe_js2,axis=0)/np.tile([np.gradient(timestamp)],(6,1)).T
 	qddot2_all=np.gradient(qdot2_all,axis=0)/np.tile([np.gradient(timestamp)],(6,1)).T
 
-	for i in range(len(curve_exe_js1[0])):
-		joint_acc_limit1=robot1.get_acc(curve_exe_js1[i])
-		qddot1_violate_idx=np.argwhere(np.abs(qddot1_all[:,i])>joint_acc_limit1[i])
+	joint_acc_limit1=robot1.get_acc(curve_exe_js1)
+	joint_acc_limit2=robot2.get_acc(curve_exe_js2)
 
-		joint_acc_limit2=robot2.get_acc(curve_exe_js2[i])
-		qddot2_violate_idx=np.argwhere(np.abs(qddot2_all[:,i])>joint_acc_limit2[i])
+	for i in range(len(curve_exe_js1[0])):
+		qddot1_violate_idx=np.argwhere(np.abs(qddot1_all[:,i])>joint_acc_limit1[:,i])
+		qddot2_violate_idx=np.argwhere(np.abs(qddot2_all[:,i])>joint_acc_limit2[:,i])
 
 		plt.scatter(lam[qddot1_violate_idx],qdot1_all[qddot1_violate_idx,i],label='acc1 limit')
 		plt.plot(lam,qdot1_all[:,i],label='robot1 joint '+str(i+1))

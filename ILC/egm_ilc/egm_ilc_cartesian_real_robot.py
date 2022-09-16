@@ -2,9 +2,6 @@ import numpy as np
 import time, sys
 from pandas import *
 
-sys.path.append('../toolbox')
-sys.path.append('../toolbox/egm_toolbox')
-
 from robots_def import *
 from error_check import *
 from lambda_calc import *
@@ -75,15 +72,18 @@ def main():
 		###infer average curve from linear interplateion
 		curve_js_all_new, avg_curve_js, timestamp_d=average_curve(curve_exe_js_all,timestamp_all)
 
+		df=DataFrame({'timestamp':timestamp_d,'q0':avg_curve_js[:,0],'q1':avg_curve_js[:,1],'q2':avg_curve_js[:,2],'q3':avg_curve_js[:,3],'q4':avg_curve_js[:,4],'q5':avg_curve_js[:,5]})
+		df.to_csv('recorded_data/iteration'+str(i)+'.csv',header=False,index=False)
 
 		lam, curve_exe, curve_exe_R, speed=logged_data_analysis(robot,timestamp_d[extension_num+idx_delay:-extension_num+idx_delay],avg_curve_js[extension_num+idx_delay:-extension_num+idx_delay])
 		curve_exe_w=R2w(curve_exe_R,curve_R_d[0])
 		error_distance,angle_error=calc_all_error_w_normal(curve_exe,curve[:,:3],curve_exe_R[:,:,-1],curve[:,3:])
-
+		print('worst case error: ',np.max(error_distance))
+		
 		##############################ILC########################################
 		error=curve_exe-curve_d
 		error_distance=np.linalg.norm(error,axis=1)
-		print('worst case error: ',np.max(error_distance))
+		
 		##add weights based on error
 		if i==0:
 			weights_p=np.ones(len(error))
@@ -169,7 +169,7 @@ def main():
 
 
 		# plt.show()
-		plt.savefig('iteration_ '+str(i))
+		plt.savefig('recorded_data/iteration_ '+str(i))
 		plt.clf()
 if __name__ == "__main__":
 	main()

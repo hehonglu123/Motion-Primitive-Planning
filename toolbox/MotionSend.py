@@ -133,11 +133,17 @@ class MotionSend(object):
             motion = primitives1[i]
             if motion == 'movel_fit':
                 robt = self.moveL_target(self.robot1,q_bp1[i][0],p_bp1[i][0])
-                mp1.MoveL(robt,speed1,zone1)
+                if type(speed1) is list:
+                    mp1.MoveL(robt,speed1[i],zone1)
+                else:
+                    mp1.MoveL(robt,speed1,zone1)
 
             elif motion == 'movec_fit':
                 robt1, robt2 = self.moveC_target(self.robot1,q_bp1[i][0],q_bp1[i][1],p_bp1[i][0],p_bp1[i][1])
-                mp1.MoveC(robt1,robt2,speed1,zone1)
+                if type(speed1) is list:
+                    mp1.MoveC(robt1,robt2,speed1[i],zone1)
+                else:
+                    mp1.MoveC(robt1,robt2,speed1,zone1)
 
             elif motion == 'movej_fit':
                 robt = self.moveL_target(self.robot1,q_bp1[i][0],p_bp1[i][0])
@@ -151,7 +157,10 @@ class MotionSend(object):
                     mp1.MoveAbsJ(jointt,v500,fine)
                     mp1.WaitTime(0.1)
                 else:
-                    mp1.MoveAbsJ(jointt,speed1,zone1)
+                    if type(speed1) is list:
+                        mp1.MoveAbsJ(jointt,speed1[i],zone1)
+                    else:
+                        mp1.MoveAbsJ(jointt,speed1,zone1)
 
         for i in range(len(primitives2)):
             motion = primitives2[i]
