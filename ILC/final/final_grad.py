@@ -99,11 +99,10 @@ def main():
 		ax1.set_ylabel('Speed/lamdot (mm/s)', color='g')
 		ax2.set_ylabel('Error/Normal Error (mm/deg)', color='b')
 		plt.title("Speed and Error Plot")
-		ax1.legend(loc="upper right")
-
-		ax2.legend(loc="upper left")
-
-		plt.legend()
+		h1, l1 = ax1.get_legend_handles_labels()
+		h2, l2 = ax2.get_legend_handles_labels()
+		ax1.legend(h1+h2, l1+l2, loc=1)
+		
 		plt.savefig('recorded_data/iteration_'+str(i))
 		plt.clf()
 		# plt.show()

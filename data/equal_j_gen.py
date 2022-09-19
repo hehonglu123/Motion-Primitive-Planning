@@ -43,7 +43,7 @@ for num_j in num_js:
 		else:
 			curve_fit_js[breakpoints[i-1]:breakpoints[i]]=np.linspace(curve_js[breakpoints[i-1]-1],curve_js[breakpoints[i]-1],num=breakpoints[i]-breakpoints[i-1]+1)[1:]
 		
-	primitives_choices=['movej_fit']*(num_j+1)
+	primitives_choices=['moveabsj_fit']*(num_j+1)
 
 	df=DataFrame({'breakpoints':breakpoints,'primitives':primitives_choices,'points':points,'q_bp':q_bp})
 	df.to_csv(cmd_dir+'command.csv',header=True,index=False)

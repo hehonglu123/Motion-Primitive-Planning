@@ -19,16 +19,19 @@ def main():
 	idx_delay=int(et.delay/et.ts)
 
 	dataset='wood/'
-	data_dir='../data/'
-	curve_js = read_csv(data_dir+dataset+'Curve_js.csv',header=None).values
-	curve = read_csv(data_dir+dataset+'Curve_in_base_frame.csv',header=None).values
+	solution_dir='curve_pose_opt7/'
+	data_dir="../../data/"+dataset+solution_dir
+	curve = read_csv(data_dir+"Curve_in_base_frame.csv",header=None).values
+	curve_js = read_csv(data_dir+"Curve_js.csv",header=None).values
+
+
 	curve_R=[]
 	for q in curve_js:
 		curve_R.append(robot.fwd(q).R)
 	curve_R=np.array(curve_R)
 
 
-	vd=250
+	vd=240
 	max_error_threshold=0.1
 	
 	lam=calc_lam_cs(curve[:,:3])
@@ -61,15 +64,18 @@ def main():
 		###traverse the curve
 		timestamp,curve_exe_js=et.traverse_curve_cartesian(curve_cmd_ext,curve_cmd_R_ext)
 
+		df=DataFrame({'timestamp':timestamp,'q0':curve_exe_js[:,0],'q1':curve_exe_js[:,1],'q2':curve_exe_js[:,2],'q3':curve_exe_js[:,3],'q4':curve_exe_js[:,4],'q5':curve_exe_js[:,5]})
+		df.to_csv('recorded_data/iteration'+str(i)+'.csv',header=False,index=False)
+
 
 		lam, curve_exe, curve_exe_R, speed=logged_data_analysis(robot,timestamp[extension_num+idx_delay:-extension_num+idx_delay],curve_exe_js[extension_num+idx_delay:-extension_num+idx_delay])
 		curve_exe_w=R2w(curve_exe_R,curve_R_d[0])
 		error_distance,angle_error=calc_all_error_w_normal(curve_exe,curve[:,:3],curve_exe_R[:,:,-1],curve[:,3:])
-
+		print('worst case error: ',np.max(error_distance))
 		##############################ILC########################################
 		error=curve_exe-curve_d
 		error_distance=np.linalg.norm(error,axis=1)
-		print('worst case error: ',np.max(error_distance))
+		
 		##add weights based on error
 		weights_p=np.ones(len(error))
 		# weights_p=np.linalg.norm(error,axis=1)
@@ -140,17 +146,18 @@ def main():
 		plt.legend()
 
 		###########################plot for verification###################################
-		plt.figure()
-		ax = plt.axes(projection='3d')
-		ax.plot3D(curve[:,0], curve[:,1], curve[:,2], c='gray',label='original')
-		ax.plot3D(curve_exe[:,0], curve_exe[:,1], curve_exe[:,2], c='red',label='execution')
-		ax.scatter3D(curve_cmd[:,0], curve_cmd[:,1], curve_cmd[:,2], c=curve_cmd[:,2], cmap='Greens',label='commanded points')
-		ax.scatter3D(curve_cmd_new[:,0], curve_cmd_new[:,1], curve_cmd_new[:,2], c=curve_cmd_new[:,2], cmap='Blues',label='new commanded points')
+		# plt.figure()
+		# ax = plt.axes(projection='3d')
+		# ax.plot3D(curve[:,0], curve[:,1], curve[:,2], c='gray',label='original')
+		# ax.plot3D(curve_exe[:,0], curve_exe[:,1], curve_exe[:,2], c='red',label='execution')
+		# ax.scatter3D(curve_cmd[:,0], curve_cmd[:,1], curve_cmd[:,2], c=curve_cmd[:,2], cmap='Greens',label='commanded points')
+		# ax.scatter3D(curve_cmd_new[:,0], curve_cmd_new[:,1], curve_cmd_new[:,2], c=curve_cmd_new[:,2], cmap='Blues',label='new commanded points')
+		# plt.legend()
 
 
-		plt.legend()
+
 		# plt.show()
-		plt.savefig('iteration_ '+str(i))
+		plt.savefig('recorded_data/iteration_ '+str(i))
 		plt.clf()
 if __name__ == "__main__":
 	main()

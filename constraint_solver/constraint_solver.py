@@ -264,7 +264,10 @@ class lambda_opt(object):
 			if np.linalg.norm(curve_js[-1])>0:
 				break
 		return curve_js
-	def dual_arm_stepwise_optimize(self,q_init1,q_init2,w1=0.01,w2=0.01):
+	def dual_arm_stepwise_optimize(self,q_init1,q_init2,w1=0.01,w2=0.01,base2_R=None,base2_p=None):
+		if base2_R is None:
+			base2_R=self.base2_R
+			base2_p=self.base2_p
 		###w1: weight for first robot
 		###w2: weight for second robot (larger weight path shorter)
 		#curve_normal: expressed in second robot tool frame
@@ -302,7 +305,7 @@ class lambda_opt(object):
 					pose1_now=self.robot1.fwd(q_all1[-1])
 					pose2_now=self.robot2.fwd(q_all2[-1])
 
-					pose2_world_now=self.robot2.fwd(q_all2[-1],self.base2_R,self.base2_p)
+					pose2_world_now=self.robot2.fwd(q_all2[-1],base2_R,base2_p)
 
 					error_fb=np.linalg.norm(np.dot(pose2_world_now.R.T,pose1_now.p-pose2_world_now.p)-self.curve[i])+np.linalg.norm(np.dot(pose2_world_now.R.T,pose1_now.R[:,-1])-self.curve_normal[i])	
 
@@ -665,12 +668,12 @@ class lambda_opt(object):
 		return -min(speed)
 
 
-	def dual_arm_opt(self,x):
+	def dual_arm_init_opt(self,x):
 		q_init2=x[:-1]
 
 		pose2_world_now=self.robot2.fwd(q_init2,self.base2_R,self.base2_p)
 
-		R_temp=direction2R(np.dot(pose2_world_now.R,self.curve_normal[0]),-self.curve[1]+self.curve[0])
+		R_temp=direction2R(pose2_world_now.R@self.curve_normal[0],-self.curve[1]+self.curve[0])
 		R=np.dot(R_temp,Rz(x[-1]))
 		try:
 			q_init1=self.robot1.inv(pose2_world_now.p,R)[0]
@@ -692,6 +695,41 @@ class lambda_opt(object):
 
 		print(min(speed))
 		return -min(speed)
+
+	def dual_arm_opt_w_pose(self,x):
+		##x:q_init2,base2_p,base2_w,theta_0
+		q_init2=x[:6]
+		base2_p=x[6:9]
+		base2_w=x[9:-1]
+		base2_theta=np.linalg.norm(base2_w)
+		base2_k=base2_w/base2_theta
+		base2_R=rot(base2_k,base2_theta)
+
+		pose2_world_now=self.robot2.fwd(q_init2,base2_R,base2_p)
+
+
+		R_temp=direction2R(pose2_world_now.R@self.curve_normal[0],-self.curve[1]+self.curve[0])
+		R=np.dot(R_temp,Rz(x[-1]))
+		try:
+			q_init1=self.robot1.inv(pose2_world_now.p,R)[0]
+			q_out1,q_out2=self.dual_arm_stepwise_optimize(q_init1,q_init2,w1=0.02,w2=0.01,base2_R=base2_R,base2_p=base2_p)
+		except:
+			# traceback.print_exc()
+			return 999
+
+		###make sure extension possible by checking start & end configuration
+		if np.min(self.robot1.upper_limit-q_out1[0])<0.2 or  np.min(q_out1[0]-self.robot1.lower_limit)<0.2 or np.min(self.robot1.upper_limit-q_out1[-1])<0.2 or np.min(q_out1[-1]-self.robot1.lower_limit)<0.2:
+			return 999
+
+		###make sure extension possible by checking start & end configuration
+		if np.min(self.robot2.upper_limit-q_out2[0])<0.2 or  np.min(q_out2[0]-self.robot2.lower_limit)<0.2 or np.min(self.robot2.upper_limit-q_out2[-1])<0.2 or  np.min(q_out2[-1]-self.robot2.lower_limit)<0.2:
+			return 999
+
+		speed,_,_=traj_speed_est_dual(self.robot1,self.robot2,q_out1,q_out2,base2_R,base2_p,self.lam,self.v_cmd)
+
+		print(min(speed))
+		return -min(speed)
+
 
 	def single_arm_theta0_opt(self,theta0):
 

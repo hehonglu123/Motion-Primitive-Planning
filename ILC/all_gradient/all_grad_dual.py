@@ -42,13 +42,13 @@ def main():
 	###get lambda at each breakpoint
 	lam_bp=lam_relative_path[np.append(breakpoints1[0],breakpoints1[1:]-1)]
 
-	vd_relative=1500
+	vd_relative=2000
 
 	s1_all,s2_all=calc_individual_speed(vd_relative,lam1,lam2,lam_relative_path,breakpoints1)
 	v2_all=[]
 	for i in range(len(breakpoints1)):
-		# v2_all.append(speeddata(s2_all[i],9999999,9999999,999999))
-		v2_all.append(v5000)
+		v2_all.append(speeddata(s2_all[i],9999999,9999999,999999))
+		# v2_all.append(v5000)
 	
 
 
@@ -69,7 +69,7 @@ def main():
 
 		ms = MotionSend(robot1=robot1,robot2=robot2,base2_R=base2_R,base2_p=base2_p)
 		###execution with plant
-		logged_data=ms.exec_motions_multimove(breakpoints1,primitives1,primitives2,p_bp1,p_bp2,q_bp1,q_bp2,vmax,v2_all,z10,z10)
+		logged_data=ms.exec_motions_multimove(breakpoints1,primitives1,primitives2,p_bp1,p_bp2,q_bp1,q_bp2,vmax,v2_all,z50,z50)
 		with open('recorded_data/dual_iteration_'+str(i)+'.csv',"w") as f:
 			f.write(logged_data)
 		###save commands

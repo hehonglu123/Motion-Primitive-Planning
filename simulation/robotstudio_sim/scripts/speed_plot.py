@@ -19,8 +19,8 @@ robot=abb6640(d=50)
 
 ###read in curve_exe
 df = read_csv(data_dir+"curve_exe"+"_"+speed+"_"+zone+".csv")
-print(data_dir+"curve_exe"+"_"+speed+"_"+zone+".csv")
-lam, curve_exe, curve_exe_R,curve_exe_js, act_speed, timestamp=ms.logged_data_analysis(robot,df)
+df = read_csv('recorded_data/curve_exe_v1000_z10.csv')
+lam, curve_exe, curve_exe_R,curve_exe_js, act_speed, timestamp=ms.logged_data_analysis(robot,df,realrobot=True)
 lamdot=calc_lamdot(curve_exe_js,lam,robot,step=1)
 
 plt.plot(lam[1:],act_speed,label='act speed')

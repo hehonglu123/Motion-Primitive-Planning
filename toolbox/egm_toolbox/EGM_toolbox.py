@@ -5,8 +5,9 @@ import sys
 from robots_def import *
 from lambda_calc import *
 from error_check import *
-import rpi_abb_irc5
+from utils import *
 
+import rpi_abb_irc5
 
 class EGM_toolbox(object):
     ###need to tune delay on real robot

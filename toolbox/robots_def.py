@@ -64,7 +64,7 @@ class abb6640(object):
 
 	def get_acc(self,q_all):
 		#if a single point
-		if q_all.shape==(len(self.upper_limit),):
+		if q_all.ndim==1:
 			###find closest q2q3 config, along with constant last 3 joints acc
 			idx=np.argmin(np.linalg.norm(self.q2q3_config-q_all[1:3],axis=1))
 			return np.append(self.q1q2q3_acc[idx],self.joint_acc_limit[-3:])
@@ -87,8 +87,9 @@ class abb6640(object):
 			pose_temp=fwdkin(robot_def,q)
 		else:
 			pose_temp=fwdkin(self.robot_def,q)
-		pose_temp.p=np.dot(base_R,pose_temp.p)+base_p
-		pose_temp.R=np.dot(base_R,pose_temp.R)
+
+		pose_temp.p=base_R@pose_temp.p+base_p
+		pose_temp.R=base_R@pose_temp.R
 		return pose_temp
 
 	def fwd_all(self,q_all,base_R=np.eye(3),base_p=np.array([0,0,0])):
@@ -154,7 +155,7 @@ class abb1200(object):
 
 	def get_acc(self,q_all):
 		#if a single point
-		if q_all.shape==(len(self.upper_limit),):
+		if q_all.ndim==1:
 			###find closest q2q3 config, along with constant last 3 joints acc
 			idx=np.argmin(np.linalg.norm(self.q2q3_config-q_all[1:3],axis=1))
 			return np.append(self.q1q2q3_acc[idx],self.joint_acc_limit[-3:])
@@ -177,9 +178,9 @@ class abb1200(object):
 		else:
 			pose_temp=fwdkin(self.robot_def,q)
 
-		pose_temp=fwdkin(self.robot_def,q)
-		pose_temp.p=np.dot(base_R,pose_temp.p)+base_p
-		pose_temp.R=np.dot(base_R,pose_temp.R)
+		
+		pose_temp.p=base_R@pose_temp.p+base_p
+		pose_temp.R=base_R@pose_temp.R
 		return pose_temp
 
 	def fwd_all(self,q_all,base_R=np.eye(3),base_p=np.array([0,0,0])):
@@ -368,7 +369,7 @@ class arb_robot(object):
 
 	def get_acc(self,q_all):
 		#if a single point
-		if q_all.shape==(len(self.upper_limit),):
+		if q_all.ndim==1:
 			###find closest q2q3 config, along with constant last 3 joints acc
 			idx=np.argmin(np.linalg.norm(self.q2q3_config-q_all[1:3],axis=1))
 			return np.append(self.q1q2q3_acc[idx],self.joint_acc_limit[-3:])

@@ -3,6 +3,7 @@ import copy
 from general_robotics_toolbox import *
 from utils import *
 from lambda_calc import *
+from pandas import read_csv
 
 
 def form_relative_path(robot1,robot2,curve_js1,curve_js2,base2_R,base2_p):
@@ -47,7 +48,7 @@ def calc_individual_speed(vd_relative,lam1,lam2,lam_relative,breakpoints):
 	return s1_all,s2_all
 
 def initialize_data(dataset,data_dir,solution_dir,cmd_dir):
-	relative_path = read_csv(data_dir+"/Curve_dense.csv", header=None).values
+	relative_path = read_csv(data_dir+"Curve_dense.csv", header=None).values
 
 	###calculate desired TCP speed for both arm
 	curve_js1=read_csv(solution_dir+'arm1.csv', header=None).values
@@ -73,3 +74,15 @@ def initialize_data(dataset,data_dir,solution_dir,cmd_dir):
 
 
 	return relative_path,robot1,robot2,base2_R,base2_p,lam_relative_path,lam1,lam2,curve_js1,curve_js2
+
+
+def cmd_speed_profile(breakpoints,s1_all,s2_all):
+	###return commanded speed profile, with same lenght as lambda
+	s1_cmd=[]
+	s2_cmd=[]
+
+	for i in range(len(breakpoints)):
+		s1_cmd.extend([s1_all[i]]*(breakpoints[i]-breakpoints[i-1]))
+		s2_cmd.extend([s2_all[i]]*(breakpoints[i]-breakpoints[i-1]))
+	return np.array(s1_cmd).flatten(),np.array(s2_cmd).flatten()
+

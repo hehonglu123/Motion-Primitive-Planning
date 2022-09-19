@@ -133,11 +133,17 @@ class MotionSend(object):
             motion = primitives1[i]
             if motion == 'movel_fit':
                 robt = self.moveL_target(self.robot1,q_bp1[i][0],p_bp1[i][0])
-                mp1.MoveL(robt,speed1,zone1)
+                if type(speed1) is list:
+                    mp1.MoveL(robt,speed1[i],zone1)
+                else:
+                    mp1.MoveL(robt,speed1,zone1)
 
             elif motion == 'movec_fit':
                 robt1, robt2 = self.moveC_target(self.robot1,q_bp1[i][0],q_bp1[i][1],p_bp1[i][0],p_bp1[i][1])
-                mp1.MoveC(robt1,robt2,speed1,zone1)
+                if type(speed1) is list:
+                    mp1.MoveC(robt1,robt2,speed1[i],zone1)
+                else:
+                    mp1.MoveC(robt1,robt2,speed1,zone1)
 
             elif motion == 'movej_fit':
                 robt = self.moveL_target(self.robot1,q_bp1[i][0],p_bp1[i][0])
@@ -151,7 +157,10 @@ class MotionSend(object):
                     mp1.MoveAbsJ(jointt,v500,fine)
                     mp1.WaitTime(0.1)
                 else:
-                    mp1.MoveAbsJ(jointt,speed1,zone1)
+                    if type(speed1) is list:
+                        mp1.MoveAbsJ(jointt,speed1[i],zone1)
+                    else:
+                        mp1.MoveAbsJ(jointt,speed1,zone1)
 
         for i in range(len(primitives2)):
             motion = primitives2[i]
@@ -326,16 +335,15 @@ class MotionSend(object):
 
         return points_list,q_bp
 
-    def extend_dual(self,robot1,p_bp1,q_bp1,primitives1,robot2,p_bp2,q_bp2,primitives2,breakpoints):
+    def extend_dual(self,robot1,p_bp1,q_bp1,primitives1,robot2,p_bp2,q_bp2,primitives2,breakpoints,extension_start2=100,extension_end2=100):
         #extend porpotionally
         d1_start=np.linalg.norm(p_bp1[1][-1]-p_bp1[0][-1])
         d2_start=np.linalg.norm(p_bp2[1][-1]-p_bp2[0][-1])
         d1_end=np.linalg.norm(p_bp1[-1][-1]-p_bp1[-2][-1])
         d2_end=np.linalg.norm(p_bp2[-1][-1]-p_bp2[-2][-1])
 
-        extension_d=100
-        p_bp1,q_bp1=self.extend(robot1,q_bp1,primitives1,breakpoints,p_bp1,extension_start=extension_d*d1_start/d2_start,extension_end=extension_d*d1_end/d2_end)
-        p_bp2,q_bp2=self.extend(robot2,q_bp2,primitives2,breakpoints,p_bp2,extension_start=extension_d,extension_end=extension_d)
+        p_bp1,q_bp1=self.extend(robot1,q_bp1,primitives1,breakpoints,p_bp1,extension_start=extension_start2*d1_start/d2_start,extension_end=extension_end2*d1_end/d2_end)
+        p_bp2,q_bp2=self.extend(robot2,q_bp2,primitives2,breakpoints,p_bp2,extension_start=extension_start2,extension_end=extension_end2)
 
         return p_bp1,q_bp1,p_bp2,q_bp2
     def extract_data_from_cmd(self,filename):
@@ -389,7 +397,7 @@ class MotionSend(object):
         return ms.exec_motions_multimove(breakpoints1,primitives1,primitives2,p_bp1,p_bp2,q_bp1,q_bp2,speed1,speed2,zone1,zone2)
 
 
-    def logged_data_analysis(self,robot,df,realrobot=False):
+    def logged_data_analysis(self,robot,df,realrobot=True):
         q1=df[' J1'].tolist()
         q2=df[' J2'].tolist()
         q3=df[' J3'].tolist()
@@ -427,12 +435,11 @@ class MotionSend(object):
             except IndexError:
                 pass
 
-        ###speed filter, only for simulation
         act_speed=moving_average(act_speed,padding=True)
         
         return np.array(lam), np.array(curve_exe), np.array(curve_exe_R),np.array(curve_exe_js), np.array(act_speed), timestamp-timestamp[0]
 
-    def logged_data_analysis_multimove(self,df,base2_R,base2_p,realrobot=False):
+    def logged_data_analysis_multimove(self,df,base2_R,base2_p,realrobot=True):
         q1_1=df[' J1'].tolist()[1:-1]
         q1_2=df[' J2'].tolist()[1:-1]
         q1_3=df[' J3'].tolist()[1:-1]
@@ -502,8 +509,10 @@ class MotionSend(object):
                 pass
 
         ###speed filter
-        act_speed=replace_outliers(np.array(act_speed))
-        act_speed=replace_outliers2(act_speed)
+        act_speed=moving_average(act_speed,padding=True)
+        
+        # act_speed=replace_outliers(np.array(act_speed))
+        # act_speed=replace_outliers2(act_speed)
 
         return np.array(lam), np.array(curve_exe1),np.array(curve_exe2), np.array(curve_exe_R1),np.array(curve_exe_R2),curve_exe_js1,curve_exe_js2, act_speed, timestamp, np.array(relative_path_exe), np.array(relative_path_exe_R)
 
