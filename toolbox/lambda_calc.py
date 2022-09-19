@@ -248,6 +248,8 @@ def traj_speed_est(robot,curve_js,lam,vd,qdot_init=[]):
 	###find desired qdot at each step
 	dq=np.gradient(curve_js,axis=0)
 	dlam=np.gradient(lam)
+	###replace 0 with small number
+	dlam[dlam==0]=0.000001
 	dt=dlam/vd
 	qdot_d=np.divide(dq,np.tile(np.array([dt]).T,(1,6)))
 	###bound desired qdot with qdot constraint

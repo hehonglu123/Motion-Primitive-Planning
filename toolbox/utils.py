@@ -8,8 +8,9 @@ import scipy
 def get_speed(curve_exe,timestamp):
 	d_curve_exe=np.gradient(curve_exe,axis=0)
 	speed=np.linalg.norm(d_curve_exe,axis=1)/np.gradient(timestamp)
-	speed=replace_outliers(speed)
-	speed=replace_outliers2(speed)
+	speed=moving_average(speed,padding=True)
+	# speed=replace_outliers(speed)
+	# speed=replace_outliers2(speed)
 	return speed
 
 def clip_joints(robot,curve_js,relax=0.05):

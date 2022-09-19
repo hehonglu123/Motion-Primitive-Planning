@@ -4,72 +4,63 @@ from lambda_calc import *
 from dual_arm import *
 
 dataset='wood/'
-data_dir="../data/"+dataset
-solution_dir=data_dir+'dual_arm/'+'diffevo_pose1/'
-cmd_dir=solution_dir+'50L/'
+solution_dir='baseline/'
+robot=abb6640(d=50, acc_dict_path='robot_info/6640acc.pickle')
+curve = read_csv('../data/'+dataset+solution_dir+'/Curve_in_base_frame.csv',header=None).values
 
-relative_path,robot1,robot2,base2_R,base2_p,lam_relative_path,lam1,lam2,curve_js1,curve_js2=initialize_data(dataset,data_dir,solution_dir,cmd_dir)
+curve_js=read_csv('../data/'+dataset+solution_dir+'/Curve_js.csv',header=None).values
+curve=curve[::1000]
+curve_js=curve_js[::1000]
+lam_original=calc_lam_cs(curve)
 
-with open(data_dir+'dual_arm/tcp.yaml') as file:
-    H_tcp = np.array(yaml.safe_load(file)['H'],dtype=np.float64)
-robot1=abb6640(d=50, acc_dict_path='robot_info/6640acc.pickle')
-robot2=abb1200(R_tool=H_tcp[:3,:3],p_tool=H_tcp[:-1,-1], acc_dict_path='robot_info/1200acc.pickle')
+###get joint acceleration at each pose
+joint_acc_limit=[]
+for q in curve_js:
+	joint_acc_limit.append(robot.get_acc(q))
 
+ms = MotionSend()
 
-ms = MotionSend(robot2=robot2,base2_R=base2_R,base2_p=base2_p)
+breakpoints,primitives,p_bp,q_bp=ms.extract_data_from_cmd('../data/'+dataset+'baseline/100L/command.csv')
+# breakpoints,primitives,p_bp,q_bp=ms.extract_data_from_cmd('../ILC/max_gradient/curve1_250_100L_multipeak/command.csv')
+# breakpoints,primitives,p_bp,q_bp=ms.extract_data_from_cmd('../ILC/max_gradient/curve2_1100_100L_multipeak/command.csv')
 
-# exe_dir='../simulation/robotstudio_sim/multimove/'+dataset+solution_dir
-
-
+# exe_dir='../simulation/robotstudio_sim/scripts/fitting_output/'+dataset+'/100L/'
+exe_dir='../simulation/robotstudio_sim/scripts/recorded_data/'
 v_cmds=[1000]
 for v_cmd in v_cmds:
 
 	###read actual exe file
-	df=read_csv('../simulation/robotstudio_sim/multimove/wood/diffevo_pose1/curve_exe_v1000_z100.csv')
-	# df=read_csv('../ILC/max_gradient/curve1_diffevo1/dual_iteration_2.csv')
-	lam_exe, curve_exe1,curve_exe2,curve_exe_R1,curve_exe_R2,curve_exe_js1,curve_exe_js2, speed, timestamp, relative_path_exe,relative_path_exe_R = ms.logged_data_analysis_multimove(df,base2_R,base2_p,realrobot=True)
+	df = read_csv(exe_dir+"curve_exe"+"_v"+str(v_cmd)+"_z10.csv")
+	lam_exe, curve_exe, curve_exe_R,curve_exe_js, act_speed, timestamp=ms.logged_data_analysis(robot,df,realrobot=True)
+	# lam_exe, curve_exe, curve_exe_R,curve_exe_js, act_speed, timestamp=ms.chop_extension(curve_exe, curve_exe_R,curve_exe_js, act_speed, timestamp,curve[0,:3],curve[-1,:3])
 
-	lam_exe, curve_exe1,curve_exe2,curve_exe_R1,curve_exe_R2,curve_exe_js1,curve_exe_js2, speed, timestamp, relative_path_exe, relative_path_exe_R=\
-		ms.chop_extension_dual(lam_exe, curve_exe1,curve_exe2,curve_exe_R1,curve_exe_R2,curve_exe_js1,curve_exe_js2, speed, timestamp, relative_path_exe,relative_path_exe_R,relative_path[0,:3],relative_path[-1,:3])
+	v_cmd=2000
+	speed_est=traj_speed_est(robot,curve_exe_js,lam_exe,v_cmd)
 
-	error,angle_error=calc_all_error_w_normal(relative_path_exe,relative_path[:,:3],relative_path_exe_R[:,:,-1],relative_path[:,3:])
-	print('max error: ', np.max(error))
 
-	speed1=get_speed(curve_exe1,timestamp)
-	speed2=get_speed(curve_exe2,timestamp)
-
-	lam2=calc_lam_cs(curve_exe2)
-	lam=lam_exe
-
-	speed_est,speed1_est,speed2_est=traj_speed_est_dual(robot1,robot2,curve_exe_js1,curve_exe_js2,base2_R,base2_p,lam,v_cmd)	
-
+	qdot_all=np.gradient(curve_exe_js,axis=0)/np.tile([np.gradient(timestamp)],(6,1)).T
+	qddot_all=np.gradient(qdot_all,axis=0)/np.tile([np.gradient(timestamp)],(6,1)).T
+	qddot_violate_idx=np.array([])
+	for i in range(len(curve_exe_js[0])):
+		qddot_violate_idx=np.append(qddot_violate_idx,np.argwhere(np.abs(qddot_all[:,i])>robot.joint_acc_limit[i]))
+	qddot_violate_idx=np.unique(qddot_violate_idx).astype(int)
+	# for idx in qddot_violate_idx:
+	# 	plt.axvline(x=lam_exe[idx],c='orange')
+	
 
 	plt.plot(lam_exe,speed_est,label='estimated')
-	plt.plot(lam_exe,speed,label='actual')
-
+	plt.plot(lam_exe[1:],act_speed,label='actual')
 
 	plt.legend()
+	plt.ylim([0,1.2*v_cmd])
 	plt.xlabel('lambda (mm)')
 	plt.ylabel('Speed (mm/s)')
 	plt.title('Speed Estimation for v'+str(v_cmd))
 	plt.show()
 
-	plt.plot(lam_exe,speed1_est,label='estimated')
-	plt.plot(lam_exe,speed1,label='actual')
-
-
-	plt.legend()
-	plt.xlabel('lambda (mm)')
-	plt.ylabel('Speed (mm/s)')
-	plt.title('TCP1 Speed Estimation for v'+str(v_cmd))
-	plt.show()
-
-	plt.plot(lam_exe,speed2_est,label='estimated')
-	plt.plot(lam_exe,speed2,label='actual')
-
-
-	plt.legend()
-	plt.xlabel('lambda (mm)')
-	plt.ylabel('Speed (mm/s)')
-	plt.title('TCP2 Speed Estimation for v'+str(v_cmd))
+	plt.figure()
+	ax = plt.axes(projection='3d')
+	ax.plot3D(curve[:,0], curve[:,1], curve[:,2], c='gray',label='original')
+	ax.plot3D(curve_exe[:,0], curve_exe[:,1], curve_exe[:,2], c='red',label='execution')
+	ax.scatter3D(curve_exe[qddot_violate_idx,0], curve_exe[qddot_violate_idx,1], curve_exe[qddot_violate_idx,2], c=curve_exe[qddot_violate_idx,2], cmap='Greens',label='commanded points')
 	plt.show()
