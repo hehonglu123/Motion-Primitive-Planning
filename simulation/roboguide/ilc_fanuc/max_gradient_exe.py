@@ -38,8 +38,8 @@ def main():
         cmd_dir='../data/curve_wood/'
         data_dir='data/wood/'
     
-    test_type='single_arm'
-    # test_type='single_arm_baseline'
+    # test_type='single_arm'
+    test_type='single_arm_baseline'
 
     with open(cmd_dir+'blade_pose.yaml') as file:
         blade_pose = np.array(yaml.safe_load(file)['H'],dtype=np.float64)
@@ -64,7 +64,7 @@ def main():
     robot=m710ic(d=50)
     ms = MotionSendFANUC()
 
-    s = 1700
+    s = 1300
     z = 100
     alpha = 0.5 # for gradient descent
     alpha_error_dir = 0.8 # for pushing in error direction
@@ -72,7 +72,7 @@ def main():
     Path(ilc_output).mkdir(exist_ok=True)
 
     try:
-        breakpoints,primitives,p_bp,q_bp=ms.extract_data_from_cmd(os.getcwd()+'/'+cmd_dir+'command1.csv')
+        breakpoints,primitives,p_bp,q_bp,_=ms.extract_data_from_cmd(os.getcwd()+'/'+cmd_dir+'command1.csv')
         # breakpoints,primitives,p_bp,q_bp=extract_data_from_cmd(os.getcwd()+'/'+ilc_output+'command_25.csv')
     except:
         print("Convert bp to command")
@@ -94,8 +94,8 @@ def main():
 
     q_bp_start = q_bp[0][0]
     q_bp_end = q_bp[-1][-1]
-    # primitives,p_bp,q_bp=ms.extend_start_end(robot,q_bp,primitives,breakpoints,p_bp,extension_start=100,extension_end=1)
-    primitives,p_bp,q_bp=ms.extend_start_end_qp(robot,q_bp,primitives,breakpoints,p_bp,extension_start=300,extension_end=300)
+    primitives,p_bp,q_bp=ms.extend_start_end(robot,q_bp,primitives,breakpoints,p_bp,extension_start=50,extension_end=50)
+    # primitives,p_bp,q_bp=ms.extend_start_end_qp(robot,q_bp,primitives,breakpoints,p_bp,extension_start=300,extension_end=300)
 
     ## calculate step at start and end
     step_start1=None
@@ -157,7 +157,11 @@ def main():
             peaks=np.append(peaks,np.argmax(error))
         
         ##############################plot error#####################################
-        fig, ax1 = plt.subplots()
+        try:
+            plt.close(fig)
+        except:
+            pass
+        fig, ax1 = plt.subplots(figsize=(6,4))
         ax2 = ax1.twinx()
         ax1.plot(lam, speed, 'g-', label='Speed')
         ax2.plot(lam, error, 'b-',label='Error')
@@ -180,14 +184,17 @@ def main():
 
         # save fig
         plt.legend()
-        plt.savefig(ilc_output+'iteration_'+str(i))
-        plt.clf()
-        # plt.show()
+        # plt.savefig(ilc_output+'iteration_'+str(i))
+        # plt.clf()
+        fig.canvas.manager.window.move(1300,99)
+        plt.show(block=False)
+        plt.pause(0.1)
         # exit()
         # save bp
-        df=DataFrame({'primitives':primitives,'points':p_bp,'q_bp':q_bp})
-        df.to_csv(ilc_output+'command_'+str(i)+'.csv',header=True,index=False)
+        # df=DataFrame({'primitives':primitives,'points':p_bp,'q_bp':q_bp})
+        # df.to_csv(ilc_output+'command_'+str(i)+'.csv',header=True,index=False)
         if max(error) < max_error_tolerance:
+            time.sleep(5)
             break
         
         # if max error does not decrease, use multi-peak max gradient descent
