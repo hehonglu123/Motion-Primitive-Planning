@@ -1,7 +1,7 @@
 ########
-# This module utilized https://github.com/johnwason/abb_motion_program_exec
+# This module utilized https://github.com/eric565648/fanuc_motion_program_exec_client
 # and send whatever the motion primitives that algorithms generate
-# to RobotStudio
+# to Roboguide
 ########
 
 from copy import deepcopy
@@ -58,6 +58,8 @@ def main():
     # test_type='dual_single_arm_straight_min10' # robot2 is multiple user defined straight line
     # test_type='dual_arm_10'
     # test_type='dual_arm_qp'
+
+    data_dir=data_dir[:-1]+'_2ctrller/'
 
     cmd_dir=cmd_dir+test_type+'/'
 
@@ -116,23 +118,23 @@ def main():
 
     # fanuc motion send tool
     if data_type=='blade':
-        ms = MotionSendFANUC(robot1=robot1,robot2=robot2)
+        ms = MotionSendFANUC(robot1=robot1,robot2=robot2,group2=1,robot_ip2='127.0.0.3')
     elif data_type=='wood':
-        ms = MotionSendFANUC(robot1=robot1,robot2=robot2,utool2=3)
+        ms = MotionSendFANUC(robot1=robot1,robot2=robot2,group2=1,utool2=3,robot_ip2='127.0.0.3')
     elif data_type=='blade_arm_shift':
-        ms = MotionSendFANUC(robot1=robot1,robot2=robot2,utool2=6)
+        ms = MotionSendFANUC(robot1=robot1,robot2=robot2,group2=1,utool2=6,robot_ip2='127.0.0.3')
     elif data_type=='blade_base_shift':
-        ms = MotionSendFANUC(robot1=robot1,robot2=robot2,utool2=2)
+        ms = MotionSendFANUC(robot1=robot1,robot2=robot2,group2=1,utool2=2,robot_ip2='127.0.0.3')
 
     # s=int(1600/2.) # mm/sec in leader frame
-    s=1200 # mm/sec
+    s=1000 # mm/sec
     # s=16 # mm/sec in leader frame
     z=100 # CNT100
     ilc_output=data_dir+'results_'+str(s)+'_'+test_type+'/'
     Path(ilc_output).mkdir(exist_ok=True)
 
-    breakpoints1,primitives1,p_bp1,q_bp1=ms.extract_data_from_cmd(os.getcwd()+'/'+cmd_dir+'command1.csv')
-    breakpoints2,primitives2,p_bp2,q_bp2=ms.extract_data_from_cmd(os.getcwd()+'/'+cmd_dir+'command2.csv')
+    breakpoints1,primitives1,p_bp1,q_bp1,_=ms.extract_data_from_cmd(os.getcwd()+'/'+cmd_dir+'command1.csv')
+    breakpoints2,primitives2,p_bp2,q_bp2,_=ms.extract_data_from_cmd(os.getcwd()+'/'+cmd_dir+'command2.csv')
 
     # for i in range(len(q_bp2)):
     #     p_bp2[i][-1] = robot2.fwd(q_bp2[i][-1]).p
@@ -178,7 +180,7 @@ def main():
     q_bp2_start = q_bp2[0][0]
     q_bp2_end = q_bp2[-1][-1]
 
-    p_bp1,q_bp1,p_bp2,q_bp2=ms.extend_dual(ms.robot1,p_bp1,q_bp1,primitives1,ms.robot2,p_bp2,q_bp2,primitives2,breakpoints1,base2_T,extension_d=50)
+    p_bp1,q_bp1,p_bp2,q_bp2=ms.extend_dual(ms.robot1,p_bp1,q_bp1,primitives1,ms.robot2,p_bp2,q_bp2,primitives2,breakpoints1,base2_T,extension_d=70)
 
     ## calculate step at start and end
     step_start1=None
@@ -190,7 +192,7 @@ def main():
             step_end1=i
 
     assert step_start1 is not None,'Cant find step start'
-    assert step_end1 is not None,'Cant find step start'
+    assert step_end1 is not None,'Cant find step end'
     print(step_start1,step_end1)
 
     step_start2=None
@@ -202,24 +204,40 @@ def main():
             step_end2=i
 
     assert step_start2 is not None,'Cant find step start'
-    assert step_end2 is not None,'Cant find step start'
+    assert step_end2 is not None,'Cant find step end'
     print(step_start2,step_end2)
+
+
+    def dummy_loop(the_item,step_start,step_end):
+        the_item_dum = [the_item[0]]
+        for i in range(step_start,step_end+1):
+            the_item_dum.append(the_item[i])
+        the_item_dum.append(the_item[-1])
+        return the_item_dum
+    p_bp1 = dummy_loop(p_bp1,step_start1,step_end1)
+    q_bp1 = dummy_loop(q_bp1,step_start1,step_end1)
+    primitives1 = dummy_loop(primitives1,step_start1,step_end1)
+    p_bp2 = dummy_loop(p_bp2,step_start2,step_end2)
+    q_bp2 = dummy_loop(q_bp2,step_start2,step_end2)
+    primitives2 = dummy_loop(primitives2,step_start2,step_end2)
+    step_start1,step_start2,step_end1,step_end2=1,1,len(p_bp1)-2,len(p_bp2)-2
 
     ## extend speed
     s1_start = np.ones(step_start1)*s1_movel[0]
     s2_start = np.ones(step_start2)*s2_movel[0]
-    s1_end = np.ones(len(primitives1)-step_end1-1)*s1_movel[-1]
-    s2_end = np.ones(len(primitives2)-step_end2-1)*s2_movel[-1]
+    s1_end = np.ones(len(p_bp1)-step_end1-1)*s1_movel[-1]
+    s2_end = np.ones(len(p_bp2)-step_end2-1)*s2_movel[-1]
     s1_movel=np.append(np.append(s1_start,s1_movel),s1_end)
     s2_movel=np.append(np.append(s2_start,s2_movel),s2_end)
+
+    print(len(p_bp1),len(q_bp1),len(primitives1),len(s1_movel))
+    print(len(p_bp2),len(q_bp2),len(primitives2),len(s2_movel))
 
     ## round up speed
     s1_movel = np.around(s1_movel)
     s2_movel = np.around(s2_movel)
     s1_movel_des = deepcopy(s1_movel)
     s2_movel_des = deepcopy(s2_movel)
-    s1_movel = s1_movel*1
-    s2_movel = s2_movel*1
 
     use_exist=False
     use_iteration=231
@@ -244,8 +262,8 @@ def main():
     all_speed_std = []
     all_max_error = []
 
-    iteration=30
-    speed_iteration = 1
+    iteration=20
+    speed_iteration = 10
     draw_speed_max=None
     draw_error_max=None
     max_error_tolerance = 0.5
@@ -287,84 +305,49 @@ def main():
         while True:
             p_bp1_update = deepcopy(p_bp1)
             q_bp1_update = deepcopy(q_bp1)
+            s1_movel_update = deepcopy(s1_movel)
+            s2_movel_update = deepcopy(s2_movel)
             if i != start_iteration:
-
-                # previous speed
-                if i>start_iteration+1:
-                    speed_exe1_old = deepcopy(speed_exe1)
-                    speed_exe2_old = deepcopy(speed_exe2)
-                    lam_exe1_old = deepcopy(lam_exe1)
-                    lam_exe2_old = deepcopy(lam_exe2)
-                else:
-                    speed_exe1_old = np.zeros(len(curve_exe1))
-                    speed_exe2_old = np.zeros(len(curve_exe2))
-                    lam_exe1_old = np.zeros(len(curve_exe1))
-                    lam_exe2_old = np.zeros(len(curve_exe2))
                 
                 # new robot data
-                lam_exe1 = np.append(0,np.cumsum(np.linalg.norm(np.diff(curve_exe1,axis=0),2,1)))
-                speed_exe1 = np.divide(np.linalg.norm(np.diff(curve_exe1,axis=0),2,1),np.diff(timestamp,axis=0))
-                # speed_exe1=np.append(speed_exe1[0],speed_exe1)
+                speed_exe1 = np.divide(np.linalg.norm(np.diff(curve_exe1,axis=0),2,1),np.diff(timestamp1,axis=0))
                 speed_exe1=np.append(speed_exe1,speed_exe1[-1])
-                lam_exe2 = np.append(0,np.cumsum(np.linalg.norm(np.diff(curve_exe2,axis=0),2,1)))
-                speed_exe2 = np.divide(np.linalg.norm(np.diff(curve_exe2,axis=0),2,1),np.diff(timestamp,axis=0))
-                # speed_exe2=np.append(speed_exe2[0],speed_exe2)
+                speed_exe2 = np.divide(np.linalg.norm(np.diff(curve_exe2,axis=0),2,1),np.diff(timestamp2,axis=0))
                 speed_exe2=np.append(speed_exe2,speed_exe2[-1])
                 p_bp1_sq = np.squeeze(p_bp1[step_start1:step_end1+1])
                 p_bp2_sq = np.squeeze(p_bp2[step_start2:step_end2+1])
-                lam1=np.cumsum(np.linalg.norm(np.diff(p_bp1_sq,axis=0),2,1))
-                lam1=np.append(0,lam1)
-                lam2=np.cumsum(np.linalg.norm(np.diff(p_bp2_sq,axis=0),2,1))
-                lam2=np.append(0,lam2)
+                lam1_bp=np.cumsum(np.linalg.norm(np.diff(p_bp1_sq,axis=0),2,1))
+                lam1_bp=np.append(0,lam1_bp)
+                lam2_bp=np.cumsum(np.linalg.norm(np.diff(p_bp2_sq,axis=0),2,1))
+                lam2_bp=np.append(0,lam2_bp)
                 
+                Ks = 10
                 if i < speed_iteration+start_iteration:
                     ### update speed
                     # print(curve_exe1)
                     for j in range(step_start1+1,step_end1+1):
                         ###### update speed 1
-                        # if np.argmin(np.abs(lam_exe1-lam1[j-step_start]))>np.argmin(np.abs(lam_exe1-lam1[j-1-step_start])):
-                        #     # print("update speed 1")
-                        #     this_speed_exe1 = np.mean(speed_exe1[np.argmin(np.abs(lam_exe1-lam1[j-1-step_start])):np.argmin(np.abs(lam_exe1-lam1[j-step_start]))])
-                        #     s1_movel[j] = (s1_movel_des[j]/this_speed_exe1)*s1_movel[j]
-                        
                         error_temp,id_prev=calc_error(p_bp1[j-1][-1],curve_exe1)
                         error_temp,id_now=calc_error(p_bp1[j][-1],curve_exe1)
                         if id_prev<id_now+1:
                             this_speed_exe1 = np.mean(speed_exe1[id_prev:id_now+1])
                             # print(p_bp1[j][-1],id_prev,id_now,this_speed_exe1)
                             s1_movel[j] = (s1_movel_des[j]/this_speed_exe1)*s1_movel[j]
+                            # s1_movel[j] = (s1_movel_des[j]-this_speed_exe1)+s1_movel[j]
                     # print(curve_exe2)
                     for j in range(step_start2+1,step_end2+1):
                         ###### update speed 2
-                        # if np.argmin(np.abs(lam_exe2-lam2[j-step_start]))>np.argmin(np.abs(lam_exe2-lam2[j-1-step_start])):
-                        #     # print("update speed 2")
-                        #     this_speed_exe2 = np.mean(speed_exe2[np.argmin(np.abs(lam_exe2-lam2[j-1-step_start])):np.argmin(np.abs(lam_exe2-lam2[j-step_start]))])
-                        #     s2_movel[j] = (s2_movel_des[j]/this_speed_exe2)*s2_movel[j]
                         error_temp,id_prev=calc_error(p_bp2[j-1][-1],curve_exe2)
                         error_temp,id_now=calc_error(p_bp2[j][-1],curve_exe2)
                         if id_prev<id_now+1:
                             this_speed_exe2 = np.mean(speed_exe2[id_prev:id_now+1])
                             # print(p_bp2[j][-1],id_prev,id_now,this_speed_exe2)
                             s2_movel[j] = (s2_movel_des[j]/this_speed_exe2)*s2_movel[j]
-                    s1_movel[:step_start1+1] = s1_movel[step_start1+1]
-                    s1_movel[step_end1+1:] = s1_movel[step_end1]
-                    s2_movel[:step_start2+1] = s2_movel[step_start2+1]
-                    s2_movel[step_end2+1:] = s2_movel[step_end2]
-
-                    ## show speed of each robot
-                    f, ax = plt.subplots(1, 2)
-                    ax[0].scatter(lam1,s1_movel_des[step_start1:step_end1+1],label='Motion Program',c='tab:green')
-                    ax[0].plot(lam_exe1_old,speed_exe1_old,label='Prev Execution')
-                    ax[0].plot(lam_exe1,speed_exe1,label='Execution')
-                    ax[1].scatter(lam2,s2_movel_des[step_start2:step_end2+1],label='Motion Program',c='tab:green')
-                    ax[1].plot(lam_exe2_old,speed_exe2_old,label='Prev Execution')
-                    ax[1].plot(lam_exe2,speed_exe2,label='Execution')
-                    plt.legend()
-                    if save_fig:
-                        plt.savefig(ilc_output+'speed_'+str(i-1))
-                        plt.clf()
-                    else:
-                        plt.show()
+                            # s2_movel[j] = (s2_movel_des[j]-this_speed_exe2)+s2_movel[j]
+                    s1_movel[step_end1+1:]=s1_movel[step_end1]
+                    s2_movel[step_end2+1:]=s1_movel[step_end2]
+                    s1_movel_update = deepcopy(s1_movel)
+                    s2_movel_update = deepcopy(s2_movel)
 
                 elif  i == speed_iteration+start_iteration:
                     pass # dont update at iteration "speed_iteration"
@@ -384,6 +367,14 @@ def main():
                             de_dp= deepcopy(all_dedp[j])
                             p_bp1_update, q_bp1_update=ilc.update_bp_xyz(p_bp1,q_bp1,de_dp,error_prev[peak],breakpoint_interp_2tweak_indices,alpha=alpha)
 
+                    #### update speed base on bp change
+                    # p_bp1_sq = np.squeeze(p_bp1_update[step_start1:step_end1+1])
+                    # dlam1_movel=np.linalg.norm(np.diff(p_bp1_sq,axis=0),2,1)
+                    # update_ratio = np.divide(np.divide(dlam1_movel,dt_movel), s1_movel_des[step_start1+1:step_end1+1])
+                    # s1_movel_update[step_start1+1:step_end1+1] = np.multiply(update_ratio,s1_movel[step_start1+1:step_end1+1])
+                    # s1_movel_update[step_end1+1:]=s1_movel[step_end1]
+                    ###################################
+
                     p_bp_relative_new,_=ms.form_relative_path(np.squeeze(q_bp1_update),np.squeeze(q_bp2),base2_R,base2_p)
                     ### update visualization
                     ax = plt.axes(projection='3d')
@@ -400,65 +391,84 @@ def main():
                         plt.clf()
                     else:
                         plt.show()
-
-                    ### show path of each robot
-                    # p_bp1_sq = np.squeeze(p_bp1)
-                    # p_bp1_update_sq = np.squeeze(p_bp1_update)
-                    # p_bp2_sq = np.squeeze(p_bp2)
-                    # fig = plt.figure(figsize=plt.figaspect(0.5))
-                    # # robot1
-                    # ax = fig.add_subplot(1, 2, 1, projection='3d')
-                    # ax.plot3D(curve1[:,0], curve1[:,1],curve1[:,2], 'red',label='original r1')
-                    # ax.plot3D(curve_exe1[:,0], curve_exe1[:,1],curve_exe1[:,2], 'green',label='execution r1')
-                    # ax.scatter3D(p_bp1_sq[step_start:step_end+1,0], p_bp1_sq[step_start:step_end+1,1],p_bp1_sq[step_start:step_end+1,2], 'blue', label='old bps1')
-                    # ax.scatter3D(p_bp1_update_sq[step_start:step_end+1,0], p_bp1_update_sq[step_start:step_end+1,1],p_bp1_update_sq[step_start:step_end+1,2], 'magenta', label='new bps1')
-                    # # robot2
-                    # ax = fig.add_subplot(1, 2, 2, projection='3d')
-                    # ax.plot3D(curve2[:,0], curve2[:,1],curve2[:,2], 'red',label='original r2')
-                    # ax.plot3D(curve_exe2[:,0], curve_exe2[:,1],curve_exe2[:,2], 'green',label='execution r2')
-                    # ax.scatter3D(p_bp2_sq[step_start:step_end+1,0], p_bp2_sq[step_start:step_end+1,1],p_bp2_sq[step_start:step_end+1,2], 'blue', label='old bps2')
-                    # plt.show()
-
-                # exit()
+                
+                ## show speed of each robot
+                if i<=start_iteration+1:
+                    speed_exe1_old = np.zeros(len(curve_exe1))
+                    speed_exe2_old = np.zeros(len(curve_exe2))
+                    lam1_old = np.zeros(len(curve_exe1))
+                    lam2_old = np.zeros(len(curve_exe2))
+                f, ax = plt.subplots(1, 2)
+                ax[0].scatter(lam1_bp,s1_movel_des[step_start1:step_end1+1],label='Motion Program',c='tab:green')
+                ax[0].plot(lam1_old,speed_exe1_old,label='Prev Execution')
+                ax[0].plot(lam1,speed_exe1,label='Execution')
+                ax[1].scatter(lam2_bp,s2_movel_des[step_start2:step_end2+1],label='Motion Program',c='tab:green')
+                ax[1].plot(lam2_old,speed_exe2_old,label='Prev Execution')
+                ax[1].plot(lam2,speed_exe2,label='Execution')
+                plt.legend()
+                if save_fig:
+                    plt.savefig(ilc_output+'speed_'+str(i-1))
+                    plt.clf()
+                else:
+                    plt.show()
+                speed_exe1_old = deepcopy(speed_exe1)
+                speed_exe2_old = deepcopy(speed_exe2)
+                lam1_old = deepcopy(lam1)
+                lam2_old = deepcopy(lam2)
+                ######
 
             ###execution with plant
-            logged_data=ms.exec_motions_multimove_nocoord(robot1,robot2,primitives1,primitives2,p_bp1_update,p_bp2,q_bp1_update,q_bp2,s1_movel,s2_movel,z,z)
-            # with open('iteration_'+str(i)+'.csv',"wb") as f:
-            #     f.write(logged_data)
-            StringData=StringIO(logged_data.decode('utf-8'))
-            df = read_csv(StringData, sep =",")
+            logged_data1,logged_data2=ms.exec_motions_multimove_separate2(robot1,robot2,primitives1,primitives2,p_bp1,p_bp2,q_bp1,q_bp2,s1_movel,s2_movel,z,z)
+            StringData=StringIO(logged_data1.decode('utf-8'))
+            df1 = read_csv(StringData, sep =",")
+            StringData=StringIO(logged_data2.decode('utf-8'))
+            df2 = read_csv(StringData, sep =",")
             ##############################data analysis#####################################
-            lam, curve_exe1,curve_exe2,curve_exe_R1,curve_exe_R2,curve_exe_js1,curve_exe_js2, speed, timestamp, relative_path_exe, relative_path_exe_R = ms.logged_data_analysis_multimove(df,base2_R,base2_p,realrobot=False)
+            lam, curve_exe1,curve_exe2,curve_exe_R1,curve_exe_R2,curve_exe_js1,curve_exe_js2, speed, timestamp, relative_path_exe, relative_path_exe_R = ms.logged_data_analysis_multimove_connect(df1,df2,base2_R,base2_p,realrobot=False)
             #############################chop extension off##################################
             if i >= speed_iteration+start_iteration:
             # if 1:
-                curve_exe_js1_prev = deepcopy(curve_exe_js1[-1])
-                curve_exe_js2_prev = deepcopy(curve_exe_js2[-1])
-                chop_first = False
-                chop_second = False
-                for j in range(len(curve_exe_js1)-2,0,-1):
-                    if np.any(curve_exe_js1[j] != curve_exe_js1_prev):
-                        chop_first = True
-                        break
-                    if np.any(curve_exe_js2[j] != curve_exe_js2_prev):
-                        chop_second = True
-                        break
-                    curve_exe_js1_prev = deepcopy(curve_exe_js1[j])
-                    curve_exe_js2_prev = deepcopy(curve_exe_js2[j])
-                if chop_first:
-                    print("First robot is slower")
-                    lam, curve_exe1,curve_exe2,curve_exe_R1,curve_exe_R2,curve_exe_js1,curve_exe_js2, speed, timestamp, relative_path_exe, relative_path_exe_R=\
-                        ms.chop_extension_dual_singel(lam, curve_exe1,curve_exe2,curve_exe_R1,curve_exe_R2,curve_exe_js1,curve_exe_js2, speed, timestamp, relative_path_exe,relative_path_exe_R,curve1[0],curve1[-1],curve_exe1)
-                if chop_second:
-                    print("Second robot is slower")
-                    lam, curve_exe1,curve_exe2,curve_exe_R1,curve_exe_R2,curve_exe_js1,curve_exe_js2, speed, timestamp, relative_path_exe, relative_path_exe_R=\
-                        ms.chop_extension_dual_singel(lam, curve_exe1,curve_exe2,curve_exe_R1,curve_exe_R2,curve_exe_js1,curve_exe_js2, speed, timestamp, relative_path_exe,relative_path_exe_R,curve2[0],curve2[-1],curve_exe2)
+                # curve_exe_js1_prev = deepcopy(curve_exe_js1[-1])
+                # curve_exe_js2_prev = deepcopy(curve_exe_js2[-1])
+                # chop_first = False
+                # chop_second = False
+                # for j in range(len(curve_exe_js1)-2,0,-1):
+                #     if np.any(curve_exe_js1[j] != curve_exe_js1_prev):
+                #         chop_first = True
+                #         break
+                #     if np.any(curve_exe_js2[j] != curve_exe_js2_prev):
+                #         chop_second = True
+                #         break
+                #     curve_exe_js1_prev = deepcopy(curve_exe_js1[j])
+                #     curve_exe_js2_prev = deepcopy(curve_exe_js2[j])
+                # if chop_first:
+                #     print("First robot is slower")
+                #     lam, curve_exe1,curve_exe2,curve_exe_R1,curve_exe_R2,curve_exe_js1,curve_exe_js2, speed, timestamp, relative_path_exe, relative_path_exe_R=\
+                #         ms.chop_extension_dual_singel(lam, curve_exe1,curve_exe2,curve_exe_R1,curve_exe_R2,curve_exe_js1,curve_exe_js2, speed, timestamp, relative_path_exe,relative_path_exe_R,curve1[0],curve1[-1],curve_exe1)
+                # if chop_second:
+                #     print("Second robot is slower")
+                #     lam, curve_exe1,curve_exe2,curve_exe_R1,curve_exe_R2,curve_exe_js1,curve_exe_js2, speed, timestamp, relative_path_exe, relative_path_exe_R=\
+                #         ms.chop_extension_dual_singel(lam, curve_exe1,curve_exe2,curve_exe_R1,curve_exe_R2,curve_exe_js1,curve_exe_js2, speed, timestamp, relative_path_exe,relative_path_exe_R,curve2[0],curve2[-1],curve_exe2)
+                lam, curve_exe1,curve_exe2,curve_exe_R1,curve_exe_R2,curve_exe_js1,curve_exe_js2, speed, timestamp, relative_path_exe, relative_path_exe_R=\
+                    ms.chop_extension_dual(lam, curve_exe1,curve_exe2,curve_exe_R1,curve_exe_R2,curve_exe_js1,curve_exe_js2, speed, timestamp, relative_path_exe,relative_path_exe_R,relative_path[0,:3],relative_path[-1,:3])
+                timestamp1 = timestamp
+                timestamp2 = timestamp
+                lam1=np.append(0,np.cumsum(np.linalg.norm(np.diff(curve_exe1,axis=0),2,1)))
+                lam2=np.append(0,np.cumsum(np.linalg.norm(np.diff(curve_exe2,axis=0),2,1)))
             else:
                 # lam, curve_exe1,curve_exe2,curve_exe_R1,curve_exe_R2,curve_exe_js1,curve_exe_js2, speed, timestamp, relative_path_exe, relative_path_exe_R=\
                 #     ms.chop_extension_dual(lam, curve_exe1,curve_exe2,curve_exe_R1,curve_exe_R2,curve_exe_js1,curve_exe_js2, speed, timestamp, relative_path_exe,relative_path_exe_R,relative_path[0,:3],relative_path[-1,:3])
+                curve_exe1_unchop = deepcopy(curve_exe1)
+                curve_exe2_unchop = deepcopy(curve_exe2)
+                curve_exe_R1_unchop = deepcopy(curve_exe_R1)
+                curve_exe_R2_unchop = deepcopy(curve_exe_R2)
+                speed_unchop = deepcopy(speed)
+                timestamp_unchop = deepcopy(timestamp)
                 lam, curve_exe1,curve_exe2,curve_exe_R1,curve_exe_R2,curve_exe_js1,curve_exe_js2, speed, timestamp, relative_path_exe, relative_path_exe_R=\
                         ms.chop_extension_dual_extend(lam, curve_exe1,curve_exe2,curve_exe_R1,curve_exe_R2,curve_exe_js1,curve_exe_js2, speed, timestamp, relative_path_exe,relative_path_exe_R,[curve1[0],curve2[0]],[curve1[-1],curve2[-1]],[curve_exe1,curve_exe2])
-            
+                lam1, curve_exe1, curve_exe_R1,curve_exe_js1, speed1, timestamp1=ms.chop_extension(curve_exe1_unchop, curve_exe_R1_unchop,curve_exe_js1, speed_unchop, timestamp_unchop,curve1[:,:3],curve1[:,3:])
+                lam2, curve_exe2, curve_exe_R2,curve_exe_js2, speed2, timestamp2=ms.chop_extension(curve_exe2_unchop, curve_exe_R2_unchop,curve_exe_js2, speed_unchop, timestamp_unchop,curve2[:,:3],curve2[:,3:])
+
             ##############################calcualte error########################################
             ave_speed=np.mean(speed)
             error,angle_error=calc_all_error_w_normal(relative_path_exe,relative_path[:,:3],relative_path_exe_R[:,:,-1],relative_path[:,3:])
@@ -471,11 +481,11 @@ def main():
                 all_speed_profile2.append(deepcopy(s2_movel))
                 all_speed_std.append(np.std(speed)/ave_speed*100)
                 all_max_error.append(max(error))
+                max_error=max(error)
                 if i==1:
                     print(s1_movel)
                     print(s2_movel)
                 break
-            
             
             # if max(error) < max_error and max(np.degrees(angle_error)) < max_ang_error:
             if (max(error) < max_error) or alpha_flag:
@@ -484,6 +494,7 @@ def main():
                 max_ang_error = max(np.degrees(angle_error))
                 p_bp1 = deepcopy(p_bp1_update)
                 q_bp1 = deepcopy(q_bp1_update)
+                s1_movel = deepcopy(s1_movel_update)
                 break
 
             all_alpha_error.append(max(error))
@@ -548,9 +559,9 @@ def main():
             plt.show()
         # exit()
 
-        df=DataFrame({'primitives':primitives1,'points':p_bp1,'q_bp':q_bp1})
+        df=DataFrame({'primitives':primitives1,'points':p_bp1,'q_bp':q_bp1,'speed':s1_movel})
         df.to_csv(ilc_output+'command_arm1_'+str(i)+'.csv',header=True,index=False)
-        df=DataFrame({'primitives':primitives2,'points':p_bp2,'q_bp':q_bp2})
+        df=DataFrame({'primitives':primitives2,'points':p_bp2,'q_bp':q_bp2,'speed':s2_movel})
         df.to_csv(ilc_output+'command_arm2_'+str(i)+'.csv',header=True,index=False)
 
         if i >= speed_iteration:

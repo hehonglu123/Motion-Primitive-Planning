@@ -116,8 +116,8 @@ def main():
     elif data_type=='blade_arm_shift':
         ms = MotionSendFANUC(robot1=robot1,robot2=robot2,group2=1,utool2=6,robot_ip2='127.0.0.3')
     elif data_type=='blade_base_shift':
-        # ms = MotionSendFANUC(robot1=robot1,robot2=robot2,group2=1,utool2=2,robot_ip2='127.0.0.3')
-        ms = MotionSendFANUC(robot1=robot1,robot2=robot2,utool2=2)
+        ms = MotionSendFANUC(robot1=robot1,robot2=robot2,group2=1,utool2=2,robot_ip2='127.0.0.3')
+        # ms = MotionSendFANUC(robot1=robot1,robot2=robot2,utool2=2)
 
     # s=int(1600/2.) # mm/sec in leader frame
     s=1000 # mm/sec
@@ -150,17 +150,17 @@ def main():
         # # thread base motion
         # logged_data1,logged_data2=ms.exec_motions_multimove_separate(robot1,robot2,primitives1,primitives2,p_bp1,p_bp2,q_bp1,q_bp2,s1_movel,s2_movel,z,z)
         # connecting DI DO motion
-        # logged_data1,logged_data2=ms.exec_motions_multimove_separate2(robot1,robot2,primitives1,primitives2,p_bp1,p_bp2,q_bp1,q_bp2,s1_movel,s2_movel,z,z)
-        # StringData=StringIO(logged_data1.decode('utf-8'))
-        # df1 = read_csv(StringData, sep =",")
-        # StringData=StringIO(logged_data2.decode('utf-8'))
-        # df2 = read_csv(StringData, sep =",")
+        logged_data1,logged_data2=ms.exec_motions_multimove_separate2(robot1,robot2,primitives1,primitives2,p_bp1,p_bp2,q_bp1,q_bp2,s1_movel,s2_movel,z,z)
+        StringData=StringIO(logged_data1.decode('utf-8'))
+        df1 = read_csv(StringData, sep =",")
+        StringData=StringIO(logged_data2.decode('utf-8'))
+        df2 = read_csv(StringData, sep =",")
         # ##############################data analysis#####################################
-        # lam, curve_exe1,curve_exe2,curve_exe_R1,curve_exe_R2,curve_exe_js1,curve_exe_js2, speed, timestamp, relative_path_exe, relative_path_exe_R = ms.logged_data_analysis_multimove_connect(df1,df2,base2_R,base2_p,realrobot=False)
+        lam, curve_exe1,curve_exe2,curve_exe_R1,curve_exe_R2,curve_exe_js1,curve_exe_js2, speed, timestamp, relative_path_exe, relative_path_exe_R = ms.logged_data_analysis_multimove_connect(df1,df2,base2_R,base2_p,realrobot=False)
         
-        logged_data=ms.exec_motions_multimove_nocoord(robot1,robot2,primitives1,primitives2,p_bp1,p_bp2,q_bp1,q_bp2,s1_movel,s2_movel,z,z)
-        StringData=StringIO(logged_data.decode('utf-8'))
-        df = read_csv(StringData, sep =",")
+        # logged_data=ms.exec_motions_multimove_nocoord(robot1,robot2,primitives1,primitives2,p_bp1,p_bp2,q_bp1,q_bp2,s1_movel,s2_movel,z,z)
+        # StringData=StringIO(logged_data.decode('utf-8'))
+        # df = read_csv(StringData, sep =",")
         ##############################data analysis#####################################
         lam, curve_exe1,curve_exe2,curve_exe_R1,curve_exe_R2,curve_exe_js1,curve_exe_js2, speed, timestamp, relative_path_exe, relative_path_exe_R = ms.logged_data_analysis_multimove(df,base2_R,base2_p,realrobot=False)
     
