@@ -7,8 +7,8 @@ import general_robotics_toolbox as rox
 sys.path.append('../../../constraint_solver')
 from constraint_solver import *
 
-# data_type='wood'
-data_type='blade'
+data_type='wood'
+# data_type='blade'
 
 if data_type=='blade':
     curve_data_dir='../../../data/from_NX/'
@@ -24,6 +24,12 @@ with open(data_dir+'blade_pose.yaml') as file:
     blade_pose = np.array(yaml.safe_load(file)['H'],dtype=np.float64)
 relative_path_p = np.hstack((relative_path[:,:3],np.ones((len(relative_path),1))))
 relative_path_n = relative_path[:,3:]
+
+# from fanuc_motion_program_exec_client import *
+# print(blade_pose)
+# print(R2wpr(blade_pose[:3,:3]))
+# print(np.degrees(R2wpr(blade_pose[:3,:3])))
+# exit()
 
 ## curve frame conversion
 curve_p = np.matmul(blade_pose,relative_path_p.T)[:-1,:]
