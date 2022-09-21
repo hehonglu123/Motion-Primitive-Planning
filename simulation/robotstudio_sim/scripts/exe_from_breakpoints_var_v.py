@@ -44,6 +44,7 @@ def main():
     v1_all=[]
     v2_all=[]
     v1=vmax
+    # s1_all[-8:-1]=[100]*7
     for i in range(len(breakpoints1)):
         v1_all.append(speeddata(s1_all[i],9999999,9999999,999999))
         v2_all.append(speeddata(s2_all[i],9999999,9999999,999999))
@@ -51,7 +52,7 @@ def main():
 
     s1_cmd,s2_cmd=cmd_speed_profile(breakpoints1,s1_all,s2_all)
 
-    zone=50
+    zone=100
     z= zonedata(False,zone,1.5*zone,1.5*zone,0.15*zone,1.5*zone,0.15*zone)
 
 

@@ -8,7 +8,7 @@ import numpy as np
 #             dic=i #string
 # dic = eval(dic) # this is orignal dict with instace dict
 
-dic = pickle.load(open('1200/1200acc.pickle','rb'))
+dic = pickle.load(open('test.pickle','rb'))
 
 
 
@@ -16,14 +16,20 @@ dic = pickle.load(open('1200/1200acc.pickle','rb'))
 x=[]
 y=[]
 q1_acc=[]
-q2_acc=[]
-q3_acc=[]
+q2_acc_p=[]
+q3_acc_p=[]
+q2_acc_n=[]
+q3_acc_n=[]
 for key, value in dic.items():
    x.append(key[0])
    y.append(key[1])
    q1_acc.append(value[0])
-   q2_acc.append(value[1])
-   q3_acc.append(value[2])
+   q2_acc_n.append(value[2])
+   q2_acc_p.append(value[3])
+   q3_acc_n.append(value[4])
+   q3_acc_p.append(value[5])
+   
+   
 
 #####################################################################get acc from q###########################################################
 # q=np.array([2,0,-1,1,3,4])
@@ -45,21 +51,38 @@ plt.show()
 
 fig = plt.figure()
 ax = fig.add_subplot(111, projection='3d')
-surf = ax.plot_trisurf(x, y, q2_acc, linewidth=0, antialiased=False)
+surf = ax.plot_trisurf(x, y, q2_acc_n, linewidth=0, antialiased=False)
 ax.set_xlabel('q2 (rad)')
 ax.set_ylabel('q3 (rad)')
 ax.set_zlabel('q2 acc (rad/s^2)')
-
-plt.title('Joint2 Acceleration Limit')
+plt.title('Joint2 Acceleration Limit-')
 plt.show()
+fig = plt.figure()
+ax = fig.add_subplot(111, projection='3d')
+surf = ax.plot_trisurf(x, y, q2_acc_p, linewidth=0, antialiased=False)
+ax.set_xlabel('q2 (rad)')
+ax.set_ylabel('q3 (rad)')
+ax.set_zlabel('q2 acc (rad/s^2)')
+plt.title('Joint2 Acceleration Limit+')
+plt.show()
+
+
+
 
 
 fig = plt.figure()
 ax = fig.add_subplot(111, projection='3d')
-surf = ax.plot_trisurf(x, y, q3_acc, linewidth=0, antialiased=False)
+surf = ax.plot_trisurf(x, y, q3_acc_n, linewidth=0, antialiased=False)
 ax.set_xlabel('q2 (rad)')
 ax.set_ylabel('q3 (rad)')
 ax.set_zlabel('q3 acc (rad/s^2)')
-
-plt.title('Joint3 Acceleration Limit')
+plt.title('Joint3 Acceleration Limit-')
+plt.show()
+fig = plt.figure()
+ax = fig.add_subplot(111, projection='3d')
+surf = ax.plot_trisurf(x, y, q3_acc_p, linewidth=0, antialiased=False)
+ax.set_xlabel('q2 (rad)')
+ax.set_ylabel('q3 (rad)')
+ax.set_zlabel('q3 acc (rad/s^2)')
+plt.title('Joint3 Acceleration Limit+')
 plt.show()

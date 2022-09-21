@@ -78,16 +78,21 @@ def get_acc(log_results_str,q,joint,clipped=False):
 
 	return qddot_max
 
-def exec(q_d,joint):
+def exec(q_d,joint,direction=1):
+	displacement=0.5
 	###move joint at q_d configuration
 	q_init=copy.deepcopy(q_d)
 	q_end=copy.deepcopy(q_d)
-	q_init[joint]-=0.1
-	q_end[joint]+=1
-	###if end outside boundary, move in other direction
-	if q_end[joint]>robot.upper_limit[joint]:
-		q_init[joint]=q_d[joint]+0.1
-		q_end[joint]=q_d[joint]-1
+	q_init[joint]-=0.1*direction
+	q_end[joint]+=displacement*direction
+	
+	if q_end[joint]>robot.upper_limit[joint] or q_end[joint]<robot.lower_limit[joint]:
+		###if end outside boundary
+		###1. move in other direction
+		# q_init[joint]=q_d[joint]+0.1*direction
+		# q_end[joint]=q_d[joint]-displacement*direction
+		###2. cap
+		q_end=np.clip(q_end,robot.lower_limit,robot.upper_limit)
 	###clip start within limits
 	if q_init[joint]<robot.lower_limit[joint] or q_init[joint]>robot.upper_limit[joint]:
 		q_init=np.clip(q_init,robot.lower_limit,robot.upper_limit)
@@ -103,33 +108,42 @@ def exec(q_d,joint):
 
 robot=abb6640()
 # robot=abb1200()
-resolution=0.05 ###rad
+resolution=0.2 ###rad
 
 dict_table={}
-
+directions=[-1,1]
 
 #####################first & second joint acc both depends on second and third joint#####################################
-# for q2 in np.arange(robot.lower_limit[1],robot.upper_limit[1],resolution):
-# 	for q3 in np.arange(robot.lower_limit[2],robot.upper_limit[2],resolution):
-# 		###initialize keys, and desired pose
-# 		dict_table[(q2,q3)]=[0]*3
-# 		q_d=[0,q2,q3,0,0,0]
+for q2 in np.arange(robot.lower_limit[1],robot.upper_limit[1],resolution):
+	for q3 in np.arange(robot.lower_limit[2],robot.upper_limit[2],resolution):
+		###initialize keys, and desired pose
 
-# 		for joint in range(3):
-# 			###move first q1, q2 and q3
-# 			qdot_max=exec(q_d,joint)
-# 			###update dict
-# 			dict_table[(q2,q3)][joint]=copy.deepcopy(qdot_max)
+		dict_table[(q2,q3)]=[0]*6 		###[+j1,-j1,+j2,-j2,+j3,-j3]
+		q_d=[0,q2,q3,0,0,0]
+
+		#measure first joint first
+		qdot_max=exec(q_d,0)
+		###update dict
+		dict_table[(q2,q3)][0]=copy.deepcopy(qdot_max)
+		dict_table[(q2,q3)][1]=copy.deepcopy(qdot_max)
+
+		for joint in range(1,3):
+			for direction in directions:
+				###move first q2 and q3
+				qdot_max=exec(q_d,joint,direction)
+				###update dict
+				dict_table[(q2,q3)][2*joint+int((direction+1)/2)]=copy.deepcopy(qdot_max)
 
 
-# with open(r'test.txt','w+') as f:
-# 	f.write(str(dict_table))
-# pickle.dump(dict_table, open('test.pickle','wb'))
+with open(r'test.txt','w+') as f:
+	f.write(str(dict_table))
+pickle.dump(dict_table, open('test.pickle','wb'))
 
 
 
 ###############################joint 4,5,6 constant acceleration measurement##############################################
-for joint in range(3,6):
-	q_d=np.zeros(6)
-	qdot_max=exec(q_d,joint)
-	print('joint '+str(joint+1),qdot_max)
+# for joint in range(3,6):
+# 	# q_d=np.zeros(6)
+# 	q_d=[ 0.06218891,  1.03144421, -1.14503547,  0.03563584, -0.6118147,   3.16560838]
+# 	qdot_max=exec(q_d,joint,direction=1)
+# 	print('joint '+str(joint+1),qdot_max)

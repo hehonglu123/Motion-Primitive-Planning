@@ -273,7 +273,6 @@ def traj_speed_est(robot,curve_js,lam,vd,qdot_init=[]):
 
 	###alpha: coeff of bounded qdot by qddot constraint
 	alpha_all=[1]
-	###acc_limit:[ 5.44542727  5.09636142  7.29547627 42.0100751  27.00024353 59.34119457]
 	for i in range(1,len(curve_js)):
 		qddot=(qdot[i]-qdot_act[-1])/dt[i]
 

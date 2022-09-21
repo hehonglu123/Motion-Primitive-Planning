@@ -81,7 +81,7 @@ def main():
 
 	###output to pose yaml
 	H=np.eye(4)
-	H[:-1,-1]=base2_p
+	H[:-1,-1]=base2_p/1000.
 	H[:3,:3]=base2_R
 
 	with open(r'trajectory/abb1200.yaml', 'w') as file:
