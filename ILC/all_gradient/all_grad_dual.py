@@ -26,9 +26,9 @@ def main():
 	dataset='from_NX/'
 	data_dir="../../data/"+dataset
 	solution_dir=data_dir+'dual_arm/'+'diffevo3/'
-	cmd_dir=solution_dir+'greedy0.2/'
+	cmd_dir=solution_dir+'30J/'
 	
-	relative_path,robot1,robot2,base2_R,base2_p,lam_relative_path,lam1,lam2,curve_js1,curve_js2=initialize_data(dataset,data_dir,solution_dir,cmd_dir)
+	relative_path,robot1,robot2,base2_R,base2_p,lam_relative_path,lam1,lam2,curve_js1,curve_js2=initialize_data(dataset,data_dir,solution_dir)
 
 
 	ms = MotionSend(robot1=robot1,robot2=robot2,base2_R=base2_R,base2_p=base2_p)
@@ -53,7 +53,7 @@ def main():
 
 
 	###extension
-	# p_bp1,q_bp1,p_bp2,q_bp2=ms.extend_dual(ms.robot1,p_bp1,q_bp1,primitives1,ms.robot2,p_bp2,q_bp2,primitives2,breakpoints1)
+	p_bp1,q_bp1,p_bp2,q_bp2=ms.extend_dual(ms.robot1,p_bp1,q_bp1,primitives1,ms.robot2,p_bp2,q_bp2,primitives2,breakpoints1)
 
 
 	###ilc toolbox def

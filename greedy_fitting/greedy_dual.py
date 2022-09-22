@@ -11,7 +11,7 @@ from robots_def import *
 from general_robotics_toolbox import *
 from error_check import *
 from MotionSend import *
-
+from dual_arm import *
 #####################3d curve-fitting with MoveL, MoveJ, MoveC; stepwise incremental bi-section searched self.breakpoints###############################
 
 class greedy_fit(fitting_toolbox):
@@ -145,7 +145,7 @@ class greedy_fit(fitting_toolbox):
 			###bisection search for each primitive 
 			###TODO: pass curve_js from j fit
 			primitive1,primitive2,curve_fit1,curve_fit2,curve_fit_R1,curve_fit_R2=self.bisect(self.breakpoints[-1])
-			
+
 			###solve inv_kin here
 			if len(self.curve_fit_js1)>1:
 				self.curve_fit_js1.extend(car2js(self.robot1,self.curve_fit_js1[-1],curve_fit1,curve_fit_R1))
@@ -218,21 +218,13 @@ class greedy_fit(fitting_toolbox):
 def main():
 	###read in points
 	dataset='from_NX/'
-	solution_dir='diffevo3/'
-	data_dir='../data/'+dataset+'/dual_arm/'+solution_dir
-
-
-	curve_js1 = read_csv(data_dir+'arm1.csv',header=None).values
-	curve_js2 = read_csv(data_dir+'arm2.csv',header=None).values
-	###define robots
-	robot1=abb6640(d=50)
-	robot2=abb1200()
-	###read in robot2 pose
-	with open(data_dir+'abb1200.yaml') as file:
-		H_1200 = np.array(yaml.safe_load(file)['H'],dtype=np.float64)
+	data_dir="../data/"+dataset
+	solution_dir=data_dir+'dual_arm/'+'diffevo3/'
+	
+	relative_path,robot1,robot2,base2_R,base2_p,lam_relative_path,lam1,lam2,curve_js1,curve_js2=initialize_data(dataset,data_dir,solution_dir)
 
 	min_length=20
-	greedy_fit_obj=greedy_fit(robot1,robot2,curve_js1[::1],curve_js2[::1],1000.*H_1200[:-1,-1],H_1200[:-1,:-1],min_length,0.2)
+	greedy_fit_obj=greedy_fit(robot1,robot2,curve_js1[::1],curve_js2[::1],base2_p,base2_R,min_length,0.2)
 
 
 	###set primitive choices, defaults are all 3

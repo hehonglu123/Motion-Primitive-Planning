@@ -14,7 +14,7 @@ from lambda_calc import *
 from utils import *
 
 
-data_dir='wood/'
+data_dir='from_NX/'
 solution_dir='baseline/'
 
 num_ls=[30]

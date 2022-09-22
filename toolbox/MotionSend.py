@@ -52,8 +52,7 @@ class MotionSend(object):
         mp = MotionProgram(tool=tooldata(True,pose(R90.T@robot.p_tool,R2q(robot.R_tool@R90.T)),loaddata(1,[0,0,0.001],[1,0,0,0],0,0,0)))
         
         for i in range(len(primitives)):
-            motion = primitives[i]
-            if motion == 'movel_fit':
+            if 'movel' in primitives[i]:
 
                 robt = self.moveL_target(robot,q_bp[i][0],p_bp[i][0])
                 if type(speed) is list:
@@ -68,7 +67,7 @@ class MotionSend(object):
                         mp.MoveL(robt,speed,zone)
                 
 
-            elif motion == 'movec_fit':
+            elif 'movec' in primitives[i]:
                 robt1, robt2 = self.moveC_target(robot,q_bp[i][0],q_bp[i][1],p_bp[i][0],p_bp[i][1])
                 if type(speed) is list:
                     if type(zone) is list:
@@ -81,7 +80,7 @@ class MotionSend(object):
                     else:
                         mp.MoveC(robt1,robt2,speed,zone)
 
-            elif motion == 'movej_fit':
+            elif 'movej' in primitives[i]:
                 robt = self.moveL_target(robot,q_bp[i][0],p_bp[i][0])
                 if type(speed) is list:
                     if type(zone) is list:
@@ -130,22 +129,22 @@ class MotionSend(object):
         mp2 = MotionProgram(tool=self.tool2)
         
         for i in range(len(primitives1)):
-            motion = primitives1[i]
-            if motion == 'movel_fit':
+
+            if 'movel' in primitives1[i]:
                 robt = self.moveL_target(self.robot1,q_bp1[i][0],p_bp1[i][0])
                 if type(speed1) is list:
                     mp1.MoveL(robt,speed1[i],zone1)
                 else:
                     mp1.MoveL(robt,speed1,zone1)
 
-            elif motion == 'movec_fit':
+            elif 'movec' in primitives1[i]:
                 robt1, robt2 = self.moveC_target(self.robot1,q_bp1[i][0],q_bp1[i][1],p_bp1[i][0],p_bp1[i][1])
                 if type(speed1) is list:
                     mp1.MoveC(robt1,robt2,speed1[i],zone1)
                 else:
                     mp1.MoveC(robt1,robt2,speed1,zone1)
 
-            elif motion == 'movej_fit':
+            elif 'movej' in primitives1[i]:
                 robt = self.moveL_target(self.robot1,q_bp1[i][0],p_bp1[i][0])
                 mp1.MoveJ(robt,speed1,zone1)
 
@@ -163,22 +162,21 @@ class MotionSend(object):
                         mp1.MoveAbsJ(jointt,speed1,zone1)
 
         for i in range(len(primitives2)):
-            motion = primitives2[i]
-            if motion == 'movel_fit':
+            if 'movel' in primitives2[i]:
                 robt = self.moveL_target(self.robot2,q_bp2[i][0],p_bp2[i][0])
                 if type(speed2) is list:
                     mp2.MoveL(robt,speed2[i],zone2)
                 else:
                     mp2.MoveL(robt,speed2,zone2)
 
-            elif motion == 'movec_fit':
+            elif 'movec' in primitives2[i]:
                 robt1, robt2 = self.moveC_target(self.robot2,q_bp2[i][0],q_bp2[i][1],p_bp2[i][0],p_bp2[i][1])
                 if type(speed2) is list:
                     mp2.MoveC(robt1,robt2,speed2[i],zone2)
                 else:
                     mp2.MoveC(robt1,robt2,speed2,zone2)
 
-            elif motion == 'movej_fit':
+            elif 'movej' in primitives2[i]:
                 robt = self.moveL_target(self.robot2,q_bp2[i][0],p_bp2[i][0])
                 if type(speed2) is list:
                     mp2.MoveJ(robt,speed2[i],zone2)
@@ -216,7 +214,7 @@ class MotionSend(object):
         pose_end=robot.fwd(q_bp[1][-1])
         p_end=pose_end.p
         R_end=pose_end.R
-        if primitives[1]=='movel_fit':
+        if 'movel' in primitives[1]:
             #find new start point
             slope_p=p_end-p_start
             slope_p=slope_p/np.linalg.norm(slope_p)
@@ -231,7 +229,7 @@ class MotionSend(object):
             points_list[0][0]=p_start_new
             q_bp[0][0]=car2js(robot,q_bp[0][0],p_start_new,R_start_new)[0]
 
-        elif primitives[1]=='movec_fit':
+        elif 'movec' in primitives[1]:
             #define circle first
             pose_mid=robot.fwd(q_bp[1][0])
             p_mid=pose_mid.p
@@ -279,7 +277,7 @@ class MotionSend(object):
         p_end=pose_end.p
         R_end=pose_end.R
 
-        if primitives[-1]=='movel_fit':
+        if 'movel' in primitives[-1]:
             #find new end point
             slope_p=(p_end-p_start)/np.linalg.norm(p_end-p_start)
             p_end_new=p_end+extension_end*slope_p        ###extend 5cm backward
@@ -294,7 +292,7 @@ class MotionSend(object):
             points_list[-1][0]=p_end_new
 
 
-        elif  primitives[-1]=='movec_fit':
+        elif  'movec' in primitives[-1]:
             #define circle first
             pose_mid=robot.fwd(q_bp[-1][0])
             p_mid=pose_mid.p
@@ -356,14 +354,14 @@ class MotionSend(object):
         p_bp=[]
         q_bp=[]
         for i in range(len(breakpoints)):
-            if primitives[i]=='movel_fit':
+            if 'movel' in primitives[i]:
                 point=extract_points(primitives[i],points[i])
                 p_bp.append([point])
                 q=extract_points(primitives[i],qs[i])
                 q_bp.append([q])
 
 
-            elif primitives[i]=='movec_fit':
+            elif 'movec' in primitives[i]:
                 point1,point2=extract_points(primitives[i],points[i])
                 p_bp.append([point1,point2])
                 q1,q2=extract_points(primitives[i],qs[i])
