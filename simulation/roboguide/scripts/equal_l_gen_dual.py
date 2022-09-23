@@ -11,8 +11,9 @@ from utils import *
 from lambda_calc import *
 
 # data_type='blade'
-data_type='blade_arm_shift'
+# data_type='blade_arm_shift'
 # data_type='blade_base_shift'
+data_type='wood_base_shift'
 
 if data_type=='blade':
     curve_data_dir='../../../data/from_NX/'
@@ -35,8 +36,11 @@ elif data_type=='blade_arm_shift':
 elif data_type=='blade_base_shift':
     curve_data_dir='../../../data/from_NX/'
     data_dir='../data/curve_blade_base_shift/'
+elif data_type=='wood_base_shift':
+    curve_data_dir='../../../data/wood/'
+    data_dir='../data/curve_wood_base_shift/'
 
-# output_dir='dual_arm/'
+output_dir='dual_arm/'
 # output_dir='dual_single_arm/'
 # output_dir='dual_single_arm_straight/' # robot2 is multiple user defined straight line
 # output_dir='dual_single_arm_straight_50/' # robot2 is multiple user defined straight line
@@ -44,7 +48,7 @@ elif data_type=='blade_base_shift':
 # output_dir='dual_single_arm_straight_min10/' # robot2 is multiple user defined straight line
 # output_dir='dual_arm_10/'
 # output_dir='dual_straight/' # test: robot2 move a simple straight line
-output_dir='dual_arm_qp/' # stepwise qp dual arm
+# output_dir='dual_arm_qp/' # stepwise qp dual arm
 
 # num_ls=[200]
 # num_ls=[100]

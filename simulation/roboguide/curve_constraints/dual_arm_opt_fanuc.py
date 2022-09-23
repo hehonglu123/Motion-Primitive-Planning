@@ -12,7 +12,8 @@ from fanuc_utils import *
 # data_type='blade_shift'
 # data_type='blade'
 # data_type='blade_arm_shift'
-data_type='blade_base_shift'
+# data_type='blade_base_shift'
+data_type='wood_base_shift'
 
 if data_type=='blade':
     curve_data_dir='../../../data/from_NX/'
@@ -29,6 +30,9 @@ elif data_type=='blade_arm_shift':
 elif data_type=='blade_base_shift':
     curve_data_dir='../../../data/from_NX/'
     data_dir='../data/curve_blade_base_shift/'
+elif data_type=='wood_base_shift':
+    curve_data_dir='../../../data/wood/'
+    data_dir='../data/curve_wood_base_shift/'
 
 # read curve relative path
 relative_path=read_csv(curve_data_dir+"Curve_dense.csv",header=None).values
@@ -57,6 +61,9 @@ with open(data_dir+'blade_pose.yaml') as file:
 ###### get tcp
 # import general_robotics_toolbox as rox
 # bT = rox.Transform(blade_pose[:3,:3],blade_pose[:3,3])
+# # print(bT)
+# # print(R2wpr(bT.R))
+# # exit()
 # bT=rox.Transform(R=base2_R,p=base2_p).inv()*bT
 # # print(bT)
 # # print(R2wpr(bT.R))
@@ -64,8 +71,9 @@ with open(data_dir+'blade_pose.yaml') as file:
 # robot=m900ia(R_tool=np.matmul(Ry(np.radians(90)),Rz(np.radians(180))),p_tool=np.array([0,0,0])*1000.,d=0)
 # # T_tool=robot.fwd(np.deg2rad([0,49.8,-17.2,0,65.4,0])) # blade
 # # T_tool=robot.fwd(np.deg2rad([-19.8,65,13.2,20.9,67.8,-13.1])) # blade new
-# T_tool=robot.fwd(np.deg2rad([0,29.3,-45.8,0,74.5,0])) # blade base shift
+# # T_tool=robot.fwd(np.deg2rad([0,29.3,-45.8,0,74.5,0])) # blade base shift
 # # T_tool=robot.fwd(np.deg2rad([0,48.3,-7,0,55.8,0])) # wood
+# T_tool=robot.fwd(np.deg2rad([14.9,33.6,-34.1,-16.3,66.8,6.1])) # wood base shift
 # # T_tool=robot.fwd(np.deg2rad([0,0,0,0,0,0]))
 # # print(T_tool)
 # bT=T_tool.inv()*bT

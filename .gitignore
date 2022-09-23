@@ -415,6 +415,8 @@ simulation/roboguide/ilc_fanuc/data/blade_base_shift_dual/results*
 simulation/roboguide/ilc_fanuc/data/kink_30/results*
 simulation/roboguide/ilc_fanuc/data/wood/results*
 simulation/roboguide/ilc_fanuc/data/wood_dual/results*
+simulation/roboguide/ilc_fanuc/data/blade_base_shift_dual_2ctrller/results*
+simulation/roboguide/ilc_fanuc/data/wood_base_shift_dual_2ctrller/results*
 
 simulation/roboguide/qp_opt/data_bp/curve_js*
 simulation/roboguide/qp_opt/data_opt_point_basis/curve_js*
