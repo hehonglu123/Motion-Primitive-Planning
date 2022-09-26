@@ -108,7 +108,7 @@ def exec(q_d,joint,direction=1):
 
 robot=abb6640()
 # robot=abb1200()
-resolution=0.2 ###rad
+resolution=0.05 ###rad
 
 dict_table={}
 directions=[-1,1]

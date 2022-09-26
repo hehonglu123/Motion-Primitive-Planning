@@ -14,7 +14,7 @@ def main():
 	dataset='wood/'
 	solution_dir='baseline/'
 	data_dir="../data/"+dataset+solution_dir
-	cmd_dir="../data/"+dataset+solution_dir+'0.3/'
+	cmd_dir="../data/"+dataset+solution_dir+'30L/'
 
 	curve = read_csv(data_dir+"Curve_in_base_frame.csv",header=None).values
 
@@ -32,7 +32,7 @@ def main():
 	plt.figure()
 	ax = plt.axes(projection='3d')
 	ax.plot(curve[:,0],curve[:,1],curve[:,2],label='Spatial Curve')
-	ax.plot(curve_fit[:,0],curve_fit[:,1],curve_fit[:,2],label='Greedy Fitting')
+	ax.plot(curve_fit[:,0],curve_fit[:,1],curve_fit[:,2],label='Equally Spaced MoveL')
 	ax.scatter(p_bp_np[:,0],p_bp_np[:,1],p_bp_np[:,2],label='breakpoints')
 	plt.legend()
 	
