@@ -363,7 +363,9 @@ def main():
                         for j in range(len(peaks)):
                             peak = deepcopy(peaks[j])
                             de_dp= deepcopy(all_dedp[j])
-                            p_bp1_update, q_bp1_update=ilc.update_bp_xyz(p_bp1,q_bp1,de_dp,error_prev[peak],breakpoint_interp_2tweak_indices,alpha=alpha)
+                            breakpoint_interp_2tweak_indices = deepcopy(all_bp2twist[j])
+                            # p_bp1_update, q_bp1_update=ilc.update_bp_xyz(p_bp1,q_bp1,de_dp,error_prev[peak],breakpoint_interp_2tweak_indices,alpha=alpha)
+                            p_bp1_update, q_bp1_update=ilc.update_bp_xyz(p_bp1_update,q_bp1_update,de_dp,error_prev[peak],breakpoint_interp_2tweak_indices,alpha=alpha)
 
                     #### update speed base on bp change
                     # p_bp1_sq = np.squeeze(p_bp1_update[step_start1:step_end1+1])
@@ -609,6 +611,7 @@ def main():
                 # p_bp1_ang_error_dir.insert(0,np.array([0,0,0])) # no update on the first breakpoints
             else:
                 all_dedp = []
+                all_bp2twist = []
                 ##########################################calculate gradient for peaks######################################
                 ###restore trajectory from primitives
                 curve_interp1, curve_R_interp1, curve_js_interp1, breakpoints_blended=form_traj_from_bp(q_bp1,primitives1,robot1)
@@ -620,6 +623,8 @@ def main():
                 relative_path_blended,relative_path_blended_R=ms.form_relative_path(curve_js_blended1,curve_js_blended2,base2_R,base2_p)
 
                 # all_new_bp=[]
+                p_bp1_temp = deepcopy(p_bp1)
+                q_bp1_temp = deepcopy(q_bp1)
                 for peak in peaks:
                     ######gradient calculation related to nearest 3 points from primitive blended trajectory, not actual one
                     _,peak_error_curve_idx=calc_error(relative_path_exe[peak],relative_path[:,:3])  # index of original curve closest to max error point
@@ -631,13 +636,18 @@ def main():
                     ###find closest 3 breakpoints
                     order=np.argsort(np.abs(breakpoints_blended-peak_error_curve_blended_idx))
                     breakpoint_interp_2tweak_indices=order[:3]
+                    all_bp2twist.append(breakpoint_interp_2tweak_indices)
 
                     # calculate desired robot1 point
                     tool_in_base1 = rox.Transform(base2_R,base2_p)*robot2.fwd(curve_exe_js2[peak])
                     closest_T = tool_in_base1*rox.Transform(np.eye(3),relative_path[peak_error_curve_idx,:3])
                     closest_p=closest_T.p
                     
-                    de_dp=ilc.get_gradient_from_model_xyz_fanuc(p_bp1,q_bp1,breakpoints_blended,curve_blended1,peak_error_curve_blended_idx,robot1.fwd(curve_exe_js1[peak]),closest_p,breakpoint_interp_2tweak_indices,ave_speed)
+                    de_dp=ilc.get_gradient_from_model_xyz_fanuc(p_bp1_temp,q_bp1_temp,breakpoints_blended,curve_blended1,peak_error_curve_blended_idx,robot1.fwd(curve_exe_js1[peak]),closest_p,breakpoint_interp_2tweak_indices,ave_speed)
+                    
+                    # update bp for gradient calculation only
+                    p_bp1_temp, q_bp1_temp=ilc.update_bp_xyz(p_bp1_temp,q_bp1_temp,de_dp,error[peak],breakpoint_interp_2tweak_indices,alpha=alpha)
+
                     all_dedp.append(de_dp)
 
 

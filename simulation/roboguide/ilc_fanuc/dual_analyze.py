@@ -130,6 +130,67 @@ for i in range(len(all_curve_exe_js1)):
 
 ############ visualization for analyze
 
+#### differences in path
+diffx_p = []
+diffy_p = []
+diffz_p = []
+for i in range(len(all_curve_exe1[1])):
+    _,error_id=calc_error(all_curve_exe1[1][i],all_curve_exe1[0])  # index of curve 27 closest to max error point
+    diffx_p.append(np.fabs(all_curve_exe1[1][i][0]-all_curve_exe1[0][error_id][0]))
+    diffy_p.append(np.fabs(all_curve_exe1[1][i][1]-all_curve_exe1[0][error_id][1]))
+    diffz_p.append(np.fabs(all_curve_exe1[1][i][2]-all_curve_exe1[0][error_id][2]))
+fig, ax = plt.subplots(3,1)
+ax[0].plot(all_timestamps[1],diffx_p,'-bo', markersize=2)
+ax[0].set_title("Path-x differences")
+ax[1].plot(all_timestamps[1],diffy_p,'-bo', markersize=2)
+ax[1].set_title("Path-y differences")
+ax[2].plot(all_timestamps[1],diffz_p,'-bo', markersize=2)
+ax[2].set_title("Path-z differences")
+fig.suptitle("Path differences")
+plt.show()
+
+#### draw differences in trajectory (considering time)
+diffx = []
+diffy = []
+diffz = []
+draw_timestamp=[]
+for j in range(len(all_timestamps[1])):
+    stamp_id = np.argwhere(all_timestamps[0]==all_timestamps[1][j])
+    if len(stamp_id)==0:
+        pass
+    else:
+        stamp_id=stamp_id[0][0]
+        diffx.append(np.fabs(all_curve_exe1[1][j,0]-all_curve_exe1[0][stamp_id,0]))
+        diffy.append(np.fabs(all_curve_exe1[1][j,1]-all_curve_exe1[0][stamp_id,1]))
+        diffz.append(np.fabs(all_curve_exe1[1][j,2]-all_curve_exe1[0][stamp_id,2]))
+        draw_timestamp.append(all_timestamps[1][j])
+fig, ax = plt.subplots(3,1)
+ax[0].plot(draw_timestamp,diffx,'-bo', markersize=2)
+ax[0].set_title("Traj-x differences")
+ax[1].plot(draw_timestamp,diffy,'-bo', markersize=2)
+ax[1].set_title("Traj-y differences")
+ax[2].plot(draw_timestamp,diffz,'-bo', markersize=2)
+ax[2].set_title("Traj-z differences")
+fig.suptitle("Trajectory differences")
+plt.show()
+
+fig, ax = plt.subplots(3,1)
+ax[0].plot(all_timestamps[1],diffx_p,'-o', markersize=2,label='Path diff')
+ax[0].plot(draw_timestamp,diffx,'-o', markersize=2,label='Traj diff')
+ax[0].set_title("x differences")
+ax[1].plot(all_timestamps[1],diffy_p,'-o', markersize=2,label='Path diff')
+ax[1].plot(draw_timestamp,diffy,'-o', markersize=2,label='Traj diff')
+ax[1].set_title("y differences")
+ax[2].plot(all_timestamps[1],diffz_p,'-o', markersize=2,label='Path diff')
+ax[2].plot(draw_timestamp,diffz,'-o', markersize=2,label='Traj diff')
+ax[2].set_title("z differences")
+fig.suptitle("Path v.s. Trajectory differences")
+plt.legend()
+plt.show()
+
+exit()
+
+#### differences in time 
 title_plot=['x','y','z','roll','pitch','yaw']
 marker_size=5
 dt=0.012

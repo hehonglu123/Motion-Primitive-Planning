@@ -242,11 +242,19 @@ def main():
     _,primitives1,p_bp1,q_bp1,s1_movel_update=ms.extract_data_from_cmd(os.getcwd()+'/'+cmd_folder+'command_arm1_'+str(use_iteration)+'.csv')
     _,primitives2,p_bp2,q_bp2,s2_movel_update=ms.extract_data_from_cmd(os.getcwd()+'/'+cmd_folder+'command_arm2_'+str(use_iteration)+'.csv')
 
+    _,_,_,_,s1_movel_update=ms.extract_data_from_cmd(os.getcwd()+'/'+cmd_folder+'command_arm1_'+str(27)+'.csv')
+    _,_,_,_,s2_movel_update=ms.extract_data_from_cmd(os.getcwd()+'/'+cmd_folder+'command_arm2_'+str(27)+'.csv')
+
     # df=DataFrame({'primitives':primitives1,'points':p_bp1,'q_bp':q_bp1,'speed':s1_movel_update})
     # df.to_csv(os.getcwd()+'/'+cmd_folder+'command_arm1_'+str(use_iteration)+'.csv',header=True,index=False)
     # df=DataFrame({'primitives':primitives2,'points':p_bp2,'q_bp':q_bp2,'speed':s2_movel_update})
     # df.to_csv(os.getcwd()+'/'+cmd_folder+'command_arm2_'+str(use_iteration)+'.csv',header=True,index=False)
     # exit()
+
+    for i in range(len(p_bp1)):
+        p_bp1[i][-1]=robot1.fwd(q_bp1[i][-1]).p
+    for i in range(len(p_bp2)):
+        p_bp2[i][-1]=robot2.fwd(q_bp2[i][-1]).p
 
     ###execution with plant
     logged_data=ms.exec_motions_multimove_nocoord(robot1,robot2,primitives1,primitives2,p_bp1,p_bp2,q_bp1,q_bp2,s1_movel_update,s2_movel_update,z,z)
@@ -316,26 +324,96 @@ def main():
             plt.clf()
         else:
             plt.show()
+    # exit()
+
+    print(peaks)
+    # for the_peak in peaks[-1:]:
+    #     print(the_peak)
+    #     ########## calculate gradient with analytical model #######
+    #     ### calculate gradient for one peak ###
+    #     ###restore trajectory from primitives
+    #     curve_interp1, curve_R_interp1, curve_js_interp1, breakpoints_blended=form_traj_from_bp(q_bp1,primitives1,robot1)
+    #     curve_interp2, curve_R_interp2, curve_js_interp2, breakpoints_blended=form_traj_from_bp(q_bp2,primitives2,robot2)
+    #     curve_js_blended1,curve_blended1,curve_R_blended1=blend_js_from_primitive(curve_interp1, curve_js_interp1, breakpoints_blended, primitives1,robot1,zone=10)
+    #     curve_js_blended2,curve_blended2,curve_R_blended2=blend_js_from_primitive(curve_interp2, curve_js_interp2, breakpoints_blended, primitives2,robot2,zone=10)
+
+    #     ###establish relative trajectory from blended trajectory
+    #     relative_path_blended,relative_path_blended_R=ms.form_relative_path(curve_js_blended1,curve_js_blended2,base2_R,base2_p)
+
+    #     ######gradient calculation related to nearest 3 points from primitive blended trajectory, not actual one
+    #     _,peak_error_curve_idx=calc_error(relative_path_exe[the_peak],relative_path[:,:3])  # index of original curve closest to max error point
+
+    #     ###get closest to worst case point on blended trajectory
+    #     _,peak_error_curve_blended_idx=calc_error(relative_path_exe[the_peak],relative_path_blended)
+
+    #     ###############get numerical gradient#####
+    #     ###find closest 3 breakpoints
+    #     order=np.argsort(np.abs(breakpoints_blended-peak_error_curve_blended_idx))
+    #     breakpoint_interp_2tweak_indices=order[:3]
+
+    #     # calculate desired robot1 point
+    #     tool_in_base1 = rox.Transform(base2_R,base2_p)*robot2.fwd(curve_exe_js2[the_peak])
+    #     closest_T = tool_in_base1*rox.Transform(np.eye(3),relative_path[peak_error_curve_idx,:3])
+    #     closest_p=closest_T.p
+        
+    #     print(breakpoint_interp_2tweak_indices)
+    #     de_dp=ilc.get_gradient_from_model_xyz_fanuc(p_bp1,q_bp1,breakpoints_blended,curve_blended1,peak_error_curve_blended_idx,robot1.fwd(curve_exe_js1[the_peak]),closest_p,breakpoint_interp_2tweak_indices,None)
+        
+    #     print(de_dp)
+    #     print(np.linalg.pinv(de_dp))
+    #     error_dir=robot1.fwd(curve_exe_js1[the_peak]).p-closest_p
+    #     print(error_dir)
+    #     print(error[the_peak])
     
+    # p_bp1_update, q_bp1_update=ilc.update_bp_xyz(p_bp1,q_bp1,de_dp,error[the_peak],breakpoint_interp_2tweak_indices,alpha=1)
+    # print(robot1.fwd(q_bp1[breakpoint_interp_2tweak_indices[0]][-1]).p)
+    # print(robot1.fwd(q_bp1[breakpoint_interp_2tweak_indices[1]][-1]).p)
+    # print(robot1.fwd(q_bp1[breakpoint_interp_2tweak_indices[2]][-1]).p)
+    # print(robot1.fwd(q_bp1_update[breakpoint_interp_2tweak_indices[0]][-1]).p)
+    # print(robot1.fwd(q_bp1_update[breakpoint_interp_2tweak_indices[1]][-1]).p)
+    # print(robot1.fwd(q_bp1_update[breakpoint_interp_2tweak_indices[2]][-1]).p)
+    
+    # exit()
+
     ########## calculate numerical gradient here #############
     ## variables
     epsilon = 0.5
     backward_range = -9
     forward_range = 11
+    the_peak = peaks[0] # for iteration 27
     # change of bp v.s. change in trajectory
-    print(peaks)
-    the_peak = peaks[1] # for iteration 27
 
-    ## curve 27
-    timestamp_prev = deepcopy(timestamp1[the_peak+backward_range:the_peak+forward_range])
-    peak_time = timestamp1[the_peak]
-    curve_prev = deepcopy(curve_exe1[the_peak+backward_range:the_peak+forward_range])
-    peak_curve = curve_exe1[the_peak]
-    p_bp_relative,_=ms.form_relative_path(np.squeeze(q_bp1),np.squeeze(q_bp2),base2_R,base2_p)
+    # get closest bp
     order_id = np.argsort(np.linalg.norm(p_bp_relative-relative_path_exe[the_peak],2,1))
     closest_bp_id=order_id[0]
     print(closest_bp_id)
     second_closest_bp_id=order_id[1]
+    third_closest_bp_id = closest_bp_id+1 if closest_bp_id > second_closest_bp_id else closest_bp_id-1
+
+    # ax = plt.axes(projection='3d')
+    # # ax.plot3D(relative_path[:,0], relative_path[:,1],relative_path[:,2], 'red',label='original')
+    # ax.plot3D(relative_path_exe[:,0], relative_path_exe[:,1],relative_path_exe[:,2], '-go',label='execution')
+    # ax.scatter3D(p_bp_relative[:,0], p_bp_relative[:,1],p_bp_relative[:,2], 'blue', label='bps')
+    # ax.view_init(61, -67)
+    # plt.legend()
+    # plt.show()
+
+    # get closest exe
+    # closest_exe_id = np.argmin(np.linalg.norm(relative_path_exe-p_bp_relative[closest_bp_id][-1],2,1))
+    # # _,closest_exe_id = calc_error(p_bp_relative[closest_bp_id][-1],relative_path_exe)
+    # print(closest_exe_id)
+    # exit()
+
+    ## curve 27
+    # the_peak=closest_exe_id
+    prev_start = the_peak+backward_range if the_peak+backward_range>=0 else 0
+    prev_end = the_peak+forward_range if the_peak+forward_range<=len(timestamp1) else len(timestamp1)
+    timestamp_prev = deepcopy(timestamp1[prev_start:prev_end])
+    peak_time = timestamp1[the_peak]
+    curve_prev = deepcopy(curve_exe1[prev_start:prev_end])
+    peak_curve = curve_exe1[the_peak]
+    p_bp_relative,_=ms.form_relative_path(np.squeeze(q_bp1),np.squeeze(q_bp2),base2_R,base2_p)
+    print(timestamp_prev)
 
     timestamp_xyz = []
     curve_xyz_dx = []
@@ -358,6 +436,7 @@ def main():
         this_curve_dx=[]
         this_curve_dy=[]
         this_curve_dz=[]
+        
         for ti in range(len(timestamp_prev)):
             t=timestamp_prev[ti]
             if t not in timestamp:
@@ -378,16 +457,20 @@ def main():
     all_title=['du_i [e 0 0]','du_i [0 e 0]','du_i [0 0 e]']
     for u_pos_i in range(3):
         fig, ax = plt.subplots(3,1)
-        peak_i = np.argwhere(timestamp_xyz[u_pos_i]==peak_time)[0,0]
+        
         ax[0].plot(timestamp_xyz[u_pos_i],curve_xyz_dx[u_pos_i],'-bo',markersize=marker_size) # x deviation
-        ax[0].scatter(timestamp_xyz[u_pos_i][peak_i],curve_xyz_dx[u_pos_i][peak_i])
         ax[0].set_title('traj new, x deviation')
         ax[1].plot(timestamp_xyz[u_pos_i],curve_xyz_dy[u_pos_i],'-bo',markersize=marker_size) # y deviation
-        ax[1].scatter(timestamp_xyz[u_pos_i][peak_i],curve_xyz_dy[u_pos_i][peak_i])
         ax[1].set_title('traj new, y deviation')
         ax[2].plot(timestamp_xyz[u_pos_i],curve_xyz_dz[u_pos_i],'-bo',markersize=marker_size) # z deviation
-        ax[2].scatter(timestamp_xyz[u_pos_i][peak_i],curve_xyz_dz[u_pos_i][peak_i])
         ax[2].set_title('traj new, z deviation')
+
+        if len(np.argwhere(timestamp_xyz[u_pos_i]==peak_time)) != 0:
+            peak_i = np.argwhere(timestamp_xyz[u_pos_i]==peak_time)[0,0]
+            ax[0].scatter(timestamp_xyz[u_pos_i][peak_i],curve_xyz_dx[u_pos_i][peak_i])
+            ax[1].scatter(timestamp_xyz[u_pos_i][peak_i],curve_xyz_dy[u_pos_i][peak_i])
+            ax[2].scatter(timestamp_xyz[u_pos_i][peak_i],curve_xyz_dz[u_pos_i][peak_i])
+
         fig.suptitle(all_title[u_pos_i]+' e='+str(epsilon))
         plt.show()
 

@@ -513,7 +513,7 @@ class ilc_toolbox(object):
 			for bp_sub_idx in range(len(p_bp[m])):
 
 				p_bp_temp[m][bp_sub_idx]+=point_adjustment[0][3*idx:3*(idx+1)]
-				q_bp_temp[m][bp_sub_idx]=car2js(robot,q_bp[m][bp_sub_idx],p_bp[m][bp_sub_idx],robot.fwd(q_bp[m][bp_sub_idx]).R)[0]
+				q_bp_temp[m][bp_sub_idx]=car2js(robot,q_bp[m][bp_sub_idx],p_bp_temp[m][bp_sub_idx],robot.fwd(q_bp[m][bp_sub_idx]).R)[0]
 				idx+=1
 		return p_bp_temp, q_bp_temp
 
