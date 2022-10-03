@@ -219,12 +219,12 @@ def main():
 	###read in points
 	dataset='from_NX/'
 	data_dir="../data/"+dataset
-	solution_dir=data_dir+'dual_arm/'+'diffevo3/'
+	solution_dir=data_dir+'dual_arm/'+'diffevo_pose2/'
 	
 	relative_path,robot1,robot2,base2_R,base2_p,lam_relative_path,lam1,lam2,curve_js1,curve_js2=initialize_data(dataset,data_dir,solution_dir)
 
 	min_length=20
-	greedy_fit_obj=greedy_fit(robot1,robot2,curve_js1[::1],curve_js2[::1],base2_p,base2_R,min_length,0.2)
+	greedy_fit_obj=greedy_fit(robot1,robot2,curve_js1[::1],curve_js2[::1],base2_p,base2_R,min_length,0.5)
 
 
 	###set primitive choices, defaults are all 3

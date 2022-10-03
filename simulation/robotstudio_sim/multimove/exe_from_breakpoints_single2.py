@@ -14,12 +14,12 @@ from MotionSend import *
 from dual_arm import *
 
 def main():
-    dataset='wood/'
+    dataset='from_NX/'
     data_dir="../../../data/"+dataset
-    solution_dir=data_dir+'dual_arm/'+'diffevo_pose1/'
-    cmd_dir=solution_dir+'50L/'
+    solution_dir=data_dir+'dual_arm/'+'diffevo_pose2/'
+    cmd_dir=solution_dir+'30L/'
     
-    relative_path,robot1,robot2,base2_R,base2_p,lam_relative_path,lam1,lam2,curve_js1,curve_js2=initialize_data(dataset,data_dir,solution_dir,cmd_dir)
+    relative_path,robot1,robot2,base2_R,base2_p,lam_relative_path,lam1,lam2,curve_js1,curve_js2=initialize_data(dataset,data_dir,solution_dir)
 
     ms = MotionSend(robot1=robot1,robot2=robot2,base2_R=base2_R,base2_p=base2_p)
 

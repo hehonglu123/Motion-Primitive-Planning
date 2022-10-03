@@ -18,10 +18,10 @@ from dual_arm import *
 def main():
     dataset='from_NX/'
     data_dir="../../../data/"+dataset
-    solution_dir=data_dir+'dual_arm/'+'diffevo_pose1/'
-    cmd_dir=solution_dir+'10L/'
+    solution_dir=data_dir+'dual_arm/'+'diffevo_pose2/'
+    cmd_dir=solution_dir+'30L/'
     
-    relative_path,robot1,robot2,base2_R,base2_p,lam_relative_path,lam1,lam2,curve_js1,curve_js2=initialize_data(dataset,data_dir,solution_dir,cmd_dir)
+    relative_path,robot1,robot2,base2_R,base2_p,lam_relative_path,lam1,lam2,curve_js1,curve_js2=initialize_data(dataset,data_dir,solution_dir)
 
     ms = MotionSend(robot1=robot1,robot2=robot2,base2_R=base2_R,base2_p=base2_p)
 
@@ -37,7 +37,7 @@ def main():
     ###get lambda at each breakpoint
     lam_bp=lam_relative_path[np.append(breakpoints1[0],breakpoints1[1:]-1)]
 
-    vd_relative=2000
+    vd_relative=2500
 
     s1_all,s2_all=calc_individual_speed(vd_relative,lam1,lam2,lam_relative_path,breakpoints1)
     v2_all=[]
@@ -77,9 +77,9 @@ def main():
     ax2 = ax1.twinx()
     ax1.plot(lam,speed, 'g-', label='Relative Speed')
     ax1.plot(lam,speed1, 'r-', label='TCP1 Speed')
-    ax1.plot(lam_relative_path[1:],s1_cmd,'p-',label='TCP1 cmd Speed')
+    ax1.plot(lam_relative_path[2:],s1_cmd,'p-',label='TCP1 cmd Speed')
     ax1.plot(lam,speed2, 'm-', label='TCP2 Speed')
-    ax1.plot(lam_relative_path[1:],s2_cmd,'p-',label='TCP2 cmd Speed')
+    ax1.plot(lam_relative_path[2:],s2_cmd,'p-',label='TCP2 cmd Speed')
     ax2.plot(lam, error, 'b-',label='Error')
     ax2.plot(lam, np.degrees(angle_error), 'y-',label='Normal Error')
 

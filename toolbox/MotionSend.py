@@ -10,6 +10,7 @@ from toolbox_circular_fit import *
 from lambda_calc import *
 
 R90=rot([0,1,0],np.pi/2)    ###rotation to align z to global x
+
 class MotionSend(object):
     def __init__(self,robot1=abb6640(d=50),robot2=abb1200(),url='http://127.0.0.1:80',base2_R=np.array([[-1,0,0],[0,-1,0],[0,0,1]]),base2_p=np.array([1500,-500,000])) -> None:
         ###robot1: 6640 with d=50 fake link
@@ -29,15 +30,15 @@ class MotionSend(object):
 
     def moveL_target(self,robot,q,point):
         quat=R2q(robot.fwd(q).R)
-        cf=quadrant(q)
+        cf=quadrant(q,robot)
         robt = robtarget([point[0], point[1], point[2]], [ quat[0], quat[1], quat[2], quat[3]], confdata(cf[0],cf[1],cf[2],cf[3]),[9E+09]*6)
         return robt
     
     def moveC_target(self,robot,q1,q2,point1,point2):
         quat1=R2q(robot.fwd(q1).R)
-        cf1=quadrant(q1)
+        cf1=quadrant(q1,robot)
         quat2=R2q(robot.fwd(q2).R)
-        cf2=quadrant(q2)
+        cf2=quadrant(q2,robot)
         robt1 = robtarget([point1[0], point1[1], point1[2]], [ quat1[0], quat1[1], quat1[2], quat1[3]], confdata(cf1[0],cf1[1],cf1[2],cf1[3]),[0]*6)
         robt2 = robtarget([point2[0], point2[1], point2[2]], [ quat2[0], quat2[1], quat2[2], quat2[3]], confdata(cf2[0],cf2[1],cf2[2],cf2[3]),[0]*6)
         return robt1, robt2

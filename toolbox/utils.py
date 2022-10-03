@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 from scipy.interpolate import interp1d
 from scipy import signal
 import scipy
+from robots_def import *
 
 def get_speed(curve_exe,timestamp):
 	d_curve_exe=np.gradient(curve_exe,axis=0)
@@ -47,15 +48,17 @@ def replace_outliers(data, m=2):
 	data[abs(data - np.mean(data)) > m * np.std(data)] = np.mean(data)
 	return data
 
-def quadrant(q):
-	temp=np.ceil(np.array([q[0],q[3],q[5]])/(np.pi/2))-1
-	
-	if q[4] < 0:
-		last = 1
-	else:
-		last = 0
+def quadrant(q,robot):
+    cf146=np.floor(np.array([q[0],q[3],q[5]])/(np.pi/2))
+    eef=fwdkin(robot.robot_def_nT,q).p
+    
+    REAR=(1-np.sign((Rz(q[0])@np.array([1,0,0]))@np.array([eef[0],eef[1],eef[2]])))/2
 
-	return np.hstack((temp,[last])).astype(int)
+    LOWERARM= q[2]<-np.pi/2
+    FLIP= q[4]<0
+
+
+    return np.hstack((cf146,[4*REAR+2*LOWERARM+FLIP])).astype(int)
 	
 def cross(v):
 	return np.array([[0,-v[-1],v[1]],
@@ -87,6 +90,24 @@ def VectorPlaneProjection(v,n):
 	v_out=v-temp
 	v_out=v_out/np.linalg.norm(v_out)
 	return v_out
+
+def find_j_det(robot,curve_js):
+	j_det=[]
+	for q in curve_js:
+		j=robot.jacobian(q)
+		# j=j/np.linalg.norm(j)
+		j_det.append(np.linalg.det(j))
+
+	return j_det
+
+def find_condition_num(robot,curve_js):
+	cond=[]
+	for q in curve_js:
+		u, s, vh = np.linalg.svd(robot.jacobian(q))
+		cond.append(s[0]/s[-1])
+
+	return cond
+
 
 def find_j_min(robot,curve_js):
 	sing_min=[]

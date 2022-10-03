@@ -44,6 +44,7 @@ class abb6640(object):
 		# self.joint_acc_limit=np.radians([312,292,418,2407,1547,3400])
 		self.joint_acc_limit=np.array([-1,-1,-1,42.49102688076435,36.84030926197994,50.45298947544431])
 		self.robot_def=Robot(self.H,self.P,self.joint_type,joint_lower_limit = self.lower_limit, joint_upper_limit = self.upper_limit, joint_vel_limit=self.joint_vel_limit, R_tool=R_tool,p_tool=tcp_new)
+		self.robot_def_nT=Robot(self.H,self.P,self.joint_type,joint_lower_limit = self.lower_limit, joint_upper_limit = self.upper_limit, joint_vel_limit=self.joint_vel_limit)
 
 		###acceleration table
 		if len(acc_dict_path)>0:
@@ -135,6 +136,7 @@ class abb1200(object):
 		self.joint_vel_limit=np.radians([288,240,297,400,405,600])
 		self.joint_acc_limit=np.array([-1,-1,-1,85.73244187330907,126.59979534862278,167.56543454239707])
 		self.robot_def=Robot(self.H,self.P,self.joint_type,joint_lower_limit = self.lower_limit, joint_upper_limit = self.upper_limit, joint_vel_limit=self.joint_vel_limit, R_tool=R_tool,p_tool=tcp_new)
+		self.robot_def_nT=Robot(self.H,self.P,self.joint_type,joint_lower_limit = self.lower_limit, joint_upper_limit = self.upper_limit, joint_vel_limit=self.joint_vel_limit)
 
 		###acceleration table
 		if len(acc_dict_path)>0:
