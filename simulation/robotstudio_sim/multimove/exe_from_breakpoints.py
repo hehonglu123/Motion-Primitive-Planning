@@ -18,8 +18,8 @@ from dual_arm import *
 def main():
     dataset='wood/'
     data_dir="../../../data/"+dataset
-    solution_dir=data_dir+'dual_arm/'+'diffevo_pose2/'
-    cmd_dir=solution_dir+'30L/'
+    solution_dir=data_dir+'dual_arm/'+'diffevo3/'
+    cmd_dir=solution_dir+'50J/'
     
     relative_path,robot1,robot2,base2_R,base2_p,lam_relative_path,lam1,lam2,curve_js1,curve_js2=initialize_data(dataset,data_dir,solution_dir)
 
@@ -48,7 +48,7 @@ def main():
 
     s1_cmd,s2_cmd=cmd_speed_profile(breakpoints1,s1_all,s2_all)
 
-    zone=50
+    zone=10
     z= zonedata(False,zone,1.5*zone,1.5*zone,0.15*zone,1.5*zone,0.15*zone)
 
     z1_all=[z]*len(v2_all)
