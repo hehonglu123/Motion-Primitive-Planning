@@ -377,10 +377,10 @@ def main():
 
     ########## calculate numerical gradient here #############
     ## variables
-    epsilon = 0.5
-    backward_range = -9
-    forward_range = 11
-    the_peak = peaks[0] # for iteration 27
+    epsilon = 1
+    backward_range = -19
+    forward_range = 21
+    the_peak = peaks[1] # for iteration 27
     # change of bp v.s. change in trajectory
 
     # get closest bp
