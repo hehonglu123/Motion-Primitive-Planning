@@ -16,7 +16,7 @@ from MotionSend import *
 from dual_arm import *
 
 def main():
-    dataset='from_NX/'
+    dataset='wood/'
     data_dir="../../../data/"+dataset
     solution_dir=data_dir+'dual_arm/'+'diffevo_pose2/'
     cmd_dir=solution_dir+'30L/'
@@ -37,7 +37,7 @@ def main():
     ###get lambda at each breakpoint
     lam_bp=lam_relative_path[np.append(breakpoints1[0],breakpoints1[1:]-1)]
 
-    vd_relative=2500
+    vd_relative=1000
 
     s1_all,s2_all=calc_individual_speed(vd_relative,lam1,lam2,lam_relative_path,breakpoints1)
     v2_all=[]
@@ -51,12 +51,16 @@ def main():
     zone=50
     z= zonedata(False,zone,1.5*zone,1.5*zone,0.15*zone,1.5*zone,0.15*zone)
 
+    z1_all=[z]*len(v2_all)
+    z2_all=[z]*len(v2_all)
 
+    z1_all[3:7]=[z5]*4
+    z2_all[3:7]=[z5]*4
 
     ###extension
     p_bp1,q_bp1,p_bp2,q_bp2=ms.extend_dual(ms.robot1,p_bp1,q_bp1,primitives1,ms.robot2,p_bp2,q_bp2,primitives2,breakpoints1)
 
-    logged_data=ms.exec_motions_multimove(breakpoints1,primitives1,primitives2,p_bp1,p_bp2,q_bp1,q_bp2,v1,v2_all,z,z)
+    logged_data=ms.exec_motions_multimove(breakpoints1,primitives1,primitives2,p_bp1,p_bp2,q_bp1,q_bp2,v1,v2_all,z1_all,z2_all)
     # Write log csv to file
     with open("recorded_data/curve_exe_v"+str(vd_relative)+'_z'+str(zone)+'.csv',"w") as f:
         f.write(logged_data)
@@ -86,12 +90,14 @@ def main():
     ax1.set_xlabel('lambda (mm)')
     ax1.set_ylabel('Speed/lamdot (mm/s)', color='g')
     ax2.set_ylabel('Error (mm)', color='b')
-    plt.title("Speed: "+dataset+'v'+str(vd_relative)+'_z'+str(zone))
+    plt.title("Speed: "+dataset+'v'+str(vd_relative)+'_z    '+str(zone))
     h1, l1 = ax1.get_legend_handles_labels()
     h2, l2 = ax2.get_legend_handles_labels()
     ax1.legend(h1+h2, l1+l2, loc=1)
 
-
+    ###plot breakpoints index
+    for bp in breakpoints1:
+        plt.axvline(x=lam_relative_path[bp])
     plt.savefig('recorded_data/curve_exe_v'+str(vd_relative)+'_z'+str(zone))
     plt.show()
 if __name__ == "__main__":

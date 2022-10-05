@@ -13,7 +13,7 @@ from lambda_calc import *
 from utils import *
 
 
-data_dir='from_NX/dual_arm/'
+data_dir='wood/dual_arm/'
 solution_dir='diffevo_pose2/'
 cmd_dir=data_dir+solution_dir+'30L/'
 num_ls=[30]
