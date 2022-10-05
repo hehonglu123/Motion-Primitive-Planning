@@ -21,28 +21,26 @@ from MotionSend import *
 from lambda_calc import *
 from blending import *
 from dual_arm import *
+from realrobot import *
 
 def main():
-	dataset='from_NX/'
+	dataset='wood/'
 	data_dir="../../data/"+dataset
 	solution_dir=data_dir+'dual_arm/'+'diffevo3/'
-	cmd_dir=solution_dir+'30J/'
+	cmd_dir=solution_dir+'50J/'
 	
 	relative_path,robot1,robot2,base2_R,base2_p,lam_relative_path,lam1,lam2,curve_js1,curve_js2=initialize_data(dataset,data_dir,solution_dir)
 
 
-	ms = MotionSend(robot1=robot1,robot2=robot2,base2_R=base2_R,base2_p=base2_p)
+	ms = MotionSend(robot1=robot1,robot2=robot2,base2_R=base2_R,base2_p=base2_p,url='http://192.168.55.1:80')
 
 	breakpoints1,primitives1,p_bp1,q_bp1=ms.extract_data_from_cmd(cmd_dir+'command1.csv')
 	breakpoints2,primitives2,p_bp2,q_bp2=ms.extract_data_from_cmd(cmd_dir+'command2.csv')
 
-	# breakpoints1[1:]=breakpoints1[1:]-1
-	# breakpoints2[2:]=breakpoints2[2:]-1
-
 	###get lambda at each breakpoint
 	lam_bp=lam_relative_path[np.append(breakpoints1[0],breakpoints1[1:]-1)]
 
-	vd_relative=2000
+	vd_relative=420
 
 	s1_all,s2_all=calc_individual_speed(vd_relative,lam1,lam2,lam_relative_path,breakpoints1)
 	v2_all=[]
@@ -66,16 +64,15 @@ def main():
 	iteration=100
 	for i in range(iteration):
 
-		ms = MotionSend(robot1=robot1,robot2=robot2,base2_R=base2_R,base2_p=base2_p)
+		ms = MotionSend(robot1=robot1,robot2=robot2,base2_R=base2_R,base2_p=base2_p,url='http://192.168.55.1:80')
 		###execution with real robots
-		curve_js_all_new, avg_curve_js, timestamp_d=average_5_exe_multimove(ms,breakpoints,robot1,primitives1,p_bp1,q_bp1,vmax,z50,robot2,primitives2,p_bp2,q_bp2,v2_all,z50,curve,log_path="recorded_data")
+		curve_js_all_new, avg_curve_js, timestamp_d=average_5_exe_multimove(ms,breakpoints1,robot1,primitives1,p_bp1,q_bp1,vmax,z50,robot2,primitives2,p_bp2,q_bp2,v2_all,z50,relative_path,log_path="recorded_data")
 		###calculat data with average curve
 		lam, curve_exe1,curve_exe2,curve_exe_R1,curve_exe_R2,curve_exe_js1,curve_exe_js2, speed, timestamp, relative_path_exe, relative_path_exe_R =\
 			logged_data_analysis_multimove(robot1,robot2,timestamp_d,avg_curve_js,base2_R,base2_p)
 		#############################chop extension off##################################
 		lam, curve_exe1,curve_exe2,curve_exe_R1,curve_exe_R2,curve_exe_js1,curve_exe_js2, speed, timestamp, relative_path_exe, relative_path_exe_R=\
 			ms.chop_extension_dual(lam, curve_exe1,curve_exe2,curve_exe_R1,curve_exe_R2,curve_exe_js1,curve_exe_js2, speed, timestamp, relative_path_exe,relative_path_exe_R,relative_path[0,:3],relative_path[-1,:3])
-
 
 		###save commands
 		ms.write_data_to_cmd('recorded_data/command1.csv',breakpoints1,primitives1, p_bp1,q_bp1)

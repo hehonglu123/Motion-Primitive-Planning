@@ -22,8 +22,9 @@ class MotionSend(object):
         self.robot1=robot1
         self.robot2=robot2
         
+        self.base2_R=base2_R
+        self.base2_p=base2_p
         
-
         self.tool1 = tooldata(True,pose(R90.T@self.robot1.p_tool,R2q(self.robot1.R_tool@R90.T)),loaddata(1,[0,0,0.001],[1,0,0,0],0,0,0))
         self.tool2 = tooldata(True,pose(R90.T@self.robot2.p_tool,R2q(self.robot2.R_tool@R90.T)),loaddata(1,[0,0,0.001],[1,0,0,0],0,0,0))
 
