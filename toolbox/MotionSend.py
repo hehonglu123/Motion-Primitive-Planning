@@ -594,8 +594,6 @@ class MotionSend(object):
         speed=speed[start_idx:end_idx+1]
         lam=calc_lam_cs(curve_exe)
 
-
-
         return lam, curve_exe, curve_exe_R,curve_exe_js, speed, timestamp[start_idx:end_idx+1]-timestamp[start_idx]
 
     def chop_extension_dual(self,lam, curve_exe1,curve_exe2,curve_exe_R1,curve_exe_R2,curve_exe_js1,curve_exe_js2, speed, timestamp, relative_path_exe,relative_path_exe_R,p_start,p_end):

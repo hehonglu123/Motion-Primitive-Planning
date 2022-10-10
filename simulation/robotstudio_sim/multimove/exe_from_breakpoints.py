@@ -18,7 +18,7 @@ from dual_arm import *
 def main():
     dataset='wood/'
     data_dir="../../../data/"+dataset
-    solution_dir=data_dir+'dual_arm/'+'diffevo3/'
+    solution_dir=data_dir+'dual_arm/'+'diffevo_pose2/'
     cmd_dir=solution_dir+'50J/'
     
     relative_path,robot1,robot2,base2_R,base2_p,lam_relative_path,lam1,lam2,curve_js1,curve_js2=initialize_data(dataset,data_dir,solution_dir)
@@ -58,7 +58,7 @@ def main():
     z2_all[3:7]=[z5]*4
 
     ###extension
-    p_bp1,q_bp1,p_bp2,q_bp2=ms.extend_dual(ms.robot1,p_bp1,q_bp1,primitives1,ms.robot2,p_bp2,q_bp2,primitives2,breakpoints1)
+    # p_bp1,q_bp1,p_bp2,q_bp2=ms.extend_dual(ms.robot1,p_bp1,q_bp1,primitives1,ms.robot2,p_bp2,q_bp2,primitives2,breakpoints1)
 
     logged_data=ms.exec_motions_multimove(breakpoints1,primitives1,primitives2,p_bp1,p_bp2,q_bp1,q_bp2,v1,v2_all,z1_all,z2_all)
     # Write log csv to file

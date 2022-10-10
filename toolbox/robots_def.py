@@ -51,29 +51,48 @@ class abb6640(object):
 			acc_dict= pickle.load(open(acc_dict_path,'rb'))
 			q2_config=[]
 			q3_config=[]
-			q1_acc=[]
-			q2_acc=[]
-			q3_acc=[]
+			q1_acc_n=[]
+			q1_acc_p=[]
+			q2_acc_n=[]
+			q2_acc_p=[]
+			q3_acc_n=[]
+			q3_acc_p=[]
 			for key, value in acc_dict.items():
 			   q2_config.append(key[0])
 			   q3_config.append(key[1])
-			   q1_acc.append(value[0])
-			   q2_acc.append(value[1])
-			   q3_acc.append(value[2])
+			   q1_acc_n.append(value[0])
+			   q1_acc_p.append(value[1])
+			   q2_acc_n.append(value[2])
+			   q2_acc_p.append(value[3])
+			   q3_acc_n.append(value[4])
+			   q3_acc_p.append(value[5])
 			self.q2q3_config=np.array([q2_config,q3_config]).T
-			self.q1q2q3_acc=np.array([q1_acc,q2_acc,q3_acc]).T
+			self.q1q2q3_acc=np.array([q1_acc_n,q1_acc_p,q2_acc_n,q2_acc_p,q3_acc_n,q3_acc_p]).T
 
-	def get_acc(self,q_all):
+	def get_acc(self,q_all,direction=[]):
+		###get acceleration limit from q config, assume last 3 joints acc fixed direction is 3 length vector, 0 is -, 1 is +
 		#if a single point
 		if q_all.ndim==1:
 			###find closest q2q3 config, along with constant last 3 joints acc
 			idx=np.argmin(np.linalg.norm(self.q2q3_config-q_all[1:3],axis=1))
-			return np.append(self.q1q2q3_acc[idx],self.joint_acc_limit[-3:])
+			acc_lim=[]
+			for d in direction:
+				acc_lim.append(self.q1q2q3_acc[idx][2*len(acc_lim)+d])
+
+			return np.append(acc_lim,self.joint_acc_limit[-3:])
+		#if a list of points
 		else:
+			dq=np.gradient(q_all,axis=0)[:,:3]
+			direction=(np.sign(dq)+1)/2
+			direction=direction.astype(int)
 			acc_limit_all=[]
-			for q in q_all:
-				idx=np.argmin(np.linalg.norm(self.q2q3_config-q[1:3],axis=1))
-				acc_limit_all.append(np.append(self.q1q2q3_acc[idx],self.joint_acc_limit[-3:]))
+			for i in range(len(q_all)):
+				idx=np.argmin(np.linalg.norm(self.q2q3_config-q_all[i][1:3],axis=1))
+				acc_lim=[]
+				for d in direction[i]:
+					acc_lim.append(self.q1q2q3_acc[idx][2*len(acc_lim)+d])
+
+				acc_limit_all.append(np.append(acc_lim,self.joint_acc_limit[-3:]))
 
 		return np.array(acc_limit_all)
 
@@ -143,29 +162,48 @@ class abb1200(object):
 			acc_dict= pickle.load(open(acc_dict_path,'rb'))
 			q2_config=[]
 			q3_config=[]
-			q1_acc=[]
-			q2_acc=[]
-			q3_acc=[]
+			q1_acc_n=[]
+			q1_acc_p=[]
+			q2_acc_n=[]
+			q2_acc_p=[]
+			q3_acc_n=[]
+			q3_acc_p=[]
 			for key, value in acc_dict.items():
 			   q2_config.append(key[0])
 			   q3_config.append(key[1])
-			   q1_acc.append(value[0])
-			   q2_acc.append(value[1])
-			   q3_acc.append(value[2])
+			   q1_acc_n.append(value[0])
+			   q1_acc_p.append(value[1])
+			   q2_acc_n.append(value[2])
+			   q2_acc_p.append(value[3])
+			   q3_acc_n.append(value[4])
+			   q3_acc_p.append(value[5])
 			self.q2q3_config=np.array([q2_config,q3_config]).T
-			self.q1q2q3_acc=np.array([q1_acc,q2_acc,q3_acc]).T
+			self.q1q2q3_acc=np.array([q1_acc_n,q1_acc_p,q2_acc_n,q2_acc_p,q3_acc_n,q3_acc_p]).T
 
-	def get_acc(self,q_all):
+	def get_acc(self,q_all,direction=[]):
+		###get acceleration limit from q config, assume last 3 joints acc fixed direction is 3 length vector, 0 is -, 1 is +
 		#if a single point
 		if q_all.ndim==1:
 			###find closest q2q3 config, along with constant last 3 joints acc
 			idx=np.argmin(np.linalg.norm(self.q2q3_config-q_all[1:3],axis=1))
-			return np.append(self.q1q2q3_acc[idx],self.joint_acc_limit[-3:])
+			acc_lim=[]
+			for d in direction:
+				acc_lim.append(self.q1q2q3_acc[idx][2*len(acc_lim)+d])
+
+			return np.append(acc_lim,self.joint_acc_limit[-3:])
+		#if a list of points
 		else:
+			dq=np.gradient(q_all,axis=0)[:,:3]
+			direction=(np.sign(dq)+1)/2
+			direction=direction.astype(int)
 			acc_limit_all=[]
-			for q in q_all:
-				idx=np.argmin(np.linalg.norm(self.q2q3_config-q[1:3],axis=1))
-				acc_limit_all.append(np.append(self.q1q2q3_acc[idx],self.joint_acc_limit[-3:]))
+			for i in range(len(q_all)):
+				idx=np.argmin(np.linalg.norm(self.q2q3_config-q_all[i][1:3],axis=1))
+				acc_lim=[]
+				for d in direction[i]:
+					acc_lim.append(self.q1q2q3_acc[idx][2*len(acc_lim)+d])
+
+				acc_limit_all.append(np.append(acc_lim,self.joint_acc_limit[-3:]))
 
 		return np.array(acc_limit_all)
 
@@ -226,29 +264,48 @@ class arb_robot(object):
 			acc_dict= pickle.load(open(acc_dict_path,'rb'))
 			q2_config=[]
 			q3_config=[]
-			q1_acc=[]
-			q2_acc=[]
-			q3_acc=[]
+			q1_acc_n=[]
+			q1_acc_p=[]
+			q2_acc_n=[]
+			q2_acc_p=[]
+			q3_acc_n=[]
+			q3_acc_p=[]
 			for key, value in acc_dict.items():
 			   q2_config.append(key[0])
 			   q3_config.append(key[1])
-			   q1_acc.append(value[0])
-			   q2_acc.append(value[1])
-			   q3_acc.append(value[2])
+			   q1_acc_n.append(value[0])
+			   q1_acc_p.append(value[1])
+			   q2_acc_n.append(value[2])
+			   q2_acc_p.append(value[3])
+			   q3_acc_n.append(value[4])
+			   q3_acc_p.append(value[5])
 			self.q2q3_config=np.array([q2_config,q3_config]).T
-			self.q1q2q3_acc=np.array([q1_acc,q2_acc,q3_acc]).T
+			self.q1q2q3_acc=np.array([q1_acc_n,q1_acc_p,q2_acc_n,q2_acc_p,q3_acc_n,q3_acc_p]).T
 
-	def get_acc(self,q_all):
+	def get_acc(self,q_all,direction=[]):
+		###get acceleration limit from q config, assume last 3 joints acc fixed direction is 3 length vector, 0 is -, 1 is +
 		#if a single point
 		if q_all.ndim==1:
 			###find closest q2q3 config, along with constant last 3 joints acc
 			idx=np.argmin(np.linalg.norm(self.q2q3_config-q_all[1:3],axis=1))
-			return np.append(self.q1q2q3_acc[idx],self.joint_acc_limit[-3:])
+			acc_lim=[]
+			for d in direction:
+				acc_lim.append(self.q1q2q3_acc[idx][2*len(acc_lim)+d])
+
+			return np.append(acc_lim,self.joint_acc_limit[-3:])
+		#if a list of points
 		else:
+			dq=np.gradient(q_all,axis=0)[:,:3]
+			direction=(np.sign(dq)+1)/2
+			direction=direction.astype(int)
 			acc_limit_all=[]
-			for q in q_all:
-				idx=np.argmin(np.linalg.norm(self.q2q3_config-q[1:3],axis=1))
-				acc_limit_all.append(np.append(self.q1q2q3_acc[idx],self.joint_acc_limit[-3:]))
+			for i in range(len(q_all)):
+				idx=np.argmin(np.linalg.norm(self.q2q3_config-q_all[i][1:3],axis=1))
+				acc_lim=[]
+				for d in direction[i]:
+					acc_lim.append(self.q1q2q3_acc[idx][2*len(acc_lim)+d])
+
+				acc_limit_all.append(np.append(acc_lim,self.joint_acc_limit[-3:]))
 
 		return np.array(acc_limit_all)
 		

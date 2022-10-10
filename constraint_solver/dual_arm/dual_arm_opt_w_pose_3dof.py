@@ -23,8 +23,8 @@ def main():
 	with open(data_dir+'dual_arm/tcp.yaml') as file:
 	    H_tcp = np.array(yaml.safe_load(file)['H'],dtype=np.float64)
 
-	robot1=abb6640(d=50, acc_dict_path='../../toolbox/robot_info/6640acc.pickle')
-	robot2=abb1200(R_tool=H_tcp[:3,:3],p_tool=H_tcp[:-1,-1], acc_dict_path='../../toolbox/robot_info/1200acc.pickle')
+	robot1=abb6640(d=50, acc_dict_path='../../toolbox/robot_info/6640acc_new.pickle')
+	robot2=abb1200(R_tool=H_tcp[:3,:3],p_tool=H_tcp[:-1,-1], acc_dict_path='../../toolbox/robot_info/1200acc_new.pickle')
 
 	ms = MotionSend(robot2=robot2,base2_R=base2_R,base2_p=base2_p)
 
@@ -46,7 +46,7 @@ def main():
 	bnds=tuple(zip(lower_limit,upper_limit))
 	res = differential_evolution(opt.dual_arm_opt_w_pose_3dof, bnds, args=None,workers=-1,
 									x0 = np.hstack((q_init2,base2_p[0],base2_p[1],base2_theta,[0])),
-									strategy='best1bin', maxiter=500,
+									strategy='best1bin', maxiter=700,
 									popsize=15, tol=1e-10,
 									mutation=(0.5, 1), recombination=0.7,
 									seed=None, callback=None, disp=False,
