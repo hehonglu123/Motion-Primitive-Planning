@@ -27,7 +27,7 @@ def main():
 	dataset='wood/'
 	data_dir="../../data/"+dataset
 	solution_dir=data_dir+'dual_arm/'+'diffevo3/'
-	cmd_dir=solution_dir+'50J/'
+	cmd_dir=solution_dir+'30J/'
 	
 	relative_path,robot1,robot2,base2_R,base2_p,lam_relative_path,lam1,lam2,curve_js1,curve_js2=initialize_data(dataset,data_dir,solution_dir)
 
@@ -40,7 +40,7 @@ def main():
 	###get lambda at each breakpoint
 	lam_bp=lam_relative_path[np.append(breakpoints1[0],breakpoints1[1:]-1)]
 
-	vd_relative=420
+	vd_relative=700
 
 	s1_all,s2_all=calc_individual_speed(vd_relative,lam1,lam2,lam_relative_path,breakpoints1)
 	v2_all=[]
@@ -126,8 +126,8 @@ def main():
 		##########################################move towards error direction######################################
 		error_bps_v1,error_bps_w1,error_bps_v2,error_bps_w2=ilc.get_error_direction_dual(relative_path,p_bp1,q_bp1,p_bp2,q_bp2,relative_path_exe,relative_path_exe_R,curve_exe1,curve_exe_R1,curve_exe2,curve_exe_R2)
 
-		error_bps_w1=np.zeros(error_bps_w1.shape)
-		error_bps_w2=np.zeros(error_bps_w2.shape)
+		# error_bps_w1=np.zeros(error_bps_w1.shape)
+		# error_bps_w2=np.zeros(error_bps_w2.shape)
 		# error_bps_v1=np.zeros(error_bps_v1.shape)
 		# error_bps_v2=np.zeros(error_bps_v2.shape)
 		p_bp1, q_bp1, p_bp2, q_bp2=ilc.update_error_direction_dual(relative_path,p_bp1,q_bp1,p_bp2,q_bp2,error_bps_v1,error_bps_w1,error_bps_v2,error_bps_w2)
