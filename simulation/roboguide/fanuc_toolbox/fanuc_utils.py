@@ -475,7 +475,7 @@ class MotionSendFANUC(object):
         q2_4=df['J24'].tolist()[1:-1]
         q2_5=df['J25'].tolist()[1:-1]
         q2_6=df['J26'].tolist()[1:-1]
-        timestamp=np.array(df['timestamp'].tolist()[1:]).astype(float)*1e-3 # from msec to sec
+        timestamp=np.round(np.array(df['timestamp'].tolist()[1:]).astype(float)*1e-3,3) # from msec to sec
 
         curve_exe_js1=np.radians(np.vstack((q1_1,q1_2,q1_3,q1_4,q1_5,q1_6)).T.astype(float))
         curve_exe_js2=np.radians(np.vstack((q2_1,q2_2,q2_3,q2_4,q2_5,q2_6)).T.astype(float))

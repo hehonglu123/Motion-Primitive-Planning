@@ -6,6 +6,7 @@
 
 from copy import deepcopy
 import numpy as np
+from scipy.interpolate import interp1d
 from general_robotics_toolbox import *
 from pandas import read_csv,DataFrame
 import sys
@@ -131,8 +132,8 @@ def main():
     ilc_output=data_dir+'results_'+str(s)+'_'+test_type+'/'
     Path(ilc_output).mkdir(exist_ok=True)
 
-    breakpoints1,primitives1,p_bp1,q_bp1=ms.extract_data_from_cmd(os.getcwd()+'/'+cmd_dir+'command1.csv')
-    breakpoints2,primitives2,p_bp2,q_bp2=ms.extract_data_from_cmd(os.getcwd()+'/'+cmd_dir+'command2.csv')
+    breakpoints1,primitives1,p_bp1,q_bp1,_=ms.extract_data_from_cmd(os.getcwd()+'/'+cmd_dir+'command1.csv')
+    breakpoints2,primitives2,p_bp2,q_bp2,_=ms.extract_data_from_cmd(os.getcwd()+'/'+cmd_dir+'command2.csv')
 
     # for i in range(len(q_bp2)):
     #     p_bp2[i][-1] = robot2.fwd(q_bp2[i][-1]).p
@@ -237,11 +238,20 @@ def main():
     s1_movel_des = deepcopy(s1_movel)
     s2_movel_des = deepcopy(s2_movel)
 
-    use_exist=False
-    use_iteration=231
+    # use_exist=False
+    # use_iteration=231
+    use_exist=True
+    use_iteration=27
+
+    read_cmd_folder = data_dir+'results_1000_dual_arm_extend1_nospeedreg/'
     if use_exist:
-        _,primitives1,p_bp1,q_bp1=ms.extract_data_from_cmd(os.getcwd()+'/'+ilc_output+'command_arm1_'+str(use_iteration)+'.csv')
-        _,primitives2,p_bp2,q_bp2=ms.extract_data_from_cmd(os.getcwd()+'/'+ilc_output+'command_arm2_'+str(use_iteration)+'.csv')
+        _,primitives1,p_bp1,q_bp1,s1_movel=ms.extract_data_from_cmd(os.getcwd()+'/'+read_cmd_folder+'command_arm1_'+str(use_iteration)+'.csv')
+        _,primitives2,p_bp2,q_bp2,s2_movel=ms.extract_data_from_cmd(os.getcwd()+'/'+read_cmd_folder+'command_arm2_'+str(use_iteration)+'.csv')
+    
+    for i in range(len(p_bp1)):
+        p_bp1[i][-1]=robot1.fwd(q_bp1[i][-1]).p
+    for i in range(len(p_bp2)):
+        p_bp2[i][-1]=robot2.fwd(q_bp2[i][-1]).p
 
     # for i in range(len(primitives1)):
     #     primitives1[i]='movej_fit'
@@ -260,7 +270,7 @@ def main():
     all_speed_std = []
     all_max_error = []
 
-    iteration=30
+    iteration=40
     speed_iteration = 0
     draw_speed_max=None
     draw_error_max=None
@@ -282,15 +292,16 @@ def main():
 
         # get the best speed profile after speed update
         if i==speed_iteration+start_iteration:
-            std_id = np.squeeze(np.argwhere(np.array(all_speed_std)<speed_std_tolerance))
-            print(std_id)
-            print(np.array(all_max_error))
-            min_err_id = np.squeeze(np.argwhere(np.array(all_max_error)==np.min(np.array(all_max_error)[std_id])))
-            print(min_err_id)
-            s1_movel = deepcopy(all_speed_profile1[min_err_id])
-            s2_movel = deepcopy(all_speed_profile2[min_err_id])
-            print(s1_movel)
-            print(s2_movel)
+            if len(all_speed_profile1) != 0:
+                std_id = np.squeeze(np.argwhere(np.array(all_speed_std)<speed_std_tolerance))
+                print(std_id)
+                print(np.array(all_max_error))
+                min_err_id = np.squeeze(np.argwhere(np.array(all_max_error)==np.min(np.array(all_max_error)[std_id])))
+                print(min_err_id)
+                s1_movel = deepcopy(all_speed_profile1[min_err_id])
+                s2_movel = deepcopy(all_speed_profile2[min_err_id])
+                print(s1_movel)
+                print(s2_movel)
         
         if i>speed_iteration+start_iteration:
             error_prev = deepcopy(error)
@@ -346,7 +357,6 @@ def main():
                     s2_movel[step_end2+1:]=s1_movel[step_end2]
                     s1_movel_update = deepcopy(s1_movel)
                     s2_movel_update = deepcopy(s2_movel)
-
                 elif  i == speed_iteration+start_iteration:
                     pass # dont update at iteration "speed_iteration"
                 else: # update bp
@@ -360,12 +370,9 @@ def main():
                             q_bp1_update[j][-1] = car2js(robot1, q_bp1[j][-1], p_bp1_update[j][-1], bp1_R)[0]
                     else:
                         ### update only the max
-                        for j in range(len(peaks)):
-                            peak = deepcopy(peaks[j])
-                            de_dp= deepcopy(all_dedp[j])
-                            breakpoint_interp_2tweak_indices = deepcopy(all_bp2twist[j])
-                            # p_bp1_update, q_bp1_update=ilc.update_bp_xyz(p_bp1,q_bp1,de_dp,error_prev[peak],breakpoint_interp_2tweak_indices,alpha=alpha)
-                            p_bp1_update, q_bp1_update=ilc.update_bp_xyz(p_bp1_update,q_bp1_update,de_dp,error_prev[peak],breakpoint_interp_2tweak_indices,alpha=alpha)
+                        ### already update
+                        alpha_flag=True
+                        pass
 
                     #### update speed base on bp change
                     # p_bp1_sq = np.squeeze(p_bp1_update[step_start1:step_end1+1])
@@ -427,28 +434,6 @@ def main():
             lam, curve_exe1,curve_exe2,curve_exe_R1,curve_exe_R2,curve_exe_js1,curve_exe_js2, speed, timestamp, relative_path_exe, relative_path_exe_R = ms.logged_data_analysis_multimove(df,base2_R,base2_p,realrobot=False)
             #############################chop extension off##################################
             if i >= speed_iteration+start_iteration:
-            # if 1:
-                # curve_exe_js1_prev = deepcopy(curve_exe_js1[-1])
-                # curve_exe_js2_prev = deepcopy(curve_exe_js2[-1])
-                # chop_first = False
-                # chop_second = False
-                # for j in range(len(curve_exe_js1)-2,0,-1):
-                #     if np.any(curve_exe_js1[j] != curve_exe_js1_prev):
-                #         chop_first = True
-                #         break
-                #     if np.any(curve_exe_js2[j] != curve_exe_js2_prev):
-                #         chop_second = True
-                #         break
-                #     curve_exe_js1_prev = deepcopy(curve_exe_js1[j])
-                #     curve_exe_js2_prev = deepcopy(curve_exe_js2[j])
-                # if chop_first:
-                #     print("First robot is slower")
-                #     lam, curve_exe1,curve_exe2,curve_exe_R1,curve_exe_R2,curve_exe_js1,curve_exe_js2, speed, timestamp, relative_path_exe, relative_path_exe_R=\
-                #         ms.chop_extension_dual_singel(lam, curve_exe1,curve_exe2,curve_exe_R1,curve_exe_R2,curve_exe_js1,curve_exe_js2, speed, timestamp, relative_path_exe,relative_path_exe_R,curve1[0],curve1[-1],curve_exe1)
-                # if chop_second:
-                #     print("Second robot is slower")
-                #     lam, curve_exe1,curve_exe2,curve_exe_R1,curve_exe_R2,curve_exe_js1,curve_exe_js2, speed, timestamp, relative_path_exe, relative_path_exe_R=\
-                #         ms.chop_extension_dual_singel(lam, curve_exe1,curve_exe2,curve_exe_R1,curve_exe_R2,curve_exe_js1,curve_exe_js2, speed, timestamp, relative_path_exe,relative_path_exe_R,curve2[0],curve2[-1],curve_exe2)
                 lam, curve_exe1,curve_exe2,curve_exe_R1,curve_exe_R2,curve_exe_js1,curve_exe_js2, speed, timestamp, relative_path_exe, relative_path_exe_R=\
                     ms.chop_extension_dual(lam, curve_exe1,curve_exe2,curve_exe_R1,curve_exe_R2,curve_exe_js1,curve_exe_js2, speed, timestamp, relative_path_exe,relative_path_exe_R,relative_path[0,:3],relative_path[-1,:3])
                 timestamp1 = timestamp
@@ -482,9 +467,6 @@ def main():
                 all_speed_std.append(np.std(speed)/ave_speed*100)
                 all_max_error.append(max(error))
                 max_error=max(error)
-                if i==1:
-                    print(s1_movel)
-                    print(s2_movel)
                 break
             
             # if max(error) < max_error and max(np.degrees(angle_error)) < max_ang_error:
@@ -614,16 +596,42 @@ def main():
                 epsilon = 0.5
                 backward_range = -19
                 forward_range = 21
-                #####
-                p_bp_relative,_=ms.form_relative_path(np.squeeze(q_bp1),np.squeeze(q_bp2),base2_R,base2_p)
-                all_G = []
-                all_bp2twist = []
                 ##########################################calculate gradient for peaks######################################
-                # all_new_bp=[]
-                p_bp1_temp = deepcopy(p_bp1)
-                q_bp1_temp = deepcopy(q_bp1)
-                for peak in peaks:
+                # for peak in peaks:
+                # only calculate the max peak
+                # becaue adjust bp defintely affect others
+                # also the duration is similar
+                max_peaks=[np.argmax(error)] 
+                for peak in max_peaks:
+                    p_bp1_temp = deepcopy(p_bp1)
+                    q_bp1_temp = deepcopy(q_bp1)
                     
+                    ### interpolate curve (get gradient direction)
+                    curve_target = np.zeros((len(relative_path_exe), 3))
+                    curve_target_R = np.zeros((len(relative_path_exe), 3))
+                    for j in range(len(relative_path_exe)):
+                        dist = np.linalg.norm(relative_path[:,:3] - relative_path_exe[j], axis=1)
+                        closest_point_idx = np.argmin(dist)
+                        curve_target[j, :] = relative_path[closest_point_idx, :3]
+                        curve_target_R[j, :] = relative_path[closest_point_idx, 3:]
+                    ### get error (and transfer into robot1 frame)
+                    curve_target1 = []
+                    curve_target_R1 = []
+                    error1 = []
+                    angle_error1 = []
+                    for j in range(len(relative_path_exe)):
+                        ## transfer to robot1 frame
+                        tool_in_base1 = rox.Transform(base2_R,base2_p)*robot2.fwd(curve_exe_js2[j])
+                        this_curve_target1_T = tool_in_base1*rox.Transform(np.eye(3),curve_target[j])
+                        this_curve_target_R1 = np.matmul(tool_in_base1.R,curve_target_R[j])
+                        curve_target1.append(this_curve_target1_T.p)
+                        curve_target_R1.append(this_curve_target_R1)
+                        ## calculate error
+                        error1.append(this_curve_target1_T.p-curve_exe1[j])
+                        # angle_error1.append(get_angle(curve_exe_R1[j][:,-1], this_curve_target_R1))
+                        angle_error1.append(this_curve_target_R1-curve_exe_R1[j][:,-1])
+                    
+                    p_bp_relative,_=ms.form_relative_path(np.squeeze(q_bp1_temp),np.squeeze(q_bp1_temp),base2_R,base2_p)
                     # get closets bp
                     order_id = np.argsort(np.linalg.norm(p_bp_relative-relative_path_exe[peak],2,1))
                     closest_bp_id=order_id[0]
@@ -631,10 +639,8 @@ def main():
                     prev_start = peak+backward_range if peak+backward_range>=0 else 0
                     prev_end = peak+forward_range if peak+forward_range<=len(timestamp1) else len(timestamp1)
                     timestamp_prev = deepcopy(timestamp1[prev_start:prev_end])
-                    peak_time = timestamp1[peak]
-                    curve_prev = deepcopy(curve_exe1[prev_start:prev_end])
-                    peak_curve = curve_exe1[peak]
-                    dt=min(np.diff(timestamp_prev))
+                    error1_dir_prev = deepcopy(error1[prev_start:prev_end])
+                    error1_prev = np.linalg.norm(error1_dir_prev,2,1)
 
                     # iterate to get gradient
                     timestamp_xyz = []
@@ -642,36 +648,101 @@ def main():
                     # adjust xyz
                     for pos_i in range(3):
                         p_bp1_temp = deepcopy(p_bp1)
-                        q_bp1_temp=np.array(deepcopy(q_bp1))
+                        q_bp1_temp=deepcopy(q_bp1)
                         p_bp1_temp[closest_bp_id][-1][pos_i] += epsilon
                         q_bp1_temp[closest_bp_id][-1]=car2js(robot1,q_bp1[closest_bp_id][-1],np.array(p_bp1_temp[closest_bp_id][-1]),robot1.fwd(q_bp1[closest_bp_id][-1]).R)[0]
 
-                        logged_data=ms.exec_motions_multimove_nocoord(robot1,robot2,primitives1,primitives2,p_bp1_temp,p_bp2,q_bp1_temp,q_bp2,s1_movel_update,s2_movel_update,z,z)
+                        logged_data=ms.exec_motions_multimove_nocoord(robot1,robot2,primitives1,primitives2,p_bp1_temp,p_bp2,q_bp1_temp,q_bp2,s1_movel,s2_movel,z,z)
                         StringData=StringIO(logged_data.decode('utf-8'))
                         df = read_csv(StringData, sep =",")
                         ##############################data analysis#####################################
                         _, curve_exe1_forgrad,_,_,_,_,_,_,timestamp_forgrad,_,_ = ms.logged_data_analysis_multimove(df,base2_R,base2_p,realrobot=False)
                         curve_exe1_forgrad=np.array(curve_exe1_forgrad)
                         this_timestamp=[]
-                        this_curve_dp=[]
-                        for ti in range(len(timestamp_prev)):
-                            t=timestamp_prev[ti]
+                        this_curve_dx=[]
+                        this_curve_dy=[]
+                        this_curve_dz=[]
+                        # d of the whole traj
+                        for ti in range(len(timestamp1)):
+                            t=timestamp1[ti]
                             if t not in timestamp_forgrad:
-                                curve_i_prev = np.argwhere(timestamp_forgrad==(t-dt))[0][0]
-                                curve_i_next = np.argwhere(timestamp_forgrad==(t+dt))[0][0]
-                                this_curve_p_est = (curve_exe1_forgrad[curve_i_prev]+curve_exe1_forgrad[curve_i_next])/2
-                            else:
-                                curve_i = np.argwhere(timestamp_forgrad==t)[0][0]
-                                this_curve_p_est=curve_exe1_forgrad[curve_i]
+                                continue
+                            curve_i = np.argwhere(timestamp_forgrad==t)[0][0]
                             this_timestamp.append(t)
-                            this_curve_dp.append(this_curve_p_est[0]-curve_prev[ti][0])
-                            this_curve_dp.append(this_curve_p_est[1]-curve_prev[ti][1])
-                            this_curve_dp.append(this_curve_p_est[2]-curve_prev[ti][2])
-                        timestamp_xyz.append(np.array(this_timestamp))
+                            this_curve_dx.append(curve_exe1_forgrad[curve_i][0]-curve_exe1[ti][0])
+                            this_curve_dy.append(curve_exe1_forgrad[curve_i][1]-curve_exe1[ti][1])
+                            this_curve_dz.append(curve_exe1_forgrad[curve_i][2]-curve_exe1[ti][2])
+
+                        # print(this_timestamp)
+                        # print(timestamp_prev)
+                        dx_interp = interp1d(this_timestamp,this_curve_dx,kind='cubic',fill_value="extrapolate")(timestamp_prev)
+                        dy_interp = interp1d(this_timestamp,this_curve_dy,kind='cubic',fill_value="extrapolate")(timestamp_prev)
+                        dz_interp = interp1d(this_timestamp,this_curve_dz,kind='cubic',fill_value="extrapolate")(timestamp_prev)
+                        this_curve_dp=[dx_interp,dy_interp,dz_interp]
+                        this_curve_dp=np.reshape(np.array(this_curve_dp).T,(-1,))
+
+                        timestamp_xyz.append(np.array(timestamp_prev))
                         curve_xyz_dp.append(this_curve_dp)
+
+                        marker_size=2
+                        fig, ax = plt.subplots(3,1)
+                        # ax[0].plot(timestamp_forgrad,curve_exe1_forgrad[:,0],'-bo',markersize=marker_size) # x deviation
+                        # ax[0].plot(timestamp_prev,curve_exe1_forgrad_x,'-go',markersize=marker_size)
+                        # ax[0].set_title('traj new, x deviation')
+                        # ax[1].plot(timestamp_forgrad,curve_exe1_forgrad[:,1],'-bo',markersize=marker_size) # y deviation
+                        # ax[1].plot(timestamp_prev,curve_exe1_forgrad_y,'-go',markersize=marker_size)
+                        # ax[1].set_title('traj new, y deviation')
+                        # ax[2].plot(timestamp_forgrad,curve_exe1_forgrad[:,2],'-bo',markersize=marker_size) # z deviation
+                        # ax[2].plot(timestamp_prev,curve_exe1_forgrad_z,'-go',markersize=marker_size)
+                        # ax[2].set_title('traj new, z deviation')
+                        # plt.show()
+                        # ax[0].plot(this_timestamp,this_curve_dx,'-bo',markersize=marker_size) # x deviation
+                        # ax[0].plot(timestamp_prev,dx_interp,'-go',markersize=marker_size)
+                        # ax[0].set_title('traj new, x deviation')
+                        # ax[1].plot(this_timestamp,this_curve_dy,'-bo',markersize=marker_size) # y deviation
+                        # ax[1].plot(timestamp_prev,dy_interp,'-go',markersize=marker_size)
+                        # ax[1].set_title('traj new, y deviation')
+                        # ax[2].plot(this_timestamp,this_curve_dz,'-bo',markersize=marker_size) # z deviation
+                        # ax[2].plot(timestamp_prev,dz_interp,'-go',markersize=marker_size)
+                        # ax[2].set_title('traj new, z deviation')
+                        # plt.show()
+
                     G = np.array(curve_xyz_dp).T*(1./epsilon)
-                    all_G.append(G)
-                    all_bp2twist.append(closest_bp_id)
+                    
+                    # decent loop
+                    alpha = 0.5
+                    while True:
+                        du = alpha*np.matmul(np.linalg.pinv(G),np.reshape(np.array(error1_dir_prev),(-1,)))
+                        p_bp1_temp = deepcopy(p_bp1)
+                        q_bp1_temp=deepcopy(q_bp1)
+                        p_bp1_temp[closest_bp_id][-1] = np.array(p_bp1_temp[closest_bp_id][-1])+du
+                        q_bp1_temp[closest_bp_id][-1]=car2js(robot1,q_bp1[closest_bp_id][-1],np.array(p_bp1_temp[closest_bp_id][-1]),robot1.fwd(q_bp1[closest_bp_id][-1]).R)[0]
+                        ###execution with plant
+                        logged_data=ms.exec_motions_multimove_nocoord(robot1,robot2,primitives1,primitives2,p_bp1_temp,p_bp2,q_bp1_temp,q_bp2,s1_movel,s2_movel,z,z)
+                        df = read_csv(StringIO(logged_data.decode('utf-8')), sep =",")
+                        ##############################data analysis#####################################
+                        lam, curve_exe1,curve_exe2,curve_exe_R1,curve_exe_R2,curve_exe_js1,curve_exe_js2, speed, timestamp, relative_path_exe, relative_path_exe_R = ms.logged_data_analysis_multimove(df,base2_R,base2_p,realrobot=False)
+                        #############################chop extension off##################################
+                        lam, curve_exe1,curve_exe2,curve_exe_R1,curve_exe_R2,curve_exe_js1,curve_exe_js2, speed, timestamp, relative_path_exe, relative_path_exe_R=\
+                            ms.chop_extension_dual(lam, curve_exe1,curve_exe2,curve_exe_R1,curve_exe_R2,curve_exe_js1,curve_exe_js2, speed, timestamp, relative_path_exe,relative_path_exe_R,relative_path[0,:3],relative_path[-1,:3])
+                        timestamp1 = timestamp
+                        timestamp2 = timestamp
+                        lam1=np.append(0,np.cumsum(np.linalg.norm(np.diff(curve_exe1,axis=0),2,1)))
+                        lam2=np.append(0,np.cumsum(np.linalg.norm(np.diff(curve_exe2,axis=0),2,1)))
+                        #############################################################################
+                        error,angle_error=calc_all_error_w_normal(relative_path_exe,relative_path[:,:3],relative_path_exe_R[:,:,-1],relative_path[:,3:])
+                        if max(error) < max(error1_prev):
+                            print("find alpha and du")
+                            break
+                        # if error not decrease
+                        alpha = 0.75*alpha
+                        if alpha<0.05:
+                            print("Very small alpha")
+                            break
+                    p_bp1=deepcopy(p_bp1_temp)
+                    q_bp1=deepcopy(q_bp1_temp)
+
+                # exit()
 
 
 if __name__ == "__main__":

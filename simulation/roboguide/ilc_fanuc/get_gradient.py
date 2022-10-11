@@ -1,6 +1,7 @@
 
 from copy import deepcopy
 import numpy as np
+from scipy.interpolate import interp1d
 from general_robotics_toolbox import *
 from pandas import read_csv,DataFrame
 import sys
@@ -377,10 +378,10 @@ def main():
 
     ########## calculate numerical gradient here #############
     ## variables
-    epsilon = 1
+    epsilon = 0.5
     backward_range = -19
     forward_range = 21
-    the_peak = peaks[1] # for iteration 27
+    the_peak = peaks[2] # for iteration 27
     # change of bp v.s. change in trajectory
 
     # get closest bp
@@ -457,12 +458,22 @@ def main():
     all_title=['du_i [e 0 0]','du_i [0 e 0]','du_i [0 0 e]']
     for u_pos_i in range(3):
         fig, ax = plt.subplots(3,1)
-        
+
+        timestamp_prev[0]=timestamp_xyz[u_pos_i][0]
+        timestamp_prev[-1]=timestamp_xyz[u_pos_i][-1]
+        dx_interp = interp1d(timestamp_xyz[u_pos_i],curve_xyz_dx[u_pos_i],kind='cubic')(timestamp_prev)
         ax[0].plot(timestamp_xyz[u_pos_i],curve_xyz_dx[u_pos_i],'-bo',markersize=marker_size) # x deviation
+        ax[0].plot(timestamp_prev,dx_interp,'-go',markersize=marker_size)
         ax[0].set_title('traj new, x deviation')
+
+        dy_interp = interp1d(timestamp_xyz[u_pos_i],curve_xyz_dy[u_pos_i],kind='cubic')(timestamp_prev)
         ax[1].plot(timestamp_xyz[u_pos_i],curve_xyz_dy[u_pos_i],'-bo',markersize=marker_size) # y deviation
+        ax[1].plot(timestamp_prev,dy_interp,'-go',markersize=marker_size)
         ax[1].set_title('traj new, y deviation')
+
+        dz_interp = interp1d(timestamp_xyz[u_pos_i],curve_xyz_dz[u_pos_i],kind='cubic')(timestamp_prev)
         ax[2].plot(timestamp_xyz[u_pos_i],curve_xyz_dz[u_pos_i],'-bo',markersize=marker_size) # z deviation
+        ax[2].plot(timestamp_prev,dz_interp,'-go',markersize=marker_size)
         ax[2].set_title('traj new, z deviation')
 
         if len(np.argwhere(timestamp_xyz[u_pos_i]==peak_time)) != 0:
