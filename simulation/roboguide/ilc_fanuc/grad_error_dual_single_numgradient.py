@@ -15,6 +15,7 @@ from scipy.signal import find_peaks
 import yaml
 from matplotlib import pyplot as plt
 from pathlib import Path
+from qpsolvers import solve_qp
 from fanuc_motion_program_exec_client import *
 sys.path.append('../fanuc_toolbox')
 from fanuc_utils import *
@@ -241,9 +242,9 @@ def main():
     # use_exist=False
     # use_iteration=231
     use_exist=True
-    use_iteration=27
+    use_iteration=43
 
-    read_cmd_folder = data_dir+'results_1000_dual_arm_extend1_nospeedreg/'
+    read_cmd_folder = data_dir+'results_1000_dual_arm_numgrad_test1/'
     if use_exist:
         _,primitives1,p_bp1,q_bp1,s1_movel=ms.extract_data_from_cmd(os.getcwd()+'/'+read_cmd_folder+'command_arm1_'+str(use_iteration)+'.csv')
         _,primitives2,p_bp2,q_bp2,s2_movel=ms.extract_data_from_cmd(os.getcwd()+'/'+read_cmd_folder+'command_arm2_'+str(use_iteration)+'.csv')
@@ -270,7 +271,7 @@ def main():
     all_speed_std = []
     all_max_error = []
 
-    iteration=40
+    iteration=100
     speed_iteration = 0
     draw_speed_max=None
     draw_error_max=None
@@ -279,6 +280,7 @@ def main():
     max_error = 999
     max_ang_error = 999
     max_error_all_thres = 1 # threshold to push all bp
+    max_error_all_thres = 5 # threshold to push all bp
     alpha_break_thres=0.1
 
     start_iteration=0
@@ -639,8 +641,19 @@ def main():
                     prev_start = peak+backward_range if peak+backward_range>=0 else 0
                     prev_end = peak+forward_range if peak+forward_range<=len(timestamp1) else len(timestamp1)
                     timestamp_prev = deepcopy(timestamp1[prev_start:prev_end])
-                    error1_dir_prev = deepcopy(error1[prev_start:prev_end])
+                    curve_exe1_prev = deepcopy(curve_exe1[prev_start:prev_end])
+                    error1_dir_prev = np.array(deepcopy(error1[prev_start:prev_end]))
                     error1_prev = np.linalg.norm(error1_dir_prev,2,1)
+
+                    # marker_size=2
+                    # fig, ax = plt.subplots(3,1)
+                    # ax[0].plot(timestamp_prev,error1_dir_prev[:,0],'-bo',markersize=marker_size) # x deviation
+                    # ax[0].set_title('traj new, x deviation')
+                    # ax[1].plot(timestamp_prev,error1_dir_prev[:,1],'-bo',markersize=marker_size) # y deviation
+                    # ax[1].set_title('traj new, y deviation')
+                    # ax[2].plot(timestamp_prev,error1_dir_prev[:,2],'-bo',markersize=marker_size) # z deviation
+                    # ax[2].set_title('traj new, z deviation')
+                    # plt.show()
 
                     # iterate to get gradient
                     timestamp_xyz = []
@@ -684,8 +697,8 @@ def main():
                         timestamp_xyz.append(np.array(timestamp_prev))
                         curve_xyz_dp.append(this_curve_dp)
 
-                        marker_size=2
-                        fig, ax = plt.subplots(3,1)
+                        # marker_size=2
+                        # fig, ax = plt.subplots(3,1)
                         # ax[0].plot(timestamp_forgrad,curve_exe1_forgrad[:,0],'-bo',markersize=marker_size) # x deviation
                         # ax[0].plot(timestamp_prev,curve_exe1_forgrad_x,'-go',markersize=marker_size)
                         # ax[0].set_title('traj new, x deviation')
@@ -708,14 +721,32 @@ def main():
                         # plt.show()
 
                     G = np.array(curve_xyz_dp).T*(1./epsilon)
+                    # print(G)
                     
+                    # curve_exe1=np.array(curve_exe1)
+                    # curve_exe1_prev = deepcopy(curve_exe1)
                     # decent loop
-                    alpha = 0.5
+                    # du = np.matmul(np.linalg.pinv(G),np.reshape(np.array(error1_dir_prev),(-1,)))
+                    W=np.diag((np.repeat(error1_prev,3)*10)**2)
+                    print(W.shape)
+                    print(G.shape)
+                    H=np.matmul(np.matmul(G.T,W.T),np.matmul(W,G))
+                    H=(H+H.T)/2.
+                    f=-np.matmul(np.matmul(np.reshape(np.array(error1_dir_prev),(-1,)),W),G)
+                    du=solve_qp(H,f)
+                    
+                    du = du/np.linalg.norm(du)*epsilon
+                    alpha = 1
                     while True:
-                        du = alpha*np.matmul(np.linalg.pinv(G),np.reshape(np.array(error1_dir_prev),(-1,)))
+                        print("alpha:",alpha)
+                        du_alpha = alpha*du
+                        # print(du_alpha)
+                        curve_dp_pred = np.matmul(G,du_alpha)
+                        curve_dp_pred = np.reshape(curve_dp_pred,(len(timestamp_prev),3))
+
                         p_bp1_temp = deepcopy(p_bp1)
                         q_bp1_temp=deepcopy(q_bp1)
-                        p_bp1_temp[closest_bp_id][-1] = np.array(p_bp1_temp[closest_bp_id][-1])+du
+                        p_bp1_temp[closest_bp_id][-1] = np.array(p_bp1_temp[closest_bp_id][-1])+du_alpha
                         q_bp1_temp[closest_bp_id][-1]=car2js(robot1,q_bp1[closest_bp_id][-1],np.array(p_bp1_temp[closest_bp_id][-1]),robot1.fwd(q_bp1[closest_bp_id][-1]).R)[0]
                         ###execution with plant
                         logged_data=ms.exec_motions_multimove_nocoord(robot1,robot2,primitives1,primitives2,p_bp1_temp,p_bp2,q_bp1_temp,q_bp2,s1_movel,s2_movel,z,z)
@@ -729,14 +760,58 @@ def main():
                         timestamp2 = timestamp
                         lam1=np.append(0,np.cumsum(np.linalg.norm(np.diff(curve_exe1,axis=0),2,1)))
                         lam2=np.append(0,np.cumsum(np.linalg.norm(np.diff(curve_exe2,axis=0),2,1)))
+                        
+                        ##### draw prediction and actual #####
+                        timestamp_draw=[]
+                        curve_dx_draw=[]
+                        curve_dy_draw=[]
+                        curve_dz_draw=[]
+                        # d of the whole traj
+                        for ti in range(len(timestamp_prev)):
+                            t=timestamp_prev[ti]
+                            if t not in timestamp1:
+                                continue
+                            curve_i = np.argwhere(timestamp1==t)[0][0]
+                            timestamp_draw.append(t)
+                            curve_dx_draw.append(curve_exe1[curve_i][0]-curve_exe1_prev[ti][0])
+                            curve_dy_draw.append(curve_exe1[curve_i][1]-curve_exe1_prev[ti][1])
+                            curve_dz_draw.append(curve_exe1[curve_i][2]-curve_exe1_prev[ti][2])
+                        ilc_output_sub=ilc_output+'iteration_'+str(i)+'/'
+                        Path(ilc_output_sub).mkdir(exist_ok=True)
+                        marker_size=2
+                        fig, ax = plt.subplots(3,1)
+                        wi, hi = fig.get_size_inches()
+                        fig.set_size_inches(hi*(1920/1080), hi)
+                        x_ratio=max(np.fabs(curve_dp_pred[:,0]))/max(np.fabs(error1_dir_prev[:,0]))
+                        ax[0].plot(timestamp_prev,error1_dir_prev[:,0]*x_ratio,'-ro',markersize=marker_size)
+                        ax[0].plot(timestamp_prev,curve_dp_pred[:,0],'-bo',markersize=marker_size) # x deviation
+                        ax[0].plot(timestamp_draw,curve_dx_draw,'-go',markersize=marker_size)
+                        ax[0].set_title('traj new, x deviation')
+                        y_ratio=max(np.fabs(curve_dp_pred[:,1]))/max(np.fabs(error1_dir_prev[:,1]))
+                        ax[1].plot(timestamp_prev,error1_dir_prev[:,1]*y_ratio,'-ro',markersize=marker_size)
+                        ax[1].plot(timestamp_prev,curve_dp_pred[:,1],'-bo',markersize=marker_size) # y deviation
+                        ax[1].plot(timestamp_draw,curve_dy_draw,'-go',markersize=marker_size)
+                        ax[1].set_title('traj new, y deviation')
+                        z_ratio=max(np.fabs(curve_dp_pred[:,2]))/max(np.fabs(error1_dir_prev[:,2]))
+                        ax[2].plot(timestamp_prev,error1_dir_prev[:,2]*z_ratio,'-ro',markersize=marker_size)
+                        ax[2].plot(timestamp_prev,curve_dp_pred[:,2],'-bo',markersize=marker_size) # z deviation
+                        ax[2].plot(timestamp_draw,curve_dz_draw,'-go',markersize=marker_size)
+                        ax[2].set_title('traj new, z deviation')
+                        # plt.show()
+                        plt.tight_layout()
+                        plt.savefig(ilc_output_sub+'alpha_'+str(round(alpha*1000)),dpi=1080/hi)
+                        plt.clf()
+                        ######################################
+                        
                         #############################################################################
-                        error,angle_error=calc_all_error_w_normal(relative_path_exe,relative_path[:,:3],relative_path_exe_R[:,:,-1],relative_path[:,3:])
-                        if max(error) < max(error1_prev):
+                        error_update,angle_error_update=calc_all_error_w_normal(relative_path_exe,relative_path[:,:3],relative_path_exe_R[:,:,-1],relative_path[:,3:])
+                        print(max(error_update),max(error))
+                        if max(error_update) < max(error):
                             print("find alpha and du")
                             break
                         # if error not decrease
                         alpha = 0.75*alpha
-                        if alpha<0.05:
+                        if alpha<0.075:
                             print("Very small alpha")
                             break
                     p_bp1=deepcopy(p_bp1_temp)
