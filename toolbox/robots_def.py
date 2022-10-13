@@ -1,4 +1,6 @@
-from general_robotics_toolbox import *
+from general_robotics_toolbox import * 
+from general_robotics_toolbox import tesseract
+
 import numpy as np
 import yaml, copy
 import pickle
@@ -9,9 +11,9 @@ def Ry(theta):
 	return np.array([[np.cos(theta),0,np.sin(theta)],[0,1,0],[-np.sin(theta),0,np.cos(theta)]])
 def Rz(theta):
 	return np.array([[np.cos(theta),-np.sin(theta),0],[np.sin(theta),np.cos(theta),0],[0,0,1]])
-ex=np.array([[1],[0],[0]])
-ey=np.array([[0],[1],[0]])
-ez=np.array([[0],[0],[1]])
+ex=np.array([[1.],[0.],[0.]])
+ey=np.array([[0.],[1.],[0.]])
+ez=np.array([[0.],[0.],[1.]])
 
 #ALL in mm
 class abb6640(object):
@@ -41,9 +43,9 @@ class abb6640(object):
 		self.upper_limit=np.radians([170.,85.,70.,300.,120.,360.])
 		self.lower_limit=np.radians([-170.,-65.,-180.,-300.,-120.,-360.])
 		self.joint_vel_limit=np.radians([100,90,90,190,140,190])
-		# self.joint_acc_limit=np.radians([312,292,418,2407,1547,3400])
 		self.joint_acc_limit=np.array([-1,-1,-1,42.49102688076435,36.84030926197994,50.45298947544431])
-		self.robot_def=Robot(self.H,self.P,self.joint_type,joint_lower_limit = self.lower_limit, joint_upper_limit = self.upper_limit, joint_vel_limit=self.joint_vel_limit, R_tool=R_tool,p_tool=tcp_new)
+		self.robot_def=Robot(self.H,self.P,self.joint_type,joint_lower_limit = self.lower_limit, joint_upper_limit = self.upper_limit, joint_vel_limit=self.joint_vel_limit,joint_acc_limit=self.joint_acc_limit, R_tool=R_tool,p_tool=tcp_new)
+		# self.robot_def_tess=tesseract.TesseractRobot(self.robot_def,invkin_solver = "OPWInvKin")
 		self.robot_def_nT=Robot(self.H,self.P,self.joint_type,joint_lower_limit = self.lower_limit, joint_upper_limit = self.upper_limit, joint_vel_limit=self.joint_vel_limit)
 
 		###acceleration table
@@ -105,8 +107,10 @@ class abb6640(object):
 			robot_def.joint_upper_limit=999*np.ones(len(self.upper_limit))
 			robot_def.joint_lower_limit=-999*np.ones(len(self.lower_limit))
 			pose_temp=fwdkin(robot_def,q)
+			# pose_temp=self.robot_def_tess.fwdkin(q)
 		else:
 			pose_temp=fwdkin(self.robot_def,q)
+			# pose_temp=self.robot_def_tess.fwdkin(q)
 
 		pose_temp.p=base_R@pose_temp.p+base_p
 		pose_temp.R=base_R@pose_temp.R
@@ -125,6 +129,8 @@ class abb6640(object):
 	def inv(self,p,R=np.eye(3),last_joints=None):
 		pose=Transform(R,p)
 		q_all=robot6_sphericalwrist_invkin(self.robot_def,pose,last_joints)
+		
+		# q_all=self.robot_def.tess.invkin(pose,last_joints)
 		return q_all
 
 

@@ -125,7 +125,7 @@ class MotionSend(object):
         breakpoints,primitives, p_bp,q_bp=self.extract_data_from_cmd(filename)
         return self.exec_motions(robot,primitives,breakpoints,p_bp,q_bp,speed,zone)
 
-    def exec_motions_multimove(self,breakpoints,primitives1,primitives2,p_bp1,p_bp2,q_bp1,q_bp2,speed1,speed2,zone1,zone2):
+    def exec_motions_multimove(self,primitives1,primitives2,p_bp1,p_bp2,q_bp1,q_bp2,speed1,speed2,zone1,zone2):
         ###dynamic speed2
         mp1 = MotionProgram(tool=self.tool1)
         mp2 = MotionProgram(tool=self.tool2)
