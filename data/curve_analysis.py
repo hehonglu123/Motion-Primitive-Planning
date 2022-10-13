@@ -8,11 +8,11 @@ from lambda_calc import *
 from utils import *
 
 def main():
-	data_dir='from_NX/'
+	data_dir='wood/'
 
 	###read interpolated curves in joint space
-	curve_js1 = read_csv(data_dir+'dual_arm/diffevo_pose2/arm1.csv',header=None).values
-	curve_js2 = read_csv(data_dir+'dual_arm/diffevo_pose2/arm2.csv',header=None).values
+	curve_js1 = read_csv(data_dir+'dual_arm/diffevo2/arm1.csv',header=None).values
+	curve_js2 = read_csv(data_dir+'dual_arm/diffevo2/arm2.csv',header=None).values
 
 
 	robot1=abb6640(d=50)

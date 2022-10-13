@@ -18,6 +18,7 @@ from utils import *
 
 
 Z_MIN=5
+S_MIN=100
 def failure_detection(curve_exe,speed,p_bp):
 	###find blending failure breakpoint index
 	peaks,_=find_peaks(-speed,height=-100)
@@ -142,7 +143,8 @@ def fix_blending_error_multimove_single6640(ms,breakpoints,primitives1,p_bp1,q_b
 			if min_zone_count==3*Z_MIN:
 				print('adjusting speed')
 				for i in range(-1,1):
-					v1_all[bp_failure_index+i]= speeddata(v1_all[bp_failure_index+i].v_tcp,9999999,9999999,999999)
+					s1=max(v1_all[bp_failure_index+i].v_tcp-100,S_MIN)
+					v1_all[bp_failure_index+i]= speeddata(s1,9999999,9999999,999999)
 
 		# plot_speed_error(lam,speed,[],[],np.max([v.v_tcp for v in v1_all]),path='recorded_data/iteration_'+str(iteration))
 
@@ -191,7 +193,8 @@ def fix_blending_error_multimove_single1200(ms,breakpoints,primitives1,p_bp1,q_b
 			if min_zone_count==3*Z_MIN:
 				print('adjusting speed')
 				for i in range(-1,1):
-					v2_all[bp_failure_index+i]= speeddata(v2_all[bp_failure_index+i].v_tcp,9999999,9999999,999999)
+					s2=max(v2_all[bp_failure_index+i].v_tcp-100,S_MIN)
+					v2_all[bp_failure_index+i]= speeddata(s2,9999999,9999999,999999)
 
 		# plot_speed_error(lam,speed,[],[],np.max([v.v_tcp for v in v2_all]),path='recorded_data/iteration_'+str(iteration))
 		# for line in ms.client.read_event_log():
