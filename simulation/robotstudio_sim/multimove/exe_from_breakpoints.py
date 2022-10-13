@@ -16,10 +16,10 @@ from MotionSend import *
 from dual_arm import *
 
 def main():
-    dataset='wood/'
+    dataset='from_NX/'
     data_dir="../../../data/"+dataset
-    solution_dir=data_dir+'dual_arm/'+'diffevo_pose2/'
-    cmd_dir=solution_dir+'50J/'
+    solution_dir=data_dir+'dual_arm/'+'diffevo_pose2_2/'
+    cmd_dir=solution_dir+'30L/'
     
     relative_path,robot1,robot2,base2_R,base2_p,lam_relative_path,lam1,lam2,curve_js1,curve_js2=initialize_data(dataset,data_dir,solution_dir)
 
@@ -37,7 +37,7 @@ def main():
     ###get lambda at each breakpoint
     lam_bp=lam_relative_path[np.append(breakpoints1[0],breakpoints1[1:]-1)]
 
-    vd_relative=500
+    vd_relative=2500
 
     s1_all,s2_all=calc_individual_speed(vd_relative,lam1,lam2,lam_relative_path,breakpoints1)
     v2_all=[]
@@ -48,7 +48,7 @@ def main():
 
     s1_cmd,s2_cmd=cmd_speed_profile(breakpoints1,s1_all,s2_all)
 
-    zone=10
+    zone=50
     z= zonedata(False,zone,1.5*zone,1.5*zone,0.15*zone,1.5*zone,0.15*zone)
 
     z1_all=[z]*len(v2_all)
