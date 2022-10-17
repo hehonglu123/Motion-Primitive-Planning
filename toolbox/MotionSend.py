@@ -34,6 +34,16 @@ class MotionSend(object):
         cf=quadrant(q,robot)
         robt = robtarget([point[0], point[1], point[2]], [ quat[0], quat[1], quat[2], quat[3]], confdata(cf[0],cf[1],cf[2],cf[3]),[9E+09]*6)
         return robt
+
+    def moveL_target_relative(self,q1,q2,point):
+        pose1_now=self.robot1.fwd(q1)
+        pose2_world_now=self.robot2.fwd(q2,self.base2_R,self.base2_p)
+        relative_R.append(pose2_world_now.R.T@pose1_now.R)
+
+        quat=R2q(relative_R)
+        cf=quadrant(q,robot)
+        robt = robtarget([point[0], point[1], point[2]], [ quat[0], quat[1], quat[2], quat[3]], confdata(cf[0],cf[1],cf[2],cf[3]),[9E+09]*6)
+        return robt
     
     def moveC_target(self,robot,q1,q2,point1,point2):
         quat1=R2q(robot.fwd(q1).R)
@@ -43,6 +53,12 @@ class MotionSend(object):
         robt1 = robtarget([point1[0], point1[1], point1[2]], [ quat1[0], quat1[1], quat1[2], quat1[3]], confdata(cf1[0],cf1[1],cf1[2],cf1[3]),[0]*6)
         robt2 = robtarget([point2[0], point2[1], point2[2]], [ quat2[0], quat2[1], quat2[2], quat2[3]], confdata(cf2[0],cf2[1],cf2[2],cf2[3]),[0]*6)
         return robt1, robt2
+
+    # def moveL_target_relative(self,robot,q,point):
+    #     quat=R2q(robot.fwd(q).R)
+    #     cf=quadrant(q,robot)
+    #     robt = robtarget([point[0], point[1], point[2]], [ quat[0], quat[1], quat[2], quat[3]], confdata(cf[0],cf[1],cf[2],cf[3]),[9E+09]*6)
+    #     return robt
 
     def moveJ_target(self,q):
         q = np.rad2deg(q)
@@ -241,7 +257,128 @@ class MotionSend(object):
         mp2.WaitTime(0.1)
         
         # print(mp1.get_program_rapid())
-        # print(mp2.get_program_rapid())
+        print(mp2.get_program_rapid())
+        log_results = self.client.execute_multimove_motion_program([mp1,mp2])
+        log_results_str = log_results.decode('ascii')
+        return log_results_str
+
+    def exec_motions_multimove_relative(self,primitives1,primitives2,p_bp1,p_bp2,q_bp1,q_bp2,speed1,speed2,zone1,zone2):
+        ###dynamic speed2
+        mp1 = MotionProgram(tool=self.tool1)
+        mp2 = MotionProgram(tool=self.tool2)
+        
+        for i in range(len(primitives1)):
+
+            if 'movel' in primitives1[i]:
+                robt = self.moveL_target(self.robot1,q_bp1[i][0],p_bp1[i][0])
+                if type(speed1) is list:
+                    if type(zone1) is list:
+                        mp1.MoveL(robt,speed1[i],zone1[i])
+                    else:
+                        mp1.MoveL(robt,speed1[i],zone1)
+                else:
+                    if type(zone1) is list:
+                        mp1.MoveL(robt,speed1,zone1[i])
+                    else:
+                        mp1.MoveL(robt,speed1,zone1)
+
+
+            elif 'movec' in primitives1[i]:
+                robt1, robt2 = self.moveC_target(self.robot1,q_bp1[i][0],q_bp1[i][1],p_bp1[i][0],p_bp1[i][1])
+                if type(speed1) is list:
+                    if type(zone1) is list:
+                        mp1.MoveC(robt1,robt2,speed1[i],zone1[i])
+                    else:
+                        mp1.MoveC(robt1,robt2,speed1[i],zone1)
+                else:
+                    if type(zone1) is list:
+                        mp1.MoveC(robt1,robt2,speed1,zone1[i])
+                    else:
+                        mp1.MoveC(robt1,robt2,speed1,zone1)
+
+            elif 'movej' in primitives1[i]:
+                robt = self.moveL_target(self.robot1,q_bp1[i][0],p_bp1[i][0])
+                mp1.MoveJ(robt,speed1,zone1)
+
+            else: # moveabsj
+                jointt = self.moveJ_target(q_bp1[i][0])
+                if i==0:
+                    mp1.MoveAbsJ(jointt,v500,fine)
+                    mp1.WaitTime(1)
+                    mp1.MoveAbsJ(jointt,v500,fine)
+                    mp1.WaitTime(0.1)
+                else:
+                    if type(speed1) is list:
+                        if type(zone1) is list:
+                            mp1.MoveAbsJ(jointt,speed1[i],zone1[i])
+                        else:
+                            mp1.MoveAbsJ(jointt,speed1[i],zone1)
+                    else:
+                        if type(zone1) is list:
+                            mp1.MoveAbsJ(jointt,speed1,zone1[i])
+                        else:
+                            mp1.MoveAbsJ(jointt,speed1,zone1)
+
+        for i in range(len(primitives2)):
+            if 'movel' in primitives2[i]:
+                robt = self.moveL_target(self.robot2,q_bp2[i][0],p_bp2[i][0])
+                if type(speed2) is list:
+                    if type(zone2) is list:
+                        mp2.MoveL(robt,speed2[i],zone2[i])
+                    else:
+                        mp2.MoveL(robt,speed2[i],zone2)
+                else:
+                    if type(zone2) is list:
+                        mp2.MoveL(robt,speed2,zone2[i])
+                    else:
+                        mp2.MoveL(robt,speed2,zone2)
+
+
+            elif 'movec' in primitives2[i]:
+                robt1, robt2 = self.moveC_target(self.robot2,q_bp2[i][0],q_bp2[i][1],p_bp2[i][0],p_bp2[i][1])
+                if type(speed2) is list:
+                    if type(zone2) is list:
+                        mp2.MoveC(robt1,robt2,speed2[i],zone2[i])
+                    else:
+                        mp2.MoveC(robt1,robt2,speed2[i],zone2)
+                else:
+                    if type(zone2) is list:
+                        mp2.MoveC(robt1,robt2,speed2,zone2[i])
+                    else:
+                        mp2.MoveC(robt1,robt2,speed2,zone2)
+
+            elif 'movej' in primitives2[i]:
+                robt = self.moveL_target(self.robot2,q_bp2[i][0],p_bp2[i][0])
+                if type(speed2) is list:
+                    mp2.MoveJ(robt,speed2[i],zone2)
+                else:
+                    mp2.MoveJ(robt,speed2,zone2)
+
+            else: # moveabsj
+                jointt = self.moveJ_target(q_bp2[i][0])
+                if i==0:
+                    mp2.MoveAbsJ(jointt,v500,fine)
+                    mp2.WaitTime(1)
+                    mp2.MoveAbsJ(jointt,v500,fine)
+                    mp2.WaitTime(0.1)
+                else:
+                    if type(speed2) is list:
+                        if type(zone2) is list:
+                            mp2.MoveAbsJ(jointt,speed2[i],zone2[i])
+                        else:
+                            mp2.MoveAbsJ(jointt,speed2[i],zone2)
+                    else:
+                        if type(zone2) is list:
+                            mp2.MoveAbsJ(jointt,speed2,zone2[i])
+                        else:
+                            mp2.MoveAbsJ(jointt,speed2,zone2)
+
+        ###add sleep at the end to wait for train_data transmission
+        mp1.WaitTime(0.1)
+        mp2.WaitTime(0.1)
+        
+        # print(mp1.get_program_rapid())
+        print(mp2.get_program_rapid())
         log_results = self.client.execute_multimove_motion_program([mp1,mp2])
         log_results_str = log_results.decode('ascii')
         return log_results_str
