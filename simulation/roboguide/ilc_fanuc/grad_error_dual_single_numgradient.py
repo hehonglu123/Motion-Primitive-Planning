@@ -242,9 +242,10 @@ def main():
     # use_exist=False
     # use_iteration=231
     use_exist=True
-    use_iteration=43
+    use_iteration=27
 
-    read_cmd_folder = data_dir+'results_1000_dual_arm_numgrad_test1/'
+    # read_cmd_folder = data_dir+'results_1000_dual_arm_numgrad_test1/'
+    read_cmd_folder = data_dir+'results_1000_dual_arm_extend1_nospeedreg/'
     if use_exist:
         _,primitives1,p_bp1,q_bp1,s1_movel=ms.extract_data_from_cmd(os.getcwd()+'/'+read_cmd_folder+'command_arm1_'+str(use_iteration)+'.csv')
         _,primitives2,p_bp2,q_bp2,s2_movel=ms.extract_data_from_cmd(os.getcwd()+'/'+read_cmd_folder+'command_arm2_'+str(use_iteration)+'.csv')
@@ -271,7 +272,7 @@ def main():
     all_speed_std = []
     all_max_error = []
 
-    iteration=100
+    iteration=60
     speed_iteration = 0
     draw_speed_max=None
     draw_error_max=None
@@ -280,7 +281,7 @@ def main():
     max_error = 999
     max_ang_error = 999
     max_error_all_thres = 1 # threshold to push all bp
-    max_error_all_thres = 5 # threshold to push all bp
+    max_error_all_thres = 2 # threshold to push all bp
     alpha_break_thres=0.1
 
     start_iteration=0
@@ -400,7 +401,7 @@ def main():
                         plt.clf()
                     else:
                         plt.show()
-                
+
                 ## show speed of each robot
                 if i<=start_iteration+1:
                     speed_exe1_old = np.zeros(len(curve_exe1))
@@ -427,6 +428,8 @@ def main():
                 ######
 
             ###execution with plant
+            p_bp1_dummmm = deepcopy(p_bp1_update)
+            p_bp1_update[48][-1][1]+=0.5
             logged_data=ms.exec_motions_multimove_nocoord(robot1,robot2,primitives1,primitives2,p_bp1_update,p_bp2,q_bp1_update,q_bp2,s1_movel_update,s2_movel_update,z,z)
             # with open('iteration_'+str(i)+'.csv',"wb") as f:
             #     f.write(logged_data)
@@ -548,6 +551,29 @@ def main():
         df=DataFrame({'primitives':primitives2,'points':p_bp2,'q_bp':q_bp2,'speed':s2_movel})
         df.to_csv(ilc_output+'command_arm2_'+str(i)+'.csv',header=True,index=False)
 
+        j_svd_min=[]
+        for t_i in range(len(curve_exe_js1)):
+            jmat = robot1.jacobian(curve_exe_js1[t_i])
+            _,jmat_s,_=np.linalg.svd(jmat)
+            j_svd_min.append(min(jmat_s))
+        plt.plot(timestamp1,j_svd_min,'-o',markersize=2)
+        plt.title("Min J SV")
+        plt.savefig(ilc_output+'minsvd_'+str(i))
+        plt.clf()
+
+    
+        # p_bp1_draw=np.squeeze(p_bp1)
+        # # p_bp1_draw_dum=np.
+        # print(p_bp1_draw[0])
+        # print(p_bp1_draw[-1])
+        # ax = plt.axes(projection='3d')
+        # ax.plot3D(curve_exe1[:,0], curve_exe1[:,1],curve_exe1[:,2], 'green',label='execution 1')
+        # ax.scatter3D(p_bp1_draw[:,0], p_bp1_draw[:,1],p_bp1_draw[:,2], 'blue', label='bps 1')
+        # ax.view_init(61, -67)
+        # plt.legend()
+        # plt.show()
+        # exit()
+
         if i >= speed_iteration:
             if max(error) > max_error_all_thres:
                 ##########################################calculate error direction and push######################################
@@ -596,8 +622,8 @@ def main():
             else:
                 # variables for calculate gradient
                 epsilon = 0.5
-                backward_range = -19
-                forward_range = 21
+                backward_range = -4
+                forward_range = 5
                 ##########################################calculate gradient for peaks######################################
                 # for peak in peaks:
                 # only calculate the max peak
@@ -633,10 +659,15 @@ def main():
                         # angle_error1.append(get_angle(curve_exe_R1[j][:,-1], this_curve_target_R1))
                         angle_error1.append(this_curve_target_R1-curve_exe_R1[j][:,-1])
                     
-                    p_bp_relative,_=ms.form_relative_path(np.squeeze(q_bp1_temp),np.squeeze(q_bp1_temp),base2_R,base2_p)
+                    p_bp_relative,_=ms.form_relative_path(np.squeeze(q_bp1_temp),np.squeeze(q_bp2),base2_R,base2_p)
                     # get closets bp
                     order_id = np.argsort(np.linalg.norm(p_bp_relative-relative_path_exe[peak],2,1))
                     closest_bp_id=order_id[0]
+                    # closest_bp_id=47
+                    # dont move the bp that cause too weird movement
+                    if closest_bp_id==48:
+                        closest_bp_id=order_id[1]
+                    print("move bp:",closest_bp_id)
                     # get timestamp range
                     prev_start = peak+backward_range if peak+backward_range>=0 else 0
                     prev_end = peak+forward_range if peak+forward_range<=len(timestamp1) else len(timestamp1)
@@ -728,19 +759,17 @@ def main():
                     # decent loop
                     # du = np.matmul(np.linalg.pinv(G),np.reshape(np.array(error1_dir_prev),(-1,)))
                     W=np.diag((np.repeat(error1_prev,3)*10)**2)
-                    print(W.shape)
-                    print(G.shape)
                     H=np.matmul(np.matmul(G.T,W.T),np.matmul(W,G))
                     H=(H+H.T)/2.
                     f=-np.matmul(np.matmul(np.reshape(np.array(error1_dir_prev),(-1,)),W),G)
                     du=solve_qp(H,f)
                     
-                    du = du/np.linalg.norm(du)*epsilon
-                    alpha = 1
+                    # du = du/np.linalg.norm(du)*epsilon
+                    alpha = 0.5
                     while True:
                         print("alpha:",alpha)
                         du_alpha = alpha*du
-                        # print(du_alpha)
+                        print(du_alpha)
                         curve_dp_pred = np.matmul(G,du_alpha)
                         curve_dp_pred = np.reshape(curve_dp_pred,(len(timestamp_prev),3))
 
@@ -760,6 +789,8 @@ def main():
                         timestamp2 = timestamp
                         lam1=np.append(0,np.cumsum(np.linalg.norm(np.diff(curve_exe1,axis=0),2,1)))
                         lam2=np.append(0,np.cumsum(np.linalg.norm(np.diff(curve_exe2,axis=0),2,1)))
+                        error_update,angle_error_update=calc_all_error_w_normal(relative_path_exe,relative_path[:,:3],relative_path_exe_R[:,:,-1],relative_path[:,3:])
+                        print(max(error_update),max(error))
                         
                         ##### draw prediction and actual #####
                         timestamp_draw=[]
@@ -783,16 +814,19 @@ def main():
                         wi, hi = fig.get_size_inches()
                         fig.set_size_inches(hi*(1920/1080), hi)
                         x_ratio=max(np.fabs(curve_dp_pred[:,0]))/max(np.fabs(error1_dir_prev[:,0]))
+                        x_ratio=1
                         ax[0].plot(timestamp_prev,error1_dir_prev[:,0]*x_ratio,'-ro',markersize=marker_size)
                         ax[0].plot(timestamp_prev,curve_dp_pred[:,0],'-bo',markersize=marker_size) # x deviation
                         ax[0].plot(timestamp_draw,curve_dx_draw,'-go',markersize=marker_size)
                         ax[0].set_title('traj new, x deviation')
                         y_ratio=max(np.fabs(curve_dp_pred[:,1]))/max(np.fabs(error1_dir_prev[:,1]))
+                        y_ratio=1
                         ax[1].plot(timestamp_prev,error1_dir_prev[:,1]*y_ratio,'-ro',markersize=marker_size)
                         ax[1].plot(timestamp_prev,curve_dp_pred[:,1],'-bo',markersize=marker_size) # y deviation
                         ax[1].plot(timestamp_draw,curve_dy_draw,'-go',markersize=marker_size)
                         ax[1].set_title('traj new, y deviation')
                         z_ratio=max(np.fabs(curve_dp_pred[:,2]))/max(np.fabs(error1_dir_prev[:,2]))
+                        z_ratio=1
                         ax[2].plot(timestamp_prev,error1_dir_prev[:,2]*z_ratio,'-ro',markersize=marker_size)
                         ax[2].plot(timestamp_prev,curve_dp_pred[:,2],'-bo',markersize=marker_size) # z deviation
                         ax[2].plot(timestamp_draw,curve_dz_draw,'-go',markersize=marker_size)
@@ -801,11 +835,41 @@ def main():
                         plt.tight_layout()
                         plt.savefig(ilc_output_sub+'alpha_'+str(round(alpha*1000)),dpi=1080/hi)
                         plt.clf()
+
+                        ##############################plot error#####################################
+                        fig, ax1 = plt.subplots()
+                        ax2 = ax1.twinx()
+                        ax1.plot(lam, speed, 'g-', label='Speed')
+                        ax2.plot(lam, error_update, 'b-',label='Error')
+                        ax2.plot(lam, np.degrees(angle_error_update), 'y-',label='Normal Error')
+                        if draw_speed_max is None:
+                            draw_speed_max=max(speed)*1.05
+                        if max(speed) >= draw_speed_max or max(speed) < draw_speed_max*0.1:
+                            draw_speed_max=max(speed)*1.05
+                        ax1.axis(ymin=0,ymax=draw_speed_max)
+                        if draw_error_max is None:
+                            draw_error_max=max(error)*1.05
+                        if max(error_update) >= draw_error_max or max(error_update) < draw_error_max*0.1:
+                            draw_error_max=max(error_update)*1.05
+                        ax2.axis(ymin=0,ymax=draw_error_max)
+                        ax1.set_xlabel('lambda (mm)')
+                        ax1.set_ylabel('Speed/lamdot (mm/s)', color='g')
+                        ax2.set_ylabel('Error/Normal Error (mm/deg)', color='b')
+                        plt.title("Speed and Error Plot")
+                        ax1.legend(loc=0)
+                        ax2.legend(loc=0)
+                        plt.legend()
+                        if save_fig:
+                            plt.savefig(ilc_output_sub+'error_alpha_'+str(round(alpha*1000)))
+                            plt.clf()
+                        else:
+                            plt.show()
                         ######################################
                         
                         #############################################################################
-                        error_update,angle_error_update=calc_all_error_w_normal(relative_path_exe,relative_path[:,:3],relative_path_exe_R[:,:,-1],relative_path[:,3:])
-                        print(max(error_update),max(error))
+                        
+                        ### break no matter how
+                        break
                         if max(error_update) < max(error):
                             print("find alpha and du")
                             break
