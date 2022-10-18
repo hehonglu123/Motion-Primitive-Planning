@@ -202,8 +202,16 @@ def car2js(robot,q_init,curve_fit,curve_fit_R):
 	###calculate corresponding joint configs
 	curve_fit_js=[]
 	if curve_fit.shape==(3,):### if a single point
-		temp_q=robot.inv(curve_fit,curve_fit_R,last_joints=q_init)[0]
-		curve_fit_js.append(temp_q)
+
+		try:
+			inv_ans=robot.inv(curve_fit,curve_fit_R,last_joints=q_init)
+		except Exception as e:
+			print("Inverse Kin Error")
+			print(e)
+			inv_ans=[]
+		if len(inv_ans) != 0:
+			temp_q=inv_ans[0]
+			curve_fit_js.append(temp_q)
 
 	else:
 		for i in range(len(curve_fit)):
