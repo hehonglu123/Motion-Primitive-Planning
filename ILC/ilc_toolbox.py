@@ -808,9 +808,11 @@ class ilc_toolbox(object):
 				###error direction in global frame (robot1 frame)
 				error_bps_v1[bp_idx][bp_sub_idx]=(self.base2_R@curve_exe_R2[bp_exe_idx])@(relative_path[curve_original_idx,:3]-relative_path_exe[bp_exe_idx])
 				###normal error direction
-				R_temp=(self.base2_R@curve_exe_R2[bp_exe_idx])@rotation_matrix_from_vectors(relative_path_exe_R[bp_exe_idx][:,-1],relative_path[curve_original_idx,3:])
-
+				R_temp=rotation_matrix_from_vectors(relative_path_exe_R[bp_exe_idx][:,-1],relative_path[curve_original_idx,3:])
 				k_temp,theta_temp=R2rot(R_temp)
+				###convert rotation axis from 2tool frame to robot1 base frame
+				k_temp=(self.base2_R@curve_exe_R2[bp_exe_idx])@k_temp
+				
 				if theta_temp!=0:
 					error_bps_w1[bp_idx][bp_sub_idx]=k_temp*theta_temp
 
@@ -832,8 +834,11 @@ class ilc_toolbox(object):
 				###error direction in robot2 base frame, negate
 				error_bps_v2[bp_idx][bp_sub_idx]=-curve_exe_R2[bp_exe_idx]@(relative_path[curve_original_idx,:3]-relative_path_exe[bp_exe_idx])
 				###normal error direction
-				R_temp=curve_exe_R2[bp_exe_idx]@rotation_matrix_from_vectors(relative_path_exe_R[bp_exe_idx][:,-1],relative_path[curve_original_idx,3:]).T
+				R_temp=rotation_matrix_from_vectors(relative_path_exe_R[bp_exe_idx][:,-1],relative_path[curve_original_idx,3:]).T
 				k_temp,theta_temp=R2rot(R_temp)
+				###convert rotation axis from 2tool frame to robot2 base frame
+				k_temp=curve_exe_R2[bp_exe_idx]@k_temp
+				
 				if theta_temp!=0:
 					error_bps_w2[bp_idx][bp_sub_idx]=k_temp*theta_temp
 

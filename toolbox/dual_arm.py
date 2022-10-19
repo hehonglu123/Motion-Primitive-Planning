@@ -47,7 +47,7 @@ def calc_individual_speed(vd_relative,lam1,lam2,lam_relative,breakpoints):
 
 	return s1_all,s2_all
 
-def initialize_data(dataset,data_dir,solution_dir,cmd_dir):
+def initialize_data(dataset,data_dir,solution_dir):
 	relative_path = read_csv(data_dir+"Curve_dense.csv", header=None).values
 
 	###calculate desired TCP speed for both arm

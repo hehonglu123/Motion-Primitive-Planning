@@ -1,8 +1,7 @@
 import numpy as np
 import sys,copy
-sys.path.append('../toolbox')
 from toolbox_circular_fit import *
-
+from utils import *
 
 class fitting_toolbox(object):
 	def __init__(self,robot1,robot2,curve_js1,curve_js2,base2_p,base2_R):
@@ -49,71 +48,6 @@ class fitting_toolbox(object):
 		self.curve2_fit_R=[]
 		self.curve2_fit_js=[]
 
-
-	def R2w(self, curve_R,R_constraint=[]):
-		if len(R_constraint)==0:
-			R_init=curve_R[0]
-			curve_w=[np.zeros(3)]
-		else:
-			R_init=R_constraint
-			R_diff=np.dot(curve_R[0],R_init.T)
-			k,theta=R2rot(R_diff)
-			k=np.array(k)
-			curve_w=[k*theta]
-		
-		for i in range(1,len(curve_R)):
-			R_diff=np.dot(curve_R[i],R_init.T)
-			k,theta=R2rot(R_diff)
-			k=np.array(k)
-			curve_w.append(k*theta)
-		return np.array(curve_w)
-	def w2R(self,curve_w,R_init):
-		curve_R=[]
-		for i in range(len(curve_w)):
-			theta=np.linalg.norm(curve_w[i])
-			if theta==0:
-				curve_R.append(R_init)
-			else:
-				curve_R.append(np.dot(rot(curve_w[i]/theta,theta),R_init))
-
-		return np.array(curve_R)
-
-	def get_angle(self,v1,v2,less90=False):
-		v1=v1/np.linalg.norm(v1)
-		v2=v2/np.linalg.norm(v2)
-		dot=np.dot(v1,v2)
-		if abs(dot)>0.999999:
-			return 0
-		angle=np.arccos(dot)
-		if less90 and angle>np.pi/2:
-			angle=np.pi-angle
-		return angle
-
-	def orientation_interp(self,R_init,R_end,steps):
-		curve_fit_R=[]
-		###find axis angle first
-		R_diff=np.dot(R_init.T,R_end)
-		k,theta=R2rot(R_diff)
-		for i in range(steps):
-			###linearly interpolate angle
-			angle=theta*i/(steps-1)
-			R=rot(k,angle)
-			curve_fit_R.append(np.dot(R_init,R))
-		curve_fit_R=np.array(curve_fit_R)
-		return curve_fit_R
-
-	def car2js(self,robot,curve_fit,curve_fit_R,q_prev):
-		###calculate corresponding joint configs
-		curve_fit_js=[]
-		for i in range(len(curve_fit)):
-			q_all=np.array(robot.inv(curve_fit[i],curve_fit_R[i]))
-
-			###choose inv_kin closest to previous joints
-			temp_q=q_all-q_prev
-			order=np.argsort(np.linalg.norm(temp_q,axis=1))
-			curve_fit_js.append(q_all[order[0]])
-		return curve_fit_js
-
 	def linear_fit(self,data,p_constraint=[]):
 		###no constraint
 		if len(p_constraint)==0:
@@ -140,14 +74,14 @@ class fitting_toolbox(object):
 
 	def movel_fit(self,curve,curve_js,curve_R,robot,p_constraint=[],R_constraint=[],slope_constraint=[]):	###unit vector slope
 		###convert orientation to w first
-		curve_w=self.R2w(curve_R,R_constraint)
+		curve_w=R2w(curve_R,R_constraint)
 
 
 		data_fit=self.linear_fit(np.hstack((curve,curve_w)),[] if len(p_constraint)==0 else np.hstack((p_constraint,np.zeros(3))))
 		curve_fit=data_fit[:,:3]
 		curve_fit_w=data_fit[:,3:]
 
-		curve_fit_R=self.w2R(curve_fit_w,curve_R[0] if len(R_constraint)==0 else R_constraint)
+		curve_fit_R=w2R(curve_fit_w,curve_R[0] if len(R_constraint)==0 else R_constraint)
 
 		p_error=np.linalg.norm(curve-curve_fit,axis=1)
 
@@ -162,7 +96,7 @@ class fitting_toolbox(object):
 
 	def movej_fit(self,curve,curve_js,curve_R,robot,p_constraint=[],R_constraint=[],slope_constraint=[]):
 		###convert orientation to w first
-		curve_w=self.R2w(curve_R,R_constraint)
+		curve_w=R2w(curve_R,R_constraint)
 
 
 		curve_fit_js=self.linear_fit(curve_js,p_constraint)
@@ -178,7 +112,7 @@ class fitting_toolbox(object):
 		curve_fit_R=np.array(curve_fit_R)
 
 		###orientation error
-		curve_fit_w=self.R2w(curve_fit_R,R_constraint)
+		curve_fit_w=R2w(curve_fit_R,R_constraint)
 
 		p_error=np.linalg.norm(curve-curve_fit,axis=1)
 
@@ -191,12 +125,12 @@ class fitting_toolbox(object):
 
 
 	def movec_fit(self,curve,curve_js,curve_R,robot,p_constraint=[],R_constraint=[],slope_constraint=[]):
-		curve_w=self.R2w(curve_R,R_constraint)	
+		curve_w=R2w(curve_R,R_constraint)	
 
 		curve_fit,curve_fit_circle=circle_fit(curve,[] if len(R_constraint)==0 else p_constraint)
 		curve_fit_w=self.linear_fit(curve_w,[] if len(R_constraint)==0 else np.zeros(3))
 
-		curve_fit_R=self.w2R(curve_fit_w,curve_R[0] if len(R_constraint)==0 else R_constraint)
+		curve_fit_R=w2R(curve_fit_w,curve_R[0] if len(R_constraint)==0 else R_constraint)
 
 		p_error=np.linalg.norm(curve-curve_fit,axis=1)
 

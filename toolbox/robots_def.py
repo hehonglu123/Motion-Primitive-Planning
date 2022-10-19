@@ -1,4 +1,6 @@
-from general_robotics_toolbox import *
+from general_robotics_toolbox import * 
+from general_robotics_toolbox import tesseract
+
 import numpy as np
 import yaml, copy
 import pickle
@@ -9,9 +11,9 @@ def Ry(theta):
 	return np.array([[np.cos(theta),0,np.sin(theta)],[0,1,0],[-np.sin(theta),0,np.cos(theta)]])
 def Rz(theta):
 	return np.array([[np.cos(theta),-np.sin(theta),0],[np.sin(theta),np.cos(theta),0],[0,0,1]])
-ex=np.array([[1],[0],[0]])
-ey=np.array([[0],[1],[0]])
-ez=np.array([[0],[0],[1]])
+ex=np.array([[1.],[0.],[0.]])
+ey=np.array([[0.],[1.],[0.]])
+ez=np.array([[0.],[0.],[1.]])
 
 #ALL in mm
 class abb6640(object):
@@ -41,38 +43,58 @@ class abb6640(object):
 		self.upper_limit=np.radians([170.,85.,70.,300.,120.,360.])
 		self.lower_limit=np.radians([-170.,-65.,-180.,-300.,-120.,-360.])
 		self.joint_vel_limit=np.radians([100,90,90,190,140,190])
-		# self.joint_acc_limit=np.radians([312,292,418,2407,1547,3400])
 		self.joint_acc_limit=np.array([-1,-1,-1,42.49102688076435,36.84030926197994,50.45298947544431])
-		self.robot_def=Robot(self.H,self.P,self.joint_type,joint_lower_limit = self.lower_limit, joint_upper_limit = self.upper_limit, joint_vel_limit=self.joint_vel_limit, R_tool=R_tool,p_tool=tcp_new)
+		self.robot_def=Robot(self.H,self.P,self.joint_type,joint_lower_limit = self.lower_limit, joint_upper_limit = self.upper_limit, joint_vel_limit=self.joint_vel_limit,joint_acc_limit=self.joint_acc_limit, R_tool=R_tool,p_tool=tcp_new)
+		# self.robot_def_tess=tesseract.TesseractRobot(self.robot_def,invkin_solver = "OPWInvKin")
+		self.robot_def_nT=Robot(self.H,self.P,self.joint_type,joint_lower_limit = self.lower_limit, joint_upper_limit = self.upper_limit, joint_vel_limit=self.joint_vel_limit)
 
 		###acceleration table
 		if len(acc_dict_path)>0:
 			acc_dict= pickle.load(open(acc_dict_path,'rb'))
 			q2_config=[]
 			q3_config=[]
-			q1_acc=[]
-			q2_acc=[]
-			q3_acc=[]
+			q1_acc_n=[]
+			q1_acc_p=[]
+			q2_acc_n=[]
+			q2_acc_p=[]
+			q3_acc_n=[]
+			q3_acc_p=[]
 			for key, value in acc_dict.items():
 				q2_config.append(key[0])
 				q3_config.append(key[1])
-				q1_acc.append(value[0])
-				q2_acc.append(value[1])
-				q3_acc.append(value[2])
+				q1_acc_n.append(value[0])
+				q1_acc_p.append(value[1])
+				q2_acc_n.append(value[2])
+				q2_acc_p.append(value[3])
+				q3_acc_n.append(value[4])
+				q3_acc_p.append(value[5])
 			self.q2q3_config=np.array([q2_config,q3_config]).T
-			self.q1q2q3_acc=np.array([q1_acc,q2_acc,q3_acc]).T
+			self.q1q2q3_acc=np.array([q1_acc_n,q1_acc_p,q2_acc_n,q2_acc_p,q3_acc_n,q3_acc_p]).T
 
-	def get_acc(self,q_all):
+	def get_acc(self,q_all,direction=[]):
+		###get acceleration limit from q config, assume last 3 joints acc fixed direction is 3 length vector, 0 is -, 1 is +
 		#if a single point
 		if q_all.ndim==1:
 			###find closest q2q3 config, along with constant last 3 joints acc
 			idx=np.argmin(np.linalg.norm(self.q2q3_config-q_all[1:3],axis=1))
-			return np.append(self.q1q2q3_acc[idx],self.joint_acc_limit[-3:])
+			acc_lim=[]
+			for d in direction:
+				acc_lim.append(self.q1q2q3_acc[idx][2*len(acc_lim)+d])
+
+			return np.append(acc_lim,self.joint_acc_limit[-3:])
+		#if a list of points
 		else:
+			dq=np.gradient(q_all,axis=0)[:,:3]
+			direction=(np.sign(dq)+1)/2
+			direction=direction.astype(int)
 			acc_limit_all=[]
-			for q in q_all:
-				idx=np.argmin(np.linalg.norm(self.q2q3_config-q[1:3],axis=1))
-				acc_limit_all.append(np.append(self.q1q2q3_acc[idx],self.joint_acc_limit[-3:]))
+			for i in range(len(q_all)):
+				idx=np.argmin(np.linalg.norm(self.q2q3_config-q_all[i][1:3],axis=1))
+				acc_lim=[]
+				for d in direction[i]:
+					acc_lim.append(self.q1q2q3_acc[idx][2*len(acc_lim)+d])
+
+				acc_limit_all.append(np.append(acc_lim,self.joint_acc_limit[-3:]))
 
 		return np.array(acc_limit_all)
 
@@ -85,8 +107,10 @@ class abb6640(object):
 			robot_def.joint_upper_limit=999*np.ones(len(self.upper_limit))
 			robot_def.joint_lower_limit=-999*np.ones(len(self.lower_limit))
 			pose_temp=fwdkin(robot_def,q)
+			# pose_temp=self.robot_def_tess.fwdkin(q)
 		else:
 			pose_temp=fwdkin(self.robot_def,q)
+			# pose_temp=self.robot_def_tess.fwdkin(q)
 
 		pose_temp.p=base_R@pose_temp.p+base_p
 		pose_temp.R=base_R@pose_temp.R
@@ -105,6 +129,8 @@ class abb6640(object):
 	def inv(self,p,R=np.eye(3),last_joints=None):
 		pose=Transform(R,p)
 		q_all=robot6_sphericalwrist_invkin(self.robot_def,pose,last_joints)
+		
+		# q_all=self.robot_def.tess.invkin(pose,last_joints)
 		return q_all
 
 
@@ -135,35 +161,55 @@ class abb1200(object):
 		self.joint_vel_limit=np.radians([288,240,297,400,405,600])
 		self.joint_acc_limit=np.array([-1,-1,-1,85.73244187330907,126.59979534862278,167.56543454239707])
 		self.robot_def=Robot(self.H,self.P,self.joint_type,joint_lower_limit = self.lower_limit, joint_upper_limit = self.upper_limit, joint_vel_limit=self.joint_vel_limit, R_tool=R_tool,p_tool=tcp_new)
+		self.robot_def_nT=Robot(self.H,self.P,self.joint_type,joint_lower_limit = self.lower_limit, joint_upper_limit = self.upper_limit, joint_vel_limit=self.joint_vel_limit)
 
 		###acceleration table
 		if len(acc_dict_path)>0:
 			acc_dict= pickle.load(open(acc_dict_path,'rb'))
 			q2_config=[]
 			q3_config=[]
-			q1_acc=[]
-			q2_acc=[]
-			q3_acc=[]
+			q1_acc_n=[]
+			q1_acc_p=[]
+			q2_acc_n=[]
+			q2_acc_p=[]
+			q3_acc_n=[]
+			q3_acc_p=[]
 			for key, value in acc_dict.items():
 				q2_config.append(key[0])
 				q3_config.append(key[1])
-				q1_acc.append(value[0])
-				q2_acc.append(value[1])
-				q3_acc.append(value[2])
+				q1_acc_n.append(value[0])
+				q1_acc_p.append(value[1])
+				q2_acc_n.append(value[2])
+				q2_acc_p.append(value[3])
+				q3_acc_n.append(value[4])
+				q3_acc_p.append(value[5])
 			self.q2q3_config=np.array([q2_config,q3_config]).T
-			self.q1q2q3_acc=np.array([q1_acc,q2_acc,q3_acc]).T
+			self.q1q2q3_acc=np.array([q1_acc_n,q1_acc_p,q2_acc_n,q2_acc_p,q3_acc_n,q3_acc_p]).T
 
-	def get_acc(self,q_all):
+	def get_acc(self,q_all,direction=[]):
+		###get acceleration limit from q config, assume last 3 joints acc fixed direction is 3 length vector, 0 is -, 1 is +
 		#if a single point
 		if q_all.ndim==1:
 			###find closest q2q3 config, along with constant last 3 joints acc
 			idx=np.argmin(np.linalg.norm(self.q2q3_config-q_all[1:3],axis=1))
-			return np.append(self.q1q2q3_acc[idx],self.joint_acc_limit[-3:])
+			acc_lim=[]
+			for d in direction:
+				acc_lim.append(self.q1q2q3_acc[idx][2*len(acc_lim)+d])
+
+			return np.append(acc_lim,self.joint_acc_limit[-3:])
+		#if a list of points
 		else:
+			dq=np.gradient(q_all,axis=0)[:,:3]
+			direction=(np.sign(dq)+1)/2
+			direction=direction.astype(int)
 			acc_limit_all=[]
-			for q in q_all:
-				idx=np.argmin(np.linalg.norm(self.q2q3_config-q[1:3],axis=1))
-				acc_limit_all.append(np.append(self.q1q2q3_acc[idx],self.joint_acc_limit[-3:]))
+			for i in range(len(q_all)):
+				idx=np.argmin(np.linalg.norm(self.q2q3_config-q_all[i][1:3],axis=1))
+				acc_lim=[]
+				for d in direction[i]:
+					acc_lim.append(self.q1q2q3_acc[idx][2*len(acc_lim)+d])
+
+				acc_limit_all.append(np.append(acc_lim,self.joint_acc_limit[-3:]))
 
 		return np.array(acc_limit_all)
 
@@ -421,29 +467,48 @@ class arb_robot(object):
 			acc_dict= pickle.load(open(acc_dict_path,'rb'))
 			q2_config=[]
 			q3_config=[]
-			q1_acc=[]
-			q2_acc=[]
-			q3_acc=[]
+			q1_acc_n=[]
+			q1_acc_p=[]
+			q2_acc_n=[]
+			q2_acc_p=[]
+			q3_acc_n=[]
+			q3_acc_p=[]
 			for key, value in acc_dict.items():
 				q2_config.append(key[0])
 				q3_config.append(key[1])
-				q1_acc.append(value[0])
-				q2_acc.append(value[1])
-				q3_acc.append(value[2])
+				q1_acc_n.append(value[0])
+				q1_acc_p.append(value[1])
+				q2_acc_n.append(value[2])
+				q2_acc_p.append(value[3])
+				q3_acc_n.append(value[4])
+				q3_acc_p.append(value[5])
 			self.q2q3_config=np.array([q2_config,q3_config]).T
-			self.q1q2q3_acc=np.array([q1_acc,q2_acc,q3_acc]).T
+			self.q1q2q3_acc=np.array([q1_acc_n,q1_acc_p,q2_acc_n,q2_acc_p,q3_acc_n,q3_acc_p]).T
 
-	def get_acc(self,q_all):
+	def get_acc(self,q_all,direction=[]):
+		###get acceleration limit from q config, assume last 3 joints acc fixed direction is 3 length vector, 0 is -, 1 is +
 		#if a single point
 		if q_all.ndim==1:
 			###find closest q2q3 config, along with constant last 3 joints acc
 			idx=np.argmin(np.linalg.norm(self.q2q3_config-q_all[1:3],axis=1))
-			return np.append(self.q1q2q3_acc[idx],self.joint_acc_limit[-3:])
+			acc_lim=[]
+			for d in direction:
+				acc_lim.append(self.q1q2q3_acc[idx][2*len(acc_lim)+d])
+
+			return np.append(acc_lim,self.joint_acc_limit[-3:])
+		#if a list of points
 		else:
+			dq=np.gradient(q_all,axis=0)[:,:3]
+			direction=(np.sign(dq)+1)/2
+			direction=direction.astype(int)
 			acc_limit_all=[]
-			for q in q_all:
-				idx=np.argmin(np.linalg.norm(self.q2q3_config-q[1:3],axis=1))
-				acc_limit_all.append(np.append(self.q1q2q3_acc[idx],self.joint_acc_limit[-3:]))
+			for i in range(len(q_all)):
+				idx=np.argmin(np.linalg.norm(self.q2q3_config-q_all[i][1:3],axis=1))
+				acc_lim=[]
+				for d in direction[i]:
+					acc_lim.append(self.q1q2q3_acc[idx][2*len(acc_lim)+d])
+
+				acc_limit_all.append(np.append(acc_lim,self.joint_acc_limit[-3:]))
 
 		return np.array(acc_limit_all)
 		

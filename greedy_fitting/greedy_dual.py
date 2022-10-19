@@ -5,13 +5,13 @@ import matplotlib.pyplot as plt
 from pandas import *
 from fitting_toolbox_dual import *
 import sys, yaml
-sys.path.append('../toolbox')
+
 from toolbox_circular_fit import *
 from robots_def import *
 from general_robotics_toolbox import *
 from error_check import *
 from MotionSend import *
-
+from dual_arm import *
 #####################3d curve-fitting with MoveL, MoveJ, MoveC; stepwise incremental bi-section searched self.breakpoints###############################
 
 class greedy_fit(fitting_toolbox):
@@ -145,14 +145,14 @@ class greedy_fit(fitting_toolbox):
 			###bisection search for each primitive 
 			###TODO: pass curve_js from j fit
 			primitive1,primitive2,curve_fit1,curve_fit2,curve_fit_R1,curve_fit_R2=self.bisect(self.breakpoints[-1])
-			
+
 			###solve inv_kin here
 			if len(self.curve_fit_js1)>1:
-				self.curve_fit_js1.extend(self.car2js(self.robot1,curve_fit1,curve_fit_R1,self.curve_fit_js1[-1]))
-				self.curve_fit_js2.extend(self.car2js(self.robot2,curve_fit2,curve_fit_R2,self.curve_fit_js2[-1]))
+				self.curve_fit_js1.extend(car2js(self.robot1,self.curve_fit_js1[-1],curve_fit1,curve_fit_R1))
+				self.curve_fit_js2.extend(car2js(self.robot2,self.curve_fit_js2[-1],curve_fit2,curve_fit_R2))
 			else:
-				self.curve_fit_js1.extend(self.car2js(self.robot1,curve_fit1,curve_fit_R1,self.curve_js1[0]))
-				self.curve_fit_js2.extend(self.car2js(self.robot2,curve_fit2,curve_fit_R2,self.curve_js2[0]))
+				self.curve_fit_js1.extend(car2js(self.robot1,self.curve_js1[0],curve_fit1,curve_fit_R1))
+				self.curve_fit_js2.extend(car2js(self.robot2,self.curve_js2[0],curve_fit2,curve_fit_R2))
 
 			###generate output
 			if primitive1=='movec_fit':
@@ -207,7 +207,7 @@ class greedy_fit(fitting_toolbox):
 
 
 
-		return self.breakpoints,primitives_choices1,points1,q_bp1,primitives_choices2,points2,q_bp2
+		return np.array(self.breakpoints),primitives_choices1,points1,q_bp1,primitives_choices2,points2,q_bp2
 
 	def merge_bp(self,breakpoints,primitives_choices1,points1,q_bp1,primitives_choices2,points2,q_bp2):
 		points1_np=np.array([item[0] for item in points1])
@@ -218,21 +218,13 @@ class greedy_fit(fitting_toolbox):
 def main():
 	###read in points
 	dataset='from_NX/'
-	solution_dir='diffevo3/'
-	data_dir='../data/'+dataset+'/dual_arm/'+solution_dir
-
-
-	curve_js1 = read_csv(data_dir+'arm1.csv',header=None).values
-	curve_js2 = read_csv(data_dir+'arm2.csv',header=None).values
-	###define robots
-	robot1=abb6640(d=50)
-	robot2=abb1200()
-	###read in robot2 pose
-	with open(data_dir+'abb1200.yaml') as file:
-		H_1200 = np.array(yaml.safe_load(file)['H'],dtype=np.float64)
+	data_dir="../data/"+dataset
+	solution_dir=data_dir+'dual_arm/'+'diffevo_pose2/'
+	
+	relative_path,robot1,robot2,base2_R,base2_p,lam_relative_path,lam1,lam2,curve_js1,curve_js2=initialize_data(dataset,data_dir,solution_dir)
 
 	min_length=20
-	greedy_fit_obj=greedy_fit(robot1,robot2,curve_js1[::10],curve_js2[::10],1000.*H_1200[:-1,-1],H_1200[:-1,:-1],min_length,0.2)
+	greedy_fit_obj=greedy_fit(robot1,robot2,curve_js1[::1],curve_js2[::1],base2_p,base2_R,min_length,0.4)
 
 
 	###set primitive choices, defaults are all 3
@@ -277,8 +269,11 @@ def main():
 	print(len(primitives_choices1))
 	print(len(points1))
 
+	###shift breakpoints
+	breakpoints[1:]=breakpoints[1:]-1
+
 	###save arm1
-	df=DataFrame({'breakpoints':breakpoints,'primitives':primitives_choices1,'points':points1,'q_bp':q_bp1})
+	df=DataFrame({'breakpoints':breakpoints,'primitives':primitives_choices1,'p_bp':points1,'q_bp':q_bp1})
 	df.to_csv('greedy_dual_output/command1.csv',header=True,index=False)
 	df=DataFrame({'x':greedy_fit_obj.curve_fit1[:,0],'y':greedy_fit_obj.curve_fit1[:,1],'z':greedy_fit_obj.curve_fit1[:,2],\
 		'R1':greedy_fit_obj.curve_fit_R1[:,0,0],'R2':greedy_fit_obj.curve_fit_R1[:,0,1],'R3':greedy_fit_obj.curve_fit_R1[:,0,2],\
@@ -288,7 +283,7 @@ def main():
 	DataFrame(greedy_fit_obj.curve_fit_js1).to_csv('greedy_dual_output/curve_fit_js1.csv',header=False,index=False)
 
 	###save arm2
-	df=DataFrame({'breakpoints':breakpoints,'primitives':primitives_choices2,'points':points2,'q_bp':q_bp2})
+	df=DataFrame({'breakpoints':breakpoints,'primitives':primitives_choices2,'p_bp':points2,'q_bp':q_bp2})
 	df.to_csv('greedy_dual_output/command2.csv',header=True,index=False)
 	df=DataFrame({'x':greedy_fit_obj.curve_fit2[:,0],'y':greedy_fit_obj.curve_fit2[:,1],'z':greedy_fit_obj.curve_fit2[:,2],\
 		'R1':greedy_fit_obj.curve_fit_R2[:,0,0],'R2':greedy_fit_obj.curve_fit_R2[:,0,1],'R3':greedy_fit_obj.curve_fit_R2[:,0,2],\

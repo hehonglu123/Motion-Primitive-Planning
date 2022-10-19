@@ -13,10 +13,10 @@ from lambda_calc import *
 from utils import *
 
 
-data_dir='wood/dual_arm/'
-solution_dir='diffevo_pose1/'
-cmd_dir=data_dir+solution_dir+'50L/'
-num_ls=[50]
+data_dir='from_NX/dual_arm/'
+solution_dir='diffevo_pose2_2/'
+cmd_dir=data_dir+solution_dir+'10L/'
+num_ls=[10]
 robot=abb6640(d=50)
 curve_js = read_csv(data_dir+solution_dir+'arm1.csv',header=None).values
 
@@ -51,8 +51,8 @@ for num_l in num_ls:
 			R_end=robot.fwd(curve_js[breakpoints[i]-1]).R
 			curve_fit_R[breakpoints[i-1]:breakpoints[i]]=orientation_interp(R_init,R_end,breakpoints[i]-breakpoints[i-1]+1)[1:]
 		
-	primitives_choices=['moveabsj']+['moveabsj']*num_l
-
+	primitives_choices=['moveabsj']+['movel']*num_l
+	breakpoints[1:]=breakpoints[1:]-1
 	df=DataFrame({'breakpoints':breakpoints,'primitives':primitives_choices,'p_bp':points,'q_bp':q_bp})
 	df.to_csv(cmd_dir+'command1.csv',header=True,index=False)
 
@@ -100,7 +100,7 @@ for num_l in num_ls:
 			curve_fit_R[breakpoints[i-1]:breakpoints[i]]=orientation_interp(R_init,R_end,breakpoints[i]-breakpoints[i-1]+1)[1:]
 		
 	primitives_choices=['moveabsj']+['moveabsj']*num_l
-
+	breakpoints[1:]=breakpoints[1:]-1
 	df=DataFrame({'breakpoints':breakpoints,'primitives':primitives_choices,'p_bp':points,'q_bp':q_bp})
 	df.to_csv(cmd_dir+'command2.csv',header=True,index=False)
 

@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 from scipy.interpolate import interp1d
 from scipy import signal
 import scipy
+from robots_def import *
 
 def get_speed(curve_exe,timestamp):
 	d_curve_exe=np.gradient(curve_exe,axis=0)
@@ -47,15 +48,17 @@ def replace_outliers(data, m=2):
 	data[abs(data - np.mean(data)) > m * np.std(data)] = np.mean(data)
 	return data
 
-def quadrant(q):
-	temp=np.ceil(np.array([q[0],q[3],q[5]])/(np.pi/2))-1
+def quadrant(q,robot):
+	cf146=np.floor(np.array([q[0],q[3],q[5]])/(np.pi/2))
+	eef=fwdkin(robot.robot_def_nT,q).p
 	
-	if q[4] < 0:
-		last = 1
-	else:
-		last = 0
+	REAR=(1-np.sign((Rz(q[0])@np.array([1,0,0]))@np.array([eef[0],eef[1],eef[2]])))/2
 
-	return np.hstack((temp,[last])).astype(int)
+	LOWERARM= q[2]<-np.pi/2
+	FLIP= q[4]<0
+
+
+	return np.hstack((cf146,[4*REAR+2*LOWERARM+FLIP])).astype(int)
 	
 def cross(v):
 	return np.array([[0,-v[-1],v[1]],
@@ -87,6 +90,24 @@ def VectorPlaneProjection(v,n):
 	v_out=v-temp
 	v_out=v_out/np.linalg.norm(v_out)
 	return v_out
+
+def find_j_det(robot,curve_js):
+	j_det=[]
+	for q in curve_js:
+		j=robot.jacobian(q)
+		# j=j/np.linalg.norm(j)
+		j_det.append(np.linalg.det(j))
+
+	return j_det
+
+def find_condition_num(robot,curve_js):
+	cond=[]
+	for q in curve_js:
+		u, s, vh = np.linalg.svd(robot.jacobian(q))
+		cond.append(s[0]/s[-1])
+
+	return cond
+
 
 def find_j_min(robot,curve_js):
 	sing_min=[]
@@ -262,18 +283,18 @@ def unwrapped_angle_check(q_init,q_all):
     return temp_q[order[0]]+q_init
 
 def rotation_matrix_from_vectors(vec1, vec2):	#https://stackoverflow.com/questions/45142959/calculate-rotation-matrix-to-align-two-vectors-in-3d-space
-    """ Find the rotation matrix that aligns vec1 to vec2
-    :param vec1: A 3d "source" vector
-    :param vec2: A 3d "destination" vector
-    :return mat: A transform matrix (3x3) which when applied to vec1, aligns it with vec2.
-    """
-    a, b = (vec1 / np.linalg.norm(vec1)).reshape(3), (vec2 / np.linalg.norm(vec2)).reshape(3)
-    v = np.cross(a, b)
-    c = np.dot(a, b)
-    s = np.linalg.norm(v)
-    kmat = np.array([[0, -v[2], v[1]], [v[2], 0, -v[0]], [-v[1], v[0], 0]])
-    rotation_matrix = np.eye(3) + kmat + kmat.dot(kmat) * ((1 - c) / (s ** 2))
-    return rotation_matrix
+	""" Find the rotation matrix that aligns vec1 to vec2
+	:param vec1: A 3d "source" vector
+	:param vec2: A 3d "destination" vector
+	:return mat: A transform matrix (3x3) which when applied to vec1, aligns it with vec2.
+	"""
+	a, b = (vec1 / np.linalg.norm(vec1)).reshape(3), (vec2 / np.linalg.norm(vec2)).reshape(3)
+	v = np.cross(a, b)
+	c = np.dot(a, b)
+	s = np.linalg.norm(v)
+	kmat = np.array([[0, -v[2], v[1]], [v[2], 0, -v[0]], [-v[1], v[0], 0]])
+	rotation_matrix = np.eye(3) + kmat + kmat.dot(kmat) * ((1 - c) / (s ** 2))
+	return rotation_matrix
 
 
 def rotationMatrixToEulerAngles(R) :
@@ -291,3 +312,32 @@ def rotationMatrixToEulerAngles(R) :
 		y = math.atan2(-R[2,0], sy)
 		z = 0
 	return [x, y, z]
+
+
+def plot_speed_error(lam,speed,error,angle_error,cmd_v,peaks=[],path='',error_window=2):
+	fig, ax1 = plt.subplots()
+	ax2 = ax1.twinx()
+	ax1.plot(lam, speed, 'g-', label='Speed')
+	if len(error)>0:
+		ax2.plot(lam, error, 'b-',label='Error')
+	if len(peaks)>0:
+		ax2.scatter(lam[peaks],error[peaks],label='peaks')
+	if len(angle_error)>0:
+		ax2.plot(lam, np.degrees(angle_error), 'y-',label='Normal Error')
+	ax2.axis(ymin=0,ymax=error_window)
+	ax1.axis(ymin=0,ymax=1.2*cmd_v)
+
+	ax1.set_xlabel('lambda (mm)')
+	ax1.set_ylabel('Speed/lamdot (mm/s)', color='g')
+	ax2.set_ylabel('Error/Normal Error (mm/deg)', color='b')
+	plt.title("Speed and Error Plot")
+	ax1.legend(loc="upper right")
+
+	ax2.legend(loc="upper left")
+
+	plt.legend()
+	if len(peaks)>0:
+		plt.savefig(path)
+		plt.clf()
+	else:
+		plt.show()

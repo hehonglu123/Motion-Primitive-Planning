@@ -15,7 +15,7 @@ def main():
 	et=EGM_toolbox(egm,robot)
 	idx_delay=int(et.delay/et.ts)
 
-	dataset='from_NX/'
+	dataset='wood/'
 	solution_dir='baseline/'
 	data_dir="../../data/"+dataset+solution_dir
 	curve = read_csv(data_dir+"Curve_in_base_frame.csv",header=None).values
@@ -35,9 +35,9 @@ def main():
 
 	extension_num=100
 
-	v=150
-	v_prev=200
-	v_prev_possible=100
+	v=50
+	v_prev=100
+	v_prev_possible=30
 	i=0
 	while True:
 		steps=int((lam[-1]/v)/et.ts)
@@ -54,12 +54,16 @@ def main():
 		curve_cmd_ext,curve_cmd_R_ext=et.add_extension_egm_cartesian(curve_cmd,curve_cmd_R,extension_num=extension_num)
 
 		###5 run execute
-		curve_js_all_new,avg_curve_js, timestamp_d=average_5_egm_car_exe(et,curve_cmd_ext,curve_cmd_R_ext)
+		# curve_js_all_new,curve_exe_js, timestamp=average_5_egm_car_exe(et,curve_cmd_ext,curve_cmd_R_ext)
 
-		df=DataFrame({'timestamp':timestamp_d,'q0':avg_curve_js[:,0],'q1':avg_curve_js[:,1],'q2':avg_curve_js[:,2],'q3':avg_curve_js[:,3],'q4':avg_curve_js[:,4],'q5':avg_curve_js[:,5]})
+		###1 run execute
+		et.jog_joint_cartesian(curve_cmd_ext[0],curve_cmd_R_ext[0])
+		timestamp,curve_exe_js=et.traverse_curve_cartesian(curve_cmd_ext,curve_cmd_R_ext)
+
+		df=DataFrame({'timestamp':timestamp,'q0':curve_exe_js[:,0],'q1':curve_exe_js[:,1],'q2':curve_exe_js[:,2],'q3':curve_exe_js[:,3],'q4':curve_exe_js[:,4],'q5':curve_exe_js[:,5]})
 		df.to_csv('recorded_data/iteration'+str(i)+'.csv',header=False,index=False)
 
-		lam, curve_exe, curve_exe_R, speed=logged_data_analysis(robot,timestamp_d[extension_num+idx_delay:-extension_num+idx_delay],avg_curve_js[extension_num+idx_delay:-extension_num+idx_delay])
+		lam, curve_exe, curve_exe_R, speed=logged_data_analysis(robot,timestamp[extension_num+idx_delay:-extension_num+idx_delay],curve_exe_js[extension_num+idx_delay:-extension_num+idx_delay])
 
 		error,angle_error=calc_all_error_w_normal(curve_exe,curve[:,:3],curve_exe_R[:,:,-1],curve[:,3:])
 		print('v',v)

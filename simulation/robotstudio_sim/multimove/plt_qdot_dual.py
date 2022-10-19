@@ -41,7 +41,6 @@ def main():
 	qdot2_all=np.gradient(curve_exe_js2,axis=0)/np.tile([np.gradient(timestamp)],(6,1)).T
 	qddot2_all=np.gradient(qdot2_all,axis=0)/np.tile([np.gradient(timestamp)],(6,1)).T
 
-	print(qddot1_all[:,3])
 	joint_acc_limit1=robot1.get_acc(curve_exe_js1)
 	joint_acc_limit2=robot2.get_acc(curve_exe_js2)
 
@@ -62,7 +61,40 @@ def main():
 		plt.show()
 
 
+	plt.figure()
+	plt.plot(timestamp,qdot1_all)
+	plt.title('qdot time plot')
+	plt.legend(['joint1','joint2','joint3','joint4','joint5','joint6'])
+	plt.show()
+	plt.figure()
+	plt.plot(lam_exe,qdot1_all)
+	plt.title('qdot lam plot')
+	plt.legend(['joint1','joint2','joint3','joint4','joint5','joint6'])
+	plt.show()
 
+
+	plt.figure()
+	plt.plot(timestamp,qddot1_all)
+	plt.title('qddot time plot')
+	plt.legend(['joint1','joint2','joint3','joint4','joint5','joint6'])
+	plt.show()
+	plt.figure()
+	plt.plot(lam_exe,qddot1_all)
+	plt.title('qddot lam plot')
+	plt.legend(['joint1','joint2','joint3','joint4','joint5','joint6'])
+	plt.show()
+
+	qdddot1_all=np.gradient(qddot1_all,axis=0)/np.tile([np.gradient(timestamp)],(6,1)).T
+	plt.figure()
+	plt.plot(timestamp,qdddot1_all)
+	plt.title('qdddot time plot')
+	plt.legend(['joint1','joint2','joint3','joint4','joint5','joint6'])
+	plt.show()
+	plt.figure()
+	plt.plot(lam_exe,qdddot1_all)
+	plt.title('qdddot lam plot')
+	plt.legend(['joint1','joint2','joint3','joint4','joint5','joint6'])
+	plt.show()
 
 if __name__ == "__main__":
 	main()

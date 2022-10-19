@@ -75,6 +75,7 @@ def main():
             ax2.legend(loc="upper left")
 
             ###plot breakpoints index
+            breakpoints[1:]=breakpoints[1:]-1
             for bp in breakpoints:
                 plt.axvline(x=lam_original[bp])
 

@@ -14,12 +14,12 @@ from MotionSend import *
 from dual_arm import *
 
 def main():
-    dataset='wood/'
+    dataset='from_NX/'
     data_dir="../../../data/"+dataset
-    solution_dir=data_dir+'dual_arm/'+'diffevo_pose1/'
-    cmd_dir=solution_dir+'50L/'
+    solution_dir=data_dir+'dual_arm/'+'diffevo_pose2/'
+    cmd_dir=solution_dir+'30L/'
     
-    relative_path,robot1,robot2,base2_R,base2_p,lam_relative_path,lam1,lam2,curve_js1,curve_js2=initialize_data(dataset,data_dir,solution_dir,cmd_dir)
+    relative_path,robot1,robot2,base2_R,base2_p,lam_relative_path,lam1,lam2,curve_js1,curve_js2=initialize_data(dataset,data_dir,solution_dir)
 
     ms = MotionSend(robot1=robot1,robot2=robot2,base2_R=base2_R,base2_p=base2_p)
 
@@ -29,16 +29,11 @@ def main():
     breakpoints1,primitives1,p_bp1,q_bp1=ms.extract_data_from_cmd(cmd_dir+'command1.csv')
     breakpoints2,primitives2,p_bp2,q_bp2=ms.extract_data_from_cmd(cmd_dir+'command2.csv')
 
-    breakpoints1[1:]=breakpoints1[1:]-1
-    breakpoints2[2:]=breakpoints2[2:]-1
-
-    
-
     p_bp_start=copy.deepcopy(p_bp2[0])
     p_bp_end=copy.deepcopy(p_bp2[-1])
 
 
-    vd_relative=1000
+    vd_relative=2500
 
     s1_all,s2_all=calc_individual_speed(vd_relative,lam1,lam2,lam_relative_path,breakpoints1)
     v2_all=[]
@@ -49,7 +44,7 @@ def main():
 
     s1_cmd,s2_cmd=cmd_speed_profile(breakpoints1,s1_all,s2_all)
 
-    zone=10
+    zone=50
     z= zonedata(False,zone,1.5*zone,1.5*zone,0.15*zone,1.5*zone,0.15*zone)
 
 

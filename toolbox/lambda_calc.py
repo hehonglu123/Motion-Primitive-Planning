@@ -273,7 +273,6 @@ def traj_speed_est(robot,curve_js,lam,vd,qdot_init=[]):
 
 	###alpha: coeff of bounded qdot by qddot constraint
 	alpha_all=[1]
-	###acc_limit:[ 5.44542727  5.09636142  7.29547627 42.0100751  27.00024353 59.34119457]
 	for i in range(1,len(curve_js)):
 		qddot=(qdot[i]-qdot_act[-1])/dt[i]
 
@@ -639,18 +638,13 @@ def main3():
 	from blending import form_traj_from_bp,blend_js_from_primitive
 	dataset='wood/'
 	solution_dir='baseline/'
-	robot=abb6640(d=50, acc_dict_path='robot_info/6640acc.pickle')
+	robot=abb6640(d=50, acc_dict_path='robot_info/6640acc_new.pickle')
 	curve = read_csv('../data/'+dataset+solution_dir+'/Curve_in_base_frame.csv',header=None).values
 
 	curve_js=read_csv('../data/'+dataset+solution_dir+'/Curve_js.csv',header=None).values
 	curve=curve[::1000]
 	curve_js=curve_js[::1000]
 	lam_original=calc_lam_cs(curve)
-	
-	###get joint acceleration at each pose
-	joint_acc_limit=[]
-	for q in curve_js:
-		joint_acc_limit.append(robot.get_acc(q))
 
 	ms = MotionSend()
 	
@@ -673,6 +667,9 @@ def main3():
 		lam_exe, curve_exe, curve_exe_R,curve_exe_js, act_speed, timestamp=ms.logged_data_analysis(robot,df,realrobot=True)
 		lam_exe, curve_exe, curve_exe_R,curve_exe_js, act_speed, timestamp=ms.chop_extension(curve_exe, curve_exe_R,curve_exe_js, act_speed, timestamp,curve[0,:3],curve[-1,:3])
 
+		###get joint acceleration at each pose
+		joint_acc_limit=robot.get_acc(curve_exe_js)
+
 		speed_est=traj_speed_est(robot,curve_exe_js,lam_exe,v_cmd)
 
 
@@ -680,7 +677,7 @@ def main3():
 		qddot_all=np.gradient(qdot_all,axis=0)/np.tile([np.gradient(timestamp)],(6,1)).T
 		qddot_violate_idx=np.array([])
 		for i in range(len(curve_exe_js[0])):
-			qddot_violate_idx=np.append(qddot_violate_idx,np.argwhere(np.abs(qddot_all[:,i])>robot.joint_acc_limit[i]))
+			qddot_violate_idx=np.append(qddot_violate_idx,np.argwhere(np.abs(qddot_all[:,i])>joint_acc_limit[:,i]))
 		qddot_violate_idx=np.unique(qddot_violate_idx).astype(int)
 		# for idx in qddot_violate_idx:
 		# 	plt.axvline(x=lam_exe[idx],c='orange')

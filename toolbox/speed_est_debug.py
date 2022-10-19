@@ -13,11 +13,6 @@ curve=curve[::1000]
 curve_js=curve_js[::1000]
 lam_original=calc_lam_cs(curve)
 
-###get joint acceleration at each pose
-joint_acc_limit=[]
-for q in curve_js:
-	joint_acc_limit.append(robot.get_acc(q))
-
 ms = MotionSend()
 
 breakpoints,primitives,p_bp,q_bp=ms.extract_data_from_cmd('../data/'+dataset+'baseline/100L/command.csv')
@@ -34,6 +29,7 @@ for v_cmd in v_cmds:
 	lam_exe, curve_exe, curve_exe_R,curve_exe_js, act_speed, timestamp=ms.logged_data_analysis(robot,df,realrobot=True)
 	# lam_exe, curve_exe, curve_exe_R,curve_exe_js, act_speed, timestamp=ms.chop_extension(curve_exe, curve_exe_R,curve_exe_js, act_speed, timestamp,curve[0,:3],curve[-1,:3])
 
+	joint_acc_limit=robot.get_acc(curve_exe_js)
 	v_cmd=2000
 	speed_est=traj_speed_est(robot,curve_exe_js,lam_exe,v_cmd)
 
@@ -42,7 +38,7 @@ for v_cmd in v_cmds:
 	qddot_all=np.gradient(qdot_all,axis=0)/np.tile([np.gradient(timestamp)],(6,1)).T
 	qddot_violate_idx=np.array([])
 	for i in range(len(curve_exe_js[0])):
-		qddot_violate_idx=np.append(qddot_violate_idx,np.argwhere(np.abs(qddot_all[:,i])>robot.joint_acc_limit[i]))
+		qddot_violate_idx=np.append(qddot_violate_idx,np.argwhere(np.abs(qddot_all[:,i])>joint_acc_limit[:,i]))
 	qddot_violate_idx=np.unique(qddot_violate_idx).astype(int)
 	# for idx in qddot_violate_idx:
 	# 	plt.axvline(x=lam_exe[idx],c='orange')
@@ -63,4 +59,9 @@ for v_cmd in v_cmds:
 	ax.plot3D(curve[:,0], curve[:,1], curve[:,2], c='gray',label='original')
 	ax.plot3D(curve_exe[:,0], curve_exe[:,1], curve_exe[:,2], c='red',label='execution')
 	ax.scatter3D(curve_exe[qddot_violate_idx,0], curve_exe[qddot_violate_idx,1], curve_exe[qddot_violate_idx,2], c=curve_exe[qddot_violate_idx,2], cmap='Greens',label='commanded points')
+	plt.show()
+
+	plt.figure()
+	plt.plot(timestamp,qdot_all)
+	plt.legend(['joint1','joint2','joint3','joint4','joint5','joint6'])
 	plt.show()
