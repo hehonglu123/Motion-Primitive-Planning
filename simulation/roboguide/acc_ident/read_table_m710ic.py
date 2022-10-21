@@ -13,7 +13,7 @@ dic = pickle.load(open('m710ic/acc.pickle','rb'))
 for i in range(1,7):
    this_dic=pickle.load(open('m710ic/acc'+str(i)+'.pickle','rb'))
    dic.update(this_dic)
-
+pickle.dump(dic, open('m710ic_acc.pickle','wb'))
 
 ###surface plots of accleration limits, x as q2, y as q3
 x=[]

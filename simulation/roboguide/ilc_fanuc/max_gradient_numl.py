@@ -207,7 +207,6 @@ def main():
                     ax2.legend(loc=0)
 
                     # save fig
-                    plt.legend()
                     plt.savefig(ilc_output+'iteration_'+str(i))
                     plt.clf()
                     # fig.canvas.manager.window.move(1300,99)

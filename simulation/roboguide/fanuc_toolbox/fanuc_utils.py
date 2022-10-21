@@ -16,7 +16,7 @@ from robots_def import *
 class MotionSendFANUC(object):
     def __init__(self,group=1,uframe=1,utool=2,robot_ip='127.0.0.2',robot1=m710ic(d=50),robot2=m900ia(),group2=2,uframe2=1,utool2=2,robot_ip2=None) -> None:
         
-        self.client = FANUCClient(robot_ip)
+        # self.client = FANUCClient(robot_ip)
         if robot_ip2 is not None:
             self.client = FANUCClient(robot_ip=robot_ip,robot_ip2=robot_ip2,robot_user2='Robot2')
         
@@ -81,7 +81,6 @@ class MotionSendFANUC(object):
             else: #moveJ
                 robt = jointtarget(group,uframe,utool,np.degrees(q_bp[i][0]),[0]*6)
                 tp.moveJ(robt,this_speed,'%',this_zone)
-        
         return client.execute_motion_program(tp)
 
     def exec_motions_multimove(self,robot1,robot2,primitives1,primitives2,p_bp1,p_bp2,q_bp1,q_bp2,speed,zone,coord=[]):

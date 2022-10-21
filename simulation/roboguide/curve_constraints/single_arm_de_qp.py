@@ -13,7 +13,6 @@ def main():
     # dataset='blade'
     curve = read_csv("../ilc_fanuc/data/"+dataset+"/Curve_in_base_frame.csv",header=None).values
 
-
     opt=lambda_opt(curve[:,:3],curve[:,3:],robot1=m710ic(d=50),steps=50)
 
     ###path constraints, position constraint and curve normal constraint
