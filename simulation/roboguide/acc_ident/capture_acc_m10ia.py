@@ -249,7 +249,7 @@ fq2low_q3 = interp1d(q3_up_sample,q2_low_sample)
 #####################first & second joint acc both depends on second and third joint#####################################
 # jog([0,0,0,0,0,0])
 # q2_test_lower = robot.lower_limit[1]+resolution
-q2_test_lower = robot.lower_limit[1]+resolution*40
+q2_test_lower = robot.lower_limit[1]+resolution*69
 q2_test_upper = robot.upper_limit[1]
 for q2 in np.arange(q2_test_lower,q2_test_upper,resolution):
 	
@@ -259,7 +259,7 @@ for q2 in np.arange(q2_test_lower,q2_test_upper,resolution):
 		q3_test_upper = np.max(q3_up_sample)
 	
 	if q2 > np.min(q2_up_sample):
-		q3_test_lower = fq3low_q2(fq3low_q2)
+		q3_test_lower = fq3low_q2(q2)
 	else:
 		q3_test_lower = np.min(q3_low_sample)
 
@@ -278,9 +278,9 @@ for q2 in np.arange(q2_test_lower,q2_test_upper,resolution):
 		print("===================================")
 		
 		# save when a qd is finished
-		with open('m10ia/acc3.txt','w+') as f:
+		with open('m10ia/acc5.txt','w+') as f:
 			f.write(str(dict_table))
-		pickle.dump(dict_table, open('m10ia/acc3.pickle','wb'))
+		pickle.dump(dict_table, open('m10ia/acc5.pickle','wb'))
 
 
 
