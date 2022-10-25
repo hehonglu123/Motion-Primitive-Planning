@@ -52,6 +52,6 @@ for num_l in num_ls:
 	df=DataFrame({'breakpoints':breakpoints,'primitives':primitives_choices1,'p_bp':points1,'q_bp':q_bp1})
 	df.to_csv(cmd_dir+'command1.csv',header=True,index=False)
 
-	primitives_choices2=['moveabsj']+['movel']*num_l
+	primitives_choices2=['moveabsj']+['moveabsj']*num_l
 	df=DataFrame({'breakpoints':breakpoints,'primitives':primitives_choices2,'p_bp':points2,'q_bp':q_bp2})
 	df.to_csv(cmd_dir+'command2.csv',header=True,index=False)

@@ -11,6 +11,19 @@ from scipy.optimize import fminbound
 from scipy.signal import find_peaks
 # from dual_arm import *
 
+def calc_curvature(curve):
+	lam=calc_lam_cs(curve)
+	dlam=np.gradient(lam)
+	curve_tan=np.gradient(curve,axis=0)
+	curve_tan_mag = np.linalg.norm(curve_tan,axis=1)
+	curve_tan_unit = curve_tan / curve_tan_mag[:, np.newaxis]
+
+	d_curve_tan_unit=np.gradient(curve_tan_unit,axis=0)
+	curvature=np.linalg.norm(d_curve_tan_unit,axis=1)/dlam
+
+	return curvature
+
+
 def calc_lam_js(curve_js,robot):
 	#calculate lambda from joints
 	lam=[0]

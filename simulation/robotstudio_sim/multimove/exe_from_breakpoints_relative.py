@@ -19,7 +19,7 @@ def main():
     dataset='from_NX/'
     data_dir="../../../data/"+dataset
     solution_dir=data_dir+'dual_arm/'+'diffevo_pose2_2/'
-    cmd_dir=solution_dir+'10L/'
+    cmd_dir=solution_dir+'10L_relative/'
     
     relative_path,robot1,robot2,base2_R,base2_p,lam_relative_path,lam1,lam2,curve_js1,curve_js2=initialize_data(dataset,data_dir,solution_dir)
 
@@ -60,7 +60,7 @@ def main():
     ###extension
     # p_bp1,q_bp1,p_bp2,q_bp2=ms.extend_dual(ms.robot1,p_bp1,q_bp1,primitives1,ms.robot2,p_bp2,q_bp2,primitives2,breakpoints1)
 
-    logged_data=ms.exec_motions_multimove(primitives1,primitives2,p_bp1,p_bp2,q_bp1,q_bp2,v1,v2_all,z1_all,z2_all)
+    logged_data=ms.exec_motions_multimove_relative(primitives1,primitives2,p_bp1,p_bp2,q_bp1,q_bp2,v1,v2_all,z1_all,z2_all)
     # Write log csv to file
     with open("recorded_data/curve_exe_v"+str(vd_relative)+'_z'+str(zone)+'.csv',"w") as f:
         f.write(logged_data)
