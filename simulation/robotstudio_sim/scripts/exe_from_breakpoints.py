@@ -26,6 +26,8 @@ def main():
     curve = read_csv(data_dir+"Curve_in_base_frame.csv",header=None).values
     lam_original=calc_lam_cs(curve[:,:3])
 
+    robot=robot_obj('../../../config/abb_6640_180_255_robot_default_config.yml',tool_file_path='../../../config/paintgun.csv',d=50,acc_dict_path='')
+
     robot=abb6640(d=50)
 
     v250 = speeddata(250,9999999,9999999,999999)
@@ -45,8 +47,9 @@ def main():
     for s in speed:
         for z in zone: 
             breakpoints,primitives, p_bp,q_bp=ms.extract_data_from_cmd(cmd_dir+"command.csv")
+            q_bp_end=q_bp[-1][0]
             p_bp, q_bp = ms.extend(robot, q_bp, primitives, breakpoints, p_bp,extension_start=100,extension_end=100)
-
+            print(q_bp[0][0])
             logged_data= ms.exec_motions(robot,primitives,breakpoints,p_bp,q_bp,speed[s],zone[z])
 
             StringData=StringIO(logged_data)

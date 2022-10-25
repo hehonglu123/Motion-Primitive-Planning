@@ -325,3 +325,11 @@ def plot_speed_error(lam,speed,error,angle_error,cmd_v,peaks=[],path='',error_wi
 		plt.clf()
 	else:
 		plt.show()
+
+def unwrapped_angle_check(q_init,q_all):
+
+    temp_q=q_all-q_init
+    temp_q = np.unwrap(temp_q)
+    order=np.argsort(np.linalg.norm(temp_q,axis=1))
+    # return q_all[order[0]]
+    return temp_q[order[0]]+q_init
