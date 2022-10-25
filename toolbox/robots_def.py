@@ -111,10 +111,11 @@ class robot_obj(object):
 
 		return np.array(acc_limit_all)
 
-	def fwd(self,q_all,world=False):
+	def fwd(self,q_all,world=False,qlim_override=False):
 		###robot forworld kinematics
 		#q_all:			robot joint angles or list of robot joint angles
 		#world:			bool, if want to get coordinate in world frame or robot base frame
+
 		if q_all.ndim==1:
 			q=q_all
 			pose_temp=self.tesseract_robot.fwdkin(q)	
@@ -144,10 +145,12 @@ class robot_obj(object):
 		if len(last_joints)==0:
 			return self.tesseract_robot.invkin(Transform(R,p),np.zeros(len(self.joint_vel_limit)))
 		else:	###sort solutions
-			print('last joints: ',last_joints)
 			theta_v=self.tesseract_robot.invkin(Transform(R,p),last_joints)
-			print(equivalent_configurations(self.robot, theta_v, last_joints))
-			return	equivalent_configurations(self.robot, theta_v, last_joints)		###run equivalent to get all solutions +/-360
+			eq_theta_v=equivalent_configurations(self.robot, theta_v, last_joints)
+			theta_v.extend(eq_theta_v)
+
+			theta_dist = np.linalg.norm(np.subtract(theta_v,last_joints), axis=1)
+			return [theta_v[i] for i in list(np.argsort(theta_dist))]
 
 			
 #ALL in mm
@@ -609,11 +612,23 @@ def main():
 	return
 
 def invtest():
+	# robot=abb6640(d=50)
+	# last_joints=[-0.84190536,  0.61401203,  0.2305977,  -2.70622154, -0.74584949, -2.21577141]
+	# pose=robot.fwd(last_joints)
+	# print('correct: ',robot.inv(pose.p,pose.R,last_joints))
+	# robot2=robot_obj('../config/abb_6640_180_255_robot_default_config.yml',tool_file_path='../config/paintgun.csv',d=50,acc_dict_path='')
+	# theta_v=robot2.inv(pose.p,pose.R)
+	# print('passed to tes:',theta_v[0])
+	# print('equivalent_configurations: ',robot2.tesseract_robot.redundant_solutions(theta_v[0]))
+
 	robot=abb6640(d=50)
 	last_joints=[-0.84190536,  0.61401203,  0.2305977,  -2.70622154, -0.74584949, -2.21577141]
 	pose=robot.fwd(last_joints)
 	print('correct: ',robot.inv(pose.p,pose.R,last_joints))
 	theta_v=robot.inv(pose.p,pose.R)
+	print('inv solutions: ',theta_v)
 	print('equivalent_configurations: ',equivalent_configurations(robot.robot_def, theta_v, last_joints))
+
+
 if __name__ == '__main__':
 	invtest()

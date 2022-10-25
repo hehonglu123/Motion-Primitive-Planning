@@ -61,8 +61,8 @@ class MotionSend(object):
 
 	def exec_motions(self,robot,primitives,breakpoints,p_bp,q_bp,speed,zone):
 
-		mp = MotionProgram(tool=tooldata(True,pose(R90.T@robot.p_tool,R2q(robot.R_tool@R90.T)),loaddata(1,[0,0,0.001],[1,0,0,0],0,0,0)))
-		# mp = MotionProgram(tool=tooldata(True,pose(robot.p_tool,R2q(robot.R_tool)),loaddata(1,[0,0,0.001],[1,0,0,0],0,0,0)))
+		# mp = MotionProgram(tool=tooldata(True,pose(R90.T@robot.p_tool,R2q(robot.R_tool@R90.T)),loaddata(1,[0,0,0.001],[1,0,0,0],0,0,0)))
+		mp = MotionProgram(tool=tooldata(True,pose(robot.p_tool,R2q(robot.R_tool)),loaddata(1,[0,0,0.001],[1,0,0,0],0,0,0)))
 		###change cirpath mode
 		mp.CirPathMode(CirPathModeSwitch.ObjectFrame)
 
@@ -132,8 +132,7 @@ class MotionSend(object):
 		
 		# print(mp.get_program_rapid())
 		log_results = self.client.execute_motion_program(mp)
-		log_results_str = log_results.decode('ascii')
-		return log_results_str
+		return log_results
 
 	def exe_from_file(self,robot,filename,speed,zone):
 		breakpoints,primitives, p_bp,q_bp=self.extract_data_from_cmd(filename)
@@ -582,27 +581,17 @@ class MotionSend(object):
 		return ms.exec_motions_multimove(breakpoints1,primitives1,primitives2,p_bp1,p_bp2,q_bp1,q_bp2,speed1,speed2,zone1,zone2)
 
 
-	def logged_data_analysis(self,robot,df,realrobot=True):
-		q1=df[' J1'].tolist()
-		q2=df[' J2'].tolist()
-		q3=df[' J3'].tolist()
-		q4=df[' J4'].tolist()
-		q5=df[' J5'].tolist()
-		q6=df[' J6'].tolist()
-		cmd_num=np.array(df[' cmd_num'].tolist()).astype(float)
+	def logged_data_analysis(self,robot,log_results,realrobot=True):
+		cmd_num=log_results.data[:,1]
 		#find closest to 5 cmd_num
 		idx = np.absolute(cmd_num-5).argmin()
-		# print('cmd_num ',cmd_num[idx])
 		start_idx=np.where(cmd_num==cmd_num[idx])[0][0]
-		curve_exe_js=np.radians(np.vstack((q1,q2,q3,q4,q5,q6)).T.astype(float)[start_idx:])
-		timestamp=np.array(df['timestamp'].tolist()[start_idx:]).astype(float)
-		timestep=np.average(timestamp[1:]-timestamp[:-1])
-		# np.set_printoptions(threshold=sys.maxsize)
-		# print(timestamp)
+		curve_exe_js=np.radians(log_results.data[start_idx:,2:])
+		timestamp=log_results.data[start_idx:,0]
 		if realrobot:
 			timestamp, curve_exe_js=lfilter(timestamp, curve_exe_js)
 
-		act_speed=[]
+		act_speed=[0]
 		lam=[0]
 		curve_exe=[]
 		curve_exe_R=[]
@@ -621,34 +610,17 @@ class MotionSend(object):
 				pass
 
 		act_speed=moving_average(act_speed,padding=True)
-		
 		return np.array(lam), np.array(curve_exe), np.array(curve_exe_R),np.array(curve_exe_js), np.array(act_speed), timestamp-timestamp[0]
 
-	def logged_data_analysis_multimove(self,df,base2_R,base2_p,realrobot=True):
-		q1_1=df[' J1'].tolist()[1:-1]
-		q1_2=df[' J2'].tolist()[1:-1]
-		q1_3=df[' J3'].tolist()[1:-1]
-		q1_4=df[' J4'].tolist()[1:-1]
-		q1_5=df[' J5'].tolist()[1:-1]
-		q1_6=df[' J6'].tolist()[1:-1]
-		q2_1=df[' J1_2'].tolist()[1:-1]
-		q2_2=df[' J2_2'].tolist()[1:-1]
-		q2_3=df[' J3_2'].tolist()[1:-1]
-		q2_4=df[' J4_2'].tolist()[1:-1]
-		q2_5=df[' J5_2'].tolist()[1:-1]
-		q2_6=df[' J6_2'].tolist()[1:-1]
-		timestamp=df['timestamp'].tolist()[1:-1]
-
-		cmd_num=np.array(df[' cmd_num'].tolist()[1:-1]).astype(float)
+	def logged_data_analysis_multimove(self,log_results,base2_R,base2_p,realrobot=True):
+		cmd_num=log_results.data[:,1]
 
 		idx = np.absolute(cmd_num-5).argmin()
 		start_idx=np.where(cmd_num==cmd_num[idx])[0][0]
 
-		curve_exe_js1=np.radians(np.vstack((q1_1,q1_2,q1_3,q1_4,q1_5,q1_6)).T.astype(float)[start_idx:])
-		curve_exe_js2=np.radians(np.vstack((q2_1,q2_2,q2_3,q2_4,q2_5,q2_6)).T.astype(float)[start_idx:])
-		timestamp=np.array(timestamp[start_idx:]).astype(float)
-
-		timestep=np.average(timestamp[1:]-timestamp[:-1])
+		curve_exe_js1=np.radians(log_results.data[start_idx:,2:8])
+		curve_exe_js2=np.radians(log_results.data[start_idx:,8:])
+		timestamp=log_results.data[start_idx:,0]
 
 
 		if realrobot:
@@ -657,7 +629,7 @@ class MotionSend(object):
 			curve_exe_js1=curve_exe_js_all[:,:6]
 			curve_exe_js2=curve_exe_js_all[:,6:]
 
-		act_speed=[]
+		act_speed=[0]
 		lam=[0]
 		relative_path_exe=[]
 		relative_path_exe_R=[]
