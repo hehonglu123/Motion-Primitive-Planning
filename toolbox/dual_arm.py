@@ -47,7 +47,7 @@ def calc_individual_speed(vd_relative,lam1,lam2,lam_relative,breakpoints):
 
 	return s1_all,s2_all
 
-def initialize_data(dataset,data_dir,solution_dir):
+def initialize_data(dataset,data_dir,solution_dir,robot1,robot2):
 	relative_path = read_csv(data_dir+"Curve_dense.csv", header=None).values
 
 	###calculate desired TCP speed for both arm
@@ -64,16 +64,12 @@ def initialize_data(dataset,data_dir,solution_dir):
 	base2_R=H_1200[:3,:3]
 	base2_p=1000*H_1200[:-1,-1]
 
-	with open(solution_dir+'tcp.yaml') as file:
-		H_tcp = np.array(yaml.safe_load(file)['H'],dtype=np.float64)
-	robot1=abb6640(d=50)
-	robot2=abb1200(R_tool=H_tcp[:3,:3],p_tool=H_tcp[:-1,-1])
 
 	lam1=calc_lam_js(curve_js1,robot1)
 	lam2=calc_lam_js(curve_js2,robot2)
 
 
-	return relative_path,robot1,robot2,base2_R,base2_p,lam_relative_path,lam1,lam2,curve_js1,curve_js2
+	return relative_path,base2_R,base2_p,lam_relative_path,lam1,lam2,curve_js1,curve_js2
 
 
 def cmd_speed_profile(breakpoints,s1_all,s2_all):

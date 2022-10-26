@@ -30,6 +30,7 @@ class robot_obj(object):
 		with open(def_path, 'r') as f:
 			self.robot = rr_rox.load_robot_info_yaml_to_robot(f)
 
+		self.def_path=def_path
 		#define robot without tool
 		self.robot_def_nT=Robot(self.robot.H,self.robot.P,self.robot.joint_type)
 
@@ -44,16 +45,6 @@ class robot_obj(object):
 			self.base_H=np.loadtxt(base_transformation_file,delimiter=',')
 		else:
 			self.base_H=np.eye(4)
-
-		if len(self.robot.joint_names)>6:	#redundant kinematic chain
-			tesseract_robot = rox_tesseract.TesseractRobot(self.robot, "robot", invkin_solver="KDL")
-		elif 'UR' in def_path:			#UR
-			tesseract_robot = rox_tesseract.TesseractRobot(self.robot, "robot", invkin_solver="URInvKin")
-		else:							#sepherical joint
-			tesseract_robot = rox_tesseract.TesseractRobot(self.robot, "robot", invkin_solver="OPWInvKin")
-
-		self.tesseract_robot=tesseract_robot
-
 
 		###set attributes
 		self.upper_limit=self.robot.joint_upper_limit 
@@ -73,16 +64,54 @@ class robot_obj(object):
 			q3_acc_n=[]
 			q3_acc_p=[]
 			for key, value in acc_dict.items():
-			   q2_config.append(key[0])
-			   q3_config.append(key[1])
-			   q1_acc_n.append(value[0])
-			   q1_acc_p.append(value[1])
-			   q2_acc_n.append(value[2])
-			   q2_acc_p.append(value[3])
-			   q3_acc_n.append(value[4])
-			   q3_acc_p.append(value[5])
+				q2_config.append(key[0])
+				q3_config.append(key[1])
+				q1_acc_n.append(value[0%len(value)])
+				q1_acc_p.append(value[1%len(value)])
+				q2_acc_n.append(value[2%len(value)])
+				q2_acc_p.append(value[3%len(value)])
+				q3_acc_n.append(value[4%len(value)])
+				q3_acc_p.append(value[5%len(value)])
 			self.q2q3_config=np.array([q2_config,q3_config]).T
 			self.q1q2q3_acc=np.array([q1_acc_n,q1_acc_p,q2_acc_n,q2_acc_p,q3_acc_n,q3_acc_p]).T
+		
+		###initialize tesseract robot
+		self.initialize_tesseract_robot()
+
+	def initialize_tesseract_robot(self):
+		if len(self.robot.joint_names)>6:	#redundant kinematic chain
+			tesseract_robot = rox_tesseract.TesseractRobot(self.robot, "robot", invkin_solver="KDL")
+		elif 'UR' in self.def_path:			#UR
+			tesseract_robot = rox_tesseract.TesseractRobot(self.robot, "robot", invkin_solver="URInvKin")
+		else:							#sepherical joint
+			tesseract_robot = rox_tesseract.TesseractRobot(self.robot, "robot", invkin_solver="OPWInvKin")
+		self.tesseract_robot=tesseract_robot
+
+	def __getstate__(self):
+		state = self.__dict__.copy()
+		del state['tesseract_robot']
+		return state
+
+	def __setstate__(self, state):
+		# Restore instance attributes (tesseract).
+		self.__dict__.update(state)
+		self.initialize_tesseract_robot()
+
+
+	# def get_acc_old(self,q_all,direction=[]):
+	# 	#if a single point
+	# 	if q_all.ndim==1:
+	# 		###find closest q2q3 config, along with constant last 3 joints acc
+	# 		idx=np.argmin(np.linalg.norm(self.q2q3_config-q_all[1:3],axis=1))
+	# 		return np.append(self.q1q2q3_acc[idx],self.joint_acc_limit[-3:])
+	# 	else:
+	# 		acc_limit_all=[]
+	# 		for q in q_all:
+	# 			idx=np.argmin(np.linalg.norm(self.q2q3_config-q[1:3],axis=1))
+	# 			acc_limit_all.append(np.append(self.q1q2q3_acc[idx],self.joint_acc_limit[-3:]))
+
+	# 	return np.array(acc_limit_all)
+
 
 	def get_acc(self,q_all,direction=[]):
 		###get acceleration limit from q config, assume last 3 joints acc fixed direction is 3 length vector, 0 is -, 1 is +
@@ -91,6 +120,9 @@ class robot_obj(object):
 			###find closest q2q3 config, along with constant last 3 joints acc
 			idx=np.argmin(np.linalg.norm(self.q2q3_config-q_all[1:3],axis=1))
 			acc_lim=[]
+			if len(direction)==0:
+				raise AssertionError('direciton not provided')
+				return
 			for d in direction:
 				acc_lim.append(self.q1q2q3_acc[idx][2*len(acc_lim)+d])
 
@@ -142,6 +174,7 @@ class robot_obj(object):
 		return self.tesseract_robot.jacobian(q)
 
 	def inv(self,p,R,last_joints=[]):
+		# self.check_tesseract_robot()
 		if len(last_joints)==0:
 			return self.tesseract_robot.invkin(Transform(R,p),np.zeros(len(self.joint_vel_limit)))
 		else:	###sort solutions

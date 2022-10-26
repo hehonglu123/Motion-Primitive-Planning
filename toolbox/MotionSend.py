@@ -37,7 +37,7 @@ class MotionSend(object):
 
 	def moveL_target_relative(self,q1,q2,point):
 		pose1_now=self.robot1.fwd(q1)
-		pose2_world_now=self.robot2.fwd(q2,self.base2_R,self.base2_p)
+		pose2_world_now=self.robot2.fwd(q2,world=True)
 		relative_R=pose2_world_now.R.T@pose1_now.R
 
 		quat=R2q(relative_R)
@@ -258,11 +258,11 @@ class MotionSend(object):
 		mp1.WaitTime(0.1)
 		mp2.WaitTime(0.1)
 		
-		print(mp1.get_program_rapid())
-		print(mp2.get_program_rapid())
+		# print(mp1.get_program_rapid())
+		# print(mp2.get_program_rapid())
 		log_results = self.client.execute_multimove_motion_program([mp1,mp2])
-		log_results_str = log_results.decode('ascii')
-		return log_results_str
+
+		return log_results
 
 	def exec_motions_multimove_relative(self,primitives1,primitives2,p_bp1,p_bp2,q_bp1,q_bp2,speed1,speed2,zone1,zone2):
 
@@ -591,7 +591,7 @@ class MotionSend(object):
 		if realrobot:
 			timestamp, curve_exe_js=lfilter(timestamp, curve_exe_js)
 
-		act_speed=[0]
+		speed=[0]
 		lam=[0]
 		curve_exe=[]
 		curve_exe_R=[]
@@ -603,16 +603,16 @@ class MotionSend(object):
 				lam.append(lam[-1]+np.linalg.norm(curve_exe[i]-curve_exe[i-1]))
 			try:
 				if timestamp[i-1]!=timestamp[i] and np.linalg.norm(curve_exe_js[i-1]-curve_exe_js[i])!=0:
-					act_speed.append(np.linalg.norm(curve_exe[-1]-curve_exe[-2])/(timestamp[i]-timestamp[i-1]))
+					speed.append(np.linalg.norm(curve_exe[-1]-curve_exe[-2])/(timestamp[i]-timestamp[i-1]))
 				else:
-					act_speed.append(act_speed[-1])      
+					speed.append(speed[-1])      
 			except IndexError:
 				pass
 
-		act_speed=moving_average(act_speed,padding=True)
-		return np.array(lam), np.array(curve_exe), np.array(curve_exe_R),np.array(curve_exe_js), np.array(act_speed), timestamp-timestamp[0]
+		speed=moving_average(speed,padding=True)
+		return np.array(lam), np.array(curve_exe), np.array(curve_exe_R),np.array(curve_exe_js), np.array(speed), timestamp-timestamp[0]
 
-	def logged_data_analysis_multimove(self,log_results,base2_R,base2_p,realrobot=True):
+	def logged_data_analysis_multimove(self,log_results,robot1,robot2,realrobot=True):
 		cmd_num=log_results.data[:,1]
 
 		idx = np.absolute(cmd_num-5).argmin()
@@ -629,51 +629,18 @@ class MotionSend(object):
 			curve_exe_js1=curve_exe_js_all[:,:6]
 			curve_exe_js2=curve_exe_js_all[:,6:]
 
-		act_speed=[0]
-		lam=[0]
-		relative_path_exe=[]
-		relative_path_exe_R=[]
-		curve_exe1=[]
-		curve_exe2=[]
-		curve_exe_R1=[]
-		curve_exe_R2=[]
-		for i in range(len(curve_exe_js1)):
-			pose1_now=self.robot1.fwd(curve_exe_js1[i])
-			pose2_now=self.robot2.fwd(curve_exe_js2[i])
-
-			curve_exe1.append(pose1_now.p)
-			curve_exe2.append(pose2_now.p)
-			curve_exe_R1.append(pose1_now.R)
-			curve_exe_R2.append(pose2_now.R)
-
-			pose2_world_now=self.robot2.fwd(curve_exe_js2[i],base2_R,base2_p)
-
-
-			relative_path_exe.append(np.dot(pose2_world_now.R.T,pose1_now.p-pose2_world_now.p))
-			relative_path_exe_R.append(pose2_world_now.R.T@pose1_now.R)
-			if i>0:
-				lam.append(lam[-1]+np.linalg.norm(relative_path_exe[i]-relative_path_exe[i-1]))
-			try:
-				if np.linalg.norm(relative_path_exe[-1]-relative_path_exe[-2])==0:
-					act_speed.append(0)
-				else:
-					if timestamp[i-1]!=timestamp[i]:
-						act_speed.append(np.linalg.norm(relative_path_exe[-1]-relative_path_exe[-2])/(timestamp[i]-timestamp[i-1]))
-					else:
-						act_speed.append(act_speed[-1])
-					
-			except IndexError:
-				pass
+	
+		curve_exe1,curve_exe2,curve_exe_R1,curve_exe_R2,relative_path_exe,relative_path_exe_R=self.form_relative_path(curve_exe_js1,curve_exe_js2,robot1,robot2)
+		lam=calc_lam_cs(relative_path_exe)
 
 		###speed filter
-		act_speed=moving_average(act_speed,padding=True)
-		
-		# act_speed=replace_outliers(np.array(act_speed))
-		# act_speed=replace_outliers2(act_speed)
+		speed=np.gradient(lam)/np.gradient(timestamp)
+		speed=moving_average(speed,padding=True)
 
-		return np.array(lam), np.array(curve_exe1),np.array(curve_exe2), np.array(curve_exe_R1),np.array(curve_exe_R2),curve_exe_js1,curve_exe_js2, act_speed, timestamp, np.array(relative_path_exe), np.array(relative_path_exe_R)
 
-	def form_relative_path(self,curve_js1,curve_js2,base2_R,base2_p):
+		return lam, curve_exe1,curve_exe2,curve_exe_R1,curve_exe_R2,curve_exe_js1,curve_exe_js2, speed, timestamp, relative_path_exe,relative_path_exe_R
+
+	def form_relative_path(self,curve_js1,curve_js2,robot1,robot2):
 		relative_path_exe=[]
 		relative_path_exe_R=[]
 		curve_exe1=[]
@@ -681,20 +648,20 @@ class MotionSend(object):
 		curve_exe_R1=[]
 		curve_exe_R2=[]
 		for i in range(len(curve_js1)):
-			pose1_now=self.robot1.fwd(curve_js1[i])
-			pose2_now=self.robot2.fwd(curve_js2[i])
+			pose1_now=robot1.fwd(curve_js1[i])
+			pose2_now=robot2.fwd(curve_js2[i])
 
 			curve_exe1.append(pose1_now.p)
 			curve_exe2.append(pose2_now.p)
 			curve_exe_R1.append(pose1_now.R)
 			curve_exe_R2.append(pose2_now.R)
 
-			pose2_world_now=self.robot2.fwd(curve_js2[i],base2_R,base2_p)
+			pose2_world_now=robot2.fwd(curve_js2[i],world=True)
 
 
 			relative_path_exe.append(np.dot(pose2_world_now.R.T,pose1_now.p-pose2_world_now.p))
 			relative_path_exe_R.append(pose2_world_now.R.T@pose1_now.R)
-		return np.array(relative_path_exe),np.array(relative_path_exe_R)
+		return np.array(curve_exe1),np.array(curve_exe2), np.array(curve_exe_R1),np.array(curve_exe_R2),np.array(relative_path_exe),np.array(relative_path_exe_R)
 
 
 	def chop_extension(self,curve_exe, curve_exe_R,curve_exe_js, speed, timestamp,p_start,p_end):
@@ -718,7 +685,7 @@ class MotionSend(object):
 	def chop_extension_dual(self,lam, curve_exe1,curve_exe2,curve_exe_R1,curve_exe_R2,curve_exe_js1,curve_exe_js2, speed, timestamp, relative_path_exe,relative_path_exe_R,p_start,p_end):
 		start_idx=np.argmin(np.linalg.norm(p_start-relative_path_exe,axis=1))
 		end_idx=np.argmin(np.linalg.norm(p_end-relative_path_exe,axis=1))
-
+		print(start_idx,end_idx)
 		#make sure extension doesn't introduce error
 		if np.linalg.norm(relative_path_exe[start_idx]-p_start)>0.5:
 			start_idx+=1
