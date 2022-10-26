@@ -21,9 +21,16 @@ def main():
     solution_dir=data_dir+'dual_arm/'+'diffevo_pose2_2/'
     cmd_dir=solution_dir+'10L_relative/'
     
-    relative_path,robot1,robot2,base2_R,base2_p,lam_relative_path,lam1,lam2,curve_js1,curve_js2=initialize_data(dataset,data_dir,solution_dir)
+    robot1=robot_obj('../../../config/abb_6640_180_255_robot_default_config.yml',tool_file_path='../../../config/paintgun.csv',d=50,acc_dict_path='')
+    robot2=robot_obj('../../../config/abb_1200_5_90_robot_default_config.yml',tool_file_path=solution_dir+'tcp.csv',base_transformation_file=solution_dir+'base.csv',acc_dict_path='')
 
-    ms = MotionSend(robot1=robot1,robot2=robot2,base2_R=base2_R,base2_p=base2_p)
+    with open(solution_dir+'tcp.yaml') as file:
+        H_tcp = np.array(yaml.safe_load(file)['H'],dtype=np.float64)
+
+
+    relative_path,base2_R,base2_p,lam_relative_path,lam1,lam2,curve_js1,curve_js2=initialize_data(dataset,data_dir,solution_dir,robot1,robot2)
+
+    ms = MotionSend(robot1=robot1,robot2=robot2)
 
 
    
@@ -60,13 +67,9 @@ def main():
     ###extension
     # p_bp1,q_bp1,p_bp2,q_bp2=ms.extend_dual(ms.robot1,p_bp1,q_bp1,primitives1,ms.robot2,p_bp2,q_bp2,primitives2,breakpoints1)
 
-    logged_data=ms.exec_motions_multimove_relative(primitives1,primitives2,p_bp1,p_bp2,q_bp1,q_bp2,v1,v2_all,z1_all,z2_all)
-    # Write log csv to file
-    with open("recorded_data/curve_exe_v"+str(vd_relative)+'_z'+str(zone)+'.csv',"w") as f:
-        f.write(logged_data)
-    StringData=StringIO(logged_data)
-    df = read_csv(StringData, sep =",")
-    lam, curve_exe1,curve_exe2,curve_exe_R1,curve_exe_R2,curve_exe_js1,curve_exe_js2, speed, timestamp, relative_path_exe,relative_path_exe_R = ms.logged_data_analysis_multimove(df,base2_R,base2_p,realrobot=True)
+    log_results=ms.exec_motions_multimove_relative(primitives1,primitives2,p_bp1,p_bp2,q_bp1,q_bp2,v1,v2_all,z1_all,z2_all)
+
+    lam, curve_exe1,curve_exe2,curve_exe_R1,curve_exe_R2,curve_exe_js1,curve_exe_js2, speed, timestamp, relative_path_exe,relative_path_exe_R = ms.logged_data_analysis_multimove(log_results,robot1,robot2,realrobot=True)
     #############################chop extension off##################################
     lam, curve_exe1,curve_exe2,curve_exe_R1,curve_exe_R2,curve_exe_js1,curve_exe_js2, speed, timestamp, relative_path_exe, relative_path_exe_R=\
         ms.chop_extension_dual(lam, curve_exe1,curve_exe2,curve_exe_R1,curve_exe_R2,curve_exe_js1,curve_exe_js2, speed, timestamp, relative_path_exe,relative_path_exe_R,relative_path[0,:3],relative_path[-1,:3])

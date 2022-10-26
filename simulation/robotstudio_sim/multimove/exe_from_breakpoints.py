@@ -24,13 +24,10 @@ def main():
     robot1=robot_obj('../../../config/abb_6640_180_255_robot_default_config.yml',tool_file_path='../../../config/paintgun.csv',d=50,acc_dict_path='')
     robot2=robot_obj('../../../config/abb_1200_5_90_robot_default_config.yml',tool_file_path=solution_dir+'tcp.csv',base_transformation_file=solution_dir+'base.csv',acc_dict_path='')
 
-    with open(solution_dir+'tcp.yaml') as file:
-        H_tcp = np.array(yaml.safe_load(file)['H'],dtype=np.float64)
-
 
     relative_path,base2_R,base2_p,lam_relative_path,lam1,lam2,curve_js1,curve_js2=initialize_data(dataset,data_dir,solution_dir,robot1,robot2)
 
-    ms = MotionSend(robot1=robot1,robot2=robot2,base2_R=base2_R,base2_p=base2_p)
+    ms = MotionSend()
 
 
    
@@ -65,16 +62,16 @@ def main():
     z2_all[3:7]=[z5]*4
 
     ###extension
-    # p_bp1,q_bp1,p_bp2,q_bp2=ms.extend_dual(ms.robot1,p_bp1,q_bp1,primitives1,ms.robot2,p_bp2,q_bp2,primitives2,breakpoints1)
+    p_bp1,q_bp1,p_bp2,q_bp2=ms.extend_dual(robot1,p_bp1,q_bp1,primitives1,robot2,p_bp2,q_bp2,primitives2,breakpoints1)
 
-    log_results=ms.exec_motions_multimove(primitives1,primitives2,p_bp1,p_bp2,q_bp1,q_bp2,v1,v2_all,z1_all,z2_all)
+    log_results=ms.exec_motions_multimove(robot1,robot2,primitives1,primitives2,p_bp1,p_bp2,q_bp1,q_bp2,v1,v2_all,z1_all,z2_all)
 
     lam, curve_exe1,curve_exe2,curve_exe_R1,curve_exe_R2,curve_exe_js1,curve_exe_js2, speed, timestamp, relative_path_exe,relative_path_exe_R = ms.logged_data_analysis_multimove(log_results,robot1,robot2,realrobot=True)
-    print(relative_path_exe)
+
     #############################chop extension off##################################
     lam, curve_exe1,curve_exe2,curve_exe_R1,curve_exe_R2,curve_exe_js1,curve_exe_js2, speed, timestamp, relative_path_exe, relative_path_exe_R=\
         ms.chop_extension_dual(lam, curve_exe1,curve_exe2,curve_exe_R1,curve_exe_R2,curve_exe_js1,curve_exe_js2, speed, timestamp, relative_path_exe,relative_path_exe_R,relative_path[0,:3],relative_path[-1,:3])
-    print(curve_exe1)
+
     speed1=get_speed(curve_exe1,timestamp)
     speed2=get_speed(curve_exe2,timestamp)
     ###calculate error
