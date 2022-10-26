@@ -272,7 +272,7 @@ def main():
     all_speed_std = []
     all_max_error = []
 
-    iteration=60
+    iteration=50
     speed_iteration = 0
     draw_speed_max=None
     draw_error_max=None
@@ -696,13 +696,20 @@ def main():
                     # iterate to get gradient
                     timestamp_xyz = []
                     curve_xyz_dp=[]
+                    curve_xyz_du = []
                     # adjust xyz
                     for closest_bp_id in all_closest_bp:
                         for pos_i in range(3):
                             p_bp1_temp = deepcopy(p_bp1)
                             q_bp1_temp=deepcopy(q_bp1)
-                            p_bp1_temp[closest_bp_id][-1][pos_i] += epsilon
-                            q_bp1_temp[closest_bp_id][-1]=car2js(robot1,q_bp1[closest_bp_id][-1],np.array(p_bp1_temp[closest_bp_id][-1]),robot1.fwd(q_bp1[closest_bp_id][-1]).R)[0]
+                            
+                            ### identity
+                            # p_bp1_temp[closest_bp_id][-1][pos_i] += epsilon
+                            # q_bp1_temp[closest_bp_id][-1]=car2js(robot1,q_bp1[closest_bp_id][-1],np.array(p_bp1_temp[closest_bp_id][-1]),robot1.fwd(q_bp1[closest_bp_id][-1]).R)[0]
+
+                            ### Stochastic gradient
+                            for closest_bp_id in all_closest_bp:
+                        for pos_i in range(3):
 
                             logged_data=ms.exec_motions_multimove_nocoord(robot1,robot2,primitives1,primitives2,p_bp1_temp,p_bp2,q_bp1_temp,q_bp2,s1_movel,s2_movel,z,z)
                             StringData=StringIO(logged_data.decode('utf-8'))
@@ -759,7 +766,7 @@ def main():
                         # ax[2].set_title('traj new, z deviation')
                         # plt.show()
 
-                    G = np.array(curve_xyz_dp).T*(1./epsilon)
+                    # G = np.array(curve_xyz_dp).T*(1./epsilon)
                     # print(G)
                     
                     # curve_exe1=np.array(curve_exe1)

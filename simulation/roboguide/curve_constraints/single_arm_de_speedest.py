@@ -15,8 +15,8 @@ def main():
     data_type='blade_scale'
 
     if data_type=='blade_scale':
-        curve_data_dir='../../../data/from_NX/'
-        data_dir='../data/curve_blade/'
+        curve_data_dir='../../../data/from_NX_scale/'
+        data_dir='../data/curve_blade_scale/'
     elif data_type=='wood':
         curve_data_dir='../../../data/wood/'
         data_dir='../data/curve_wood/'
@@ -24,7 +24,9 @@ def main():
     ###read actual curve
     curve_dense = read_csv(curve_data_dir+"Curve_dense.csv",header=None).values
 
-    robot=m10ia(d=50, acc_dict_path=os.getcwd()+'/../../../toolbox/robot_info/m710ic_acc.pickle')
+    # robot=m10ia(d=50, acc_dict_path=os.getcwd()+'/../../../toolbox/robot_info/m10ia_acc.pickle')
+    toolbox_path = '../../../toolbox/'
+    robot = robot_obj(toolbox_path+'robot_info/fanuc_m10ia_robot_default_config.yml',tool_file_path=toolbox_path+'tool_info/paintgun.csv',d=50,acc_dict_path=toolbox_path+'robot_info/m10ia_acc.pickle')
     v_cmd=350
     opt=lambda_opt(curve_dense[:,:3],curve_dense[:,3:],robot1=robot,steps=500,v_cmd=v_cmd)
 
@@ -40,33 +42,36 @@ def main():
     bnds=tuple(zip(lowerer_limit,upper_limit))
 
     ###diff evolution
-    res = differential_evolution(opt.curve_pose_opt2, bnds, args=None,workers=1,
-									x0 = np.hstack((k*theta,curve_pose[:-1,-1],[0])),
-									strategy='best1bin', maxiter=500,
-                                    # strategy='best1bin', maxiter=1,
-									popsize=15, tol=1e-10,
-									mutation=(0.5, 1), recombination=0.7,
-									seed=None, callback=None, disp=False,
-									polish=True, init='latinhypercube',
-									atol=0.)
+    # res = differential_evolution(opt.curve_pose_opt2, bnds, args=None,workers=1,
+	# 								x0 = np.hstack((k*theta,curve_pose[:-1,-1],[0])),
+	# 								strategy='best1bin', maxiter=1,
+    #                                 # strategy='best1bin', maxiter=1,
+	# 								popsize=15, tol=1e-10,
+	# 								mutation=(0.5, 1), recombination=0.7,
+	# 								seed=None, callback=None, disp=False,
+	# 								polish=True, init='latinhypercube',
+	# 								atol=0.)
+    # print(res)
+    # theta0=np.linalg.norm(res.x[:3])
+    # k=res.x[:3]/theta0
+    # shift=res.x[3:-1]
+    # theta1=res.x[-1]
+    # R_curve=rot(k,theta0)
+    # curve_pose=np.vstack((np.hstack((R_curve,np.array([shift]).T)),np.array([0,0,0,1])))
+    # with open(data_dir+'curve_pose.yaml', 'w') as file:
+    #     documents = yaml.dump({'H':curve_pose.tolist()}, file)
+    
+    R_curve=curve_pose[:3,:3]
+    shift=curve_pose[:3,3]
+    theta1=0
 
-    print(res)
-    theta0=np.linalg.norm(res.x[:3])
-    k=res.x[:3]/theta0
-    shift=res.x[3:-1]
-    theta1=res.x[-1]
-
-    R_curve=rot(k,theta0)
-    curve_pose=np.vstack((np.hstack((R_curve,np.array([shift]).T)),np.array([0,0,0,1])))
-
-    with open(data_dir+'curve_pose.yaml', 'w') as file:
-        documents = yaml.dump({'H':curve_pose.tolist()}, file)
     ###get initial q
     curve_new=np.dot(R_curve,opt.curve.T).T+np.tile(shift,(len(opt.curve),1))
     curve_normal_new=np.dot(R_curve,opt.curve_normal.T).T
 
     R_temp=direction2R(curve_normal_new[0],-curve_new[1]+curve_new[0])
     R=np.dot(R_temp,Rz(theta1))
+    print(robot.inv(curve_new[0],R))
     q_init=robot.inv(curve_new[0],R)[0]
 
     #########################################restore only given points, saves time##########################################################
@@ -89,7 +94,7 @@ def main():
     plt.ylabel("lambda_dot")
     # plt.ylim([1000,4000])
     plt.title("max lambda_dot vs lambda (path index)")
-    plt.savefig("trajectory/curve_pose_opt/results.png")
+    plt.savefig(data_dir+"single_arm_de/results.png")
 
     ###optional, solve for dense curve
     #########################################restore all 50,000 points, takes time##########################################################

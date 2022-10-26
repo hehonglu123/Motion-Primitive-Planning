@@ -38,7 +38,7 @@ class robot_obj(object):
 			self.robot.R_tool=tool_H[:3,:3]
 			self.robot.p_tool=tool_H[:3,-1]+np.dot(tool_H[:3,:3],np.array([0,0,d]))
 			self.p_tool=self.robot.p_tool
-			self.R_tool=self.robot.R_tool		
+			self.R_tool=self.robot.R_tool
 
 		if len(base_transformation_file)>0:
 			self.base_H=np.loadtxt(base_transformation_file,delimiter=',')
@@ -53,7 +53,6 @@ class robot_obj(object):
 			tesseract_robot = rox_tesseract.TesseractRobot(self.robot, "robot", invkin_solver="OPWInvKin")
 
 		self.tesseract_robot=tesseract_robot
-
 
 		###set attributes
 		self.upper_limit=self.robot.joint_upper_limit 
@@ -73,14 +72,14 @@ class robot_obj(object):
 			q3_acc_n=[]
 			q3_acc_p=[]
 			for key, value in acc_dict.items():
-			   q2_config.append(key[0])
-			   q3_config.append(key[1])
-			   q1_acc_n.append(value[0])
-			   q1_acc_p.append(value[1])
-			   q2_acc_n.append(value[2])
-			   q2_acc_p.append(value[3])
-			   q3_acc_n.append(value[4])
-			   q3_acc_p.append(value[5])
+				q2_config.append(key[0])
+				q3_config.append(key[1])
+				q1_acc_n.append(value[0%len(value)])
+				q1_acc_p.append(value[1%len(value)])
+				q2_acc_n.append(value[2%len(value)])
+				q2_acc_p.append(value[3%len(value)])
+				q3_acc_n.append(value[4%len(value)])
+				q3_acc_p.append(value[5%len(value)])
 			self.q2q3_config=np.array([q2_config,q3_config]).T
 			self.q1q2q3_acc=np.array([q1_acc_n,q1_acc_p,q2_acc_n,q2_acc_p,q3_acc_n,q3_acc_p]).T
 
@@ -115,6 +114,7 @@ class robot_obj(object):
 		###robot forworld kinematics
 		#q_all:			robot joint angles or list of robot joint angles
 		#world:			bool, if want to get coordinate in world frame or robot base frame
+		q_all=np.array(q_all)
 		if q_all.ndim==1:
 			q=q_all
 			pose_temp=self.tesseract_robot.fwdkin(q)	
@@ -532,7 +532,7 @@ class m10ia(object):
 		
 		###updated range&vel limit
 		self.upper_limit=np.radians([170.,160,180.,190.,140.,360.])
-		self.lower_limit=np.radians([-180.,-90.,-89.,-190.,-140.,-360.])
+		self.lower_limit=np.radians([-170.,-90.,-89.,-190.,-140.,-360.])
 		self.joint_vel_limit=np.radians([210.,190.,210.,400.,400.,600.])
 		# self.joint_acc_limit=np.radians([640.,520.,700.,910.,910.,1207.])
 		self.joint_acc_limit=np.radians([285.741,214.286,214.286,401.786,401.786,401.786])
