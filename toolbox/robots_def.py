@@ -20,7 +20,7 @@ ez=np.array([[0.],[0.],[1.]])
 
 class robot_obj(object):
 	###robot object class
-	def __init__(self,def_path,tool_file_path='',base_transformation_file='',d=0,acc_dict_path=''):
+	def __init__(self,def_path,tool_file_path='',base_transformation_file='',d=0,acc_dict_path='',j_compensation=[1,1,1,1,1,1]):
 		#def_path: robot 			definition yaml file, name must include robot vendor
 		#tool_file_path: 			tool transformation to robot flange csv file
 		#base_transformation_file: 	base transformation to world frame csv file
@@ -83,6 +83,9 @@ class robot_obj(object):
 			self.q2q3_config=np.array([q2_config,q3_config]).T
 			self.q1q2q3_acc=np.array([q1_acc_n,q1_acc_p,q2_acc_n,q2_acc_p,q3_acc_n,q3_acc_p]).T
 
+		## joint H compensation
+		self.j_compensation=np.array(j_compensation)
+
 	def get_acc(self,q_all,direction=[]):
 		###get acceleration limit from q config, assume last 3 joints acc fixed direction is 3 length vector, 0 is -, 1 is +
 		#if a single point
@@ -117,7 +120,7 @@ class robot_obj(object):
 		q_all=np.array(q_all)
 		if q_all.ndim==1:
 			q=q_all
-			pose_temp=self.tesseract_robot.fwdkin(q)	
+			pose_temp=self.tesseract_robot.fwdkin(np.multiply(q,self.j_compensation))	
 
 			if world:
 				pose_temp.p=self.base_H[:3,:3]@pose_temp.p+self.base_H[:3,-1]
@@ -127,7 +130,7 @@ class robot_obj(object):
 			pose_p_all=[]
 			pose_R_all=[]
 			for q in q_all:
-				pose_temp=self.tesseract_robot.fwdkin(q)	
+				pose_temp=self.tesseract_robot.fwdkin(np.multiply(q,self.j_compensation))	
 				if world:
 					pose_temp.p=self.base_H[:3,:3]@pose_temp.p+self.base_H[:3,-1]
 					pose_temp.R=self.base_H[:3,:3]@pose_temp.R
@@ -138,11 +141,11 @@ class robot_obj(object):
 			return Transform_all(pose_p_all,pose_R_all)
 	
 	def jacobian(self,q):
-		return self.tesseract_robot.jacobian(q)
+		return self.tesseract_robot.jacobian(np.multiply(q,self.j_compensation))
 
 	def inv(self,p,R,last_joints=[]):
 		if len(last_joints)==0:
-			return self.tesseract_robot.invkin(Transform(R,p),np.zeros(len(self.joint_vel_limit)))
+			return np.multiply(self.tesseract_robot.invkin(Transform(R,p),np.zeros(len(self.joint_vel_limit))),self.j_compensation)
 		else:	###sort solutions
 			print('last joints: ',last_joints)
 			theta_v=self.tesseract_robot.invkin(Transform(R,p),last_joints)
