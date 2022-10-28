@@ -700,6 +700,7 @@ def main():
                     # adjust xyz
                     for closest_bp_id in all_closest_bp:
                         for pos_i in range(3):
+                            
                             p_bp1_temp = deepcopy(p_bp1)
                             q_bp1_temp=deepcopy(q_bp1)
                             
@@ -708,8 +709,13 @@ def main():
                             # q_bp1_temp[closest_bp_id][-1]=car2js(robot1,q_bp1[closest_bp_id][-1],np.array(p_bp1_temp[closest_bp_id][-1]),robot1.fwd(q_bp1[closest_bp_id][-1]).R)[0]
 
                             ### Stochastic gradient
-                            for closest_bp_id in all_closest_bp:
-                        for pos_i in range(3):
+                            this_du = np.random.rand(len(all_closest_bp)*3)
+                            this_du = this_du/np.linalg.norm(this_du)*epsilon
+                            for bp_id_i in range(len(all_closest_bp)):
+                                for pos_i_i in range(3):
+                                    bp_id=all_closest_bp[bp_id_i]
+                                    p_bp1_temp[bp_id][-1][pos_i_i] += this_du[bp_id_i*3+pos_i_i]
+                                    q_bp1_temp[bp_id][-1]=car2js(robot1,q_bp1[bp_id][-1],np.array(p_bp1_temp[bp_id][-1]),robot1.fwd(q_bp1[bp_id][-1]).R)[0]
 
                             logged_data=ms.exec_motions_multimove_nocoord(robot1,robot2,primitives1,primitives2,p_bp1_temp,p_bp2,q_bp1_temp,q_bp2,s1_movel,s2_movel,z,z)
                             StringData=StringIO(logged_data.decode('utf-8'))
@@ -742,6 +748,7 @@ def main():
 
                             timestamp_xyz.append(np.array(timestamp_prev))
                             curve_xyz_dp.append(this_curve_dp)
+                            curve_xyz_du.append(this_du)
 
                         # marker_size=2
                         # fig, ax = plt.subplots(3,1)
@@ -766,8 +773,13 @@ def main():
                         # ax[2].set_title('traj new, z deviation')
                         # plt.show()
 
+                    ### identity
                     # G = np.array(curve_xyz_dp).T*(1./epsilon)
-                    # print(G)
+                    ### stochastic gradient
+                    curve_xyz_dp=np.array(curve_xyz_dp)
+                    curve_xyz_du=np.array(curve_xyz_du)
+                    G = np.matmul(curve_xyz_dp.T,np.linalg.pinv(curve_xyz_du.T))
+                    print(G)
                     
                     # curve_exe1=np.array(curve_exe1)
                     # curve_exe1_prev = deepcopy(curve_exe1)
@@ -888,8 +900,8 @@ def main():
                         
                         #############################################################################
                         
-                        ### break no matter how
-                        break
+                        # ### break no matter how
+                        # break
                         if max(error_update) < max(error):
                             print("find alpha and du")
                             break

@@ -26,7 +26,7 @@ def main():
 
     # robot=m10ia(d=50, acc_dict_path=os.getcwd()+'/../../../toolbox/robot_info/m10ia_acc.pickle')
     toolbox_path = '../../../toolbox/'
-    robot = robot_obj(toolbox_path+'robot_info/fanuc_m10ia_robot_default_config.yml',tool_file_path=toolbox_path+'tool_info/paintgun.csv',d=50,acc_dict_path=toolbox_path+'robot_info/m10ia_acc.pickle')
+    robot = robot_obj(toolbox_path+'robot_info/fanuc_m10ia_robot_default_config.yml',tool_file_path=toolbox_path+'tool_info/paintgun.csv',d=50,acc_dict_path=toolbox_path+'robot_info/m10ia_acc.pickle',j_compensation=[1,1,-1,-1,-1,-1])
     v_cmd=350
     opt=lambda_opt(curve_dense[:,:3],curve_dense[:,3:],robot1=robot,steps=500,v_cmd=v_cmd)
 

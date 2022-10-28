@@ -1,6 +1,6 @@
 from math import ceil, radians, floor, degrees
 import numpy as np
-from pandas import read_csv
+from pandas import read_csv,DataFrame
 from matplotlib import pyplot as plt
 from io import StringIO
 from general_robotics_toolbox import *
@@ -23,7 +23,9 @@ ms = MotionSendFANUC()
 utool_num = 2
 
 # all_objtype=['wood','blade_scale']
-all_objtype=['blade_scale']
+# all_objtype=['blade_scale']
+# all_objtype=['curve_blade_scale']
+all_objtype=['curve_wood']
 # all_objtype=['wood']
 
 # num_ls=[80,100,150]
@@ -35,9 +37,13 @@ for obj_type in all_objtype:
     # obj_type='blade'
     print(obj_type)
     
-    data_dir='../data/baseline_m10ia/'+obj_type+'/'
+    # data_dir='../data/baseline_m10ia/'+obj_type+'/'
+    data_dir='../data/'+obj_type+'/single_arm_de/'
 
     robot=m10ia(d=50)
+    # toolbox_path = '../../../toolbox/'
+    # robot = robot_obj(toolbox_path+'robot_info/fanuc_m10ia_robot_default_config.yml',tool_file_path=toolbox_path+'tool_info/paintgun.csv',d=50,acc_dict_path=toolbox_path+'robot_info/m10ia_acc.pickle',j_compensation=[1,1,-1,-1,-1,-1])
+
     curve = read_csv(data_dir+"Curve_in_base_frame.csv",header=None).values
     curve = np.array(curve)
     curve_normal = curve[:,3:]
@@ -114,8 +120,10 @@ for obj_type in all_objtype:
         
         lamdot_act=calc_lamdot(curve_exe_js,lam,robot,1)
         
-        with open(data_dir+str(num_l)+"/curve_js_exe_"+str(s)+".csv","wb") as f:
-            f.write(curve_exe_js)
+        # with open(data_dir+str(num_l)+"/curve_js_exe_"+str(s)+".csv","wb") as f:
+        #     f.write(curve_exe_js)
+        df=DataFrame({'timestamp':timestamp,'q0':curve_exe_js[:,0],'q1':curve_exe_js[:,1],'q2':curve_exe_js[:,2],'q3':curve_exe_js[:,3],'q4':curve_exe_js[:,4],'q5':curve_exe_js[:,5]})
+        df.to_csv(data_dir+str(num_l)+"/curve_js_exe_"+str(s)+".csv",header=False,index=False)
         with open(data_dir+str(num_l)+'/error.npy','wb') as f:
             np.save(f,error)
         with open(data_dir+str(num_l)+'/normal_error.npy','wb') as f:

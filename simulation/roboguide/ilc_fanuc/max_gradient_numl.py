@@ -27,11 +27,14 @@ from blending import *
 def main():
 
     # all_objtype=['wood','blade_scale']
-    all_objtype=['blade_scale']
+    # all_objtype=['blade_scale']
     # all_objtype=['wood']
+    # all_objtype=['curve_blade_scale']
+    all_objtype=['curve_wood']
 
     # num_ls=[80,100,150]
     num_ls=[100,50,30,25]
+    # num_ls=[25]
 
     for obj_type in all_objtype:
 
@@ -39,9 +42,12 @@ def main():
         # obj_type='blade'
         print(obj_type)
         
-        data_dir='../data/baseline_m10ia/'+obj_type+'/'
+        # data_dir='../data/baseline_m10ia/'+obj_type+'/'
+        data_dir='../data/'+obj_type+'/single_arm_de/'
 
         robot=m10ia(d=50)
+        ms = MotionSendFANUC()
+        multi_peak_threshold=0.2
         curve = read_csv(data_dir+"Curve_in_base_frame.csv",header=None).values
         curve = np.array(curve)
         curve_normal = curve[:,3:]
@@ -49,12 +55,9 @@ def main():
 
         for num_l in num_ls:
             print(obj_type+' '+str(num_l))
-    
-            multi_peak_threshold=0.2
-            robot=m10ia(d=50)
-            ms = MotionSendFANUC()
 
-            cmd_dir='../data/baseline_m10ia/'+obj_type+'/'+str(num_l)+'/'
+            # cmd_dir='../data/baseline_m10ia/'+obj_type+'/'+str(num_l)+'/'
+            cmd_dir=data_dir+str(num_l)+'/'
 
             try:
                 breakpoints,primitives,p_bp,q_bp,_=ms.extract_data_from_cmd(os.getcwd()+'/'+cmd_dir+'command.csv')
@@ -88,6 +91,7 @@ def main():
             s_up=1000
             s_low=0
             s=(s_up+s_low)/2
+            s=612
             speed_found=False
             z=100
             while True:
@@ -103,6 +107,7 @@ def main():
                 error,angle_error=calc_all_error_w_normal(curve_exe,curve[:,:3],curve_exe_R[:,:,-1],curve_normal)
                 error_max=max(error)
                 angle_error_max=max(angle_error)
+                exit()
 
                 if speed_found:
                     break

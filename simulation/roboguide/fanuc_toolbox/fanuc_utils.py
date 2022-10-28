@@ -16,7 +16,7 @@ from robots_def import *
 class MotionSendFANUC(object):
     def __init__(self,group=1,uframe=1,utool=2,robot_ip='127.0.0.2',robot1=m710ic(d=50),robot2=m900ia(),group2=2,uframe2=1,utool2=2,robot_ip2=None) -> None:
         
-        # self.client = FANUCClient(robot_ip)
+        self.client = FANUCClient(robot_ip)
         if robot_ip2 is not None:
             self.client = FANUCClient(robot_ip=robot_ip,robot_ip2=robot_ip2,robot_user2='Robot2')
         
@@ -785,7 +785,7 @@ class MotionSendFANUC(object):
             # adding extension with uniform space
             the_very_start_p = p_start-step_to_extend*extend_step_d_start*slope_p
             the_very_start_R = rot(k,-np.linalg.norm(the_very_start_p-p_start)*theta/np.linalg.norm(p_end-p_start))@R_start
-            if len(car2js(robot,q_bp[0][0],the_very_start_p,the_very_start_R)) < 0:
+            if len(car2js(robot,q_bp[0][0],the_very_start_p,the_very_start_R)) > 0:
                 for i in range(1,step_to_extend+1):
                     p_extend=p_start-i*extend_step_d_start*slope_p
                     theta_extend=-np.linalg.norm(p_extend-p_start)*theta/np.linalg.norm(p_end-p_start)
