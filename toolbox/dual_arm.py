@@ -5,9 +5,7 @@ from utils import *
 from lambda_calc import *
 from pandas import read_csv
 
-
-def form_relative_path(robot1,robot2,curve_js1,curve_js2,base2_R,base2_p):
-
+def form_relative_path(curve_js1,curve_js2,robot1,robot2):
 	relative_path_exe=[]
 	relative_path_exe_R=[]
 	curve_exe1=[]
@@ -23,12 +21,11 @@ def form_relative_path(robot1,robot2,curve_js1,curve_js2,base2_R,base2_p):
 		curve_exe_R1.append(pose1_now.R)
 		curve_exe_R2.append(pose2_now.R)
 
-		pose2_world_now=robot2.fwd(curve_js2[i],base2_R,base2_p)
-
+		pose2_world_now=robot2.fwd(curve_js2[i],world=True)
 
 		relative_path_exe.append(np.dot(pose2_world_now.R.T,pose1_now.p-pose2_world_now.p))
 		relative_path_exe_R.append(pose2_world_now.R.T@pose1_now.R)
-	return np.array(relative_path_exe),np.array(relative_path_exe_R)
+	return np.array(curve_exe1),np.array(curve_exe2), np.array(curve_exe_R1),np.array(curve_exe_R2),np.array(relative_path_exe),np.array(relative_path_exe_R)
 
 def calc_individual_speed(vd_relative,lam1,lam2,lam_relative,breakpoints):
 	speed_ratio=[]      ###speed of robot1 TCP / robot2 TCP
@@ -47,7 +44,7 @@ def calc_individual_speed(vd_relative,lam1,lam2,lam_relative,breakpoints):
 
 	return s1_all,s2_all
 
-def initialize_data(dataset,data_dir,solution_dir):
+def initialize_data(dataset,data_dir,solution_dir,robot1,robot2):
 	relative_path = read_csv(data_dir+"Curve_dense.csv", header=None).values
 
 	###calculate desired TCP speed for both arm
@@ -64,16 +61,12 @@ def initialize_data(dataset,data_dir,solution_dir):
 	base2_R=H_1200[:3,:3]
 	base2_p=1000*H_1200[:-1,-1]
 
-	with open(solution_dir+'tcp.yaml') as file:
-		H_tcp = np.array(yaml.safe_load(file)['H'],dtype=np.float64)
-	robot1=abb6640(d=50)
-	robot2=abb1200(R_tool=H_tcp[:3,:3],p_tool=H_tcp[:-1,-1])
 
 	lam1=calc_lam_js(curve_js1,robot1)
 	lam2=calc_lam_js(curve_js2,robot2)
 
 
-	return relative_path,robot1,robot2,base2_R,base2_p,lam_relative_path,lam1,lam2,curve_js1,curve_js2
+	return relative_path,base2_R,base2_p,lam_relative_path,lam1,lam2,curve_js1,curve_js2
 
 
 def cmd_speed_profile(breakpoints,s1_all,s2_all):

@@ -28,8 +28,6 @@ def main():
 
     robot=robot_obj('../../../config/abb_6640_180_255_robot_default_config.yml',tool_file_path='../../../config/paintgun.csv',d=50,acc_dict_path='')
 
-    robot=abb6640(d=50)
-
     v250 = speeddata(250,9999999,9999999,999999)
     v350 = speeddata(350,9999999,9999999,999999)
     v450 = speeddata(450,9999999,9999999,999999)
@@ -49,13 +47,10 @@ def main():
             breakpoints,primitives, p_bp,q_bp=ms.extract_data_from_cmd(cmd_dir+"command.csv")
             q_bp_end=q_bp[-1][0]
             p_bp, q_bp = ms.extend(robot, q_bp, primitives, breakpoints, p_bp,extension_start=100,extension_end=100)
-            print(q_bp[0][0])
-            logged_data= ms.exec_motions(robot,primitives,breakpoints,p_bp,q_bp,speed[s],zone[z])
+            log_results = ms.exec_motions(robot,primitives,breakpoints,p_bp,q_bp,speed[s],zone[z])
 
-            StringData=StringIO(logged_data)
-            df = read_csv(StringData, sep =",")
             ##############################data analysis#####################################
-            lam, curve_exe, curve_exe_R,curve_exe_js, exe_speed, timestamp=ms.logged_data_analysis(robot,df,realrobot=True)
+            lam, curve_exe, curve_exe_R,curve_exe_js, exe_speed, timestamp=ms.logged_data_analysis(robot,log_results,realrobot=True)
             #############################chop extension off##################################
             lam, curve_exe, curve_exe_R,curve_exe_js, exe_speed, timestamp=ms.chop_extension(curve_exe, curve_exe_R,curve_exe_js, exe_speed, timestamp,curve[0,:3],curve[-1,:3])
             ##############################calcualte error########################################

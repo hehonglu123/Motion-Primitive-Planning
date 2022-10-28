@@ -34,7 +34,7 @@ def main():
 
 
 	multi_peak_threshold=0.2
-	robot=abb6640(d=50)
+	robot=robot_obj('../../config/abb_6640_180_255_robot_default_config.yml',tool_file_path='../../config/paintgun.csv',d=50,acc_dict_path='')
 
 	v=400
 	s = speeddata(v,9999999,9999999,999999)
@@ -61,17 +61,14 @@ def main():
 
 		ms = MotionSend()
 		###execution with plant
-		logged_data=ms.exec_motions(robot,primitives,breakpoints,p_bp,q_bp,s,z)
+		log_results=ms.exec_motions(robot,primitives,breakpoints,p_bp,q_bp,s,z)
 		# Write log csv to file
-		with open("recorded_data/curve_exe_v"+str(v)+"_z10.csv","w") as f:
-			f.write(logged_data)
+		np.savetxt("recorded_data/curve_exe_v"+str(v)+"_z10.csv",log_results.data,delimiter=',',header='timestamp,cmd_num,J1,J2,J3,J4,J5,J6')
 
 		ms.write_data_to_cmd('recorded_data/command.csv',breakpoints,primitives, p_bp,q_bp)
 
-		StringData=StringIO(logged_data)
-		df = read_csv(StringData, sep =",")
 		##############################data analysis#####################################
-		lam, curve_exe, curve_exe_R,curve_exe_js, speed, timestamp=ms.logged_data_analysis(robot,df,realrobot=True)
+		lam, curve_exe, curve_exe_R,curve_exe_js, speed, timestamp=ms.logged_data_analysis(robot,log_results,realrobot=True)
 		#############################chop extension off##################################
 		lam, curve_exe, curve_exe_R,curve_exe_js, speed, timestamp=ms.chop_extension(curve_exe, curve_exe_R,curve_exe_js, speed, timestamp,curve[0,:3],curve[-1,:3])
 

@@ -30,6 +30,7 @@ class robot_obj(object):
 		with open(def_path, 'r') as f:
 			self.robot = rr_rox.load_robot_info_yaml_to_robot(f)
 
+		self.def_path=def_path
 		#define robot without tool
 		self.robot_def_nT=Robot(self.robot.H,self.robot.P,self.robot.joint_type)
 
@@ -44,15 +45,6 @@ class robot_obj(object):
 			self.base_H=np.loadtxt(base_transformation_file,delimiter=',')
 		else:
 			self.base_H=np.eye(4)
-
-		if len(self.robot.joint_names)>6:	#redundant kinematic chain
-			tesseract_robot = rox_tesseract.TesseractRobot(self.robot, "robot", invkin_solver="KDL")
-		elif 'UR' in def_path:			#UR
-			tesseract_robot = rox_tesseract.TesseractRobot(self.robot, "robot", invkin_solver="URInvKin")
-		else:							#sepherical joint
-			tesseract_robot = rox_tesseract.TesseractRobot(self.robot, "robot", invkin_solver="OPWInvKin")
-
-		self.tesseract_robot=tesseract_robot
 
 		###set attributes
 		self.upper_limit=self.robot.joint_upper_limit 
@@ -82,9 +74,46 @@ class robot_obj(object):
 				q3_acc_p.append(value[5%len(value)])
 			self.q2q3_config=np.array([q2_config,q3_config]).T
 			self.q1q2q3_acc=np.array([q1_acc_n,q1_acc_p,q2_acc_n,q2_acc_p,q3_acc_n,q3_acc_p]).T
+		
+		###initialize tesseract robot
+		self.initialize_tesseract_robot()
 
 		## joint H compensation
 		self.j_compensation=np.array(j_compensation)
+
+	def initialize_tesseract_robot(self):
+		if len(self.robot.joint_names)>6:	#redundant kinematic chain
+			tesseract_robot = rox_tesseract.TesseractRobot(self.robot, "robot", invkin_solver="KDL")
+		elif 'UR' in self.def_path:			#UR
+			tesseract_robot = rox_tesseract.TesseractRobot(self.robot, "robot", invkin_solver="URInvKin")
+		else:							#sepherical joint
+			tesseract_robot = rox_tesseract.TesseractRobot(self.robot, "robot", invkin_solver="OPWInvKin")
+		self.tesseract_robot=tesseract_robot
+
+	def __getstate__(self):
+		state = self.__dict__.copy()
+		del state['tesseract_robot']
+		return state
+
+	def __setstate__(self, state):
+		# Restore instance attributes (tesseract).
+		self.__dict__.update(state)
+		self.initialize_tesseract_robot()
+
+
+	# def get_acc_old(self,q_all,direction=[]):
+	# 	#if a single point
+	# 	if q_all.ndim==1:
+	# 		###find closest q2q3 config, along with constant last 3 joints acc
+	# 		idx=np.argmin(np.linalg.norm(self.q2q3_config-q_all[1:3],axis=1))
+	# 		return np.append(self.q1q2q3_acc[idx],self.joint_acc_limit[-3:])
+	# 	else:
+	# 		acc_limit_all=[]
+	# 		for q in q_all:
+	# 			idx=np.argmin(np.linalg.norm(self.q2q3_config-q[1:3],axis=1))
+	# 			acc_limit_all.append(np.append(self.q1q2q3_acc[idx],self.joint_acc_limit[-3:]))
+
+	# 	return np.array(acc_limit_all)
 
 	def get_acc(self,q_all,direction=[]):
 		###get acceleration limit from q config, assume last 3 joints acc fixed direction is 3 length vector, 0 is -, 1 is +
@@ -93,6 +122,9 @@ class robot_obj(object):
 			###find closest q2q3 config, along with constant last 3 joints acc
 			idx=np.argmin(np.linalg.norm(self.q2q3_config-q_all[1:3],axis=1))
 			acc_lim=[]
+			if len(direction)==0:
+				raise AssertionError('direciton not provided')
+				return
 			for d in direction:
 				acc_lim.append(self.q1q2q3_acc[idx][2*len(acc_lim)+d])
 
@@ -113,11 +145,10 @@ class robot_obj(object):
 
 		return np.array(acc_limit_all)
 
-	def fwd(self,q_all,world=False):
+	def fwd(self,q_all,world=False,qlim_override=False):
 		###robot forworld kinematics
 		#q_all:			robot joint angles or list of robot joint angles
 		#world:			bool, if want to get coordinate in world frame or robot base frame
-		q_all=np.array(q_all)
 		if q_all.ndim==1:
 			q=q_all
 			pose_temp=self.tesseract_robot.fwdkin(np.multiply(q,self.j_compensation))	
@@ -140,17 +171,35 @@ class robot_obj(object):
 
 			return Transform_all(pose_p_all,pose_R_all)
 	
+	def fwd_j456(self,q):
+		q = np.multiply(q,self.j_compensation)
+		if (self.robot.joint_lower_limit is not None and self.robot.joint_upper_limit is not None):
+			assert np.greater_equal(q, self.robot.joint_lower_limit).all(), "Specified joints out of range"
+			assert np.less_equal(q, self.robot.joint_upper_limit).all(), "Specified joints out of range"
+
+		p = self.robot.P[:,[1]]
+		R = np.identity(3)
+		for i in xrange(1,len(self.robot.joint_type)-1):
+			R = R.dot(rot(self.robot.H[:,[i]],q[i]))
+			p = p + R.dot(self.robot.P[:,[i+1]])
+		p=np.reshape(p,(3,))
+
+		return Transform(R, p)
+
 	def jacobian(self,q):
 		return self.tesseract_robot.jacobian(np.multiply(q,self.j_compensation))
 
 	def inv(self,p,R,last_joints=[]):
+		# self.check_tesseract_robot()
 		if len(last_joints)==0:
 			return np.multiply(self.tesseract_robot.invkin(Transform(R,p),np.zeros(len(self.joint_vel_limit))),self.j_compensation)
 		else:	###sort solutions
-			print('last joints: ',last_joints)
 			theta_v=self.tesseract_robot.invkin(Transform(R,p),last_joints)
-			print(equivalent_configurations(self.robot, theta_v, last_joints))
-			return	equivalent_configurations(self.robot, theta_v, last_joints)		###run equivalent to get all solutions +/-360
+			eq_theta_v=equivalent_configurations(self.robot, theta_v, last_joints)
+			theta_v.extend(eq_theta_v)
+
+			theta_dist = np.linalg.norm(np.subtract(theta_v,last_joints), axis=1)
+			return [np.multiply(theta_v[i],self.j_compensation) for i in list(np.argsort(theta_dist))]
 
 			
 #ALL in mm
@@ -868,11 +917,23 @@ def main():
 	return
 
 def invtest():
+	# robot=abb6640(d=50)
+	# last_joints=[-0.84190536,  0.61401203,  0.2305977,  -2.70622154, -0.74584949, -2.21577141]
+	# pose=robot.fwd(last_joints)
+	# print('correct: ',robot.inv(pose.p,pose.R,last_joints))
+	# robot2=robot_obj('../config/abb_6640_180_255_robot_default_config.yml',tool_file_path='../config/paintgun.csv',d=50,acc_dict_path='')
+	# theta_v=robot2.inv(pose.p,pose.R)
+	# print('passed to tes:',theta_v[0])
+	# print('equivalent_configurations: ',robot2.tesseract_robot.redundant_solutions(theta_v[0]))
+
 	robot=abb6640(d=50)
 	last_joints=[-0.84190536,  0.61401203,  0.2305977,  -2.70622154, -0.74584949, -2.21577141]
 	pose=robot.fwd(last_joints)
 	print('correct: ',robot.inv(pose.p,pose.R,last_joints))
 	theta_v=robot.inv(pose.p,pose.R)
+	print('inv solutions: ',theta_v)
 	print('equivalent_configurations: ',equivalent_configurations(robot.robot_def, theta_v, last_joints))
+
+
 if __name__ == '__main__':
 	invtest()

@@ -8,14 +8,15 @@ def main():
 	curve_dense = read_csv(data_dir+"Curve_dense.csv",header=None).values
 
 
-	robot=abb6640(d=50, acc_dict_path='../../toolbox/robot_info/6640acc.pickle')
+	# robot=abb6640(d=50, acc_dict_path='../../toolbox/robot_info/6640acc_new.pickle')
+	robot=robot_obj('../../config/abb_6640_180_255_robot_default_config.yml',tool_file_path='../../config/paintgun.csv',d=50,acc_dict_path='../../toolbox/robot_info/6640acc_new.pickle')
 
 
 	v_cmd=1555
 	opt=lambda_opt(curve_dense[:,:3],curve_dense[:,3:],robot1=robot,steps=500,v_cmd=v_cmd)
 
 	#read in initial curve pose
-	with open(data_dir+'blade_pose.yaml') as file:
+	with open(data_dir+'baseline/curve_pose.yaml') as file:
 		curve_pose = np.array(yaml.safe_load(file)['H'],dtype=np.float64)
 
 	k,theta=R2rot(curve_pose[:3,:3])

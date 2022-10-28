@@ -5,29 +5,15 @@ import sys
 from abb_motion_program_exec_client import *
 from robots_def import *
 from error_check import *
-sys.path.append('../toolbox')
 from toolbox_circular_fit import *
 from lambda_calc import *
+from dual_arm import *
 
 R90=rot([0,1,0],np.pi/2)    ###rotation to align z to global x
 
 class MotionSend(object):
-	def __init__(self,robot1=abb6640(d=50),robot2=abb1200(),url='http://127.0.0.1:80',base2_R=np.array([[-1,0,0],[0,-1,0],[0,0,1]]),base2_p=np.array([1500,-500,000])) -> None:
-		###robot1: 6640 with d=50 fake link
-		###robot2: 1200 
-		
+	def __init__(self,url='http://127.0.0.1:80') -> None:
 		self.client = MotionProgramExecClient(base_url=url)
-
-		###with fake link
-		self.robot1=robot1
-		self.robot2=robot2
-		
-		self.base2_R=base2_R
-		self.base2_p=base2_p
-		
-		self.tool1 = tooldata(True,pose(self.robot1.p_tool,R2q(self.robot1.R_tool)),loaddata(1,[0,0,0.001],[1,0,0,0],0,0,0))
-		self.tool2 = tooldata(True,pose(self.robot2.p_tool,R2q(self.robot2.R_tool)),loaddata(1,[0,0,0.001],[1,0,0,0],0,0,0))
-
 
 	def moveL_target(self,robot,q,point):
 		quat=R2q(robot.fwd(q).R)
@@ -35,13 +21,13 @@ class MotionSend(object):
 		robt = robtarget([point[0], point[1], point[2]], [ quat[0], quat[1], quat[2], quat[3]], confdata(cf[0],cf[1],cf[2],cf[3]),[9E+09]*6)
 		return robt
 
-	def moveL_target_relative(self,q1,q2,point):
-		pose1_now=self.robot1.fwd(q1)
-		pose2_world_now=self.robot2.fwd(q2,self.base2_R,self.base2_p)
+	def moveL_target_relative(self,robot1,robot2,q1,q2,point):
+		pose1_now=robot1.fwd(q1)
+		pose2_world_now=robot2.fwd(q2,world=True)
 		relative_R=pose2_world_now.R.T@pose1_now.R
 
 		quat=R2q(relative_R)
-		cf=quadrant(q1,self.robot1)
+		cf=quadrant(q1,robot1)
 		robt = robtarget([point[0], point[1], point[2]], [ quat[0], quat[1], quat[2], quat[3]], confdata(cf[0],cf[1],cf[2],cf[3]),[9E+09]*6)
 		return robt
 	
@@ -61,8 +47,8 @@ class MotionSend(object):
 
 	def exec_motions(self,robot,primitives,breakpoints,p_bp,q_bp,speed,zone):
 
-		mp = MotionProgram(tool=tooldata(True,pose(R90.T@robot.p_tool,R2q(robot.R_tool@R90.T)),loaddata(1,[0,0,0.001],[1,0,0,0],0,0,0)))
-		# mp = MotionProgram(tool=tooldata(True,pose(robot.p_tool,R2q(robot.R_tool)),loaddata(1,[0,0,0.001],[1,0,0,0],0,0,0)))
+		# mp = MotionProgram(tool=tooldata(True,pose(R90.T@robot.p_tool,R2q(robot.R_tool@R90.T)),loaddata(1,[0,0,0.001],[1,0,0,0],0,0,0)))
+		mp = MotionProgram(tool=tooldata(True,pose(robot.p_tool,R2q(robot.R_tool)),loaddata(1,[0,0,0.001],[1,0,0,0],0,0,0)))
 		###change cirpath mode
 		mp.CirPathMode(CirPathModeSwitch.ObjectFrame)
 
@@ -132,17 +118,17 @@ class MotionSend(object):
 		
 		# print(mp.get_program_rapid())
 		log_results = self.client.execute_motion_program(mp)
-		log_results_str = log_results.decode('ascii')
-		return log_results_str
+		return log_results
 
 	def exe_from_file(self,robot,filename,speed,zone):
 		breakpoints,primitives, p_bp,q_bp=self.extract_data_from_cmd(filename)
 		return self.exec_motions(robot,primitives,breakpoints,p_bp,q_bp,speed,zone)
 
-	def exec_motions_multimove(self,primitives1,primitives2,p_bp1,p_bp2,q_bp1,q_bp2,speed1,speed2,zone1,zone2):
+	def exec_motions_multimove(self,robot1,robot2,primitives1,primitives2,p_bp1,p_bp2,q_bp1,q_bp2,speed1,speed2,zone1,zone2):
 		###dynamic speed2
-		mp1 = MotionProgram(tool=self.tool1)
-		mp2 = MotionProgram(tool=self.tool2)
+		
+		mp1 = MotionProgram(tool=tooldata(True,pose(robot1.p_tool,R2q(robot1.R_tool)),loaddata(1,[0,0,0.001],[1,0,0,0],0,0,0)))
+		mp2 = MotionProgram(tool=tooldata(True,pose(robot2.p_tool,R2q(robot2.R_tool)),loaddata(1,[0,0,0.001],[1,0,0,0],0,0,0)))
 
 		###change cirpath mode
 		mp1.CirPathMode(CirPathModeSwitch.ObjectFrame)
@@ -152,7 +138,7 @@ class MotionSend(object):
 		for i in range(len(primitives1)):
 
 			if 'movel' in primitives1[i]:
-				robt = self.moveL_target(self.robot1,q_bp1[i][0],p_bp1[i][0])
+				robt = self.moveL_target(robot1,q_bp1[i][0],p_bp1[i][0])
 				if type(speed1) is list:
 					if type(zone1) is list:
 						mp1.MoveL(robt,speed1[i],zone1[i])
@@ -166,7 +152,7 @@ class MotionSend(object):
 
 
 			elif 'movec' in primitives1[i]:
-				robt1, robt2 = self.moveC_target(self.robot1,q_bp1[i][0],q_bp1[i][1],p_bp1[i][0],p_bp1[i][1])
+				robt1, robt2 = self.moveC_target(robot1,q_bp1[i][0],q_bp1[i][1],p_bp1[i][0],p_bp1[i][1])
 				if type(speed1) is list:
 					if type(zone1) is list:
 						mp1.MoveC(robt1,robt2,speed1[i],zone1[i])
@@ -179,7 +165,7 @@ class MotionSend(object):
 						mp1.MoveC(robt1,robt2,speed1,zone1)
 
 			elif 'movej' in primitives1[i]:
-				robt = self.moveL_target(self.robot1,q_bp1[i][0],p_bp1[i][0])
+				robt = self.moveL_target(robot1,q_bp1[i][0],p_bp1[i][0])
 				mp1.MoveJ(robt,speed1,zone1)
 
 			else: # moveabsj
@@ -203,7 +189,7 @@ class MotionSend(object):
 
 		for i in range(len(primitives2)):
 			if 'movel' in primitives2[i]:
-				robt = self.moveL_target(self.robot2,q_bp2[i][0],p_bp2[i][0])
+				robt = self.moveL_target(robot2,q_bp2[i][0],p_bp2[i][0])
 				if type(speed2) is list:
 					if type(zone2) is list:
 						mp2.MoveL(robt,speed2[i],zone2[i])
@@ -217,7 +203,7 @@ class MotionSend(object):
 
 
 			elif 'movec' in primitives2[i]:
-				robt1, robt2 = self.moveC_target(self.robot2,q_bp2[i][0],q_bp2[i][1],p_bp2[i][0],p_bp2[i][1])
+				robt1, robt2 = self.moveC_target(robot2,q_bp2[i][0],q_bp2[i][1],p_bp2[i][0],p_bp2[i][1])
 				if type(speed2) is list:
 					if type(zone2) is list:
 						mp2.MoveC(robt1,robt2,speed2[i],zone2[i])
@@ -230,7 +216,7 @@ class MotionSend(object):
 						mp2.MoveC(robt1,robt2,speed2,zone2)
 
 			elif 'movej' in primitives2[i]:
-				robt = self.moveL_target(self.robot2,q_bp2[i][0],p_bp2[i][0])
+				robt = self.moveL_target(robot2,q_bp2[i][0],p_bp2[i][0])
 				if type(speed2) is list:
 					mp2.MoveJ(robt,speed2[i],zone2)
 				else:
@@ -259,19 +245,19 @@ class MotionSend(object):
 		mp1.WaitTime(0.1)
 		mp2.WaitTime(0.1)
 		
-		print(mp1.get_program_rapid())
-		print(mp2.get_program_rapid())
-		log_results = self.client.execute_multimove_motion_program([mp1,mp2])
-		log_results_str = log_results.decode('ascii')
-		return log_results_str
+		# print(mp1.get_program_rapid())
+		# print(mp2.get_program_rapid())
+		return self.client.execute_multimove_motion_program([mp1,mp2])
 
-	def exec_motions_multimove_relative(self,primitives1,primitives2,p_bp1,p_bp2,q_bp1,q_bp2,speed1,speed2,zone1,zone2):
+		
+
+	def exec_motions_multimove_relative(self,robot1,robot2,primitives1,primitives2,p_bp1,p_bp2,q_bp1,q_bp2,speed1,speed2,zone1,zone2):
 
 		wobj = wobjdata(False,False,"ROB_2",pose([0,0,0],[1,0,0,0]),pose([0,0,0],[0,0,1,0]))
 
 		###dynamic speed2
-		mp1 = MotionProgram(tool=self.tool1,wobj=wobj)
-		mp2 = MotionProgram(tool=self.tool2)
+		mp1 = MotionProgram(tool=tooldata(True,pose(robot1.p_tool,R2q(robot1.R_tool)),loaddata(1,[0,0,0.001],[1,0,0,0],0,0,0)),wobj=wobj)
+		mp2 = MotionProgram(tool=tooldata(True,pose(robot2.p_tool,R2q(robot2.R_tool)),loaddata(1,[0,0,0.001],[1,0,0,0],0,0,0)))
 
 		###change cirpath mode
 		mp1.CirPathMode(CirPathModeSwitch.ObjectFrame)
@@ -280,7 +266,7 @@ class MotionSend(object):
 		for i in range(len(primitives1)):
 
 			if 'movel' in primitives1[i]:
-				robt = self.moveL_target_relative(q_bp1[i][0],q_bp2[i][0],p_bp1[i][0])
+				robt = self.moveL_target_relative(robot1,robot2,q_bp1[i][0],q_bp2[i][0],p_bp1[i][0])
 				if type(speed1) is list:
 					if type(zone1) is list:
 						mp1.MoveL(robt,speed1[i],zone1[i])
@@ -294,7 +280,7 @@ class MotionSend(object):
 
 
 			elif 'movec' in primitives1[i]:
-				robt1, robt2 = self.moveC_target(self.robot1,q_bp1[i][0],q_bp1[i][1],p_bp1[i][0],p_bp1[i][1])
+				robt1, robt2 = self.moveC_target_relative(robot1,robot2,q_bp1[i][0],q_bp1[i][1],p_bp1[i][0],p_bp1[i][1])
 				if type(speed1) is list:
 					if type(zone1) is list:
 						mp1.MoveC(robt1,robt2,speed1[i],zone1[i])
@@ -307,7 +293,7 @@ class MotionSend(object):
 						mp1.MoveC(robt1,robt2,speed1,zone1)
 
 			elif 'movej' in primitives1[i]:
-				robt = self.moveL_target(self.robot1,q_bp1[i][0],p_bp1[i][0])
+				robt = self.moveL_target(robot1,q_bp1[i][0],p_bp1[i][0])
 				mp1.MoveJ(robt,speed1,zone1)
 
 			else: # moveabsj
@@ -331,7 +317,7 @@ class MotionSend(object):
 
 		for i in range(len(primitives2)):
 			if 'movel' in primitives2[i]:
-				robt = self.moveL_target(self.robot2,q_bp2[i][0],p_bp2[i][0])
+				robt = self.moveL_target(robot2,q_bp2[i][0],p_bp2[i][0])
 				if type(speed2) is list:
 					if type(zone2) is list:
 						mp2.MoveL(robt,speed2[i],zone2[i])
@@ -345,7 +331,7 @@ class MotionSend(object):
 
 
 			elif 'movec' in primitives2[i]:
-				robt1, robt2 = self.moveC_target(self.robot2,q_bp2[i][0],q_bp2[i][1],p_bp2[i][0],p_bp2[i][1])
+				robt1, robt2 = self.moveC_target(robot2,q_bp2[i][0],q_bp2[i][1],p_bp2[i][0],p_bp2[i][1])
 				if type(speed2) is list:
 					if type(zone2) is list:
 						mp2.MoveC(robt1,robt2,speed2[i],zone2[i])
@@ -358,7 +344,7 @@ class MotionSend(object):
 						mp2.MoveC(robt1,robt2,speed2,zone2)
 
 			elif 'movej' in primitives2[i]:
-				robt = self.moveL_target(self.robot2,q_bp2[i][0],p_bp2[i][0])
+				robt = self.moveL_target(robot2,q_bp2[i][0],p_bp2[i][0])
 				if type(speed2) is list:
 					mp2.MoveJ(robt,speed2[i],zone2)
 				else:
@@ -389,9 +375,8 @@ class MotionSend(object):
 		
 		print(mp1.get_program_rapid())
 		print(mp2.get_program_rapid())
-		log_results = self.client.execute_multimove_motion_program([mp1,mp2])
-		log_results_str = log_results.decode('ascii')
-		return log_results_str
+		return self.client.execute_multimove_motion_program([mp1,mp2])
+
 
 	def extend(self,robot,q_bp,primitives,breakpoints,points_list,extension_start=100,extension_end=100):
 		###initial point extension
@@ -582,27 +567,17 @@ class MotionSend(object):
 		return ms.exec_motions_multimove(breakpoints1,primitives1,primitives2,p_bp1,p_bp2,q_bp1,q_bp2,speed1,speed2,zone1,zone2)
 
 
-	def logged_data_analysis(self,robot,df,realrobot=True):
-		q1=df[' J1'].tolist()
-		q2=df[' J2'].tolist()
-		q3=df[' J3'].tolist()
-		q4=df[' J4'].tolist()
-		q5=df[' J5'].tolist()
-		q6=df[' J6'].tolist()
-		cmd_num=np.array(df[' cmd_num'].tolist()).astype(float)
+	def logged_data_analysis(self,robot,log_results,realrobot=True):
+		cmd_num=log_results.data[:,1]
 		#find closest to 5 cmd_num
 		idx = np.absolute(cmd_num-5).argmin()
-		# print('cmd_num ',cmd_num[idx])
 		start_idx=np.where(cmd_num==cmd_num[idx])[0][0]
-		curve_exe_js=np.radians(np.vstack((q1,q2,q3,q4,q5,q6)).T.astype(float)[start_idx:])
-		timestamp=np.array(df['timestamp'].tolist()[start_idx:]).astype(float)
-		timestep=np.average(timestamp[1:]-timestamp[:-1])
-		# np.set_printoptions(threshold=sys.maxsize)
-		# print(timestamp)
+		curve_exe_js=np.radians(log_results.data[start_idx:,2:])
+		timestamp=log_results.data[start_idx:,0]
 		if realrobot:
 			timestamp, curve_exe_js=lfilter(timestamp, curve_exe_js)
 
-		act_speed=[]
+		speed=[0]
 		lam=[0]
 		curve_exe=[]
 		curve_exe_R=[]
@@ -614,41 +589,24 @@ class MotionSend(object):
 				lam.append(lam[-1]+np.linalg.norm(curve_exe[i]-curve_exe[i-1]))
 			try:
 				if timestamp[i-1]!=timestamp[i] and np.linalg.norm(curve_exe_js[i-1]-curve_exe_js[i])!=0:
-					act_speed.append(np.linalg.norm(curve_exe[-1]-curve_exe[-2])/(timestamp[i]-timestamp[i-1]))
+					speed.append(np.linalg.norm(curve_exe[-1]-curve_exe[-2])/(timestamp[i]-timestamp[i-1]))
 				else:
-					act_speed.append(act_speed[-1])      
+					speed.append(speed[-1])      
 			except IndexError:
 				pass
 
-		act_speed=moving_average(act_speed,padding=True)
-		
-		return np.array(lam), np.array(curve_exe), np.array(curve_exe_R),np.array(curve_exe_js), np.array(act_speed), timestamp-timestamp[0]
+		speed=moving_average(speed,padding=True)
+		return np.array(lam), np.array(curve_exe), np.array(curve_exe_R),np.array(curve_exe_js), np.array(speed), timestamp-timestamp[0]
 
-	def logged_data_analysis_multimove(self,df,base2_R,base2_p,realrobot=True):
-		q1_1=df[' J1'].tolist()[1:-1]
-		q1_2=df[' J2'].tolist()[1:-1]
-		q1_3=df[' J3'].tolist()[1:-1]
-		q1_4=df[' J4'].tolist()[1:-1]
-		q1_5=df[' J5'].tolist()[1:-1]
-		q1_6=df[' J6'].tolist()[1:-1]
-		q2_1=df[' J1_2'].tolist()[1:-1]
-		q2_2=df[' J2_2'].tolist()[1:-1]
-		q2_3=df[' J3_2'].tolist()[1:-1]
-		q2_4=df[' J4_2'].tolist()[1:-1]
-		q2_5=df[' J5_2'].tolist()[1:-1]
-		q2_6=df[' J6_2'].tolist()[1:-1]
-		timestamp=df['timestamp'].tolist()[1:-1]
-
-		cmd_num=np.array(df[' cmd_num'].tolist()[1:-1]).astype(float)
+	def logged_data_analysis_multimove(self,log_results,robot1,robot2,realrobot=True):
+		cmd_num=log_results.data[:,1]
 
 		idx = np.absolute(cmd_num-5).argmin()
 		start_idx=np.where(cmd_num==cmd_num[idx])[0][0]
 
-		curve_exe_js1=np.radians(np.vstack((q1_1,q1_2,q1_3,q1_4,q1_5,q1_6)).T.astype(float)[start_idx:])
-		curve_exe_js2=np.radians(np.vstack((q2_1,q2_2,q2_3,q2_4,q2_5,q2_6)).T.astype(float)[start_idx:])
-		timestamp=np.array(timestamp[start_idx:]).astype(float)
-
-		timestep=np.average(timestamp[1:]-timestamp[:-1])
+		curve_exe_js1=np.radians(log_results.data[start_idx:,2:8])
+		curve_exe_js2=np.radians(log_results.data[start_idx:,8:])
+		timestamp=log_results.data[start_idx:,0]
 
 
 		if realrobot:
@@ -657,72 +615,16 @@ class MotionSend(object):
 			curve_exe_js1=curve_exe_js_all[:,:6]
 			curve_exe_js2=curve_exe_js_all[:,6:]
 
-		act_speed=[]
-		lam=[0]
-		relative_path_exe=[]
-		relative_path_exe_R=[]
-		curve_exe1=[]
-		curve_exe2=[]
-		curve_exe_R1=[]
-		curve_exe_R2=[]
-		for i in range(len(curve_exe_js1)):
-			pose1_now=self.robot1.fwd(curve_exe_js1[i])
-			pose2_now=self.robot2.fwd(curve_exe_js2[i])
-
-			curve_exe1.append(pose1_now.p)
-			curve_exe2.append(pose2_now.p)
-			curve_exe_R1.append(pose1_now.R)
-			curve_exe_R2.append(pose2_now.R)
-
-			pose2_world_now=self.robot2.fwd(curve_exe_js2[i],base2_R,base2_p)
-
-
-			relative_path_exe.append(np.dot(pose2_world_now.R.T,pose1_now.p-pose2_world_now.p))
-			relative_path_exe_R.append(pose2_world_now.R.T@pose1_now.R)
-			if i>0:
-				lam.append(lam[-1]+np.linalg.norm(relative_path_exe[i]-relative_path_exe[i-1]))
-			try:
-				if np.linalg.norm(relative_path_exe[-1]-relative_path_exe[-2])==0:
-					act_speed.append(0)
-				else:
-					if timestamp[i-1]!=timestamp[i]:
-						act_speed.append(np.linalg.norm(relative_path_exe[-1]-relative_path_exe[-2])/(timestamp[i]-timestamp[i-1]))
-					else:
-						act_speed.append(act_speed[-1])
-					
-			except IndexError:
-				pass
+	
+		curve_exe1,curve_exe2,curve_exe_R1,curve_exe_R2,relative_path_exe,relative_path_exe_R=form_relative_path(curve_exe_js1,curve_exe_js2,robot1,robot2)
+		lam=calc_lam_cs(relative_path_exe)
 
 		###speed filter
-		act_speed=moving_average(act_speed,padding=True)
-		
-		# act_speed=replace_outliers(np.array(act_speed))
-		# act_speed=replace_outliers2(act_speed)
-
-		return np.array(lam), np.array(curve_exe1),np.array(curve_exe2), np.array(curve_exe_R1),np.array(curve_exe_R2),curve_exe_js1,curve_exe_js2, act_speed, timestamp, np.array(relative_path_exe), np.array(relative_path_exe_R)
-
-	def form_relative_path(self,curve_js1,curve_js2,base2_R,base2_p):
-		relative_path_exe=[]
-		relative_path_exe_R=[]
-		curve_exe1=[]
-		curve_exe2=[]
-		curve_exe_R1=[]
-		curve_exe_R2=[]
-		for i in range(len(curve_js1)):
-			pose1_now=self.robot1.fwd(curve_js1[i])
-			pose2_now=self.robot2.fwd(curve_js2[i])
-
-			curve_exe1.append(pose1_now.p)
-			curve_exe2.append(pose2_now.p)
-			curve_exe_R1.append(pose1_now.R)
-			curve_exe_R2.append(pose2_now.R)
-
-			pose2_world_now=self.robot2.fwd(curve_js2[i],base2_R,base2_p)
+		speed=np.gradient(lam)/np.gradient(timestamp)
+		speed=moving_average(speed,padding=True)
 
 
-			relative_path_exe.append(np.dot(pose2_world_now.R.T,pose1_now.p-pose2_world_now.p))
-			relative_path_exe_R.append(pose2_world_now.R.T@pose1_now.R)
-		return np.array(relative_path_exe),np.array(relative_path_exe_R)
+		return lam, curve_exe1,curve_exe2,curve_exe_R1,curve_exe_R2,curve_exe_js1,curve_exe_js2, speed, timestamp, relative_path_exe,relative_path_exe_R
 
 
 	def chop_extension(self,curve_exe, curve_exe_R,curve_exe_js, speed, timestamp,p_start,p_end):
@@ -779,24 +681,6 @@ class MotionSend(object):
 
 
 def main():
-	ms = MotionSend()
-	# data_dir="../greedy_fitting/greedy_output/"
-	data_dir="../greedy_fitting/greedy_dual_output/"
-	# speed={"v50":v50,"v500":v500,"v5000":v5000}
-	# zone={"fine":fine,"z1":z1,"z10":z10}
-	vmax = speeddata(10000,9999999,9999999,999999)
-	v559 = speeddata(559,9999999,9999999,999999)
-	speed={"v50":v50}#,"v500":v500,"v300":v300,"v100":v100}
-	zone={"z10":z10}
-
-	for s in speed:
-		for z in zone: 
-			curve_exe_js=ms.exe_from_file(data_dir+"command2.csv",data_dir+"curve_fit_js2.csv",speed[s],zone[z])
-   
-
-			# f = open(data_dir+"curve_exe"+"_"+s+"_"+z+".csv", "w")
-			# f.write(curve_exe_js)
-			# f.close()
-
+	return
 if __name__ == "__main__":
 	main()
