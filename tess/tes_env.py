@@ -23,7 +23,7 @@ def H42H3(H):
 	H3=np.vstack((H3,np.array([0,0,1])))
 	return H3
 
-class Planner(object):
+class Tess_Visual(object):
 	def __init__(self):
 
 		##load calibration parameters
@@ -39,15 +39,15 @@ class Planner(object):
 		################kinematics tools##################################################
 		
 		#link and joint names in urdf
-		# Sawyer_joint_names=["right_j0","right_j1","right_j2","right_j3","right_j4","right_j5","right_j6"]
-		# Sawyer_link_names=["right_l0","right_l1","right_l2","right_l3","right_l4","right_l5","right_l6","right_l1_2","right_l2_2","right_l4_2","right_hand"]
-		# ABB_joint_names=['ABB1200_joint_1','ABB1200_joint_2','ABB1200_joint_3','ABB1200_joint_4','ABB1200_joint_5','ABB1200_joint_6']
-		# ABB_link_names=['ABB1200_link_1','ABB1200_link_2','ABB1200_link_3','ABB1200_link_4','ABB1200_link_5','ABB1200_link_6']
+		ABB_6640_180_255_joint_names=["ABB_6640_180_255_joint_1","ABB_6640_180_255_joint_1","ABB_6640_180_255_joint_1","ABB_6640_180_255_joint_1","ABB_6640_180_255_joint_1","ABB_6640_180_255_joint_1"]
+		ABB_6640_180_255_link_names=["ABB_6640_180_255_link_1","ABB_6640_180_255_link_2","ABB_6640_180_255_link_3","ABB_6640_180_255_link_4","ABB_6640_180_255_link_5","ABB_6640_180_255_link_6"]
+		ABB_1200_5_90_joint_names=['ABB_1200_5_90_joint_1','ABB_1200_5_90_joint_2','ABB_1200_5_90_joint_3','ABB_1200_5_90_joint_4','ABB_1200_5_90_joint_5','ABB_1200_5_90_joint_6']
+		ABB_1200_5_90_link_names=['ABB_1200_5_90_link_1','ABB_1200_5_90_link_1','ABB_1200_5_90_link_1','ABB_1200_5_90_link_1','ABB_1200_5_90_link_1','ABB_1200_5_90_link_1']
 
 		#Robot dictionaries, all reference by name
-		# self.robot_name_list=['sawyer','abb']
-		# self.robot_linkname={'sawyer':Sawyer_link_names,'abb':ABB_link_names}
-		# self.robot_jointname={'sawyer':Sawyer_joint_names,'abb':ABB_joint_names}
+		self.robot_name_list=['ABB_6640_180_255','ABB_1200_5_90']
+		self.robot_linkname={'ABB_6640_180_255':ABB_6640_180_255_link_names,'ABB_1200_5_90':ABB_1200_5_90_link_names}
+		self.robot_jointname={'ABB_6640_180_255':ABB_6640_180_255_joint_names,'ABB_1200_5_90':ABB_1200_5_90_joint_names}
 		
 
 		######tesseract environment setup:
@@ -60,12 +60,6 @@ class Planner(object):
 		self.t_env.init(combined_urdf, combined_srdf, GazeboModelResourceLocator())
 		self.scene_graph=self.t_env.getSceneGraph()
 
-		#update robot poses based on calibration file
-		# cmd1 = ChangeJointOriginCommand("sawyer_pose", Isometry3d(H_Sawyer))
-		# cmd2 = ChangeJointOriginCommand("abb_pose", Isometry3d(H_ABB))
-
-		# self.t_env.applyCommand(cmd1)
-		# self.t_env.applyCommand(cmd2)
 
 		#Tesseract reports all GJK/EPA distance within contact_distance threshold
 		contact_distance=0.2
@@ -82,7 +76,14 @@ class Planner(object):
 
 		self.viewer.start_serve_background()
 
-		
+	def update_pose(model_name,H):
+		cmd = ChangeJointOriginCommand(model_name+'_pose', Isometry3d(H_Sawyer))
+		self.t_env.applyCommand(cmd)
+
+	def check_collision(robot_name,curve_js):
+
+		return 
+
 	#######################################update joint angles in Tesseract Viewer###########################################
 	def viewer_joints_update(self,robots_joint):
 		joint_names=[]
@@ -98,7 +99,7 @@ class Planner(object):
 def main():
 
 
-	planner_inst=Planner()				#create obj
+	planner_inst=Tess_Visual()				#create obj
 
 
 	input("Press enter to quit")

@@ -572,8 +572,8 @@ class MotionSend(object):
 		start_idx=np.where(cmd_num==cmd_num[idx])[0][0]
 		curve_exe_js=np.radians(log_results.data[start_idx:,2:])
 		timestamp=log_results.data[start_idx:,0]
-		if realrobot:
-			timestamp, curve_exe_js=lfilter(timestamp, curve_exe_js)
+		###filter noise
+		timestamp, curve_exe_js=lfilter(timestamp, curve_exe_js)
 
 		speed=[0]
 		lam=[0]

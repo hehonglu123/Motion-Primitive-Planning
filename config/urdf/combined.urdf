@@ -19,18 +19,63 @@
     <origin rpy="0.0 0.0 0.0" xyz="0 5.0 5.0"/><!--abb_1200_5_90 pedestal-->
   </joint>
 
+  <joint name="curve_1_pose" type="fixed">
+    <parent link="world"/>
+    <child link="curve_1_base_link"/>
+    <origin rpy="0.0 0.0 0.0" xyz="0 0.0 5.0"/><!--abb_1200_5_90 pedestal-->
+  </joint>
+  <joint name="curve_2_pose" type="fixed">
+    <parent link="world"/>
+    <child link="curve_2_base_link"/>
+    <origin rpy="0.0 0.0 0.0" xyz="0 0.0 -5.0"/><!--abb_1200_5_90 pedestal-->
+  </joint>
 
-  
 
-  <material name="black">
-    <color rgba="0 0 0 1"/>
-  </material>
-  <material name="darkgray">
-    <color rgba=".2 .2 .2 1"/>
-  </material>
-  <material name="darkred">
-    <color rgba=".5 .1 .1 1"/>
-  </material>
+  <!--curve_1 part-->
+  <link name="curve_1_base_link">
+    <!-- <collision>
+      <origin rpy="0 0 0" xyz="-.124 0 .12"/>
+      <geometry>
+        <box size="1.016 .729 .24"/>
+      </geometry>
+    </collision> -->
+    <visual name="visual">
+      <geometry>
+        <mesh filename="model://curve_1/meshes/wood.stl" scale="0.01 0.01 0.01"/>
+      </geometry>
+      <material name="orange">
+        <color rgba="1 .42 .04 1"/>
+      </material>
+    </visual>
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 .107 "/>
+      <mass value="254.138"/>
+      <inertia ixx="9.459" ixy="-.018" ixz="-.297" iyy="9.18" iyz=".003" izz="16.946"/>
+    </inertial>
+  </link>
+
+  <!--curve_2 part-->
+  <link name="curve_2_base_link">
+    <!-- <collision>
+      <origin rpy="0 0 0" xyz="-.124 0 .12"/>
+      <geometry>
+        <box size="1.016 .729 .24"/>
+      </geometry>
+    </collision> -->
+    <visual name="visual">
+      <geometry>
+        <mesh filename="model://curve_2/meshes/generic_fan_blade.stl" scale="0.01 0.01 0.01"/>
+      </geometry>
+      <material name="orange">
+        <color rgba="1 .42 .04 1"/>
+      </material>
+    </visual>
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 .107 "/>
+      <mass value="254.138"/>
+      <inertia ixx="9.459" ixy="-.018" ixz="-.297" iyy="9.18" iyz=".003" izz="16.946"/>
+    </inertial>
+  </link>
 
   <!--abb_6640_180_255 part-->
   <link name="ABB_6640_180_255_base_link">
