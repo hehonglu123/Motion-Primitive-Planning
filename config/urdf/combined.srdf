@@ -44,7 +44,7 @@
     could potentially come into collision with any other link in the robot.
     This tag disables collision checking between a specified pair of links. -->
 
-  <!-- ABB -->
+  <!-- ABB 1200 -->
   <disable_collisions link1="ABB_1200_5_90_base_link" link2="ABB_1200_5_90_link_1" reason="Adjacent" />
   <disable_collisions link1="ABB_1200_5_90_link_1" link2="ABB_1200_5_90_link_2" reason="Adjacent" />
   <disable_collisions link1="ABB_1200_5_90_link_2" link2="ABB_1200_5_90_link_3" reason="Adjacent" />
@@ -55,6 +55,16 @@
   <disable_collisions link1="ABB_1200_5_90_link_3" link2="ABB_1200_5_90_link_6" reason="Never" />
   <disable_collisions link1="ABB_1200_5_90_link_4" link2="ABB_1200_5_90_link_5" reason="Adjacent" />
   <disable_collisions link1="ABB_1200_5_90_link_5" link2="ABB_1200_5_90_link_6" reason="Adjacent" />
-
+  <!-- ABB_6640_180_255 -->
+  <disable_collisions link1="ABB_6640_180_255_base_link" link2="ABB_6640_180_255_link_1" reason="Adjacent" />
+  <disable_collisions link1="ABB_6640_180_255_link_1" link2="ABB_6640_180_255_link_2" reason="Adjacent" />
+  <disable_collisions link1="ABB_6640_180_255_link_2" link2="ABB_6640_180_255_link_3" reason="Adjacent" />
+  <disable_collisions link1="ABB_6640_180_255_link_2" link2="ABB_6640_180_255_link_5" reason="Never" />
+  <disable_collisions link1="ABB_6640_180_255_link_2" link2="ABB_6640_180_255_link_6" reason="Never" />
+  <disable_collisions link1="ABB_6640_180_255_link_3" link2="ABB_6640_180_255_link_4" reason="Adjacent" />
+  <disable_collisions link1="ABB_6640_180_255_link_3" link2="ABB_6640_180_255_link_5" reason="Never" />
+  <disable_collisions link1="ABB_6640_180_255_link_3" link2="ABB_6640_180_255_link_6" reason="Never" />
+  <disable_collisions link1="ABB_6640_180_255_link_4" link2="ABB_6640_180_255_link_5" reason="Adjacent" />
+  <disable_collisions link1="ABB_6640_180_255_link_5" link2="ABB_6640_180_255_link_6" reason="Adjacent" />
 
 </robot>

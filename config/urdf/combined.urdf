@@ -22,12 +22,12 @@
   <joint name="curve_1_pose" type="fixed">
     <parent link="world"/>
     <child link="curve_1_base_link"/>
-    <origin rpy="0.0 0.0 0.0" xyz="0 0.0 5.0"/><!--abb_1200_5_90 pedestal-->
+    <origin rpy="0.0 0.0 0.0" xyz="0 2.0 0.0"/><!--abb_1200_5_90 pedestal-->
   </joint>
   <joint name="curve_2_pose" type="fixed">
     <parent link="world"/>
     <child link="curve_2_base_link"/>
-    <origin rpy="0.0 0.0 0.0" xyz="0 0.0 -5.0"/><!--abb_1200_5_90 pedestal-->
+    <origin rpy="0.0 0.0 0.0" xyz="0 -2.0 0.0"/><!--abb_1200_5_90 pedestal-->
   </joint>
 
 
@@ -41,10 +41,10 @@
     </collision> -->
     <visual name="visual">
       <geometry>
-        <mesh filename="model://curve_1/meshes/wood.stl" scale="0.01 0.01 0.01"/>
+        <mesh filename="model://curve_1/meshes/wood.stl" scale="0.05 0.05 0.05"/>
       </geometry>
       <material name="orange">
-        <color rgba="1 .42 .04 1"/>
+        <color rgba=".04 .42 1 1"/>
       </material>
     </visual>
     <inertial>
@@ -64,10 +64,10 @@
     </collision> -->
     <visual name="visual">
       <geometry>
-        <mesh filename="model://curve_2/meshes/generic_fan_blade.stl" scale="0.01 0.01 0.01"/>
+        <mesh filename="model://curve_2/meshes/generic_fan_blade.stl" scale="0.05 0.05 0.05"/>
       </geometry>
       <material name="orange">
-        <color rgba="1 .42 .04 1"/>
+        <color rgba=".04 .42 1 1"/>
       </material>
     </visual>
     <inertial>
@@ -334,7 +334,16 @@
       <inertia ixx=".017" ixy="0" ixz="0" iyy=".009" iyz="0" izz=".009"/>
     </inertial>
   </link>
-  <link name="tool0"/>
+  <link name="ABB_6640_180_255_tool">
+    <visual name="visual">
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <geometry>
+        <mesh filename="model://paintgun/meshes/paint_gun.stl" scale="0.04 0.04 0.04"/>
+      </geometry>
+      <material name="orange"/>
+    </visual>
+
+  </link>
   <!-- end of link list -->
   <!-- joint list -->
   <joint name="ABB_6640_180_255_joint_1" type="revolute">
@@ -381,7 +390,7 @@
   </joint>
   <joint name="joint_6-tool0" type="fixed">
     <parent link="ABB_6640_180_255_link_6"/>
-    <child link="tool0"/>
+    <child link="ABB_6640_180_255_tool"/>
     <origin rpy="0 1.57079632679 0" xyz="0 0 0"/>
   </joint>
   <!-- end of joint list -->
