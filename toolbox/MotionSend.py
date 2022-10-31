@@ -9,7 +9,6 @@ from toolbox_circular_fit import *
 from lambda_calc import *
 from dual_arm import *
 
-R90=rot([0,1,0],np.pi/2)    ###rotation to align z to global x
 
 class MotionSend(object):
 	def __init__(self,url='http://127.0.0.1:80') -> None:
@@ -47,7 +46,6 @@ class MotionSend(object):
 
 	def exec_motions(self,robot,primitives,breakpoints,p_bp,q_bp,speed,zone):
 
-		# mp = MotionProgram(tool=tooldata(True,pose(R90.T@robot.p_tool,R2q(robot.R_tool@R90.T)),loaddata(1,[0,0,0.001],[1,0,0,0],0,0,0)))
 		mp = MotionProgram(tool=tooldata(True,pose(robot.p_tool,R2q(robot.R_tool)),loaddata(1,[0,0,0.001],[1,0,0,0],0,0,0)))
 		###change cirpath mode
 		mp.CirPathMode(CirPathModeSwitch.ObjectFrame)
@@ -253,15 +251,15 @@ class MotionSend(object):
 
 	def exec_motions_multimove_relative(self,robot1,robot2,primitives1,primitives2,p_bp1,p_bp2,q_bp1,q_bp2,speed1,speed2,zone1,zone2):
 
-		wobj = wobjdata(False,False,"ROB_2",pose([0,0,0],[1,0,0,0]),pose([0,0,0],[0,0,1,0]))
+		wobj = wobjdata(False,False,"ROB_2",pose([0,0,0],[1,0,0,0]),pose(robot2.p_tool,R2q(robot2.R_tool)))
 
 		###dynamic speed2
 		mp1 = MotionProgram(tool=tooldata(True,pose(robot1.p_tool,R2q(robot1.R_tool)),loaddata(1,[0,0,0.001],[1,0,0,0],0,0,0)),wobj=wobj)
 		mp2 = MotionProgram(tool=tooldata(True,pose(robot2.p_tool,R2q(robot2.R_tool)),loaddata(1,[0,0,0.001],[1,0,0,0],0,0,0)))
 
 		###change cirpath mode
-		mp1.CirPathMode(CirPathModeSwitch.ObjectFrame)
-		mp2.CirPathMode(CirPathModeSwitch.ObjectFrame)
+		# mp1.CirPathMode(CirPathModeSwitch.ObjectFrame)
+		# mp2.CirPathMode(CirPathModeSwitch.ObjectFrame)
 		
 		for i in range(len(primitives1)):
 
@@ -373,8 +371,8 @@ class MotionSend(object):
 		mp1.WaitTime(0.1)
 		mp2.WaitTime(0.1)
 		
-		print(mp1.get_program_rapid())
-		print(mp2.get_program_rapid())
+		print(mp1.get_program_rapid(module_name="TROB1_MODULE",sync_move=True))
+		print(mp2.get_program_rapid(module_name="TROB2_MODULE", sync_move=True))
 		return self.client.execute_multimove_motion_program([mp1,mp2])
 
 
@@ -574,8 +572,8 @@ class MotionSend(object):
 		start_idx=np.where(cmd_num==cmd_num[idx])[0][0]
 		curve_exe_js=np.radians(log_results.data[start_idx:,2:])
 		timestamp=log_results.data[start_idx:,0]
-		if realrobot:
-			timestamp, curve_exe_js=lfilter(timestamp, curve_exe_js)
+		###filter noise
+		timestamp, curve_exe_js=lfilter(timestamp, curve_exe_js)
 
 		speed=[0]
 		lam=[0]
