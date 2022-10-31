@@ -33,8 +33,8 @@ def main():
     all_objtype=['curve_wood']
 
     # num_ls=[80,100,150]
-    num_ls=[100,50,30,25]
-    # num_ls=[25]
+    # num_ls=[100,50,30,25]
+    num_ls=[25]
 
     for obj_type in all_objtype:
 
@@ -91,7 +91,7 @@ def main():
             s_up=1000
             s_low=0
             s=(s_up+s_low)/2
-            s=612
+            s=448
             speed_found=False
             z=100
             while True:
