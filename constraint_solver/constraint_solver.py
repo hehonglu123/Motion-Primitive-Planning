@@ -300,7 +300,8 @@ class lambda_opt(object):
 					pose1_now=self.robot1.fwd(q_all1[-1])
 					pose2_now=self.robot2.fwd(q_all2[-1])
 
-					pose2_world_now=self.robot2.fwd(q_all2[-1],base2_R,base2_p)
+					self.robot2.base_H=H_from_RT(base2_R,base2_p)
+					pose2_world_now=self.robot2.fwd(q_all2[-1],world=True)
 
 					error_fb=np.linalg.norm(np.dot(pose2_world_now.R.T,pose1_now.p-pose2_world_now.p)-self.curve[i])+np.linalg.norm(np.dot(pose2_world_now.R.T,pose1_now.R[:,-1])-self.curve_normal[i])	
 
@@ -545,14 +546,13 @@ class lambda_opt(object):
 		speed=traj_speed_est(self.robot1,q_out,self.lam,self.v_cmd)
 
 		
-		print(min(speed))
 		return -min(speed)
 
 
 	def dual_arm_init_opt(self,x):
 		q_init2=x[:-1]
 
-		pose2_world_now=self.robot2.fwd(q_init2,self.base2_R,self.base2_p)
+		pose2_world_now=self.robot2.fwd(q_init2,world=True)
 
 		R_temp=direction2R(pose2_world_now.R@self.curve_normal[0],-self.curve[1]+self.curve[0])
 		R=np.dot(R_temp,Rz(x[-1]))
@@ -572,9 +572,8 @@ class lambda_opt(object):
 			return 999
 
 		# dlam=calc_lamdot_2arm(np.hstack((q_out1,q_out2)),self.lam,self.robot1,self.robot2,step=1)
-		speed,_,_=traj_speed_est_dual(self.robot1,self.robot2,q_out1,q_out2,self.base2_R,self.base2_p,self.lam,self.v_cmd)
+		speed,_,_=traj_speed_est_dual(self.robot1,self.robot2,q_out1,q_out2,self.lam,self.v_cmd)
 
-		print(min(speed))
 		return -min(speed)
 
 	def dual_arm_opt_w_pose(self,x):
@@ -586,7 +585,8 @@ class lambda_opt(object):
 		base2_k=base2_w/base2_theta
 		base2_R=rot(base2_k,base2_theta)
 
-		pose2_world_now=self.robot2.fwd(q_init2,base2_R,base2_p)
+		self.robot2.base_H=H_from_RT(base2_R,base2_p)
+		pose2_world_now=self.robot2.fwd(q_init2,world=True)
 
 
 		R_temp=direction2R(pose2_world_now.R@self.curve_normal[0],-self.curve[1]+self.curve[0])
@@ -606,9 +606,8 @@ class lambda_opt(object):
 		if np.min(self.robot2.upper_limit-q_out2[0])<0.2 or  np.min(q_out2[0]-self.robot2.lower_limit)<0.2 or np.min(self.robot2.upper_limit-q_out2[-1])<0.2 or  np.min(q_out2[-1]-self.robot2.lower_limit)<0.2:
 			return 999
 
-		speed,_,_=traj_speed_est_dual(self.robot1,self.robot2,q_out1,q_out2,base2_R,base2_p,self.lam,self.v_cmd)
+		speed,_,_=traj_speed_est_dual(self.robot1,self.robot2,q_out1,q_out2,self.lam,self.v_cmd)
 
-		print(min(speed))
 		return -min(speed)
 
 	def dual_arm_opt_w_pose_3dof(self,x):
@@ -618,7 +617,8 @@ class lambda_opt(object):
 		base2_theta=x[8]
 		base2_R=Rz(base2_theta)
 
-		pose2_world_now=self.robot2.fwd(q_init2,base2_R,base2_p)
+		self.robot2.base_H=H_from_RT(base2_R,base2_p)
+		pose2_world_now=self.robot2.fwd(q_init2,world=True)
 
 
 		R_temp=direction2R(pose2_world_now.R@self.curve_normal[0],-self.curve[1]+self.curve[0])
@@ -638,9 +638,8 @@ class lambda_opt(object):
 		if np.min(self.robot2.upper_limit-q_out2[0])<0.2 or  np.min(q_out2[0]-self.robot2.lower_limit)<0.2 or np.min(self.robot2.upper_limit-q_out2[-1])<0.2 or  np.min(q_out2[-1]-self.robot2.lower_limit)<0.2:
 			return 999
 
-		speed,_,_=traj_speed_est_dual(self.robot1,self.robot2,q_out1,q_out2,base2_R,base2_p,self.lam,self.v_cmd)
+		speed,_,_=traj_speed_est_dual(self.robot1,self.robot2,q_out1,q_out2,self.lam,self.v_cmd)
 
-		print(min(speed))
 		return -min(speed)
 
 	def single_arm_theta0_opt(self,theta0):
