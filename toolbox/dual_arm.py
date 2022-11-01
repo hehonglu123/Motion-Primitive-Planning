@@ -55,18 +55,12 @@ def initialize_data(dataset,data_dir,solution_dir,robot1,robot2):
 
 	lam_relative_path=calc_lam_cs(relative_path)
 
-	with open(solution_dir+'abb1200.yaml') as file:
-		H_1200 = np.array(yaml.safe_load(file)['H'],dtype=np.float64)
-
-	base2_R=H_1200[:3,:3]
-	base2_p=1000*H_1200[:-1,-1]
-
 
 	lam1=calc_lam_js(curve_js1,robot1)
 	lam2=calc_lam_js(curve_js2,robot2)
 
 
-	return relative_path,base2_R,base2_p,lam_relative_path,lam1,lam2,curve_js1,curve_js2
+	return relative_path,lam_relative_path,lam1,lam2,curve_js1,curve_js2
 
 
 def cmd_speed_profile(breakpoints,s1_all,s2_all):

@@ -14,13 +14,11 @@ from lambda_calc import *
 from blending import *
 
 class ilc_toolbox(object):
-	def __init__(self,robot,primitives,base2_R=np.eye(3),base2_p=np.zeros(3)):
+	def __init__(self,robot,primitives):
 		#robot: single robot or tuple
 		#primitives: series of primitives or list of 2 
 		self.robot=robot
 		self.primitives=primitives
-		self.base2_R=base2_R
-		self.base2_p=base2_p
 	def interp_trajectory(self,q_bp,zone):
 		curve_interp, curve_R_interp, curve_js_interp, breakpoints_blended=form_traj_from_bp(q_bp,self.primitives,self.robot)
 		return blend_js_from_primitive(curve_interp, curve_js_interp, breakpoints_blended, self.primitives,self.robot,zone=zone)
@@ -348,7 +346,7 @@ class ilc_toolbox(object):
 
 		robot1_worst_pose=self.robot[0].fwd(worst_point_joints[0])
 		robot2_worst_pose=self.robot[-1].fwd(worst_point_joints[-1])
-		robot2_worst_pose_global=self.robot[-1].fwd(worst_point_joints[-1],self.base2_R,self.base2_p)
+		robot2_worst_pose_global=self.robot[-1].fwd(worst_point_joints[-1],world=True)
 		worst_point_relative_p=robot2_worst_pose_global.R.T@(robot1_worst_pose.p-robot2_worst_pose_global.p)
 
 		worst_case_error=np.linalg.norm(worst_point_relative_p-closest_p)
@@ -725,12 +723,12 @@ class ilc_toolbox(object):
 				
 				error_bps1.append(error_bp)
 				###error direction in global frame (robot1 frame)
-				error_bps_v1[bp_idx][bp_sub_idx]=(self.base2_R@curve_exe_R2[bp_exe_idx])@(relative_path[curve_original_idx,:3]-relative_path_exe[bp_exe_idx])
+				error_bps_v1[bp_idx][bp_sub_idx]=(self.robot[-1].base_H[:3,:3]@curve_exe_R2[bp_exe_idx])@(relative_path[curve_original_idx,:3]-relative_path_exe[bp_exe_idx])
 				###normal error direction
 				R_temp=rotation_matrix_from_vectors(relative_path_exe_R[bp_exe_idx][:,-1],relative_path[curve_original_idx,3:])
 				k_temp,theta_temp=R2rot(R_temp)
 				###convert rotation axis from 2tool frame to robot1 base frame
-				k_temp=(self.base2_R@curve_exe_R2[bp_exe_idx])@k_temp
+				k_temp=(self.robot[-1].base_H[:3,:3]@curve_exe_R2[bp_exe_idx])@k_temp
 				
 				if theta_temp!=0:
 					error_bps_w1[bp_idx][bp_sub_idx]=k_temp*theta_temp

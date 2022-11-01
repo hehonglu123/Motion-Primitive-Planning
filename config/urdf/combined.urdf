@@ -675,7 +675,7 @@
         <mesh filename="model://FANUC_m10ia/meshes/m10ia/visual/link_4.stl"/>
       </geometry>
       <material name="">
-        <color rgba="0.96 0.76 0.13 1.0"/> <!-- color not changing??? -->
+        <color rgba="0.96 0.76 0.13 0.0"/> <!-- color not changing??? -->
       </material>
     </visual>
     <collision>

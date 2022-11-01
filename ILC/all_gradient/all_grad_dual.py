@@ -23,15 +23,15 @@ from blending import *
 from dual_arm import *
 
 def main():
-	dataset='from_NX/'
+	dataset='wood/'
 	data_dir="../../data/"+dataset
-	solution_dir=data_dir+'dual_arm/'+'diffevo_pose2_2/'
-	cmd_dir=solution_dir+'30L/'
+	solution_dir=data_dir+'dual_arm/'+'diffevo_pose2/'
+	cmd_dir=solution_dir+'50J/'
 	
 	robot1=robot_obj('../../config/abb_6640_180_255_robot_default_config.yml',tool_file_path='../../config/paintgun.csv',d=50,acc_dict_path='')
 	robot2=robot_obj('../../config/abb_1200_5_90_robot_default_config.yml',tool_file_path=solution_dir+'tcp.csv',base_transformation_file=solution_dir+'base.csv',acc_dict_path='')
 
-	relative_path,base2_R,base2_p,lam_relative_path,lam1,lam2,curve_js1,curve_js2=initialize_data(dataset,data_dir,solution_dir,robot1,robot2)
+	relative_path,lam_relative_path,lam1,lam2,curve_js1,curve_js2=initialize_data(dataset,data_dir,solution_dir,robot1,robot2)
 
 
 	ms = MotionSend()
@@ -39,13 +39,10 @@ def main():
 	breakpoints1,primitives1,p_bp1,q_bp1=ms.extract_data_from_cmd(cmd_dir+'command1.csv')
 	breakpoints2,primitives2,p_bp2,q_bp2=ms.extract_data_from_cmd(cmd_dir+'command2.csv')
 
-	# breakpoints1[1:]=breakpoints1[1:]-1
-	# breakpoints2[2:]=breakpoints2[2:]-1
-
 	###get lambda at each breakpoint
 	lam_bp=lam_relative_path[np.append(breakpoints1[0],breakpoints1[1:]-1)]
 
-	vd_relative=2000
+	vd_relative=500
 
 	s1_all,s2_all=calc_individual_speed(vd_relative,lam1,lam2,lam_relative_path,breakpoints1)
 	v2_all=[]
@@ -60,7 +57,7 @@ def main():
 
 
 	###ilc toolbox def
-	ilc=ilc_toolbox([robot1,robot2],[primitives1,primitives2],base2_R,base2_p)
+	ilc=ilc_toolbox([robot1,robot2],[primitives1,primitives2])
 
 	multi_peak_threshold=0.2
 	###TODO: extension fix start point, moveC support
@@ -74,7 +71,7 @@ def main():
 		###execution with plant
 		log_results=ms.exec_motions_multimove(robot1,robot2,primitives1,primitives2,p_bp1,p_bp2,q_bp1,q_bp2,vmax,v2_all,z50,z50)
 
-		np.savetxt('recorded_data/dual_iteration_'+str(i)+'.csv',log_results.data,header='timestamp,cmd_num,J1,J2,J3,J4,J5,J6,J1_2,J2_2,J3_2,J4_2,J5_2,J6_2')
+		np.savetxt('recorded_data/dual_iteration_'+str(i)+'.csv',log_results.data,delimiter=',',comments='',header='timestamp,cmd_num,J1,J2,J3,J4,J5,J6,J1_2,J2_2,J3_2,J4_2,J5_2,J6_2')
 		###save commands
 		ms.write_data_to_cmd('recorded_data/command1.csv',breakpoints1,primitives1, p_bp1,q_bp1)
 		ms.write_data_to_cmd('recorded_data/command2.csv',breakpoints2,primitives2, p_bp2,q_bp2)

@@ -12,8 +12,7 @@ solution_dir='dual_arm/diffevo_pose2_2/'
 data_dir=dataset+solution_dir
 
 ###reference frame transformation
-with open(data_dir+'abb1200.yaml') as file:
-	curve_pose = np.array(yaml.safe_load(file)['H'],dtype=np.float64)
+curve_pose=np.loadtxt(data_dir+'base.csv',delimiter=',')
 
 print(curve_pose[:-1,-1])
 print(np.degrees(rotationMatrixToEulerAngles(curve_pose[:3,:3])))

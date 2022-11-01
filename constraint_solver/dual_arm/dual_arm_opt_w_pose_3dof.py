@@ -73,11 +73,10 @@ def main():
 
 	###output to pose yaml
 	H=np.eye(4)
-	H[:-1,-1]=base2_p/1000.
+	H[:-1,-1]=base2_p
 	H[:3,:3]=base2_R
 
-	with open(r'trajectory/abb1200.yaml', 'w') as file:
-		documents = yaml.dump({'H':H.tolist()}, file)
+	np.savetxt('trajectory/base.csv', H, delimiter=',')
 
 	###dual lambda_dot calc
 	speed,speed1,speed2=traj_speed_est_dual(robot1,robot2,q_out1[::100],q_out2[::100],opt.base2_R,opt.base2_p,opt.lam[::100],v_cmd)
