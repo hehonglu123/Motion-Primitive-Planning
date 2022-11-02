@@ -79,7 +79,7 @@ def main():
 	np.savetxt('trajectory/base.csv', H, delimiter=',')
 
 	###dual lambda_dot calc
-	speed,speed1,speed2=traj_speed_est_dual(robot1,robot2,q_out1[::100],q_out2[::100],opt.base2_R,opt.base2_p,opt.lam[::100],v_cmd)
+	speed,speed1,speed2=traj_speed_est_dual(robot1,robot2,q_out1[::100],q_out2[::100],opt.lam[::100],v_cmd)
 
 	print('speed min: ', min(speed))
 

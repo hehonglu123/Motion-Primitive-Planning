@@ -64,6 +64,11 @@ def main():
 
     log_results=ms.exec_motions_multimove(robot1,robot2,primitives1,primitives2,p_bp1,p_bp2,q_bp1,q_bp2,v1,v2_all,z1_all,z2_all)
 
+    # plt.plot(np.diff(log_results.data[:,0]))
+    plt.plot(log_results.data[:,0])
+    # plt.title('logging timestamp diff')
+    plt.show()
+
     lam, curve_exe1,curve_exe2,curve_exe_R1,curve_exe_R2,curve_exe_js1,curve_exe_js2, speed, timestamp, relative_path_exe,relative_path_exe_R = ms.logged_data_analysis_multimove(log_results,robot1,robot2,realrobot=True)
 
     #############################chop extension off##################################
