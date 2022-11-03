@@ -10,7 +10,7 @@ def main():
 	data_dir='../../data/wood/'
 	relative_path=read_csv(data_dir+"Curve_dense.csv",header=None).values
 
-	v_cmd=1000
+	v_cmd=1200
 
 	H_1200=np.loadtxt('../../data/wood/dual_arm/abb1200_2.csv',delimiter=',')
 
@@ -19,13 +19,10 @@ def main():
 
 	base2_k,base2_theta=R2rot(base2_R)
 
-	with open(data_dir+'dual_arm/tcp.yaml') as file:
-		H_tcp = np.array(yaml.safe_load(file)['H'],dtype=np.float64)
-
 	robot1=robot_obj('../../config/abb_6640_180_255_robot_default_config.yml',tool_file_path='../../config/paintgun.csv',d=50,acc_dict_path='../../toolbox/robot_info/6640acc_new.pickle')
 	robot2=robot_obj('../../config/abb_1200_5_90_robot_default_config.yml',tool_file_path='../../data/wood/dual_arm/tcp.csv',acc_dict_path='../../toolbox/robot_info/1200acc_new.pickle')
 
-	opt=lambda_opt(relative_path[:,:3],relative_path[:,3:],robot1=robot1,robot2=robot2,base2_R=base2_R,base2_p=base2_p,steps=500,v_cmd=v_cmd)
+	opt=lambda_opt(relative_path[:,:3],relative_path[:,3:],robot1=robot1,robot2=robot2,steps=500,v_cmd=v_cmd)
 
 	###########################################diff evo opt############################################
 	##x:q_init2,base2_x,base2_y,base2_theta,theta_0
@@ -62,8 +59,8 @@ def main():
 
 	q_init1=robot1.inv(pose2_world_now.p,R)[0]
 
-	opt=lambda_opt(relative_path[:,:3],relative_path[:,3:],robot1=robot1,robot2=robot2,base2_R=base2_R,base2_p=base2_p,steps=50000)
-	q_out1,q_out2=opt.dual_arm_stepwise_optimize(q_init1,q_init2,w1=0.02,w2=0.01,base2_R=base2_R,base2_p=base2_p)
+	opt=lambda_opt(relative_path[:,:3],relative_path[:,3:],robot1=robot1,robot2=robot2,steps=50000)
+	q_out1,q_out2=opt.dual_arm_stepwise_optimize(q_init1,q_init2,base2_R=base2_R,base2_p=base2_p,w1=0.02,w2=0.01)
 
 	####output to trajectory csv
 	df=DataFrame({'q0':q_out1[:,0],'q1':q_out1[:,1],'q2':q_out1[:,2],'q3':q_out1[:,3],'q4':q_out1[:,4],'q5':q_out1[:,5]})

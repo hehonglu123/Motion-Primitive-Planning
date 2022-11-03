@@ -25,8 +25,8 @@ from dual_arm import *
 def main():
 	dataset='wood/'
 	data_dir="../../data/"+dataset
-	solution_dir=data_dir+'dual_arm/'+'diffevo_pose2/'
-	cmd_dir=solution_dir+'50J/'
+	solution_dir=data_dir+'dual_arm/'+'diffevo_pose4_2/'
+	cmd_dir=solution_dir+'50L/'
 	
 	robot1=robot_obj('../../config/abb_6640_180_255_robot_default_config.yml',tool_file_path='../../config/paintgun.csv',d=50,acc_dict_path='')
 	robot2=robot_obj('../../config/abb_1200_5_90_robot_default_config.yml',tool_file_path=solution_dir+'tcp.csv',base_transformation_file=solution_dir+'base.csv',acc_dict_path='')
@@ -42,7 +42,7 @@ def main():
 	###get lambda at each breakpoint
 	lam_bp=lam_relative_path[np.append(breakpoints1[0],breakpoints1[1:]-1)]
 
-	vd_relative=500
+	vd_relative=600
 
 	s1_all,s2_all=calc_individual_speed(vd_relative,lam1,lam2,lam_relative_path,breakpoints1)
 	v2_all=[]

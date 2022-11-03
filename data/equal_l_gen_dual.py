@@ -13,12 +13,13 @@ from lambda_calc import *
 from utils import *
 
 
-data_dir='from_NX/dual_arm/'
-solution_dir='diffevo_pose2_2/'
-cmd_dir=data_dir+solution_dir+'10L/'
-num_ls=[10]
-robot=abb6640(d=50)
-curve_js = read_csv(data_dir+solution_dir+'arm1.csv',header=None).values
+data_dir='wood/dual_arm/'
+solution_dir=data_dir+'diffevo_pose4_2/'
+cmd_dir=solution_dir+'50L/'
+num_ls=[50]
+
+robot=robot_obj('../config/abb_6640_180_255_robot_default_config.yml',tool_file_path='../config/paintgun.csv',d=50,acc_dict_path='')
+curve_js = read_csv(solution_dir+'arm1.csv',header=None).values
 
 
 curve = []
@@ -62,12 +63,10 @@ for num_l in num_ls:
 
 
 
-with open(data_dir+'tcp.yaml') as file:
-    H_tcp = np.array(yaml.safe_load(file)['H'],dtype=np.float64)
+robot=robot_obj('../config/abb_1200_5_90_robot_default_config.yml',tool_file_path=solution_dir+'tcp.csv',base_transformation_file=solution_dir+'base.csv',acc_dict_path='')
 
-robot=abb1200(R_tool=H_tcp[:3,:3],p_tool=H_tcp[:-1,-1])
 
-curve_js = read_csv(data_dir+solution_dir+'arm2.csv',header=None).values
+curve_js = read_csv(solution_dir+'arm2.csv',header=None).values
 
 curve = []
 for q in curve_js:
@@ -99,7 +98,7 @@ for num_l in num_ls:
 			R_end=robot.fwd(curve_js[breakpoints[i]-1]).R
 			curve_fit_R[breakpoints[i-1]:breakpoints[i]]=orientation_interp(R_init,R_end,breakpoints[i]-breakpoints[i-1]+1)[1:]
 		
-	primitives_choices=['moveabsj']+['moveabsj']*num_l
+	primitives_choices=['moveabsj']+['movel']*num_l
 	breakpoints[1:]=breakpoints[1:]-1
 	df=DataFrame({'breakpoints':breakpoints,'primitives':primitives_choices,'p_bp':points,'q_bp':q_bp})
 	df.to_csv(cmd_dir+'command2.csv',header=True,index=False)

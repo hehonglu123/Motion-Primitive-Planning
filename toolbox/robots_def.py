@@ -20,13 +20,14 @@ ez=np.array([[0.],[0.],[1.]])
 
 class robot_obj(object):
 	###robot object class
-	def __init__(self,def_path,tool_file_path='',base_transformation_file='',d=0,acc_dict_path=''):
+	def __init__(self,robot_name,def_path,tool_file_path='',base_transformation_file='',d=0,acc_dict_path=''):
 		#def_path: robot 			definition yaml file, name must include robot vendor
 		#tool_file_path: 			tool transformation to robot flange csv file
 		#base_transformation_file: 	base transformation to world frame csv file
 		#d: 						tool z extension
 		#acc_dict_path: 			accleration profile
 
+		self.robot_name=robot_name
 		with open(def_path, 'r') as f:
 			self.robot = rr_rox.load_robot_info_yaml_to_robot(f)
 

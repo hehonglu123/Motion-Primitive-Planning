@@ -6,9 +6,7 @@ import matplotlib.pyplot as plt
 from scipy.optimize import differential_evolution, shgo, NonlinearConstraint, minimize, fminbound
 from qpsolvers import solve_qp
 
-sys.path.append('../../circular_Fit')
-
-sys.path.append('../../toolbox')
+from tes_env import *
 from robots_def import *
 from lambda_calc import *
 from blending import *
@@ -16,14 +14,18 @@ from utils import *
 
 class lambda_opt(object):
 	###robot1 hold paint gun, robot2 hold part
-	def __init__(self,curve,curve_normal,robot1=abb6640(d=50),robot2=abb1200(),base2_R=np.eye(3),base2_p=np.zeros(3),steps=50,breakpoints=[],primitives=[],v_cmd=1000):
+	def __init__(self,curve,curve_normal,robot1,robot2=abb1200(),urdf_path=None,curve_name='',steps=50,breakpoints=[],primitives=[],v_cmd=1000):
 
 		self.curve_original=curve
 		self.curve_normal_original=curve_normal
 		self.robot1=robot1
 		self.robot2=robot2
-		self.base2_R=base2_R
-		self.base2_p=base2_p
+		self.urdf_path=urdf_path
+		if urdf_path:
+			self.tes_env=Tess_Env(urdf_path)
+			self.tes_env.update_pose(self.robot1.robot_name,np.eye(4))
+
+		self.curve_name=curve_name
 
 		self.v_cmd=v_cmd
 
@@ -51,6 +53,19 @@ class lambda_opt(object):
 		###find path length
 		self.lam_original=calc_lam_cs(curve)
 		self.lam=self.lam_original[self.act_breakpoints]
+
+	def __getstate__(self):
+		state = self.__dict__.copy()
+		del state['tes_env']
+		return state
+
+	def __setstate__(self, state):
+		# Restore instance attributes (tesseract).
+		self.__dict__.update(state)
+		if self.urdf_path:
+			self.tes_env=Tess_Env(self.urdf_path)
+			self.tes_env.update_pose(self.robot1.robot_name,np.eye(4))
+
 
 	def normalize_dq(self,q):
 		q=q/(np.linalg.norm(q)) 
@@ -261,10 +276,8 @@ class lambda_opt(object):
 			if np.linalg.norm(curve_js[-1])>0:
 				break
 		return curve_js
-	def dual_arm_stepwise_optimize(self,q_init1,q_init2,w1=0.01,w2=0.01,base2_R=None,base2_p=None):
-		if base2_R is None:
-			base2_R=self.base2_R
-			base2_p=self.base2_p
+	def dual_arm_stepwise_optimize(self,q_init1,q_init2,base2_R,base2_p,w1=0.01,w2=0.01):
+
 		###w1: weight for first robot
 		###w2: weight for second robot (larger weight path shorter)
 		#curve_normal: expressed in second robot tool frame
@@ -355,7 +368,7 @@ class lambda_opt(object):
 		q_out2=np.array(q_out2)[1:]
 		return q_out1, q_out2
 
-	def dual_arm_stepwise_optimize_separate(self,q_init1,q_init2):
+	def dual_arm_stepwise_optimize_separate(self,q_init1,q_init2,base2_R,base2_p):
 		#QP motion solver for robot1 fixed position, robot2 fixed orientation
 		#curve_normal: expressed in second robot tool frame
 		###all (jacobian) in robot2 tool frame
@@ -379,7 +392,7 @@ class lambda_opt(object):
 					pose1_now=self.robot1.fwd(q_all1[-1])
 					pose2_now=self.robot2.fwd(q_all2[-1])
 
-					pose2_world_now=self.robot2.fwd(q_all2[-1],self.base2_R,self.base2_p)
+					pose2_world_now=self.robot2.fwd(q_all2[-1],base2_R,base2_p)
 
 					error_fb=np.linalg.norm(np.dot(pose2_world_now.R.T,pose1_now.p-pose2_world_now.p)-self.curve[i])+np.linalg.norm(np.dot(pose2_world_now.R.T,pose1_now.R[:,-1])-self.curve_normal[i])	
 
@@ -545,7 +558,11 @@ class lambda_opt(object):
 
 		speed=traj_speed_est(self.robot1,q_out,self.lam,self.v_cmd)
 
-		
+		if self.tes_env:
+			self.tes_env.update_pose(self.curve_name,H_from_RT(R_curve,shift/1000.))
+			if self.tes_env.check_collision_single(self.robot1.robot_name,self.curve_name,q_out):
+				return 999
+
 		return -min(speed)
 
 
@@ -593,7 +610,7 @@ class lambda_opt(object):
 		R=np.dot(R_temp,Rz(x[-1]))
 		try:
 			q_init1=self.robot1.inv(pose2_world_now.p,R)[0]
-			q_out1,q_out2=self.dual_arm_stepwise_optimize(q_init1,q_init2,w1=0.02,w2=0.01,base2_R=base2_R,base2_p=base2_p)
+			q_out1,q_out2=self.dual_arm_stepwise_optimize(q_init1,q_init2,base2_R=base2_R,base2_p=base2_p,w1=0.02,w2=0.01)
 		except:
 			# traceback.print_exc()
 			return 999
@@ -625,7 +642,7 @@ class lambda_opt(object):
 		R=np.dot(R_temp,Rz(x[-1]))
 		try:
 			q_init1=self.robot1.inv(pose2_world_now.p,R)[0]
-			q_out1,q_out2=self.dual_arm_stepwise_optimize(q_init1,q_init2,w1=0.02,w2=0.01,base2_R=base2_R,base2_p=base2_p)
+			q_out1,q_out2=self.dual_arm_stepwise_optimize(q_init1,q_init2,base2_R=base2_R,base2_p=base2_p,w1=0.02,w2=0.01)
 		except:
 			# traceback.print_exc()
 			return 999

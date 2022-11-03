@@ -10,7 +10,7 @@
   <joint name="ABB_6640_180_255_pose" type="fixed">
     <parent link="world"/>
     <child link="ABB_6640_180_255_base_link"/>
-    <origin rpy="0.0 0.0 0.0" xyz="0 0 0.0"/><!--ABB_6640_180_255 pedestal-->
+    <origin rpy="0.0 0.0 0.0" xyz="5.0 0 5.0"/><!--ABB_6640_180_255 pedestal-->
   </joint>
 
   <joint name="ABB_1200_5_90_pose" type="fixed">
@@ -45,12 +45,11 @@
 
   <!--curve_1 part-->
   <link name="curve_1_base_link">
-    <!-- <collision>
-      <origin rpy="0 0 0" xyz="-.124 0 .12"/>
+    <collision>
       <geometry>
-        <box size="1.016 .729 .24"/>
+        <mesh filename="model://curve_1/meshes/wood.stl" scale="0.001 0.001 0.001"/>
       </geometry>
-    </collision> -->
+    </collision>
     <visual name="visual">
       <geometry>
         <mesh filename="model://curve_1/meshes/wood.stl" scale="0.001 0.001 0.001"/>
@@ -68,12 +67,11 @@
 
   <!--curve_2 part-->
   <link name="curve_2_base_link">
-    <!-- <collision>
-      <origin rpy="0 0 0" xyz="-.124 0 .12"/>
+    <collision>
       <geometry>
-        <box size="1.016 .729 .24"/>
+        <mesh filename="model://curve_2/meshes/generic_fan_blade.stl" scale="0.001 0.001 0.001"/>
       </geometry>
-    </collision> -->
+    </collision>
     <visual name="visual">
       <geometry>
         <mesh filename="model://curve_2/meshes/generic_fan_blade.stl" scale="0.001 0.001 0.001"/>
@@ -354,6 +352,12 @@
       </geometry>
       <material name="orange"/>
     </visual>
+    <collision>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <geometry>
+        <mesh filename="model://paintgun/meshes/paint_gun.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+    </collision>
 
   </link>
   <!-- end of link list -->
@@ -729,6 +733,12 @@
         <color rgba="0.96 0.76 0.13 1.0"/>
       </material>
     </visual>
+    <collision>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <geometry>
+        <mesh filename="model://paintgun/meshes/paint_gun.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+    </collision>
 
   </link>
   <!-- joints: main serial chain -->
