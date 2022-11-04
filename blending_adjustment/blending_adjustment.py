@@ -17,7 +17,7 @@ from dual_arm import *
 from utils import *
 
 
-Z_MIN=5
+Z_MIN=10
 S_MIN=100
 def failure_detection(curve_exe,speed,p_bp):
 	###find blending failure breakpoint index
@@ -73,26 +73,26 @@ def fix_blending_error_multimove(ms,breakpoints,primitives1,p_bp1,q_bp1,v1_all,z
 	###calculate error
 	error,angle_error=calc_all_error_w_normal(relative_path_exe,relative_path[:,:3],relative_path_exe_R[:,:,-1],relative_path[:,3:])
 
-	fig, ax1 = plt.subplots()
+	# fig, ax1 = plt.subplots()
 
-	ax2 = ax1.twinx()
-	ax1.plot(lam,speed, 'g-', label='Relative Speed')
-	ax1.plot(lam,speed1, 'r-', label='TCP1 Speed')
-	# ax1.plot(lam_relative_path[2:],s1_cmd,'p-',label='TCP1 cmd Speed')
-	ax1.plot(lam,speed2, 'm-', label='TCP2 Speed')
-	# ax1.plot(lam_relative_path[2:],s2_cmd,'p-',label='TCP2 cmd Speed')
-	ax2.plot(lam, error, 'b-',label='Error')
-	ax2.plot(lam, np.degrees(angle_error), 'y-',label='Normal Error')
+	# ax2 = ax1.twinx()
+	# ax1.plot(lam,speed, 'g-', label='Relative Speed')
+	# ax1.plot(lam,speed1, 'r-', label='TCP1 Speed')
+	# # ax1.plot(lam_relative_path[2:],s1_cmd,'p-',label='TCP1 cmd Speed')
+	# ax1.plot(lam,speed2, 'm-', label='TCP2 Speed')
+	# # ax1.plot(lam_relative_path[2:],s2_cmd,'p-',label='TCP2 cmd Speed')
+	# ax2.plot(lam, error, 'b-',label='Error')
+	# ax2.plot(lam, np.degrees(angle_error), 'y-',label='Normal Error')
 
-	ax1.set_xlabel('lambda (mm)')
-	ax1.set_ylabel('Speed/lamdot (mm/s)', color='g')
-	ax2.set_ylabel('Error (mm)', color='b')
-	plt.title('Speed: v'+str(vd_relative))
-	h1, l1 = ax1.get_legend_handles_labels()
-	h2, l2 = ax2.get_legend_handles_labels()
-	ax1.legend(h1+h2, l1+l2, loc=1)
+	# ax1.set_xlabel('lambda (mm)')
+	# ax1.set_ylabel('Speed/lamdot (mm/s)', color='g')
+	# ax2.set_ylabel('Error (mm)', color='b')
+	# plt.title('Speed: v'+str(vd_relative))
+	# h1, l1 = ax1.get_legend_handles_labels()
+	# h2, l2 = ax2.get_legend_handles_labels()
+	# ax1.legend(h1+h2, l1+l2, loc=1)
 
-	plt.show()
+	# plt.show()
 
 
 	bp_failure_indices=failure_detection(curve_exe1,speed1,p_bp1)
@@ -279,12 +279,12 @@ def main1200():
 def main_multimove():
 	dataset='from_NX/'
 	data_dir="../data/"+dataset
-	solution_dir=data_dir+'dual_arm/'+'diffevo_pose2/'
+	solution_dir=data_dir+'dual_arm/'+'diffevo_pose2_2/'
 	cmd_dir=solution_dir+'30L/'
 	
 	relative_path,robot1,robot2,base2_R,base2_p,lam_relative_path,lam1,lam2,curve_js1,curve_js2=initialize_data(dataset,data_dir,solution_dir)
 
-	ms = MotionSend(robot1=robot1,robot2=robot2,base2_R=base2_R,base2_p=base2_p)
+	ms = MotionSend(robot1=robot1,robot2=robot2,base2_R=base2_R,base2_p=base2_p,url='http://192.168.55.1:80')
 
 	breakpoints1,primitives1,p_bp1,q_bp1=ms.extract_data_from_cmd(cmd_dir+'command1.csv')
 	breakpoints2,primitives2,p_bp2,q_bp2=ms.extract_data_from_cmd(cmd_dir+'command2.csv')
@@ -294,12 +294,12 @@ def main_multimove():
 	start_2=copy.deepcopy(p_bp2[0])
 	end_2=copy.deepcopy(p_bp2[-1])
 	###extension
-	p_bp1,q_bp1,p_bp2,q_bp2=ms.extend_dual(ms.robot1,p_bp1,q_bp1,primitives1,ms.robot2,p_bp2,q_bp2,primitives2,breakpoints1)
+	p_bp1,q_bp1,p_bp2,q_bp2=ms.extend_dual(ms.robot1,p_bp1,q_bp1,primitives1,ms.robot2,p_bp2,q_bp2,primitives2,breakpoints1,extension_start2=200,extension_end2=200)
 
 	###get lambda at each breakpoint
 	lam_bp=lam_relative_path[np.append(breakpoints1[0],breakpoints1[1:]-1)]
 
-	vd_relative=2500
+	vd_relative=1400
 
 	s1_all,s2_all=calc_individual_speed(vd_relative,lam1,lam2,lam_relative_path,breakpoints1)
 	v1_all=[]
@@ -312,10 +312,18 @@ def main_multimove():
 
 
 	z1_all=[z50]*len(breakpoints1)
-	z2_all=[z30]*len(breakpoints1)
+	z2_all=[z50]*len(breakpoints1)
 
 	
 	v1_all,z1_all,v2_all,z2_all=fix_blending_error_multimove(ms,breakpoints1,primitives1,p_bp1,q_bp1,v1_all,z1_all,primitives2,p_bp2,q_bp2,v2_all,z2_all,relative_path,vd_relative,start1,end_1,start_2,end_2)
+	###save v & z profile
+	s1_all=[v1_all[i].v_tcp for i in range(len(v1_all))]
+	s2_all=[v2_all[i].v_tcp for i in range(len(v2_all))]
+	zone1_all=[z1_all[i].pzone_tcp for i in range(len(z1_all))]
+	zone2_all=[z2_all[i].pzone_tcp for i in range(len(z2_all))]
+
+	df=DataFrame({'v1':s1_all,'z1':zone1_all, 'v2':s2_all,'z2':zone2_all})
+	df.to_csv('speed_zone.csv',header=True,index=False)
 
 	#####################################################execute blending failure free commands##################################################################
 	logged_data=ms.exec_motions_multimove(primitives1,primitives2,p_bp1,p_bp2,q_bp1,q_bp2,v1_all,v2_all,z1_all,z2_all)

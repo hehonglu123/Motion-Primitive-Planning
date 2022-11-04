@@ -10,22 +10,21 @@ from utils import *
 from lambda_calc import *
 from dual_arm import *
 
-dataset='wood/'
+dataset='curve_1/'
 data_dir="../../../data/"+dataset
-solution_dir=data_dir+'dual_arm/'+'diffevo_pose2/'
-cmd_dir=solution_dir+'30L/'
-exe_dir='../../../ilc/all_gradient/curve2_dual_v600/'
+solution_dir=data_dir+'dual_arm/'+'diffevo_pose4_2/'
+exe_dir='../../../ilc/all_gradient/recorded_data/'
 
 
-robot1=robot_obj('../../../config/abb_6640_180_255_robot_default_config.yml',tool_file_path='../../../config/paintgun.csv',d=50,acc_dict_path='')
-robot2=robot_obj('../../../config/abb_1200_5_90_robot_default_config.yml',tool_file_path=solution_dir+'tcp.csv',base_transformation_file=solution_dir+'base.csv',acc_dict_path='')
+robot1=robot_obj('ABB_6640_180_255','../../../config/abb_6640_180_255_robot_default_config.yml',tool_file_path='../../../config/paintgun.csv',d=50,acc_dict_path='')
+robot2=robot_obj('ABB_1200_5_90','../../../config/abb_1200_5_90_robot_default_config.yml',tool_file_path=solution_dir+'tcp.csv',base_transformation_file=solution_dir+'base.csv',acc_dict_path='')
 
-relative_path,base2_R,base2_p,lam_relative_path,lam1,lam2,curve_js1,curve_js2=initialize_data(dataset,data_dir,solution_dir,robot1,robot2)
+relative_path,lam_relative_path,lam1,lam2,curve_js1,curve_js2=initialize_data(dataset,data_dir,solution_dir,robot1,robot2)
 
 
 ms = MotionSend()
 
-data = np.loadtxt(exe_dir+'dual_iteration_4.csv',delimiter=',', skiprows=1)
+data = np.loadtxt(exe_dir+'run_4.csv',delimiter=',', skiprows=1)
 
 ##############################data analysis#####################################
 lam, curve_exe1,curve_exe2,curve_exe_R1,curve_exe_R2,curve_exe_js1,curve_exe_js2, speed, timestamp, relative_path_exe, relative_path_exe_R = ms.logged_data_analysis_multimove(MotionProgramResultLog(None, None, data),robot1,robot2,realrobot=True)

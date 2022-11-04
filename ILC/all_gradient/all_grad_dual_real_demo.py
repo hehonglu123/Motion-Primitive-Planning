@@ -24,8 +24,10 @@ from dual_arm import *
 from realrobot import *
 
 def main():
-	SAFE_Q1=np.radians([33.89,7.77,57.5,-144.03,55.32,0])
-	SAFE_Q2=np.radians([109.45,23.78,54,-38,-66.55,348.77])
+	# SAFE_Q1=np.radians([33.89,7.77,57.5,-144.03,55.32,0])
+	# SAFE_Q2=np.radians([109.45,23.78,54,-38,-66.55,348.77])
+	SAFE_Q1=None
+	SAFE_Q2=None
 	dataset='curve_1/'
 	data_dir="../../data/"+dataset
 	solution_dir=data_dir+'dual_arm/'+'diffevo_pose4_2/'
@@ -71,7 +73,7 @@ def main():
 	for i in range(iteration):
 
 		###execution with real robots
-		curve_js_all_new, avg_curve_js, timestamp_d=average_5_exe_multimove(ms,breakpoints1,robot1,primitives1,p_bp1,q_bp1,vmax,z50,robot2,primitives2,p_bp2,q_bp2,v2_all,z50,relative_path,SAFE_Q1,SAFE_Q2,log_path="recorded_data")
+		curve_js_all_new, avg_curve_js, timestamp_d=average_5_exe_multimove(ms,breakpoints1,robot1,primitives1,p_bp1,q_bp1,vmax,z50,robot2,primitives2,p_bp2,q_bp2,v2_all,z50,relative_path,SAFE_Q1,SAFE_Q2)
 		###calculat data with average curve
 		lam, curve_exe1,curve_exe2,curve_exe_R1,curve_exe_R2,curve_exe_js1,curve_exe_js2, speed, timestamp, relative_path_exe, relative_path_exe_R =\
 			logged_data_analysis_multimove(robot1,robot2,timestamp_d,avg_curve_js)
@@ -95,7 +97,11 @@ def main():
 		# peaks=np.array([np.argmax(error)])
 		##############################plot error#####################################
 
-		fig, ax1 = plt.subplots()
+		try:
+			plt.close(fig)
+		except:
+			pass
+		fig, ax1 = plt.subplots(figsize=(6,4))
 		ax2 = ax1.twinx()
 		ax1.plot(lam, speed, 'g-', label='Speed')
 		ax2.plot(lam, error, 'b-',label='Error')
@@ -107,28 +113,15 @@ def main():
 		ax1.set_xlabel('lambda (mm)')
 		ax1.set_ylabel('Speed/lamdot (mm/s)', color='g')
 		ax2.set_ylabel('Error/Normal Error (mm/deg)', color='b')
-		plt.title("Speed and Error Plot")
-		ax1.legend(loc=0)
+		plt.title("Speed and Error Plot, Iteration: "+str(i))
+		h1, l1 = ax1.get_legend_handles_labels()
+		h2, l2 = ax2.get_legend_handles_labels()
+		ax1.legend(h1+h2, l1+l2, loc=1)
 
-		ax2.legend(loc=0)
+		fig.canvas.manager.window.move(50,350)
+		plt.show(block=False)
+		plt.pause(0.1)
 
-		plt.legend()
-		plt.savefig('recorded_data/iteration_'+str(i))
-		plt.clf()
-		# plt.show()
-
-		###########################plot for verification###################################
-		# p_bp_relative,_=ms.form_relative_path(np.squeeze(q_bp1),np.squeeze(q_bp2),base2_R,base2_p)
-		# plt.figure()
-		# ax = plt.axes(projection='3d')
-		# ax.plot3D(relative_path[:,0], relative_path[:,1], relative_path[:,2], c='gray',label='original')
-		# ax.plot3D(relative_path_exe[:,0], relative_path_exe[:,1], relative_path_exe[:,2], c='red',label='execution')
-		# ax.scatter3D(p_bp_relative[:,0], p_bp_relative[:,1], p_bp_relative[:,2], c=p_bp_relative[:,2], cmap='Greens',label='breakpoints')
-		# ax.scatter(relative_path_exe[peaks,0], relative_path_exe[peaks,1], relative_path_exe[peaks,2],c='orange',label='worst case')
-		
-		# plt.show()
-
-		##########################################move towards error direction######################################
 		error_bps_v1,error_bps_w1,error_bps_v2,error_bps_w2=ilc.get_error_direction_dual(relative_path,p_bp1,q_bp1,p_bp2,q_bp2,relative_path_exe,relative_path_exe_R,curve_exe1,curve_exe_R1,curve_exe2,curve_exe_R2)
 
 		# error_bps_w1=np.zeros(error_bps_w1.shape)
@@ -136,17 +129,6 @@ def main():
 		# error_bps_v1=np.zeros(error_bps_v1.shape)
 		# error_bps_v2=np.zeros(error_bps_v2.shape)
 		p_bp1, q_bp1, p_bp2, q_bp2=ilc.update_error_direction_dual(relative_path,p_bp1,q_bp1,p_bp2,q_bp2,error_bps_v1,error_bps_w1,error_bps_v2,error_bps_w2,gamma_v=0.3,gamma_w=0.05)
-
-		###cmd speed adjustment
-		# speed_alpha=0.1
-
-		# for m in range(1,len(lam_bp)):
-		# 	###get segment average speed
-		# 	segment_avg=np.average(speed[np.argmin(np.abs(lam-lam_bp[m-1])):np.argmin(np.abs(lam-lam_bp[m]))])
-		# 	###cap above 100m/s for robot2
-		# 	s2_all[m]+=speed_alpha*(vd_relative-segment_avg)
-		# 	s2_all[m]=max(s2_all[m],100)
-		# 	v2_all[m]=speeddata(s2_all[m],9999999,9999999,999999)
 
 		if max(error)<0.5:
 			break

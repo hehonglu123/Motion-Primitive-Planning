@@ -18,7 +18,7 @@ from dual_arm import *
 def main():
     dataset='curve_1/'
     data_dir="../../../data/"+dataset
-    solution_dir=data_dir+'dual_arm/'+'diffevo_pose5/'
+    solution_dir=data_dir+'dual_arm/'+'diffevo_pose4_2/'
     cmd_dir=solution_dir+'50J/'
     
     robot1=robot_obj('ABB_6640_180_255','../../../config/abb_6640_180_255_robot_default_config.yml',tool_file_path='../../../config/paintgun.csv',d=50,acc_dict_path='')
@@ -27,7 +27,8 @@ def main():
 
     relative_path,lam_relative_path,lam1,lam2,curve_js1,curve_js2=initialize_data(dataset,data_dir,solution_dir,robot1,robot2)
 
-    ms = MotionSend()
+    # ms = MotionSend()
+    ms = MotionSend(url='http://192.168.55.1:80')
 
 
     breakpoints1,primitives1,p_bp1,q_bp1=ms.extract_data_from_cmd(cmd_dir+'command1.csv')
@@ -39,7 +40,7 @@ def main():
     ###get lambda at each breakpoint
     lam_bp=lam_relative_path[np.append(breakpoints1[0],breakpoints1[1:]-1)]
 
-    vd_relative=700
+    vd_relative=600
 
     s1_all,s2_all=calc_individual_speed(vd_relative,lam1,lam2,lam_relative_path,breakpoints1)
     v2_all=[]
@@ -95,7 +96,7 @@ def main():
     ax1.set_xlabel('lambda (mm)')
     ax1.set_ylabel('Speed/lamdot (mm/s)', color='g')
     ax2.set_ylabel('Error (mm)', color='b')
-    plt.title("Speed: "+dataset+'v'+str(vd_relative)+'_z    '+str(zone))
+    plt.title("Speed: "+dataset+'v'+str(vd_relative)+'_z'+str(zone))
     h1, l1 = ax1.get_legend_handles_labels()
     h2, l2 = ax2.get_legend_handles_labels()
     ax1.legend(h1+h2, l1+l2, loc=1)
