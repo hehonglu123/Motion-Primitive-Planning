@@ -222,6 +222,7 @@ def H_from_RT(R,T):
 def car2js(robot,q_init,curve_fit,curve_fit_R):
 	###calculate corresponding joint configs
 	curve_fit_js=[]
+	curve_fit=np.array(curve_fit)
 	if curve_fit.shape==(3,):### if a single point
 
 		try:

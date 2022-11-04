@@ -355,6 +355,9 @@ generated_src/
 generated_src
 {"mode":"full","isActive":false}
 
+# vscode plugin
+.vscode
+
 # ignore for Eric's developments (FANUC, traj prediction, cold spray simulation 3D)
 *.pc
 

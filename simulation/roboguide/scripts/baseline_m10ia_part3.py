@@ -24,12 +24,13 @@ utool_num = 2
 
 # all_objtype=['wood','blade_scale']
 # all_objtype=['blade_scale']
-# all_objtype=['curve_blade_scale']
-all_objtype=['curve_wood']
+all_objtype=['curve_blade_scale']
+# all_objtype=['curve_wood']
 # all_objtype=['wood']
 
 # num_ls=[80,100,150]
-num_ls=[100,50,30,25]
+# num_ls=[100,50,30,25]
+num_ls=[30]
 
 for obj_type in all_objtype:
 
@@ -37,8 +38,8 @@ for obj_type in all_objtype:
     # obj_type='blade'
     print(obj_type)
     
-    # data_dir='../data/baseline_m10ia/'+obj_type+'/'
-    data_dir='../data/'+obj_type+'/single_arm_de/'
+    data_dir='../data/baseline_m10ia/'+obj_type+'/'
+    # data_dir='../data/'+obj_type+'/single_arm_de/'
 
     robot=m10ia(d=50)
     # toolbox_path = '../../../toolbox/'
@@ -58,20 +59,20 @@ for obj_type in all_objtype:
 
         q_bp_start = q_bp[0][0]
         q_bp_end = q_bp[-1][-1]
-        primitives,p_bp,q_bp=ms.extend_start_end(robot,q_bp,primitives,breakpoints,p_bp,extension_start=100,extension_end=100)
+        # primitives,p_bp,q_bp=ms.extend_start_end(robot,q_bp,primitives,breakpoints,p_bp,extension_start=100,extension_end=100)
 
         ## calculate step at start and end
-        step_start1=None
-        step_end1=None
-        for i in range(len(q_bp)):
-            if np.all(q_bp[i][0]==q_bp_start):
-                step_start1=i
-            if np.all(q_bp[i][-1]==q_bp_end):
-                step_end1=i
+        # step_start1=None
+        # step_end1=None
+        # for i in range(len(q_bp)):
+        #     if np.all(q_bp[i][0]==q_bp_start):
+        #         step_start1=i
+        #     if np.all(q_bp[i][-1]==q_bp_end):
+        #         step_end1=i
 
-        assert step_start1 is not None,'Cant find step start'
-        assert step_end1 is not None,'Cant find step start'
-        print(step_start1,step_end1)
+        # assert step_start1 is not None,'Cant find step start'
+        # assert step_end1 is not None,'Cant find step start'
+        # print(step_start1,step_end1)
 
         s_up=1000
         s_low=0
@@ -93,6 +94,24 @@ for obj_type in all_objtype:
             error,angle_error=calc_all_error_w_normal(curve_exe,curve[:,:3],curve_exe_R[:,:,-1],curve_normal)
             error_max=max(error)
             angle_error_max=max(angle_error)
+
+            # fig, ax1 = plt.subplots(figsize=(6,4))
+            # ax2 = ax1.twinx()
+            # ax1.plot(lam, speed, 'g-', label='Speed')
+            # ax2.plot(lam, error, 'b-',label='Error')
+            # ax2.plot(lam, np.degrees(angle_error), 'y-',label='Normal Error')
+            # draw_speed_max=max(speed)*1.05
+            # # draw_error_max=max(error)*1.05
+            # draw_error_max=6
+            # ax1.axis(ymin=0,ymax=draw_speed_max)
+            # ax2.axis(ymin=0,ymax=draw_error_max)
+            # ax1.set_xlabel('lambda (mm)')
+            # ax1.set_ylabel('Speed/lamdot (mm/s)', color='g')
+            # ax2.set_ylabel('Error/Normal Error (mm/deg)', color='b')
+            # plt.title("Speed and Error Plot")
+            # ax1.legend(loc=0)
+            # ax2.legend(loc=0)
+            # plt.show()
 
             if speed_found:
                 break

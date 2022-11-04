@@ -79,8 +79,10 @@ class MotionSendFANUC(object):
                 robt = joint2robtarget(q_bp[i][1],robot,group,uframe,utool)
                 tp.moveC(robt_mid,robt,this_speed,'mmsec',this_zone)
             else: #moveJ
-                robt = jointtarget(group,uframe,utool,np.degrees(q_bp[i][0]),[0]*6)
-                tp.moveJ(robt,this_speed,'%',this_zone)
+                # robt = jointtarget(group,uframe,utool,np.degrees(q_bp[i][0]),[0]*6)
+                robt = joint2robtarget(q_bp[i][0],robot,group,uframe,utool)
+                # tp.moveJ(robt,this_speed,'%',this_zone)
+                tp.moveJ(robt,this_speed,'msec',this_zone)
         return client.execute_motion_program(tp)
 
     def exec_motions_multimove(self,robot1,robot2,primitives1,primitives2,p_bp1,p_bp2,q_bp1,q_bp2,speed,zone,coord=[]):
@@ -780,35 +782,36 @@ class MotionSendFANUC(object):
             #find new start orientation
             k,theta=R2rot(R_end@R_start.T)
             theta_new=-extension_start*theta/np.linalg.norm(p_end-p_start)
-            # R_start_new=rot(k,theta_new)@R_start
 
             # adding extension with uniform space
-            the_very_start_p = p_start-step_to_extend*extend_step_d_start*slope_p
-            the_very_start_R = rot(k,-np.linalg.norm(the_very_start_p-p_start)*theta/np.linalg.norm(p_end-p_start))@R_start
-            if len(car2js(robot,q_bp[0][0],the_very_start_p,the_very_start_R)) > 0:
-                for i in range(1,step_to_extend+1):
-                    p_extend=p_start-i*extend_step_d_start*slope_p
-                    theta_extend=-np.linalg.norm(p_extend-p_start)*theta/np.linalg.norm(p_end-p_start)
-                    R_extend=rot(k,theta_extend)@R_start
-                    points_list.insert(0,[p_extend])
-                    q_bp.insert(0,[car2js(robot,q_bp[0][0],p_extend,R_extend)[0]])
-                    primitives.insert(1,'movel_fit')
-            else:
-                for i in range(1,step_to_extend+1):
-                    p_extend=p_start-i*extend_step_d_start*slope_p
-                    points_list.insert(0,[p_extend])
-                    q_bp.insert(0,[car2js(robot,q_bp[0][0],p_extend,R_start)[0]])
-                    primitives.insert(1,'movel_fit')
+            # the_very_start_p = p_start-step_to_extend*extend_step_d_start*slope_p
+            # the_very_start_R = rot(k,-np.linalg.norm(the_very_start_p-p_start)*theta/np.linalg.norm(p_end-p_start))@R_start
+            # if len(car2js(robot,q_bp[0][0],the_very_start_p,the_very_start_R)) > 0:
+            #     for i in range(1,step_to_extend+1):
+            #         p_extend=p_start-i*extend_step_d_start*slope_p
+            #         theta_extend=-np.linalg.norm(p_extend-p_start)*theta/np.linalg.norm(p_end-p_start)
+            #         R_extend=rot(k,theta_extend)@R_start
+            #         points_list.insert(0,[p_extend])
+            #         q_bp.insert(0,[car2js(robot,q_bp[0][0],p_extend,R_extend)[0]])
+            #         primitives.insert(1,'movel_fit')
+            # else:
+            #     for i in range(1,step_to_extend+1):
+            #         p_extend=p_start-i*extend_step_d_start*slope_p
+            #         points_list.insert(0,[p_extend])
+            #         q_bp.insert(0,[car2js(robot,q_bp[0][0],p_extend,R_start)[0]])
+            #         primitives.insert(1,'movel_fit')
 
-            #solve invkin for initial point
-            # points_list[0][0]=p_start_new
-            # q_bp[0][0]=car2js(robot,q_bp[0][0],p_start_new,R_start_new)[0]
+            R_start_new=rot(k,theta_new)@R_start
+            # solve invkin for initial point
+            points_list[0][0]=p_start_new
+            q_bp[0][0]=car2js(robot,q_bp[0][0],p_start_new,R_start_new)[0]
 
         elif  primitives[1]=='movec_fit':
             #define circle first
-            pose_mid=robot.fwd(q_bp[0][0])
+            pose_mid=robot.fwd(q_bp[1][0])
             p_mid=pose_mid.p
             R_mid=pose_mid.R
+
             center, radius=circle_from_3point(p_start,p_end,p_mid)
 
             #find desired rotation angle
@@ -820,14 +823,23 @@ class MotionSendFANUC(object):
             R_temp=rot(plane_N,angle)
             p_start_new=center+R_temp@(p_start-center)
 
+            #modify mid point to be in the middle of new start and old end (to avoid RS circle uncertain error)
+            modified_bp=arc_from_3point(p_start_new,p_end,p_mid,N=3)
+            points_list[1][0]=modified_bp[1]
+
             #find new start orientation
-            k,theta=R2rot(R_end@R_start.T)
+            # k,theta=R2rot(R_end@R_start.T)
+            k,theta=R2rot(R_end.T@R_start)
             theta_new=-extension_start*theta/np.linalg.norm(p_end-p_start)
-            R_start_new=rot(k,theta_new)@R_start
+            # R_start_new=rot(k,theta_new)@R_start
+            # R_mid_new=rot(k,theta_new/2)@R_start
+            R_start_new=R_start@rot(k,theta_new)
+            R_mid_new=R_start@rot(k,theta_new/2)
 
             #solve invkin for initial point
             points_list[0][0]=p_start_new
             q_bp[0][0]=car2js(robot,q_bp[0][0],p_start_new,R_start_new)[0]
+            q_bp[1][0]=car2js(robot,q_bp[1][0],points_list[1][0],R_start)[0] ## kind of a compromise here
 
         else:
             #find new start point
@@ -857,37 +869,36 @@ class MotionSendFANUC(object):
             #find new end point
             slope_p=p_end-p_start
             slope_p=slope_p/np.linalg.norm(slope_p)
-            # p_end_new=p_end+extension_d*slope_p        ###extend 5cm backward
+            p_end_new=p_end+extension_end*slope_p        ###extend 5cm backward
 
             #find new end orientation
             k,theta=R2rot(R_end@R_start.T)
-            # theta_new=extension_d*theta/np.linalg.norm(p_end-p_start)
-            # R_end_new=rot(k,theta_new)@R_end
+            theta_new=extension_end*theta/np.linalg.norm(p_end-p_start)
+            R_end_new=rot(k,theta_new)@R_end
 
             # adding extension with uniform space
-            the_very_end_p = p_end+step_to_extend*extend_step_d_end*slope_p
-            the_very_end_R = rot(k,np.linalg.norm(the_very_end_p-p_end)*theta/np.linalg.norm(p_end-p_start))@R_end
-            if len(car2js(robot,q_bp[0][0],the_very_end_p,the_very_end_R))>0:
-                for i in range(1,step_to_extend+1):
-                    p_extend=p_end+i*extend_step_d_end*slope_p
-                    theta_extend=np.linalg.norm(p_extend-p_end)*theta/np.linalg.norm(p_end-p_start)
-                    R_extend=rot(k,theta_extend)@R_end
-                    points_list.append([p_extend])
-                    q_bp.append([car2js(robot,q_bp[-1][0],p_extend,R_extend)[0]])
-                    primitives.append('movel_fit')
-            else:
-                for i in range(1,step_to_extend+1):
-                    p_extend=p_end+i*extend_step_d_end*slope_p
-                    points_list.append([p_extend])
-                    q_bp.append([car2js(robot,q_bp[-1][0],p_extend,R_end)[0]])
-                    primitives.append('movel_fit')
+            # the_very_end_p = p_end+step_to_extend*extend_step_d_end*slope_p
+            # the_very_end_R = rot(k,np.linalg.norm(the_very_end_p-p_end)*theta/np.linalg.norm(p_end-p_start))@R_end
+            # if len(car2js(robot,q_bp[0][0],the_very_end_p,the_very_end_R))>0:
+            #     for i in range(1,step_to_extend+1):
+            #         p_extend=p_end+i*extend_step_d_end*slope_p
+            #         theta_extend=np.linalg.norm(p_extend-p_end)*theta/np.linalg.norm(p_end-p_start)
+            #         R_extend=rot(k,theta_extend)@R_end
+            #         points_list.append([p_extend])
+            #         q_bp.append([car2js(robot,q_bp[-1][0],p_extend,R_extend)[0]])
+            #         primitives.append('movel_fit')
+            # else:
+            #     for i in range(1,step_to_extend+1):
+            #         p_extend=p_end+i*extend_step_d_end*slope_p
+            #         points_list.append([p_extend])
+            #         q_bp.append([car2js(robot,q_bp[-1][0],p_extend,R_end)[0]])
+            #         primitives.append('movel_fit')
 
-            #solve invkin for end point
-            # q_bp[-1][-1]=car2js(robot,q_bp[-1][0],p_end_new,R_end_new)[0]
-            # points_list[-1][0]=p_end_new
+            # solve invkin for end point
+            q_bp[-1][-1]=car2js(robot,q_bp[-1][0],p_end_new,R_end_new)[0]
+            points_list[-1][0]=p_end_new
 
-
-        elif  primitives[1]=='movec_fit':
+        elif  primitives[-1]=='movec_fit':
             #define circle first
             pose_mid=robot.fwd(q_bp[-1][0])
             p_mid=pose_mid.p
@@ -903,23 +914,29 @@ class MotionSendFANUC(object):
             R_temp=rot(plane_N,angle)
             p_end_new=center+R_temp@(p_end-center)
 
+            #modify mid point to be in the middle of new end and old start (to avoid RS circle uncertain error)
+            modified_bp=arc_from_3point(p_start,p_end_new,p_mid,N=3)
+            points_list[-1][0]=modified_bp[1]
+            
             #find new end orientation
             k,theta=R2rot(R_end@R_start.T)
             theta_new=extension_end*theta/np.linalg.norm(p_end-p_start)
             R_end_new=rot(k,theta_new)@R_end
+            R_mid_new=rot(k,theta_new/2)@R_end
 
             #solve invkin for end point
             q_bp[-1][-1]=car2js(robot,q_bp[-1][-1],p_end_new,R_end_new)[0]
             points_list[-1][-1]=p_end_new   #midpoint not changed
+            q_bp[-1][0]=car2js(robot,q_bp[-1][0],points_list[-1][0],R_end)[0]
 
         else:
             #find new end point
             J_end=robot.jacobian(q_bp[-1][0])
             qdot=q_bp[-1][0]-q_bp[-2][0]
-            v=J_end[3:,:]@qdot
-            t=extension_end/np.linalg.norm(v)
-            
-            q_bp[-1][-1]=q_bp[-1][-1]+qdot*t
+            dlam=np.linalg.norm(J_end[3:,:]@qdot)
+            t=extension_end/dlam
+
+            q_bp[-1][0]=q_bp[-1][-1]+qdot*t
             points_list[-1][0]=robot.fwd(q_bp[-1][-1]).p
 
         return primitives,points_list,q_bp

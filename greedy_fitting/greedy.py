@@ -138,7 +138,7 @@ class greedy_fit(fitting_toolbox):
 				key='movel_fit'
 
 
-			
+			# key='movec_fit'
 			primitives.append(key)
 			self.breakpoints.append(min(self.breakpoints[-1]+len(curve_fit[key]),len(self.curve)))
 			self.curve_fit.extend(curve_fit[key])

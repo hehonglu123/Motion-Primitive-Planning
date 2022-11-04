@@ -29,8 +29,8 @@ def main():
     # all_objtype=['wood','blade_scale']
     # all_objtype=['blade_scale']
     # all_objtype=['wood']
-    # all_objtype=['curve_blade_scale']
-    all_objtype=['curve_wood']
+    all_objtype=['curve_blade_scale']
+    # all_objtype=['curve_wood']
 
     # num_ls=[80,100,150]
     # num_ls=[100,50,30,25]
@@ -51,7 +51,7 @@ def main():
         curve = read_csv(data_dir+"Curve_in_base_frame.csv",header=None).values
         curve = np.array(curve)
         curve_normal = curve[:,3:]
-        curve = curve[:,:3]
+        # curve = curve[:,:3]
 
         for num_l in num_ls:
             print(obj_type+' '+str(num_l))
@@ -91,7 +91,6 @@ def main():
             s_up=1000
             s_low=0
             s=(s_up+s_low)/2
-            s=448
             speed_found=False
             z=100
             while True:
@@ -107,8 +106,7 @@ def main():
                 error,angle_error=calc_all_error_w_normal(curve_exe,curve[:,:3],curve_exe_R[:,:,-1],curve_normal)
                 error_max=max(error)
                 angle_error_max=max(angle_error)
-                exit()
-
+                break
                 if speed_found:
                     break
 
@@ -268,6 +266,16 @@ def main():
                             p_bp1_error_dir.append(error_dir)
                             ang_error_dir = angle_error1[closest_point_idx]
                             p_bp1_ang_error_dir.append(ang_error_dir)
+                        
+                        # error_dir_toolbox=ilc.get_error_direction(curve,p_bp,q_bp,curve_exe,curve_exe_R)
+                        # print(len(error_dir_toolbox))
+                        # print(len(p_bp1_error_dir))
+                        # print(len(p_bp1_ang_error_dir))
+                        # for j in range(step_start1, step_end1+1):
+                        #     print("BP:",j)
+                        #     print("error dir:",np.dot(error_dir_toolbox[0][j][0]/np.linalg.norm(error_dir_toolbox[0][j][0]),p_bp1_error_dir[j-step_start1]/np.linalg.norm(p_bp1_error_dir[j-step_start1])))
+                        #     print("ang error dir:",np.dot(error_dir_toolbox[1][j][0]/np.linalg.norm(error_dir_toolbox[1][j][0]),p_bp1_ang_error_dir[j-step_start1]/np.linalg.norm(p_bp1_ang_error_dir[j-step_start1])))
+                        # exit()
                         
                         ### update all p_bp1
                         for j in range(step_start1,step_end1+1):
