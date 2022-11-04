@@ -13,13 +13,16 @@ from lambda_calc import *
 from utils import *
 from dual_arm import *
 
-dataset='from_NX/'
+dataset='curve_2/'
 data_dir=dataset
 solution_dir=data_dir+'dual_arm/'+'diffevo_pose2_2/'
-cmd_dir=solution_dir+'10L_relative/'
-num_ls=[10]
+cmd_dir=solution_dir+'30L_relative/'
+num_ls=[30]
 
-relative_path,robot1,robot2,base2_R,base2_p,lam_relative_path,lam1,lam2,curve_js1,curve_js2=initialize_data(dataset,data_dir,solution_dir)
+robot1=robot_obj('ABB_6640_180_255','../config/abb_6640_180_255_robot_default_config.yml',tool_file_path='../config/paintgun.csv',d=50,acc_dict_path='')
+robot2=robot_obj('ABB_1200_5_90','../config/abb_1200_5_90_robot_default_config.yml',tool_file_path=solution_dir+'tcp.csv',base_transformation_file=solution_dir+'base.csv',acc_dict_path='')
+
+relative_path,lam_relative_path,lam1,lam2,curve_js1,curve_js2=initialize_data(dataset,data_dir,solution_dir,robot1,robot2)
 
 curve2 = []
 for i in range(len(curve_js1)):

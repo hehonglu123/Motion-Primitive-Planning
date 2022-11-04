@@ -7,20 +7,20 @@ class Geeks:
 
 def main():
 
-	data_dir='../../data/wood/'
+	data_dir='../../data/curve_1/'
 	relative_path=read_csv(data_dir+"Curve_dense.csv",header=None).values
 
 	v_cmd=1200
 
-	H_1200=np.loadtxt('../../data/wood/dual_arm/abb1200_2.csv',delimiter=',')
+	H_1200=np.loadtxt('../../data/curve_1/dual_arm/abb1200_2.csv',delimiter=',')
 
 	base2_R=H_1200[:3,:3]
 	base2_p=H_1200[:-1,-1]
 
 	base2_k,base2_theta=R2rot(base2_R)
 
-	robot1=robot_obj('../../config/abb_6640_180_255_robot_default_config.yml',tool_file_path='../../config/paintgun.csv',d=50,acc_dict_path='../../toolbox/robot_info/6640acc_new.pickle')
-	robot2=robot_obj('../../config/abb_1200_5_90_robot_default_config.yml',tool_file_path='../../data/wood/dual_arm/tcp.csv',acc_dict_path='../../toolbox/robot_info/1200acc_new.pickle')
+	robot1=robot_obj('ABB_6640_180_255','../../config/abb_6640_180_255_robot_default_config.yml',tool_file_path='../../config/paintgun.csv',d=50,acc_dict_path='../../toolbox/robot_info/6640acc_new.pickle')
+	robot2=robot_obj('ABB_1200_5_90','../../config/abb_1200_5_90_robot_default_config.yml',tool_file_path=data_dir+'dual_arm/tcp.csv',acc_dict_path='../../toolbox/robot_info/1200acc_new.pickle')
 
 	opt=lambda_opt(relative_path[:,:3],relative_path[:,3:],robot1=robot1,robot2=robot2,steps=500,v_cmd=v_cmd)
 

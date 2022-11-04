@@ -371,8 +371,8 @@ class MotionSend(object):
 		mp1.WaitTime(0.1)
 		mp2.WaitTime(0.1)
 		
-		print(mp1.get_program_rapid(module_name="TROB1_MODULE",sync_move=True))
-		print(mp2.get_program_rapid(module_name="TROB2_MODULE", sync_move=True))
+		# print(mp1.get_program_rapid(module_name="TROB1_MODULE",sync_move=True))
+		# print(mp2.get_program_rapid(module_name="TROB2_MODULE", sync_move=True))
 		return self.client.execute_multimove_motion_program([mp1,mp2])
 
 
