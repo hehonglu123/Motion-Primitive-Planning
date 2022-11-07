@@ -1,23 +1,32 @@
 import sys, yaml
 sys.path.append('../')
 from constraint_solver import *
+sys.path.append('../../')
+from tes_env import *
 
 def main():
-	data_dir='../../data/from_NX/'
+	dataset='curve_1'
+	data_dir='../../data/'+dataset+'/'
 	###read actual curve
 	curve_dense = read_csv(data_dir+"Curve_dense.csv",header=None).values
 
 
-	# robot=abb6640(d=50, acc_dict_path='../../toolbox/robot_info/6640acc_new.pickle')
-	robot=robot_obj('../../config/abb_6640_180_255_robot_default_config.yml',tool_file_path='../../config/paintgun.csv',d=50,acc_dict_path='../../toolbox/robot_info/6640acc_new.pickle')
+	# robot=robot_obj('ABB_6640_180_255','../../config/ABB_6640_180_255_robot_default_config.yml',tool_file_path='../../config/paintgun.csv',d=50,acc_dict_path='../../toolbox/robot_info/6640acc_new.pickle')
+	robot = robot_obj('FANUC_m10ia','../../config/FANUC_m10ia_robot_default_config.yml',tool_file_path='../../config/paintgun.csv',d=50,acc_dict_path='../../config/FANUC_m10ia_acc_new.pickle')
 
-
-	v_cmd=1555
-	opt=lambda_opt(curve_dense[:,:3],curve_dense[:,3:],robot1=robot,steps=500,v_cmd=v_cmd)
+	v_cmd=500
+	opt=lambda_opt(curve_dense[:,:3],curve_dense[:,3:],robot1=robot,urdf_path='../../config/urdf/',curve_name=dataset,steps=500,v_cmd=v_cmd)
 
 	#read in initial curve pose
-	with open(data_dir+'baseline/curve_pose.yaml') as file:
-		curve_pose = np.array(yaml.safe_load(file)['H'],dtype=np.float64)
+	# with open(data_dir+'baseline/curve_pose.yaml') as file:
+	# 	curve_pose = np.array(yaml.safe_load(file)['H'],dtype=np.float64)
+
+	curve_pose_fanuc=\
+	np.array([[-0.008281240596627095,-0.9895715673738508,0.14380380418973931,700.2585970910012],\
+	[0.9999617720243631,-0.007791538934054126,0.00396817476110772,-506.82332718104914],\
+	[-0.0028063399787532726,0.14383116827134246,0.9895982616646132,566.410804375142],\
+	[0,0,0,1]])
+	curve_pose=curve_pose_fanuc
 
 	k,theta=R2rot(curve_pose[:3,:3])
 
@@ -29,10 +38,10 @@ def main():
 
 	res = differential_evolution(opt.curve_pose_opt2, bnds, args=None,workers=11,
 									x0 = np.hstack((k*theta,curve_pose[:-1,-1],[0])),
-									strategy='best1bin', maxiter=500,
+									strategy='best1bin', maxiter=10,
 									popsize=15, tol=1e-10,
 									mutation=(0.5, 1), recombination=0.7,
-									seed=None, callback=None, disp=False,
+									seed=None, callback=None, disp=True,
 									polish=True, init='latinhypercube',
 									atol=0.)
 	

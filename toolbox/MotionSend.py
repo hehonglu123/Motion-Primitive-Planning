@@ -44,6 +44,13 @@ class MotionSend(object):
 		jointt = jointtarget([q[0],q[1],q[2],q[3],q[4],q[5]],[0]*6)
 		return jointt
 
+	def jog_joint_multimove(self,q1,q2):
+		mp1 = MotionProgram()
+		mp2 = MotionProgram()
+		mp1.MoveAbsJ(self.moveJ_target(q1),v200,fine)
+		mp2.MoveAbsJ(self.moveJ_target(q2),v200,fine)
+		self.client.execute_multimove_motion_program([mp1,mp2])
+
 	def exec_motions(self,robot,primitives,breakpoints,p_bp,q_bp,speed,zone):
 
 		mp = MotionProgram(tool=tooldata(True,pose(robot.p_tool,R2q(robot.R_tool)),loaddata(1,[0,0,0.001],[1,0,0,0],0,0,0)))
@@ -371,8 +378,8 @@ class MotionSend(object):
 		mp1.WaitTime(0.1)
 		mp2.WaitTime(0.1)
 		
-		print(mp1.get_program_rapid(module_name="TROB1_MODULE",sync_move=True))
-		print(mp2.get_program_rapid(module_name="TROB2_MODULE", sync_move=True))
+		# print(mp1.get_program_rapid(module_name="TROB1_MODULE",sync_move=True))
+		# print(mp2.get_program_rapid(module_name="TROB2_MODULE", sync_move=True))
 		return self.client.execute_multimove_motion_program([mp1,mp2])
 
 

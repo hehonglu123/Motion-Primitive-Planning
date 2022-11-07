@@ -39,7 +39,7 @@ def main():
     # speed={'v200':v200,'v250':v250,'v300':v300,'v350':v350,'v400':v400,'v450':v450,'v500':v500}
     # speed={'v800':v800,'v900':v900,'v1000':v1000,'v1100':v1100,'v1200':v1200,'v1300':v1300,'v1400':v1400}
     # speed={'v800':v800,'v1000':v1000,'v1200':v1200,'v1500':v1500,'v2000':v2000}
-    speed={'v1200':v1200}
+    speed={'v50':v50}
     zone={'z100':z100}
 
     for s in speed:
@@ -48,6 +48,10 @@ def main():
             q_bp_end=q_bp[-1][0]
             p_bp, q_bp = ms.extend(robot, q_bp, primitives, breakpoints, p_bp,extension_start=100,extension_end=100)
             log_results = ms.exec_motions(robot,primitives,breakpoints,p_bp,q_bp,speed[s],zone[z])
+
+            plt.plot(log_results.data[:,0])
+            # plt.title('logging timestamp diff')
+            plt.show()
 
             ##############################data analysis#####################################
             lam, curve_exe, curve_exe_R,curve_exe_js, exe_speed, timestamp=ms.logged_data_analysis(robot,log_results,realrobot=True)

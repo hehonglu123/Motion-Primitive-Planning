@@ -16,19 +16,15 @@ from MotionSend import *
 from dual_arm import *
 
 def main():
-    dataset='from_NX/'
+    dataset='curve_2/'
     data_dir="../../../data/"+dataset
     solution_dir=data_dir+'dual_arm/'+'diffevo_pose2_2/'
-    cmd_dir=solution_dir+'10L_relative/'
+    cmd_dir=solution_dir+'30L_relative/'
     
-    robot1=robot_obj('../../../config/abb_6640_180_255_robot_default_config.yml',tool_file_path='../../../config/paintgun.csv',d=50,acc_dict_path='')
-    robot2=robot_obj('../../../config/abb_1200_5_90_robot_default_config.yml',tool_file_path=solution_dir+'tcp.csv',base_transformation_file=solution_dir+'base.csv',acc_dict_path='')
+    robot1=robot_obj('ABB_6640_180_255','../../../config/abb_6640_180_255_robot_default_config.yml',tool_file_path='../../../config/paintgun.csv',d=50,acc_dict_path='')
+    robot2=robot_obj('ABB_1200_5_90','../../../config/abb_1200_5_90_robot_default_config.yml',tool_file_path=solution_dir+'tcp.csv',base_transformation_file=solution_dir+'base.csv',acc_dict_path='')
 
-    with open(solution_dir+'tcp.yaml') as file:
-        H_tcp = np.array(yaml.safe_load(file)['H'],dtype=np.float64)
-
-
-    relative_path,base2_R,base2_p,lam_relative_path,lam1,lam2,curve_js1,curve_js2=initialize_data(dataset,data_dir,solution_dir,robot1,robot2)
+    relative_path,lam_relative_path,lam1,lam2,curve_js1,curve_js2=initialize_data(dataset,data_dir,solution_dir,robot1,robot2)
 
     ms = MotionSend()
 
@@ -44,7 +40,7 @@ def main():
     ###get lambda at each breakpoint
     lam_bp=lam_relative_path[np.append(breakpoints1[0],breakpoints1[1:]-1)]
 
-    vd_relative=2500
+    vd_relative=2000
 
     s1_all,s2_all=calc_individual_speed(vd_relative,lam1,lam2,lam_relative_path,breakpoints1)
     v2_all=[]
@@ -93,7 +89,7 @@ def main():
     ax1.set_xlabel('lambda (mm)')
     ax1.set_ylabel('Speed/lamdot (mm/s)', color='g')
     ax2.set_ylabel('Error (mm)', color='b')
-    plt.title("Speed: "+dataset+'v'+str(vd_relative)+'_z    '+str(zone))
+    plt.title("Speed: "+dataset+'v'+str(vd_relative)+'_z'+str(zone))
     h1, l1 = ax1.get_legend_handles_labels()
     h2, l2 = ax2.get_legend_handles_labels()
     ax1.legend(h1+h2, l1+l2, loc=1)

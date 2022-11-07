@@ -193,7 +193,7 @@ def logged_data_analysis(robot,timestamp,curve_exe_js):
 	return lam, np.array(curve_exe), np.array(curve_exe_R), act_speed
 
 
-def logged_data_analysis_multimove(robot1,robot2,timestamp,curve_exe_js_dual,base2_R,base2_p):
+def logged_data_analysis_multimove(robot1,robot2,timestamp,curve_exe_js_dual):
 	curve_exe_js1=curve_exe_js_dual[:,:6]
 	curve_exe_js2=curve_exe_js_dual[:,6:]
 
@@ -215,7 +215,7 @@ def logged_data_analysis_multimove(robot1,robot2,timestamp,curve_exe_js_dual,bas
 		curve_exe_R1.append(pose1_now.R)
 		curve_exe_R2.append(pose2_now.R)
 
-		pose2_world_now=robot2.fwd(curve_exe_js2[i],base2_R,base2_p)
+		pose2_world_now=robot2.fwd(curve_exe_js2[i],world=True)
 
 		relative_path_exe.append(np.dot(pose2_world_now.R.T,pose1_now.p-pose2_world_now.p))
 		relative_path_exe_R.append(pose2_world_now.R.T@pose1_now.R)
