@@ -9,14 +9,15 @@ import ast
 #             dic=i #string
 # dic = eval(dic) # this is orignal dict with instace dict
 
-dic={}
-try:
-   dic = pickle.load(open('lrmate200id/acc.pickle','rb'))
-except EOFError:
-   print("EOF Error")
-   with open('lrmate200id/acc.txt', 'r+') as handle:
-      data = handle.read()
-   dic = ast.literal_eval(data)
+# dic={}
+# try:
+#    dic = pickle.load(open('lrmate200id/acc.pickle','rb'))
+# except EOFError:
+#    print("EOF Error")
+#    with open('lrmate200id/acc.txt', 'r+') as handle:
+#       data = handle.read()
+#    dic = ast.literal_eval(data)
+dic = pickle.load(open('lrmate200id/lrmate200id_acc.pickle','rb'))
 
 for i in range(1,2):
    this_dic=pickle.load(open('lrmate200id/acc'+str(i)+'.pickle','rb'))
