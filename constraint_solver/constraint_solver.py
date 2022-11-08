@@ -7,13 +7,10 @@ import matplotlib.pyplot as plt
 from scipy.optimize import differential_evolution, shgo, NonlinearConstraint, minimize, fminbound
 from qpsolvers import solve_qp
 
-<<<<<<< HEAD
 sys.path.append('../../circular_Fit')
 
 sys.path.append('../../../toolbox')
-=======
 from tes_env import *
->>>>>>> main
 from robots_def import *
 from lambda_calc import *
 from blending import *
@@ -380,125 +377,7 @@ class lambda_opt(object):
 		q_out2=np.array(q_out2)[1:]
 		return q_out1, q_out2
 
-<<<<<<< HEAD
-	def dual_arm_qp_vel_track(self,q_init1,q_init2,ldotdes,Kq,KR,Kp):
-
-		#######
-		# Kq: weighting of qdot (12x1)
-		# KR: orientation gain (float)
-		# Kp: position gain (float)
-		Kq = np.diag(Kq)
-		Kw = 1
-
-		#curve_normal: expressed in second robot tool frame
-		###all (jacobian) in robot2 tool frame
-		q_all1=[q_init1]
-		q_out1=[q_init1]
-		q_all2=[q_init2]
-		q_out2=[q_init2]
-
-		###concatenated bounds
-		upper_limit=np.hstack((self.robot1.upper_limit,self.robot2.upper_limit))
-		lower_limit=np.hstack((self.robot1.lower_limit,self.robot2.lower_limit))
-		joint_vel_limit=np.hstack((self.robot1.joint_vel_limit,self.robot2.joint_vel_limit))
-		joint_acc_limit=np.hstack((self.robot1.joint_acc_limit,self.robot2.joint_acc_limit))
-		joint_jrk_limit=np.hstack((self.robot1.joint_jrk_limit,self.robot2.joint_jrk_limit))
-
-		###moving weights, p1 p2,r1 r2
-		weight_distro=np.array([[1,1],
-								[1,1]])
-
-		### previous (for upper/lower bound)
-		qddot_prev = np.zeros(len(Kq))
-		qdot_prev = np.zeros(len(Kq))
-		dt_prev = 999 # assume plenty of time for acceleration
-
-		for i in range(0,len(self.curve)-1):
-			if (i%100) == 0:
-				print(i)
-			# print(i)
-			try:
-				pose1_now=self.robot1.fwd(q_all1[-1])
-				pose2_now=self.robot2.fwd(q_all2[-1])
-				pose2_world_now=self.robot2.fwd(q_all2[-1],self.base2_R,self.base2_p)
-				
-				########################################################QP formation###########################################
-				
-				J1=self.robot1.jacobian(q_all1[-1])        #calculate current Jacobian
-				J1p=np.dot(pose2_world_now.R.T,J1[3:,:])
-				J1R=np.dot(pose2_world_now.R.T,J1[:3,:])
-				J1R_mod=-np.dot(hat(np.dot(pose2_world_now.R.T,pose1_now.R[:,-1])),J1R)
-
-				J2=self.robot2.jacobian(q_all2[-1])        #calculate current Jacobian, mapped to robot2 tool frame
-				J2p=np.dot(pose2_now.R.T,J2[3:,:])
-				J2R=np.dot(pose2_now.R.T,J2[:3,:])
-				J2R_mod=-np.dot(hat(np.dot(pose2_world_now.R.T,pose1_now.R[:,-1])),J2R)
-
-				p12_2=pose2_world_now.R.T@(pose1_now.p-pose2_world_now.p)
-					
-				#form 6x12 jacobian with weight distribution, velocity propogate from rotation of TCP2
-				J_all_p=np.hstack((J1p,-J2p+hat(p12_2)@J2R))
-				J_all_R=np.hstack((J1R_mod,-J2R_mod))
-				
-				# find v*
-				dt = np.linalg.norm(self.curve[i+1]-self.curve[i])/ldotdes
-				vTdes = (self.curve[i+1]-self.curve[i])/dt
-				ezdotdes = (self.curve_normal[i+1]-self.curve_normal[i])/dt
-
-				this_pos_act = np.dot(pose2_world_now.R.T,pose1_now.p-pose2_world_now.p)
-				this_ori_act = np.dot(pose2_world_now.R.T,pose1_now.R[:,-1])
-				# nustar = np.append(ezdotdes,vTdes) - np.append(KR*(this_ori_act-self.curve_normal[i]),Kp*(this_pos_act-self.curve[i]))
-				nustar = - np.append(KR*(this_ori_act-self.curve_normal[i]),Kp*(this_pos_act-self.curve[i]))
-
-				if (i%100) == 0:
-					print(round(np.linalg.norm(this_pos_act-self.curve[i])))
-					costh = np.dot(this_ori_act,self.curve_normal[i])/(np.linalg.norm(this_ori_act)*np.linalg.norm(self.curve_normal[i]))
-					costh = np.max([-1,np.min([1,costh])])
-					print(np.rad2deg(acos(costh)))
-
-				# H and f
-				H=np.dot(np.transpose(J_all_p),J_all_p)+Kq+Kw*np.dot(np.transpose(J_all_R),J_all_R)
-				H=(H+np.transpose(H))/2
-				f=-np.dot(np.transpose(J_all_p),nustar[3:])-Kw*np.dot(np.transpose(J_all_R),nustar[:3])
-
-				# qdot max and min
-				q_prev = np.hstack((q_all1[-1],q_all2[-1]))
-				if i>2:
-					qddot_lb = np.max(np.vstack((-joint_acc_limit,qddot_prev-joint_jrk_limit*dt_prev)),0)
-					qddot_ub = np.min(np.vstack((joint_acc_limit,qddot_prev+joint_jrk_limit*dt_prev)),0)
-				else:
-					qddot_lb = -joint_acc_limit
-					qddot_ub = joint_acc_limit
-				qdot_lb = np.max(np.vstack((-joint_vel_limit,qdot_prev+qddot_lb*dt_prev,(lower_limit-q_prev)/dt+self.lim_factor*np.ones(12))),0)
-				qdot_ub = np.min(np.vstack((joint_vel_limit,qdot_prev+qddot_ub*dt_prev,(upper_limit-q_prev)/dt-self.lim_factor*np.ones(12))),0)
-
-				qdot=solve_qp(H,f,lb=qdot_lb,ub=qdot_ub)
-				
-				q_all1.append(q_all1[-1]+dt*qdot[:6])
-				q_all2.append(q_all2[-1]+dt*qdot[6:])
-				
-				qddot_prev = (qdot-qdot_prev)/dt_prev
-				qdot_prev = qdot
-				dt_prev = dt
-			except:
-				traceback.print_exc()
-				print(i)
-				print(qdot)
-				print(nustar)
-				print(np.linalg.norm(this_pos_act-self.curve[i]))
-				q_out1.append(q_all1[-1])
-				q_out2.append(q_all2[-1])			
-				raise AssertionError
-				break
-
-		q_out1=np.array(q_all1)
-		q_out2=np.array(q_all2)
-		return q_out1, q_out2
-
-	def dual_arm_stepwise_optimize_separate(self,q_init1,q_init2):
-=======
 	def dual_arm_stepwise_optimize_separate(self,q_init1,q_init2,base2_R,base2_p):
->>>>>>> main
 		#QP motion solver for robot1 fixed position, robot2 fixed orientation
 		#curve_normal: expressed in second robot tool frame
 		###all (jacobian) in robot2 tool frame
