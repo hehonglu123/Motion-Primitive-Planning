@@ -7,7 +7,11 @@ import os
 import yaml
 
 sys.path.append('../../../constraint_solver')
+sys.path.append('../fanuc_toolbox')
 from constraint_solver import *
+from fanuc_utils import *
+from error_check import *
+from utils import *
 
 def main():
 
@@ -19,56 +23,67 @@ def main():
     
     relative_path=read_csv(data_dir+"Curve_dense.csv",header=None).values
 
+    # ###### get tcp
     #read in initial curve pose
-    with open(output_dir+'blade_pose.yaml') as file:
-        blade_pose = np.array(yaml.safe_load(file)['H'],dtype=np.float64)
-
-    ###### get tcp
-    import general_robotics_toolbox as rox
-    bT = rox.Transform(blade_pose[:3,:3],blade_pose[:3,3])
-    # bT=rox.Transform(R=rox.rot([0,0,1],np.pi),p=[3500,0,0])*bT
+    # with open('../data/'+data_type+'/blade_pose.yaml') as file:
+    #     blade_pose = np.array(yaml.safe_load(file)['H'],dtype=np.float64)
+    scale=0.85
+    H_200id=np.loadtxt(output_dir+'tcp.csv',delimiter=',')
+    bT = Transform(H_200id[:3,:3],H_200id[:3,3]*scale)
+    bT=Transform(R=np.matmul(Ry(np.radians(90)),Rz(np.radians(180))),p=[0,0,0]).inv()*bT
     print(bT)
     print(R2wpr(bT.R))
+    bT.p[2]=-420
+    bT=Transform(R=Rz(np.radians(180)),p=[0,0,0]).inv()*bT
+    print(bT)
     exit()
-    robot=m900ia(R_tool=np.matmul(Ry(np.radians(90)),Rz(np.radians(180))),p_tool=np.array([0,0,0])*1000.,d=0)
-    # T_tool=robot.fwd(np.deg2rad([0,49.8,-17.2,0,65.4,0]))
-    # T_tool=robot.fwd(np.deg2rad([0,48.3,-7,0,55.8,0]))
-    # T_tool=robot.fwd(np.deg2rad([0,0,0,0,0,0]))
-    # T_tool=robot.fwd(np.deg2rad([0,40.5,-28.8,0,69.3,0]))
-    T_tool=rox.Transform(np.matmul(Ry(np.radians(-90)),Rx(np.radians(180))),[1950,0,650])
-    bT=T_tool.inv()*bT
-    print(bT)
-    print(R2wpr(bT.R))
-    bT=rox.Transform(np.matmul(Ry(np.radians(90)),Rz(np.radians(180))),np.array([0,0,0])*1000.)*bT
+    # robot=m900ia(R_tool=np.matmul(Ry(np.radians(90)),Rz(np.radians(180))),p_tool=np.array([0,0,0])*1000.,d=0)
+    # # T_tool=robot.fwd(np.deg2rad([0,49.8,-17.2,0,65.4,0]))
+    # # T_tool=robot.fwd(np.deg2rad([0,48.3,-7,0,55.8,0]))
+    # # T_tool=robot.fwd(np.deg2rad([0,0,0,0,0,0]))
+    # # T_tool=robot.fwd(np.deg2rad([0,40.5,-28.8,0,69.3,0]))
+    # T_tool=Transform(np.matmul(Ry(np.radians(-90)),Rx(np.radians(180))),[1950,0,650])
+    # bT=T_tool.inv()*bT
+    # print(bT)
+    # print(R2wpr(bT.R))
+    # bT=Transform(np.matmul(Ry(np.radians(90)),Rz(np.radians(180))),np.array([0,0,0])*1000.)*bT
+    # # exit()
+    # bT_T=np.vstack((np.vstack((bT.R.T,bT.p)).T,[0,0,0,1]))
+    # # print(bT_T)
+    # with open(data_dir+'tcp.yaml','w') as file:
+    #     yaml.dump({'H':bT_T.tolist()},file)
     # exit()
-    bT_T=np.vstack((np.vstack((bT.R.T,bT.p)).T,[0,0,0,1]))
-    # print(bT_T)
-    with open(data_dir+'tcp.yaml','w') as file:
-        yaml.dump({'H':bT_T.tolist()},file)
-    exit()
-    ##################################################
+    # ##################################################
 
-    v_cmd=1200
+    # curve 1
+    # v_cmd=500
+    # curve 2 scale
+    v_cmd=800
 
-    H_1200=np.loadtxt('../../data/curve_1/dual_arm/abb1200_2.csv',delimiter=',')
+    H_200id=np.loadtxt(output_dir+'H_lrmate200id.csv',delimiter=',')
 
-    base2_R=H_1200[:3,:3]
-    base2_p=H_1200[:-1,-1]
+    base2_R=H_200id[:3,:3]
+    base2_p=H_200id[:-1,-1]
 
     base2_k,base2_theta=R2rot(base2_R)
 
-    robot1=robot_obj('ABB_6640_180_255','../../config/abb_6640_180_255_robot_default_config.yml',tool_file_path='../../config/paintgun.csv',d=50,acc_dict_path='../../toolbox/robot_info/6640acc_new.pickle')
-    robot2=robot_obj('ABB_1200_5_90','../../config/abb_1200_5_90_robot_default_config.yml',tool_file_path=data_dir+'dual_arm/tcp.csv',acc_dict_path='../../toolbox/robot_info/1200acc_new.pickle')
+    toolbox_path = '../../../toolbox/'
+    robot1=robot_obj('FANUC_m10ia',toolbox_path+'robot_info/fanuc_m10ia_robot_default_config.yml',tool_file_path=toolbox_path+'tool_info/paintgun.csv',d=50,acc_dict_path=toolbox_path+'robot_info/m10ia_acc.pickle',j_compensation=[1,1,-1,-1,-1,-1])
+    robot2=robot_obj('FANUC_lrmate_200id',toolbox_path+'robot_info/fanuc_lrmate200id_robot_default_config.yml',tool_file_path=output_dir+'tcp.csv',acc_dict_path=toolbox_path+'robot_info/lrmate200id_acc.pickle',j_compensation=[1,1,-1,-1,-1,-1])
 
     opt=lambda_opt(relative_path[:,:3],relative_path[:,3:],robot1=robot1,robot2=robot2,steps=500,v_cmd=v_cmd)
 
+    ## fwd check
+    # print(robot2.fwd(np.radians([0,0,0,0,30,-90])))
+    # print(R2wpr(robot2.fwd(np.radians([0,0,0,0,30,-90])).R))
     ###########################################diff evo opt############################################
     ##x:q_init2,base2_x,base2_y,base2_theta,theta_0
+    q_init2_init=np.radians([0,0,0,0,-30,90])
     lower_limit=np.hstack((robot2.lower_limit,[0,0],[-np.pi],[-np.pi]))
     upper_limit=np.hstack((robot2.upper_limit,[3000,3000],[np.pi],[np.pi]))
     bnds=tuple(zip(lower_limit,upper_limit))
     res = differential_evolution(opt.dual_arm_opt_w_pose_3dof, bnds, args=None,workers=-1,
-                                    x0 = np.hstack((np.zeros(6),base2_p[0],base2_p[1],base2_theta,[0])),
+                                    x0 = np.hstack((q_init2_init,base2_p[0],base2_p[1],base2_theta,[0])),
                                     strategy='best1bin', maxiter=700,
                                     popsize=15, tol=1e-10,
                                     mutation=(0.5, 1), recombination=0.7,
@@ -102,16 +117,16 @@ def main():
 
     ####output to trajectory csv
     df=DataFrame({'q0':q_out1[:,0],'q1':q_out1[:,1],'q2':q_out1[:,2],'q3':q_out1[:,3],'q4':q_out1[:,4],'q5':q_out1[:,5]})
-    df.to_csv('trajectory/arm1.csv',header=False,index=False)
+    df.to_csv(output_dir+'arm1.csv',header=False,index=False)
     df=DataFrame({'q0':q_out2[:,0],'q1':q_out2[:,1],'q2':q_out2[:,2],'q3':q_out2[:,3],'q4':q_out2[:,4],'q5':q_out2[:,5]})
-    df.to_csv('trajectory/arm2.csv',header=False,index=False)
+    df.to_csv(output_dir+'arm2.csv',header=False,index=False)
 
     ###output to pose yaml
     H=np.eye(4)
     H[:-1,-1]=base2_p
     H[:3,:3]=base2_R
 
-    np.savetxt('trajectory/base.csv', H, delimiter=',')
+    np.savetxt(output_dir+'base.csv', H, delimiter=',')
 
     ###dual lambda_dot calc
     speed,speed1,speed2=traj_speed_est_dual(robot1,robot2,q_out1[::100],q_out2[::100],opt.lam[::100],v_cmd)
@@ -123,7 +138,7 @@ def main():
     plt.ylabel("lambda_dot")
     plt.title("DUALARM max lambda_dot vs lambda (path index)")
     plt.ylim([0,1.2*v_cmd])
-    plt.savefig("trajectory/results.png")
+    plt.savefig(output_dir+"results.png")
     # plt.show()
 
 
