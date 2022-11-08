@@ -43,22 +43,12 @@ class greedy_fit(fitting_toolbox):
 		###update relative error
 		for key in self.primitives:
 
-			relative_path_fit=[]
-			relative_norm_fit=[]
 			ori_error=[]
 			for i in range(len(curve1)):
-				#convert to robot2 tool frame
-				pose2_world_now_R=self.robot2.base_H[:-1,:-1]@curve2[i]
-				pose2_world_now_p=self.robot2.base_H[:-1,:-1]@curve2[i]+self.robot2.base_H[:-1,-1]
+				#get angle error
+				ori_error.append(get_angle(curve_relative_R[i][:,-1],curve_fit_R_dict[key][i][:,-1]))
 
-				relative_path_fit.append(pose2_world_now_R.T@(curve_fit_dict[key][i]-pose2_world_now_p))
-				relative_norm_fit.append(pose2_world_now_R.T@curve_fit_R_dict[key][i][:,-1])
-
-				print(relative_norm_fit)
-				ori_error.append(get_angle(curve_relative_R[i][:,-1],relative_norm_fit[-1]))
-
-
-			error_dict[key]=np.max(np.linalg.norm(curve_relative-np.array(relative_path_fit),axis=1))
+			error_dict[key]=np.max(np.linalg.norm(curve_relative-curve_fit_dict[key],axis=1))
 			ori_error_dict[key]=np.max(ori_error)
 
 		return error_dict,ori_error_dict,curve_fit_dict,curve_fit_R_dict
@@ -76,9 +66,9 @@ class greedy_fit(fitting_toolbox):
 				###TODO: may not be the same comb with min value
 				if min(error_dict.values())<self.max_error_threshold and min(ori_error_dict.values())<self.max_ori_threshold:
 					##find min comb
-					primitive_comb=min(error_dict, key=error_dict.get)
+					primitive1=min(error_dict, key=error_dict.get)
 					print('min relative error: ',min(error_dict.values()))
-					return primitive_comb[0],curve_fit_dict[primitive_comb[0]],curve_fit_R_dict[primitive_comb[0]]
+					return primitive1,curve_fit_dict[primitive1],curve_fit_R_dict[primitive1]
 
 				else:
 					next_point=max(prev_possible_point,2)
@@ -86,9 +76,9 @@ class greedy_fit(fitting_toolbox):
 					error_dict,ori_error_dict,curve_fit_dict,curve_fit_R_dict=\
 						self.update_dict(self.curve1[indices],self.curve2[indices],self.curve_js1[indices],self.curve_js2[indices],self.curve_R1[indices],self.curve_R2[indices],self.relative_path[indices],self.relative_R[indices])
 					##find min comb
-					primitive_comb=min(error_dict, key=error_dict.get)
+					primitive1=min(error_dict, key=error_dict.get)
 					print('min relative error: ',min(error_dict.values()))
-					return primitive_comb[0],curve_fit_dict[primitive_comb[0]],curve_fit_R_dict[primitive_comb[0]]
+					return primitive1,curve_fit_dict[primitive1],curve_fit_R_dict[primitive1]
 
 			###fitting
 			indices=range(cur_idx,cur_idx+next_point)
@@ -140,11 +130,19 @@ class greedy_fit(fitting_toolbox):
 			###TODO: pass curve_js from j fit
 			primitive1,curve_fit1,curve_fit_R1=self.bisect(self.breakpoints[-1])
 
+			###TODO: convert relative curve_fit into world frame, then solves inv
+			curve_fit1_world=copy.deepcopy(curve_fit1)
+			curve_fit_R1_world=copy.deepcopy(curve_fit_R1)
+			for i in range(len(curve_fit1)):
+				pose2_world_now=self.robot2.fwd(self.curve_js2[i+self.breakpoints[-1]])
+				curve_fit1_world[i]=pose2_world_now.p+pose2_world_now.R@curve_fit1[i]
+				curve_fit_R1_world[i]=pose2_world_now.R@curve_fit_R1[i]
+
 			###solve inv_kin here
 			if len(self.curve_fit_js1)>1:
 				self.curve_fit_js1.extend(car2js(self.robot1,self.curve_fit_js1[-1],curve_fit1,curve_fit_R1))
 			else:
-				self.curve_fit_js1.extend(car2js(self.robot1,self.curve_js1[0],curve_fit1,curve_fit_R1))
+				self.curve_fit_js1.extend(car2js(self.robot1,self.curve_js1[0],curve_fit1_world,curve_fit_R1_world))
 
 			###generate output
 			if primitive1=='movec_fit':
@@ -160,14 +158,12 @@ class greedy_fit(fitting_toolbox):
 			
 			primitives_choices1.append(primitive1)
 			primitives_choices2.append('moveabsj_fit')
-			points2.append([curve2[self.breakpoints[-1]]])
-			q_bp2.append([curve_js2[self.breakpoints[-1]]])
+			points2.append([self.curve2[self.breakpoints[-1]]])
+			q_bp2.append([self.curve_js2[self.breakpoints[-1]]])
 
 			self.breakpoints.append(min(self.breakpoints[-1]+len(curve_fit1),len(self.curve1)))
 			self.curve_fit1.extend(curve_fit1)
 			self.curve_fit_R1.extend(curve_fit_R1)
-			self.curve_fit2.extend(curve_fit2)
-			self.curve_fit_R2.extend(curve_fit_R2)
 
 
 
@@ -183,11 +179,6 @@ class greedy_fit(fitting_toolbox):
 		self.curve_fit1=np.array(self.curve_fit1)
 		self.curve_fit_R1=np.array(self.curve_fit_R1)
 		self.curve_fit_js1=np.array(self.curve_fit_js1)
-
-		self.curve_fit2=np.array(self.curve_fit2)
-		self.curve_fit_R2=np.array(self.curve_fit_R2)
-		self.curve_fit_js2=np.array(self.curve_fit_js2)
-
 
 
 		return np.array(self.breakpoints),primitives_choices1,points1,q_bp1,primitives_choices2,points2,q_bp2
@@ -216,7 +207,7 @@ def main():
 
 
 	###set primitive choices, defaults are all 3
-	greedy_fit_obj.primitives={'movel_fit':greedy_fit_obj.movel_fit,'movec_fit':greedy_fit_obj.movec_fit}
+	greedy_fit_obj.primitives={'movel_f cit':greedy_fit_obj.movel_fit,'movec_fit':greedy_fit_obj.movec_fit}
 
 	breakpoints,primitives_choices1,points1,q_bp1,primitives_choices2,points2,q_bp2=greedy_fit_obj.fit_under_error()
 
