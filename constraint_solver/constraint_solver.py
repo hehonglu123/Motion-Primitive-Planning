@@ -36,7 +36,7 @@ class lambda_opt(object):
 		self.steps=steps
 
 		# self.lim_factor=0.0000001###avoid fwd error on joint limit
-		self.lim_factor=np.deg2rad(5) ###avoid fwd error on joint limit
+		self.lim_factor=np.deg2rad(2) ###avoid fwd error on joint limit
 
 		#prespecified primitives
 		self.primitives=primitives
@@ -308,11 +308,12 @@ class lambda_opt(object):
 		joint_acc_limit=np.hstack((self.robot1.joint_acc_limit,self.robot2.joint_acc_limit))
 
 		for i in range(len(self.curve)):
-			if (i%1000) == 0:
+			if (i%1) == 0:
 				print(i)
 			try:
 				now=time.time()
 				error_fb=999
+				loop_i=0
 				while error_fb>0.1:
 					###timeout guard
 					if time.time()-now>10:
@@ -327,6 +328,11 @@ class lambda_opt(object):
 
 					error_fb=np.linalg.norm(np.dot(pose2_world_now.R.T,pose1_now.p-pose2_world_now.p)-self.curve[i])+np.linalg.norm(np.dot(pose2_world_now.R.T,pose1_now.R[:,-1])-self.curve_normal[i])	
 
+					if error_fb>1000:
+						print("error_fb:",error_fb)
+						raise AssertionError
+
+					# print(error_fb)
 					# print(i)
 					# print(np.dot(pose2_world_now.R.T,pose1_now.p-pose2_world_now.p)-self.curve[i])
 					# print(np.dot(pose2_world_now.R.T,pose1_now.R[:,-1])-self.curve_normal[i])
@@ -357,12 +363,14 @@ class lambda_opt(object):
 					f=-np.dot(np.transpose(J_all_p),vd)-Kw*np.dot(np.transpose(J_all_R),ezdotd)
 					qdot=solve_qp(H,f,lb=lower_limit-np.hstack((q_all1[-1],q_all2[-1]))+self.lim_factor*np.ones(12),ub=upper_limit-np.hstack((q_all1[-1],q_all2[-1]))-self.lim_factor*np.ones(12))
 
+					# print(qdot)
 					# alpha=fminbound(self.error_calc4,0,0.999999999999999999999,args=(q_all1[-1],q_all2[-1],qdot,self.curve[i],self.curve_normal[i],))
 					# print(alpha)
 					alpha=1
 					q_all1.append(q_all1[-1]+alpha*qdot[:6])
 					q_all2.append(q_all2[-1]+alpha*qdot[6:])
 
+					loop_i+=1
 			except:
 				traceback.print_exc()
 				q_out1.append(q_all1[-1])
@@ -639,18 +647,17 @@ class lambda_opt(object):
 	def dual_arm_opt_w_pose_3dof(self,x):
 		##x:q_init2,base2_x,base2_y,base2_theta,theta_0
 		q_init2=x[:6]
-		base2_p=[x[6],x[7],790.5]		###fixed z height
+		base2_p=[x[6],x[7],0]		###fixed z height
 		base2_theta=x[8]
 		base2_R=Rz(base2_theta)
 
 		self.robot2.base_H=H_from_RT(base2_R,base2_p)
 		pose2_world_now=self.robot2.fwd(q_init2,world=True)
 
-
-		R_temp=direction2R(pose2_world_now.R@self.curve_normal[0],-self.curve[1]+self.curve[0])
+		R_temp=direction2R(pose2_world_now.R@(self.curve_normal[0]),pose2_world_now.R@(self.curve[1]-self.curve[0]))
 		R=np.dot(R_temp,Rz(x[-1]))
 		try:
-			q_init1=self.robot1.inv(pose2_world_now.p,R)[0]
+			q_init1=self.robot1.inv(np.matmul(pose2_world_now.R,self.curve[0])+pose2_world_now.p,R)[0]
 			q_out1,q_out2=self.dual_arm_stepwise_optimize(q_init1,q_init2,base2_R=base2_R,base2_p=base2_p,w1=0.01,w2=0.02)
 		except:
 			# traceback.print_exc()

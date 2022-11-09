@@ -27,16 +27,16 @@ def main():
     #read in initial curve pose
     # with open('../data/'+data_type+'/blade_pose.yaml') as file:
     #     blade_pose = np.array(yaml.safe_load(file)['H'],dtype=np.float64)
-    scale=0.85
-    H_200id=np.loadtxt(output_dir+'tcp.csv',delimiter=',')
-    bT = Transform(H_200id[:3,:3],H_200id[:3,3]*scale)
-    bT=Transform(R=np.matmul(Ry(np.radians(90)),Rz(np.radians(180))),p=[0,0,0]).inv()*bT
-    print(bT)
-    print(R2wpr(bT.R))
-    bT.p[2]=-420
-    bT=Transform(R=Rz(np.radians(180)),p=[0,0,0]).inv()*bT
-    print(bT)
-    exit()
+    # scale=0.85
+    # H_200id=np.loadtxt(output_dir+'tcp.csv',delimiter=',')
+    # bT = Transform(H_200id[:3,:3],H_200id[:3,3]*scale)
+    # bT=Transform(R=np.matmul(Ry(np.radians(90)),Rz(np.radians(180))),p=[0,0,0]).inv()*bT
+    # print(bT)
+    # print(R2wpr(bT.R))
+    # bT.p[2]=-420
+    # bT=Transform(R=Rz(np.radians(180)),p=[0,0,0]).inv()*bT
+    # print(bT)
+    # exit()
     # robot=m900ia(R_tool=np.matmul(Ry(np.radians(90)),Rz(np.radians(180))),p_tool=np.array([0,0,0])*1000.,d=0)
     # # T_tool=robot.fwd(np.deg2rad([0,49.8,-17.2,0,65.4,0]))
     # # T_tool=robot.fwd(np.deg2rad([0,48.3,-7,0,55.8,0]))
@@ -71,11 +71,25 @@ def main():
     robot1=robot_obj('FANUC_m10ia',toolbox_path+'robot_info/fanuc_m10ia_robot_default_config.yml',tool_file_path=toolbox_path+'tool_info/paintgun.csv',d=50,acc_dict_path=toolbox_path+'robot_info/m10ia_acc.pickle',j_compensation=[1,1,-1,-1,-1,-1])
     robot2=robot_obj('FANUC_lrmate_200id',toolbox_path+'robot_info/fanuc_lrmate200id_robot_default_config.yml',tool_file_path=output_dir+'tcp.csv',acc_dict_path=toolbox_path+'robot_info/lrmate200id_acc.pickle',j_compensation=[1,1,-1,-1,-1,-1])
 
-    opt=lambda_opt(relative_path[:,:3],relative_path[:,3:],robot1=robot1,robot2=robot2,steps=500,v_cmd=v_cmd)
+    opt=lambda_opt(relative_path[:,:3],relative_path[:,3:],robot1=robot1,robot2=robot2,steps=50000,v_cmd=v_cmd)
 
     ## fwd check
     # print(robot2.fwd(np.radians([0,0,0,0,30,-90])))
     # print(R2wpr(robot2.fwd(np.radians([0,0,0,0,30,-90])).R))
+
+    ## find valid x y q_init2
+    q_init2_init=np.radians([0,15,-15,0,15,-90])
+    # print(robot2.fwd(q_init2_init))
+    # print(q_init2_init)
+    # print(base2_p)
+    # print(base2_theta)
+
+    input_x = np.append(q_init2_init,base2_p[:2])
+    input_x = np.append(input_x,base2_theta)
+    input_x = np.append(input_x,0)
+    print(input_x)
+    print(opt.dual_arm_opt_w_pose_3dof(input_x))
+    exit()
     ###########################################diff evo opt############################################
     ##x:q_init2,base2_x,base2_y,base2_theta,theta_0
     q_init2_init=np.radians([0,0,0,0,-30,90])
