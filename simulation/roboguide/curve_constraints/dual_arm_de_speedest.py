@@ -65,36 +65,54 @@ def main():
     base2_R=H_200id[:3,:3]
     base2_p=H_200id[:-1,-1]
 
+    ### test different base
+    base2_R=Rz(0)
+    base2_p=np.array([100,-100,0])
+
     base2_k,base2_theta=R2rot(base2_R)
 
     toolbox_path = '../../../toolbox/'
-    robot1=robot_obj('FANUC_m10ia',toolbox_path+'robot_info/fanuc_m10ia_robot_default_config.yml',tool_file_path=toolbox_path+'tool_info/paintgun.csv',d=50,acc_dict_path=toolbox_path+'robot_info/m10ia_acc.pickle',j_compensation=[1,1,-1,-1,-1,-1])
-    robot2=robot_obj('FANUC_lrmate_200id',toolbox_path+'robot_info/fanuc_lrmate200id_robot_default_config.yml',tool_file_path=output_dir+'tcp.csv',acc_dict_path=toolbox_path+'robot_info/lrmate200id_acc.pickle',j_compensation=[1,1,-1,-1,-1,-1])
+    # robot1=robot_obj('FANUC_m10ia',toolbox_path+'robot_info/fanuc_m10ia_robot_default_config.yml',tool_file_path=toolbox_path+'tool_info/paintgun.csv',d=50,acc_dict_path=toolbox_path+'robot_info/m10ia_acc.pickle',j_compensation=[1,1,-1,-1,-1,-1])
+    # robot2=robot_obj('FANUC_lrmate_200id',toolbox_path+'robot_info/fanuc_lrmate200id_robot_default_config.yml',tool_file_path=output_dir+'tcp.csv',acc_dict_path=toolbox_path+'robot_info/lrmate200id_acc.pickle',j_compensation=[1,1,-1,-1,-1,-1])
+    robot1=robot_obj('FANUC_m10ia',toolbox_path+'robot_info/fanuc_m10ia_robot_default_config.yml',tool_file_path=toolbox_path+'tool_info/paintgun.csv',d=50,acc_dict_path=toolbox_path+'robot_info/m10ia_acc.pickle')
+    robot2=robot_obj('FANUC_lrmate_200id',toolbox_path+'robot_info/fanuc_lrmate200id_robot_default_config.yml',tool_file_path=output_dir+'tcp.csv',acc_dict_path=toolbox_path+'robot_info/lrmate200id_acc.pickle')
 
-    opt=lambda_opt(relative_path[:,:3],relative_path[:,3:],robot1=robot1,robot2=robot2,steps=50000,v_cmd=v_cmd)
+    opt=lambda_opt(relative_path[:,:3],relative_path[:,3:],robot1=robot1,robot2=robot2,steps=500,v_cmd=v_cmd)
 
     ## fwd check
     # print(robot2.fwd(np.radians([0,0,0,0,30,-90])))
     # print(R2wpr(robot2.fwd(np.radians([0,0,0,0,30,-90])).R))
 
     ## find valid x y q_init2
-    q_init2_init=np.radians([0,15,-15,0,15,-90])
+    with open('../data/'+data_type+'/blade_pose.yaml') as file:
+        blade_pose = np.array(yaml.safe_load(file)['H'],dtype=np.float64)
+    blade_pose_base2=Transform(base2_R,base2_p).inv()*Transform(blade_pose[:3,:3],blade_pose[:-1,-1])
+    # print(blade_pose_base2)
+    # print(np.degrees(robot2.inv(p=blade_pose_base2.p,R=blade_pose_base2.R)))
+    # exit()
+    # q_init2_init=np.radians([0,15,-15,0,15,-90])
+    q_init2_init=robot2.inv(p=blade_pose_base2.p,R=blade_pose_base2.R)[0]
     # print(robot2.fwd(q_init2_init))
     # print(q_init2_init)
     # print(base2_p)
     # print(base2_theta)
 
+    # print(Transform(base2_R,base2_p)*robot2.fwd(q_init2_init))
+    # print(blade_pose)
+    # exit()
+
     input_x = np.append(q_init2_init,base2_p[:2])
     input_x = np.append(input_x,base2_theta)
     input_x = np.append(input_x,0)
-    print(input_x)
+    # print(input_x)
+    print("Sanity Check")
     print(opt.dual_arm_opt_w_pose_3dof(input_x))
-    exit()
+    print("Sanity Check Done")
     ###########################################diff evo opt############################################
     ##x:q_init2,base2_x,base2_y,base2_theta,theta_0
     q_init2_init=np.radians([0,0,0,0,-30,90])
-    lower_limit=np.hstack((robot2.lower_limit,[0,0],[-np.pi],[-np.pi]))
-    upper_limit=np.hstack((robot2.upper_limit,[3000,3000],[np.pi],[np.pi]))
+    lower_limit=np.hstack((robot2.lower_limit,[-500,-2000],[-np.pi],[-np.pi]))
+    upper_limit=np.hstack((robot2.upper_limit,[2000,2000],[np.pi],[np.pi]))
     bnds=tuple(zip(lower_limit,upper_limit))
     res = differential_evolution(opt.dual_arm_opt_w_pose_3dof, bnds, args=None,workers=-1,
                                     x0 = np.hstack((q_init2_init,base2_p[0],base2_p[1],base2_theta,[0])),

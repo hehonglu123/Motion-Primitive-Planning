@@ -36,7 +36,7 @@ class lambda_opt(object):
 		self.steps=steps
 
 		# self.lim_factor=0.0000001###avoid fwd error on joint limit
-		self.lim_factor=np.deg2rad(2) ###avoid fwd error on joint limit
+		self.lim_factor=np.deg2rad(1) ###avoid fwd error on joint limit
 
 		#prespecified primitives
 		self.primitives=primitives
@@ -308,12 +308,11 @@ class lambda_opt(object):
 		joint_acc_limit=np.hstack((self.robot1.joint_acc_limit,self.robot2.joint_acc_limit))
 
 		for i in range(len(self.curve)):
-			if (i%1) == 0:
-				print(i)
+			# if (i%1000) == 0:
+			# 	print(i)
 			try:
 				now=time.time()
 				error_fb=999
-				loop_i=0
 				while error_fb>0.1:
 					###timeout guard
 					if time.time()-now>10:
@@ -361,7 +360,7 @@ class lambda_opt(object):
 					ezdotd=self.curve_normal[i]-np.dot(pose2_world_now.R.T,pose1_now.R[:,-1])
 
 					f=-np.dot(np.transpose(J_all_p),vd)-Kw*np.dot(np.transpose(J_all_R),ezdotd)
-					qdot=solve_qp(H,f,lb=lower_limit-np.hstack((q_all1[-1],q_all2[-1]))+self.lim_factor*np.ones(12),ub=upper_limit-np.hstack((q_all1[-1],q_all2[-1]))-self.lim_factor*np.ones(12))
+					qdot=solve_qp(H,f,lb=lower_limit-np.hstack((q_all1[-1],q_all2[-1]))+self.lim_factor*np.ones(12),ub=upper_limit-np.hstack((q_all1[-1],q_all2[-1]))-self.lim_factor*np.ones(12),solver='quadprog')
 
 					# print(qdot)
 					# alpha=fminbound(self.error_calc4,0,0.999999999999999999999,args=(q_all1[-1],q_all2[-1],qdot,self.curve[i],self.curve_normal[i],))
@@ -369,8 +368,6 @@ class lambda_opt(object):
 					alpha=1
 					q_all1.append(q_all1[-1]+alpha*qdot[:6])
 					q_all2.append(q_all2[-1]+alpha*qdot[6:])
-
-					loop_i+=1
 			except:
 				traceback.print_exc()
 				q_out1.append(q_all1[-1])
@@ -654,21 +651,24 @@ class lambda_opt(object):
 		self.robot2.base_H=H_from_RT(base2_R,base2_p)
 		pose2_world_now=self.robot2.fwd(q_init2,world=True)
 
-		R_temp=direction2R(pose2_world_now.R@(self.curve_normal[0]),pose2_world_now.R@(self.curve[1]-self.curve[0]))
+		R_temp=direction2R(pose2_world_now.R@(self.curve_normal[0]),pose2_world_now.R@(-self.curve[1]+self.curve[0]))
 		R=np.dot(R_temp,Rz(x[-1]))
 		try:
+			# print(np.matmul(pose2_world_now.R,self.curve[0])+pose2_world_now.p,R)
+			# print(self.robot1.inv(np.matmul(pose2_world_now.R,self.curve[0])+pose2_world_now.p,R))
 			q_init1=self.robot1.inv(np.matmul(pose2_world_now.R,self.curve[0])+pose2_world_now.p,R)[0]
 			q_out1,q_out2=self.dual_arm_stepwise_optimize(q_init1,q_init2,base2_R=base2_R,base2_p=base2_p,w1=0.01,w2=0.02)
 		except:
 			# traceback.print_exc()
 			return 999
 
+		joint_margin=0.01
+		
 		###make sure extension possible by checking start & end configuration
-		if np.min(self.robot1.upper_limit-q_out1[0])<0.2 or  np.min(q_out1[0]-self.robot1.lower_limit)<0.2 or np.min(self.robot1.upper_limit-q_out1[-1])<0.2 or np.min(q_out1[-1]-self.robot1.lower_limit)<0.2:
+		if np.min(self.robot1.upper_limit-q_out1[0])<joint_margin or  np.min(q_out1[0]-self.robot1.lower_limit)<joint_margin or np.min(self.robot1.upper_limit-q_out1[-1])<joint_margin or np.min(q_out1[-1]-self.robot1.lower_limit)<joint_margin:
 			return 999
-
 		###make sure extension possible by checking start & end configuration
-		if np.min(self.robot2.upper_limit-q_out2[0])<0.2 or  np.min(q_out2[0]-self.robot2.lower_limit)<0.2 or np.min(self.robot2.upper_limit-q_out2[-1])<0.2 or  np.min(q_out2[-1]-self.robot2.lower_limit)<0.2:
+		if np.min(self.robot2.upper_limit-q_out2[0])<joint_margin or  np.min(q_out2[0]-self.robot2.lower_limit)<joint_margin or np.min(self.robot2.upper_limit-q_out2[-1])<joint_margin or  np.min(q_out2[-1]-self.robot2.lower_limit)<joint_margin:
 			return 999
 
 		speed,_,_=traj_speed_est_dual(self.robot1,self.robot2,q_out1,q_out2,self.lam,self.v_cmd)
