@@ -642,7 +642,7 @@ class lambda_opt(object):
 		R_temp=direction2R(pose2_world_now.R@self.curve_normal[0],-self.curve[1]+self.curve[0])
 		R=np.dot(R_temp,Rz(x[-1]))
 		try:
-			q_init1=self.robot1.inv(pose2_world_now.p,R)[0]
+			q_init1=self.robot1.inv(pose2_world_now.R@self.curve[0]+pose2_world_now.p,R)[0]
 			q_out1,q_out2=self.dual_arm_stepwise_optimize(q_init1,q_init2,base2_R=base2_R,base2_p=base2_p,w1=0.01,w2=0.02)
 		except:
 			# traceback.print_exc()

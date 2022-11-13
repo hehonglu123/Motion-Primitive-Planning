@@ -26,7 +26,7 @@ class greedy_fit(fitting_toolbox):
 		###initial primitive candidates
 		self.primitives={'movel_fit':self.movel_fit,'movej_fit':self.movej_fit,'movec_fit':self.movec_fit}
 
-	def update_dict(self,curve1,curve2,curve_js1,curve_js2,curve_R1,curve_R2,curve_relative,curve_relative_R):
+	def update_dict(self,curve_js1,curve_relative,curve_relative_R):
 		###form new error dict
 		error_dict={}
 		ori_error_dict={}
@@ -36,20 +36,13 @@ class greedy_fit(fitting_toolbox):
 		###fit all 3 for all robots first
 		for key in self.primitives:
 			if 'movej' in key:
-				curve_fit_dict[key],curve_fit_R_dict[key],_,_,_=self.primitives[key](curve_relative,curve_js1,curve_R1,self.robot1,self.curve_fit_js1[-1] if len(self.curve_fit_js1)>0 else [])
+				curve_fit_dict[key],curve_fit_R_dict[key],_,p_error,ori_error=self.primitives[key](curve_relative,curve_js1,curve_relative_R,self.robot1,self.curve_fit_js1[-1] if len(self.curve_fit_js1)>0 else [])
 			else:
-				curve_fit_dict[key],curve_fit_R_dict[key],_,_,_=self.primitives[key](curve_relative,curve_js1,curve_R1,self.robot1,self.curve_fit1[-1] if len(self.curve_fit1)>0 else [],self.curve_fit_R1[-1] if len(self.curve_fit_R1)>0 else [])
+				curve_fit_dict[key],curve_fit_R_dict[key],_,p_error,ori_error=self.primitives[key](curve_relative,curve_js1,curve_relative_R,self.robot1,self.curve_fit1[-1] if len(self.curve_fit1)>0 else [],self.curve_fit_R1[-1] if len(self.curve_fit_R1)>0 else [])
 
-		###update relative error
-		for key in self.primitives:
-
-			ori_error=[]
-			for i in range(len(curve1)):
-				#get angle error
-				ori_error.append(get_angle(curve_relative_R[i][:,-1],curve_fit_R_dict[key][i][:,-1]))
-
-			error_dict[key]=np.max(np.linalg.norm(curve_relative-curve_fit_dict[key],axis=1))
-			ori_error_dict[key]=np.max(ori_error)
+			error_dict[key]=p_error
+			ori_error_dict[key]=ori_error
+		
 
 		return error_dict,ori_error_dict,curve_fit_dict,curve_fit_R_dict
 
@@ -74,7 +67,7 @@ class greedy_fit(fitting_toolbox):
 					next_point=max(prev_possible_point,2)
 					indices=range(cur_idx,cur_idx+next_point)
 					error_dict,ori_error_dict,curve_fit_dict,curve_fit_R_dict=\
-						self.update_dict(self.curve1[indices],self.curve2[indices],self.curve_js1[indices],self.curve_js2[indices],self.curve_R1[indices],self.curve_R2[indices],self.relative_path[indices],self.relative_R[indices])
+						self.update_dict(self.curve_js1[indices],self.relative_path[indices],self.relative_R[indices])
 					##find min comb
 					primitive1=min(error_dict, key=error_dict.get)
 					print('min relative error: ',min(error_dict.values()))
@@ -83,7 +76,7 @@ class greedy_fit(fitting_toolbox):
 			###fitting
 			indices=range(cur_idx,cur_idx+next_point)
 			error_dict,ori_error_dict,curve_fit_dict,curve_fit_R_dict=\
-				self.update_dict(self.curve1[indices],self.curve2[indices],self.curve_js1[indices],self.curve_js2[indices],self.curve_R1[indices],self.curve_R2[indices],self.relative_path[indices],self.relative_R[indices])
+				self.update_dict(self.curve_js1[indices],self.relative_path[indices],self.relative_R[indices])
 
 			###bp going backward to meet threshold
 			if min(error_dict.values())>self.max_error_threshold or min(ori_error_dict.values())>self.max_ori_threshold:
@@ -130,17 +123,17 @@ class greedy_fit(fitting_toolbox):
 			###TODO: pass curve_js from j fit
 			primitive1,curve_fit1,curve_fit_R1=self.bisect(self.breakpoints[-1])
 
-			###TODO: convert relative curve_fit into world frame, then solves inv
+			###convert relative curve_fit into world frame, then solves inv
 			curve_fit1_world=copy.deepcopy(curve_fit1)
 			curve_fit_R1_world=copy.deepcopy(curve_fit_R1)
 			for i in range(len(curve_fit1)):
-				pose2_world_now=self.robot2.fwd(self.curve_js2[i+self.breakpoints[-1]])
+				pose2_world_now=self.robot2.fwd(self.curve_js2[i+self.breakpoints[-1]],world=True)
 				curve_fit1_world[i]=pose2_world_now.p+pose2_world_now.R@curve_fit1[i]
 				curve_fit_R1_world[i]=pose2_world_now.R@curve_fit_R1[i]
 
 			###solve inv_kin here
 			if len(self.curve_fit_js1)>1:
-				self.curve_fit_js1.extend(car2js(self.robot1,self.curve_fit_js1[-1],curve_fit1,curve_fit_R1))
+				self.curve_fit_js1.extend(car2js(self.robot1,self.curve_fit_js1[-1],curve_fit1_world,curve_fit_R1_world))
 			else:
 				self.curve_fit_js1.extend(car2js(self.robot1,self.curve_js1[0],curve_fit1_world,curve_fit_R1_world))
 
@@ -156,16 +149,16 @@ class greedy_fit(fitting_toolbox):
 				q_bp1.append([self.curve_fit_js1[-1]])
 
 			
-			primitives_choices1.append(primitive1)
-			primitives_choices2.append('moveabsj_fit')
-			points2.append([self.curve2[self.breakpoints[-1]]])
-			q_bp2.append([self.curve_js2[self.breakpoints[-1]]])
+			
 
 			self.breakpoints.append(min(self.breakpoints[-1]+len(curve_fit1),len(self.curve1)))
 			self.curve_fit1.extend(curve_fit1)
 			self.curve_fit_R1.extend(curve_fit_R1)
 
-
+			primitives_choices1.append(primitive1)
+			primitives_choices2.append('moveabsj_fit')
+			points2.append([self.curve2[self.breakpoints[-1]-1]])
+			q_bp2.append([self.curve_js2[self.breakpoints[-1]-1]])
 
 			print(self.breakpoints)
 			print(primitives_choices1)
@@ -203,7 +196,7 @@ def main():
 
 
 	min_length=20
-	greedy_fit_obj=greedy_fit(robot1,robot2,curve_js1[::1],curve_js2[::1],min_length,0.4)
+	greedy_fit_obj=greedy_fit(robot1,robot2,curve_js1[::1],curve_js2[::1],min_length,0.1)
 
 
 	###set primitive choices, defaults are all 3
@@ -219,7 +212,8 @@ def main():
 	plt.legend()
 
 	###3D plot in robot2 tool frame
-	relative_path_fit=form_relative_path(greedy_fit_obj.curve_fit_js1,greedy_fit_obj.curve_fit_js2,robot1,robot2)
+	_,_,_,_,relative_path_fit,relative_path_fit_R=form_relative_path(greedy_fit_obj.curve_fit_js1,greedy_fit_obj.curve_js2,robot1,robot2)
+	print(relative_path_fit)
 	plt.figure()
 	ax = plt.axes(projection='3d')
 	ax.plot3D(greedy_fit_obj.relative_path[:,0], greedy_fit_obj.relative_path[:,1],greedy_fit_obj.relative_path[:,2], 'gray', label='original')
@@ -233,8 +227,8 @@ def main():
 	q_bp1.insert(0,[greedy_fit_obj.curve_fit_js1[0]])
 
 	primitives_choices2.insert(0,'moveabsj_fit')
-	points2.insert(0,[greedy_fit_obj.curve_fit2[0]])
-	q_bp2.insert(0,[greedy_fit_obj.curve_fit_js2[0]])
+	points2.insert(0,[greedy_fit_obj.curve2[0]])
+	q_bp2.insert(0,[greedy_fit_obj.curve_js2[0]])
 
 	print(len(breakpoints))
 	print(len(primitives_choices1))
@@ -246,22 +240,10 @@ def main():
 	###save arm1
 	df=DataFrame({'breakpoints':breakpoints,'primitives':primitives_choices1,'p_bp':points1,'q_bp':q_bp1})
 	df.to_csv('greedy_dual_output/command1.csv',header=True,index=False)
-	df=DataFrame({'x':greedy_fit_obj.curve_fit1[:,0],'y':greedy_fit_obj.curve_fit1[:,1],'z':greedy_fit_obj.curve_fit1[:,2],\
-		'R1':greedy_fit_obj.curve_fit_R1[:,0,0],'R2':greedy_fit_obj.curve_fit_R1[:,0,1],'R3':greedy_fit_obj.curve_fit_R1[:,0,2],\
-		'R4':greedy_fit_obj.curve_fit_R1[:,1,0],'R5':greedy_fit_obj.curve_fit_R1[:,1,1],'R6':greedy_fit_obj.curve_fit_R1[:,1,2],\
-		'R7':greedy_fit_obj.curve_fit_R1[:,2,0],'R8':greedy_fit_obj.curve_fit_R1[:,2,1],'R9':greedy_fit_obj.curve_fit_R1[:,2,2]})
-	df.to_csv('greedy_dual_output/curve_fit1.csv',header=True,index=False)
-	DataFrame(greedy_fit_obj.curve_fit_js1).to_csv('greedy_dual_output/curve_fit_js1.csv',header=False,index=False)
 
 	###save arm2
 	df=DataFrame({'breakpoints':breakpoints,'primitives':primitives_choices2,'p_bp':points2,'q_bp':q_bp2})
 	df.to_csv('greedy_dual_output/command2.csv',header=True,index=False)
-	df=DataFrame({'x':greedy_fit_obj.curve_fit2[:,0],'y':greedy_fit_obj.curve_fit2[:,1],'z':greedy_fit_obj.curve_fit2[:,2],\
-		'R1':greedy_fit_obj.curve_fit_R2[:,0,0],'R2':greedy_fit_obj.curve_fit_R2[:,0,1],'R3':greedy_fit_obj.curve_fit_R2[:,0,2],\
-		'R4':greedy_fit_obj.curve_fit_R2[:,1,0],'R5':greedy_fit_obj.curve_fit_R2[:,1,1],'R6':greedy_fit_obj.curve_fit_R2[:,1,2],\
-		'R7':greedy_fit_obj.curve_fit_R2[:,2,0],'R8':greedy_fit_obj.curve_fit_R2[:,2,1],'R9':greedy_fit_obj.curve_fit_R2[:,2,2]})
-	df.to_csv('greedy_dual_output/curve_fit2.csv',header=True,index=False)
-	DataFrame(greedy_fit_obj.curve_fit_js2).to_csv('greedy_dual_output/curve_fit_js2.csv',header=False,index=False)
 
 
 if __name__ == "__main__":

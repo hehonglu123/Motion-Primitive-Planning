@@ -2,7 +2,7 @@ import numpy as np
 from general_robotics_toolbox import *
 from pandas import read_csv
 import sys
-from abb_motion_program_exec_client import *
+from abb_motion_program_exec import *
 from robots_def import *
 from error_check import *
 from toolbox_circular_fit import *
@@ -38,6 +38,24 @@ class MotionSend(object):
 		robt1 = robtarget([point1[0], point1[1], point1[2]], [ quat1[0], quat1[1], quat1[2], quat1[3]], confdata(cf1[0],cf1[1],cf1[2],cf1[3]),[0]*6)
 		robt2 = robtarget([point2[0], point2[1], point2[2]], [ quat2[0], quat2[1], quat2[2], quat2[3]], confdata(cf2[0],cf2[1],cf2[2],cf2[3]),[0]*6)
 		return robt1, robt2
+
+	def moveC_target_relative(self,robot1,robot2,q1_1,q1_2,q2,point1,point2):
+		pose1_now=robot1.fwd(q1_1)
+		pose2_world_now=robot2.fwd(q2,world=True)
+		relative_R=pose2_world_now.R.T@pose1_now.R
+		quat=R2q(relative_R)
+		cf=quadrant(q1_1,robot1)
+		robt1 = robtarget([point1[0], point1[1], point1[2]], [ quat[0], quat[1], quat[2], quat[3]], confdata(cf[0],cf[1],cf[2],cf[3]),[9E+09]*6)
+
+
+		pose1_now=robot1.fwd(q1_2)
+		pose2_world_now=robot2.fwd(q2,world=True)
+		relative_R=pose2_world_now.R.T@pose1_now.R
+		quat=R2q(relative_R)
+		cf=quadrant(q1_2,robot1)
+		robt2 = robtarget([point2[0], point2[1], point2[2]], [quat[0], quat[1], quat[2], quat[3]], confdata(cf[0],cf[1],cf[2],cf[3]),[9E+09]*6)
+		return robt1, robt2
+
 
 	def moveJ_target(self,q):
 		q = np.rad2deg(q)
@@ -134,7 +152,8 @@ class MotionSend(object):
 		
 		mp1 = MotionProgram(tool=tooldata(True,pose(robot1.p_tool,R2q(robot1.R_tool)),loaddata(1,[0,0,0.001],[1,0,0,0],0,0,0)))
 		mp2 = MotionProgram(tool=tooldata(True,pose(robot2.p_tool,R2q(robot2.R_tool)),loaddata(1,[0,0,0.001],[1,0,0,0],0,0,0)))
-
+		mp1.SyncMoveOn()
+		mp2.SyncMoveOn()
 		###change cirpath mode
 		mp1.CirPathMode(CirPathModeSwitch.ObjectFrame)
 		mp2.CirPathMode(CirPathModeSwitch.ObjectFrame)
@@ -263,7 +282,9 @@ class MotionSend(object):
 		###dynamic speed2
 		mp1 = MotionProgram(tool=tooldata(True,pose(robot1.p_tool,R2q(robot1.R_tool)),loaddata(1,[0,0,0.001],[1,0,0,0],0,0,0)),wobj=wobj)
 		mp2 = MotionProgram(tool=tooldata(True,pose(robot2.p_tool,R2q(robot2.R_tool)),loaddata(1,[0,0,0.001],[1,0,0,0],0,0,0)))
-
+		mp1.SyncMoveOn()
+		mp2.SyncMoveOn()
+		
 		###change cirpath mode
 		# mp1.CirPathMode(CirPathModeSwitch.ObjectFrame)
 		# mp2.CirPathMode(CirPathModeSwitch.ObjectFrame)
@@ -285,7 +306,7 @@ class MotionSend(object):
 
 
 			elif 'movec' in primitives1[i]:
-				robt1, robt2 = self.moveC_target_relative(robot1,robot2,q_bp1[i][0],q_bp1[i][1],p_bp1[i][0],p_bp1[i][1])
+				robt1, robt2 = self.moveC_target_relative(robot1,robot2,q_bp1[i][0],q_bp1[i][1],q_bp2[i][0],p_bp1[i][0],p_bp1[i][1])
 				if type(speed1) is list:
 					if type(zone1) is list:
 						mp1.MoveC(robt1,robt2,speed1[i],zone1[i])
@@ -411,9 +432,11 @@ class MotionSend(object):
 
 		elif 'movec' in primitives[1]:
 			##TODO: MOVEC IN RELATIVE EXTENSION FIX, ROBOT2 NO MIDPOINT
+			##TODO: proportional extension in relative motion
+			
 			#define circle first
 			_,_,_,_,p_mid,R_mid=form_relative_path([q_bp1[1][0]],[q_bp2[1][0]],robot1,robot2)
-
+			p_mid,R_mid=p_mid[0],R_mid[0]
 			center, radius=circle_from_3point(p_start,p_end,p_mid)
 
 			#find desired rotation angle
@@ -422,6 +445,7 @@ class MotionSend(object):
 			#find new start point
 			plane_N=np.cross(p_end-center,p_start-center)
 			plane_N=plane_N/np.linalg.norm(plane_N)
+
 			R_temp=rot(plane_N,angle)
 			p_start_new=center+R_temp@(p_start-center)
 
@@ -478,6 +502,7 @@ class MotionSend(object):
 		elif  'movec' in primitives[-1]:
 			#define circle first
 			_,_,_,_,p_mid,R_mid=form_relative_path([q_bp1[-1][0]],[q_bp2[-1][0]],robot1,robot2)
+			p_mid,R_mid=p_mid[0],R_mid[0]
 			center, radius=circle_from_3point(p_start,p_end,p_mid)
 
 			#find desired rotation angle
