@@ -4,11 +4,13 @@ from toolbox_circular_fit import *
 from utils import *
 
 class fitting_toolbox(object):
-	def __init__(self,robot1,robot2,curve_js1,curve_js2):
+	def __init__(self,robot1,robot2,curve_js1,curve_js2,base2_p,base2_R):
 		self.curve_js1=curve_js1
 		self.curve_js2=curve_js2
 		self.robot1=robot1
 		self.robot2=robot2
+		self.base2_p=base2_p
+		self.base2_R=base2_R
 
 		###get full curve list
 		self.relative_R=[]
@@ -20,7 +22,7 @@ class fitting_toolbox(object):
 		for i in range(len(curve_js1)):
 			pose1_now=robot1.fwd(curve_js1[i])
 			pose2_now=robot2.fwd(curve_js2[i])
-			pose2_world_now=robot2.fwd(curve_js2[i],world=True)
+			pose2_world_now=robot2.fwd(curve_js2[i],base2_R,base2_p)
 
 			self.curve1.append(pose1_now.p)
 			self.curve2.append(pose2_now.p)
