@@ -15,8 +15,8 @@ from dual_arm import *
 #####################3d curve-fitting with MoveL, MoveJ, MoveC; stepwise incremental bi-section searched self.breakpoints###############################
 
 class greedy_fit(fitting_toolbox):
-	def __init__(self,robot1,robot2,curve_js1,curve_js2,base2_p,base2_R,min_length,max_error_threshold,max_ori_threshold=np.radians(3)):
-		super().__init__(robot1,robot2,curve_js1,curve_js2,base2_p,base2_R)
+	def __init__(self,robot1,robot2,curve_js1,curve_js2,min_length,max_error_threshold,max_ori_threshold=np.radians(3)):
+		super().__init__(robot1,robot2,curve_js1,curve_js2)
 		self.max_error_threshold=max_error_threshold
 		self.max_ori_threshold=max_ori_threshold
 		self.step=int(len(curve_js1)/25)
