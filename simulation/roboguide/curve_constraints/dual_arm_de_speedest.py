@@ -109,7 +109,6 @@ def main():
     robot2.base_H=H_from_RT(base2_R,base2_p)
     pose2_world_now=robot2.fwd(q_init2,world=True)
 
-
     R_temp=direction2R(pose2_world_now.R@opt.curve_normal[0],-opt.curve[1]+opt.curve[0])
     R=np.dot(R_temp,Rz(res.x[-1]))
 
@@ -119,11 +118,18 @@ def main():
     opt=lambda_opt(relative_path[:,:3],relative_path[:,3:],robot1=robot1,robot2=robot2,steps=50000)
     q_out1,q_out2=opt.dual_arm_stepwise_optimize(q_init1,q_init2,base2_R=base2_R,base2_p=base2_p,w1=0.01,w2=0.02)
 
+    ### the joints have different rotation axis as the real robot
+    ### need compenstaion here
+
     ####output to trajectory csv
-    df=DataFrame({'q0':q_out1[:,0],'q1':q_out1[:,1],'q2':q_out1[:,2],'q3':q_out1[:,3],'q4':q_out1[:,4],'q5':q_out1[:,5]})
+    df=DataFrame({'q0':q_out1[:,0],'q1':q_out1[:,1],'q2':-q_out1[:,2],'q3':-q_out1[:,3],'q4':-q_out1[:,4],'q5':-q_out1[:,5]})
     df.to_csv(output_dir+'arm1.csv',header=False,index=False)
-    df=DataFrame({'q0':q_out2[:,0],'q1':q_out2[:,1],'q2':q_out2[:,2],'q3':q_out2[:,3],'q4':q_out2[:,4],'q5':q_out2[:,5]})
+    df=DataFrame({'q0':q_out2[:,0],'q1':q_out2[:,1],'q2':-q_out2[:,2],'q3':-q_out2[:,3],'q4':-q_out2[:,4],'q5':-q_out2[:,5]})
     df.to_csv(output_dir+'arm2.csv',header=False,index=False)
+    # df=DataFrame({'q0':q_out1[:,0],'q1':q_out1[:,1],'q2':q_out1[:,2],'q3':q_out1[:,3],'q4':q_out1[:,4],'q5':q_out1[:,5]})
+    # df.to_csv(output_dir+'arm1.csv',header=False,index=False)
+    # df=DataFrame({'q0':q_out2[:,0],'q1':q_out2[:,1],'q2':q_out2[:,2],'q3':q_out2[:,3],'q4':q_out2[:,4],'q5':q_out2[:,5]})
+    # df.to_csv(output_dir+'arm2.csv',header=False,index=False)
 
     ###output to pose yaml
     H=np.eye(4)

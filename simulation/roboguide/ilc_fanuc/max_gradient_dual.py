@@ -26,31 +26,29 @@ from blending import *
 
 def main():
     # curve
-    data_type='blade'
-    # data_type='wood'
+    data_type='curve_1'
+    data_type='curve_2_scale'
 
     # data and curve directory
-    if data_type=='blade':
-        curve_data_dir='../../../data/from_NX/'
-        cmd_dir='../data/curve_blade/'
-        data_dir='data/blade_dual/'
-    elif data_type=='wood':
-        curve_data_dir='../../../data/wood/'
-        cmd_dir='../data/curve_wood/'
-        data_dir='data/wood_dual/'
+    curve_data_dir='../../../data/'+data_type+'/'
 
-    test_type='dual_arm'
-    # test_type='dual_single_arm'
-    # test_type='dual_single_arm_straight' # robot2 is multiple user defined straight line
-    # test_type='dual_single_arm_straight_50' # robot2 is multiple user defined straight line
-    # test_type='dual_single_arm_straight_min' # robot2 is multiple user defined straight line
-    # test_type='dual_single_arm_straight_min10' # robot2 is multiple user defined straight line
-    # test_type='dual_arm_10'
+    test_type='30'
 
-    cmd_dir=cmd_dir+test_type+'/'
+    cmd_dir='../data/'+data_type+'/dual_arm_de/'+test_type+'/'
 
     # relative path
     relative_path = read_csv(curve_data_dir+"/Curve_dense.csv", header=None).values
+
+    H_200id=np.loadtxt(cmd_dir+'../base.csv',delimiter=',')
+    base2_R=H_200id[:3,:3]
+    base2_p=H_200id[:-1,-1]
+
+    print(base2_R)
+    print(base2_p)
+    k,theta=R2rot(base2_R)
+    print(k,np.degrees(theta))
+
+    exit()
 
     # the second robot relative to the fist robot
     with open(cmd_dir+'../m900ia.yaml') as file:
