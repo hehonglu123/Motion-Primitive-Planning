@@ -19,8 +19,8 @@ num_ls=[25,30,50,100]
 for obj_type in all_objtype:
 
     print(obj_type)
-    # data_dir='../data/'+obj_type+'/dual_arm_de/'
-    data_dir='../data/'+obj_type+'/dual_arm_de_possibilyimpossible/'
+    data_dir='../data/'+obj_type+'/dual_arm_de/'
+    # data_dir='../data/'+obj_type+'/dual_arm_de_possibilyimpossible/'
     print(data_dir)
 
     ## robot

@@ -22,7 +22,8 @@ class fitting_toolbox(object):
 		for i in range(len(curve_js1)):
 			pose1_now=robot1.fwd(curve_js1[i])
 			pose2_now=robot2.fwd(curve_js2[i])
-			pose2_world_now=robot2.fwd(curve_js2[i],base2_R,base2_p)
+			# pose2_world_now=robot2.fwd(curve_js2[i],base2_R,base2_p)
+			pose2_world_now=robot2.fwd(curve_js2[i],world=True)
 
 			self.curve1.append(pose1_now.p)
 			self.curve2.append(pose2_now.p)
