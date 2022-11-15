@@ -232,6 +232,7 @@ def car2js(robot,q_init,curve_fit,curve_fit_R):
 			print(e)
 			inv_ans=[]
 		if len(inv_ans) != 0:
+			# print(inv_ans)
 			temp_q=inv_ans[0]
 			curve_fit_js.append(temp_q)
 

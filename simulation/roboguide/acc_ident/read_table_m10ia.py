@@ -15,13 +15,19 @@ for i in range(1,6):
    dic.update(this_dic)
 pickle.dump(dic, open('m10ia/m10ia_acc.pickle','wb'))
 
+dic_comp={}
+for key, value in dic.items():
+   dic_comp[(key[0],-key[1])]=value
+
+pickle.dump(dic_comp, open('m10ia/m10ia_acc_compensate.pickle','wb'))
+
 ###surface plots of accleration limits, x as q2, y as q3
 x=[]
 y=[]
 q1_acc=[]
 q2_acc=[]
 q3_acc=[]
-for key, value in dic.items():
+for key, value in dic_comp.items():
    x.append(key[0])
    y.append(key[1])
    q1_acc.append(value[0])

@@ -22,7 +22,14 @@ dic = pickle.load(open('lrmate200id/lrmate200id_acc.pickle','rb'))
 for i in range(1,2):
    this_dic=pickle.load(open('lrmate200id/acc'+str(i)+'.pickle','rb'))
    dic.update(this_dic)
-pickle.dump(dic, open('lrmate200id/lrmate200id_acc.pickle','wb'))
+
+# pickle.dump(dic, open('lrmate200id/lrmate200id_acc.pickle','wb'))
+
+dic_comp={}
+for key, value in dic.items():
+   dic_comp[(key[0],-key[1])]=value
+
+pickle.dump(dic_comp, open('lrmate200id/lrmate200id_acc_compensate.pickle','wb'))
 
 ###surface plots of accleration limits, x as q2, y as q3
 x=[]

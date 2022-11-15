@@ -807,10 +807,17 @@ class MotionSendFANUC(object):
             R_start_new=rot(k,theta_new)@R_start
             # solve invkin for initial point
             try:
-                q_bp[0][0]=car2js(robot,q_bp[0][0],p_start_new,R_start_new)[0]
-                points_list[0][0]=p_start_new
+                # print(p_start_new,R2wpr(R_start_new))
+                # q_bp[0][0]=car2js(robot,q_bp[0][0],p_start_new,R_start_new)[0]
+                # print(robot.fwd(q_bp[0][0]))
+                # points_list[0][0]=p_start_new
+                q_bp.insert(0,[car2js(robot,q_bp[0][0],p_start_new,R_start_new)[0]])
+                points_list.insert(0,[p_start_new])
+                primitives.insert(1,'movel_fit')
             except:
+                # print(p_start_new,R2wpr(R_start))
                 q_bp.insert(0,[car2js(robot,q_bp[0][0],p_start_new,R_start)[0]])
+                # print(robot.fwd(q_bp[0][0]))
                 points_list.insert(0,[p_start_new])
                 primitives.insert(1,'movel_fit')
 
@@ -904,8 +911,11 @@ class MotionSendFANUC(object):
 
             # solve invkin for end point
             try:
-                q_bp[-1][-1]=car2js(robot,q_bp[-1][0],p_end_new,R_end_new)[0]
-                points_list[-1][0]=p_end_new
+                # q_bp[-1][-1]=car2js(robot,q_bp[-1][0],p_end_new,R_end_new)[0]
+                # points_list[-1][0]=p_end_new
+                q_bp.append([car2js(robot,q_bp[-1][0],p_end_new,R_end_new)[0]])
+                points_list.append([p_end_new])
+                primitives.append('movel_fit')
             except:
                 q_bp.append([car2js(robot,q_bp[-1][0],p_end_new,R_end)[0]])
                 points_list.append([p_end_new])

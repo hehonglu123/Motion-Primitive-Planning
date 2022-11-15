@@ -125,6 +125,7 @@ class robot_obj(object):
 	def get_acc(self,q_all,direction=[]):
 		###get acceleration limit from q config, assume last 3 joints acc fixed direction is 3 length vector, 0 is -, 1 is +
 		#if a single point
+		q_all=np.multiply(q_all,self.j_compensation)
 		if q_all.ndim==1:
 			###find closest q2q3 config, along with constant last 3 joints acc
 			idx=np.argmin(np.linalg.norm(self.q2q3_config-q_all[1:3],axis=1))

@@ -34,8 +34,8 @@ def main():
 
     test_type='30'
 
-    # cmd_dir='../data/'+data_type+'/dual_arm_de/'+test_type+'/'
-    cmd_dir='../data/'+data_type+'/dual_arm_de_possibilyimpossible/'+test_type+'/'
+    cmd_dir='../data/'+data_type+'/dual_arm_de/'+test_type+'/'
+    # cmd_dir='../data/'+data_type+'/dual_arm_de_possibilyimpossible/'+test_type+'/'
 
     # relative path
     relative_path = read_csv(curve_data_dir+"/Curve_dense.csv", header=None).values
@@ -43,17 +43,25 @@ def main():
     H_200id=np.loadtxt(cmd_dir+'../base.csv',delimiter=',')
     base2_R=H_200id[:3,:3]
     base2_p=H_200id[:-1,-1]
-
-    print(base2_R)
-    print(base2_p)
+    # print(base2_R)
+    # print(base2_p)
     k,theta=R2rot(base2_R)
-    print(k,np.degrees(theta))
+    # print(k,np.degrees(theta))
+
+    robot2_tcp=np.loadtxt(cmd_dir+'../tcp.csv',delimiter=',')
+    # print(robot2_tcp)
+
     # exit()
     
     ## robot
     toolbox_path = '../../../toolbox/'
-    robot1 = robot_obj('FANUC_m10ia',toolbox_path+'robot_info/fanuc_m10ia_robot_default_config.yml',tool_file_path=toolbox_path+'tool_info/paintgun.csv',d=50,acc_dict_path=toolbox_path+'robot_info/m10ia_acc.pickle',j_compensation=[1,1,-1,-1,-1,-1])
-    robot2=robot_obj('FANUC_lrmate200id',toolbox_path+'robot_info/fanuc_lrmate200id_robot_default_config.yml',tool_file_path=cmd_dir+'../tcp.csv',base_transformation_file=cmd_dir+'../base.csv',acc_dict_path=toolbox_path+'robot_info/lrmate200id_acc.pickle',j_compensation=[1,1,-1,-1,-1,-1])
+    robot1 = robot_obj('FANUC_m10ia',toolbox_path+'robot_info/fanuc_m10ia_robot_default_config.yml',tool_file_path=toolbox_path+'tool_info/paintgun.csv',d=50,acc_dict_path=toolbox_path+'robot_info/m10ia_acc_compensate.pickle',j_compensation=[1,1,-1,-1,-1,-1])
+    robot2=robot_obj('FANUC_lrmate200id',toolbox_path+'robot_info/fanuc_lrmate200id_robot_default_config.yml',tool_file_path=cmd_dir+'../tcp.csv',base_transformation_file=cmd_dir+'../base.csv',acc_dict_path=toolbox_path+'robot_info/lrmate200id_acc_compensate.pickle',j_compensation=[1,1,-1,-1,-1,-1])
+    
+    # robot2=lrmate200id(R_tool=Ry(np.pi/2)@robot2_tcp[:3,:3],p_tool=Ry(np.pi/2)@robot2_tcp[:3,-1])
+    # print(robot2.fwd(np.radians([-41.52,-12.97,156.93,-57.35,-31.39,97.72])))
+    # print(robot2.fwd(np.radians([0,0,0,0,0,0])))
+    # exit()
 
     # fanuc motion send tool
     if data_type=='curve_1':
@@ -61,7 +69,7 @@ def main():
     elif data_type=='curve_2_scale':
         ms = MotionSendFANUC(robot1=robot1,robot2=robot2,utool2=3)
 
-    s=800 # mm/sec in leader frame
+    s=500 # mm/sec in leader frame
     z=100 # CNT100
     ilc_output=cmd_dir+'results_'+str(s)+'_'+test_type+'/'
     Path(ilc_output).mkdir(exist_ok=True)
@@ -70,9 +78,25 @@ def main():
     breakpoints2,primitives2,p_bp2,q_bp2,_=ms.extract_data_from_cmd(os.getcwd()+'/'+cmd_dir+'command2.csv')
 
     ###extension
-    # p_bp1,q_bp1,p_bp2,q_bp2=ms.extend_dual(ms.robot1,p_bp1,q_bp1,primitives1,ms.robot2,p_bp2,q_bp2,primitives2,breakpoints1,0,extension_start=10,extension_end=10)
+    print(np.degrees(q_bp2[0][-1]))
+    p_bp1,q_bp1,p_bp2,q_bp2=ms.extend_dual(ms.robot1,p_bp1,q_bp1,primitives1,ms.robot2,p_bp2,q_bp2,primitives2,breakpoints1,0,extension_start=35,extension_end=35)
 
-    # print(q_bp2)
+    print(robot2.fwd(q_bp2[0][0]))
+    print(robot2.inv(robot2.fwd(q_bp2[0][0]).p,robot2.fwd(q_bp2[0][0]).R,q_bp2[1][0]))
+    print(robot2.inv(np.array([-646.2,-504.9,1099]),robot2.fwd(q_bp2[0][0]).R,q_bp2[1][0]))
+    # # print(q_bp2)
+    # exit()
+    print(len(q_bp1))
+    print(len(q_bp2))
+
+    # print(robot1.jacobian(q_bp1[0][0]))
+    for i in range(len(q_bp1)):
+        u,s,v=np.linalg.svd(robot1.jacobian(q_bp1[i][0]))
+        print(np.min(s))
+        u,s,v=np.linalg.svd(robot2.jacobian(q_bp2[i][0]))
+        print(np.min(s))
+        print('======================')
+    exit()
 
     ###ilc toolbox def
     ilc=ilc_toolbox([robot1,robot2],[primitives1,primitives2])
@@ -141,7 +165,7 @@ def main():
         # plt.savefig(ilc_output+'iteration_ '+str(i))
         # plt.clf()
         plt.show()
-        exit()
+        # exit()
 
         df=DataFrame({'primitives':primitives1,'points':p_bp1,'q_bp':q_bp1})
         df.to_csv(ilc_output+'command_arm1_'+str(i)+'.csv',header=True,index=False)
