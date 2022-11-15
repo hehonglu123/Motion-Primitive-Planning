@@ -116,6 +116,7 @@ class MotionSendFANUC(object):
         tp_follow = TPMotionProgram(self.utool,self.uframe)
         tp_lead = TPMotionProgram(self.utool2,self.uframe2)
         for i in range(1,len(primitives1)):
+            print(i)
             if i == len(primitives1)-1:
                 # this_zone = zone
                 this_zone = -1
@@ -147,9 +148,11 @@ class MotionSendFANUC(object):
                 tp_lead.moveC(robt_mid2,robt2,this_speed,'mmsec',this_zone,option)
             else: #moveJ
                 robt1 = joint2robtarget(q_bp1[i][0],robot1,self.group,self.uframe,self.utool)
-                tp_follow.moveJ(robt1,this_speed,'%',this_zone)
+                # tp_follow.moveJ(robt1,this_speed,'%',this_zone)
+                tp_follow.moveJ(robt1,this_speed,'msec',this_zone)
                 robt2 = joint2robtarget(q_bp2[i][0],robot2,self.group2,self.uframe2,self.utool2)
-                tp_lead.moveJ(robt2,this_speed,'%',this_zone)
+                # tp_lead.moveJ(robt2,this_speed,'%',this_zone)
+                tp_lead.moveJ(robt2,this_speed,'msec',this_zone)
         
         return self.client.execute_motion_program_coord(tp_lead,tp_follow)
     
@@ -518,7 +521,7 @@ class MotionSendFANUC(object):
             curve_exe_R1.append(pose1_now.R)
             curve_exe_R2.append(pose2_now.R)
 
-            pose2_world_now=self.robot2.fwd(curve_exe_js2[i],base2_R,base2_p)
+            pose2_world_now=self.robot2.fwd(curve_exe_js2[i],world=True)
             relative_path_exe.append(np.dot(pose2_world_now.R.T,pose1_now.p-pose2_world_now.p))
             relative_path_exe_R.append(pose2_world_now.R.T@pose1_now.R)
             
@@ -803,8 +806,13 @@ class MotionSendFANUC(object):
 
             R_start_new=rot(k,theta_new)@R_start
             # solve invkin for initial point
-            points_list[0][0]=p_start_new
-            q_bp[0][0]=car2js(robot,q_bp[0][0],p_start_new,R_start_new)[0]
+            try:
+                q_bp[0][0]=car2js(robot,q_bp[0][0],p_start_new,R_start_new)[0]
+                points_list[0][0]=p_start_new
+            except:
+                q_bp.insert(0,[car2js(robot,q_bp[0][0],p_start_new,R_start)[0]])
+                points_list.insert(0,[p_start_new])
+                primitives.insert(1,'movel_fit')
 
         elif  primitives[1]=='movec_fit':
             #define circle first
@@ -895,8 +903,13 @@ class MotionSendFANUC(object):
             #         primitives.append('movel_fit')
 
             # solve invkin for end point
-            q_bp[-1][-1]=car2js(robot,q_bp[-1][0],p_end_new,R_end_new)[0]
-            points_list[-1][0]=p_end_new
+            try:
+                q_bp[-1][-1]=car2js(robot,q_bp[-1][0],p_end_new,R_end_new)[0]
+                points_list[-1][0]=p_end_new
+            except:
+                q_bp.append([car2js(robot,q_bp[-1][0],p_end_new,R_end)[0]])
+                points_list.append([p_end_new])
+                primitives.append('movel_fit')
 
         elif  primitives[-1]=='movec_fit':
             #define circle first
@@ -1223,7 +1236,7 @@ class MotionSendFANUC(object):
 
         return p_bp1,q_bp1,p_bp2,q_bp2,step_to_extend_end
 
-    def extend_dual(self,robot1,p_bp1,q_bp1,primitives1,robot2,p_bp2,q_bp2,primitives2,breakpoints,base2_T,extension_d=100):
+    def extend_dual(self,robot1,p_bp1,q_bp1,primitives1,robot2,p_bp2,q_bp2,primitives2,breakpoints,base2_T,extension_start=100,extension_end=100):
         #extend porpotionally
         d1_start=np.linalg.norm(p_bp1[1][-1]-p_bp1[0][-1])
         d2_start=np.linalg.norm(p_bp2[1][-1]-p_bp2[0][-1])
@@ -1231,9 +1244,9 @@ class MotionSendFANUC(object):
         d2_end=np.linalg.norm(p_bp2[-1][-1]-p_bp2[-2][-1])
 
         ### First, extend the leader (workpiece robot).
-        primitives2,p_bp2,q_bp2=self.extend_start_end(robot2,q_bp2,primitives2,breakpoints,p_bp2,extension_start=extension_d,extension_end=extension_d)
+        primitives2,p_bp2,q_bp2=self.extend_start_end(robot2,q_bp2,primitives2,breakpoints,p_bp2,extension_start=extension_start,extension_end=extension_end)
         ### Then, extend the follower (tool robot) in the workpiece (i.e. leader robot workpiece) frame.
-        primitives1,p_bp1,q_bp1=self.extend_start_end(robot1,q_bp1,primitives1,breakpoints,p_bp1,extension_start=extension_d*d1_start/d2_start,extension_end=extension_d*d1_end/d2_end)
+        primitives1,p_bp1,q_bp1=self.extend_start_end(robot1,q_bp1,primitives1,breakpoints,p_bp1,extension_start=extension_start*d1_start/d2_start,extension_end=extension_end*d1_end/d2_end)
         # primitives1,p_bp1,q_bp1=self.extend_start_end(robot1,q_bp1,primitives1,breakpoints,p_bp1,extension_start=extension_d,extension_end=extension_d)
 
         # ### First, extend the leader (workpiece robot).

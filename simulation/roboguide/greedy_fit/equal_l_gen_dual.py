@@ -19,7 +19,8 @@ num_ls=[25,30,50,100]
 for obj_type in all_objtype:
 
     print(obj_type)
-    data_dir='../data/'+obj_type+'/dual_arm_de/'
+    # data_dir='../data/'+obj_type+'/dual_arm_de/'
+    data_dir='../data/'+obj_type+'/dual_arm_de_possibilyimpossible/'
     print(data_dir)
 
     ## robot
@@ -29,6 +30,12 @@ for obj_type in all_objtype:
 
     curve_js1 = read_csv(data_dir+'arm1.csv',header=None).values
     curve_js2 = read_csv(data_dir+'arm2.csv',header=None).values
+
+    # df=DataFrame({'q0':curve_js1[:,0],'q1':curve_js1[:,1],'q2':-curve_js1[:,2],'q3':-curve_js1[:,3],'q4':-curve_js1[:,4],'q5':-curve_js1[:,5]})
+    # df.to_csv(data_dir+'arm1.csv',header=False,index=False)
+    # df=DataFrame({'q0':curve_js2[:,0],'q1':curve_js2[:,1],'q2':-curve_js2[:,2],'q3':-curve_js2[:,3],'q4':-curve_js2[:,4],'q5':-curve_js2[:,5]})
+    # df.to_csv(data_dir+'arm2.csv',header=False,index=False)
+    # exit()
 
     ## cartesian in robot's own user frame
     curve1 = []
