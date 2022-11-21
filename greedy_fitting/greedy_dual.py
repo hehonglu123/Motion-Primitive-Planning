@@ -55,8 +55,8 @@ class greedy_fit(fitting_toolbox):
 				ori_error=[]
 				for i in range(len(curve1)):
 					#convert to robot2 tool frame
-					pose2_world_now_R=self.base2_R@curve_fit_R_dict2[key2][i]
-					pose2_world_now_p=self.base2_R@curve_fit_dict2[key2][i]+self.base2_p
+					pose2_world_now_R=self.robot2.base_H[:3,:3]@curve_fit_R_dict2[key2][i]
+					pose2_world_now_p=self.robot2.base_H[:3,:3]@curve_fit_dict2[key2][i]+self.robot2.base_H[:-1,-1]
 
 					relative_path_fit.append(pose2_world_now_R.T@(curve_fit_dict1[key1][i]-pose2_world_now_p))
 					relative_norm_fit.append(pose2_world_now_R.T@curve_fit_R_dict1[key1][i][:,-1])
@@ -203,7 +203,7 @@ class greedy_fit(fitting_toolbox):
 		self.curve_fit_R2=np.array(self.curve_fit_R2)
 		self.curve_fit_js2=np.array(self.curve_fit_js2)
 
-		self.curve_fit2_global=(self.base2_R@self.curve_fit2.T).T+np.tile(self.base2_p,(len(self.curve_fit2),1))
+		self.curve_fit2_global=(self.robot2.base_H[:3,:3]@self.curve_fit2.T).T+np.tile(self.robot2.base_H[:-1,-1],(len(self.curve_fit2),1))
 
 
 
@@ -217,18 +217,23 @@ class greedy_fit(fitting_toolbox):
 
 def main():
 	###read in points
-	dataset='from_NX/'
+	dataset='curve_2/'
 	data_dir="../data/"+dataset
-	solution_dir=data_dir+'dual_arm/'+'diffevo_pose2/'
+	solution_dir=data_dir+'dual_arm/'+'diffevo_pose6/'
 	
-	relative_path,robot1,robot2,base2_R,base2_p,lam_relative_path,lam1,lam2,curve_js1,curve_js2=initialize_data(dataset,data_dir,solution_dir)
+	robot1=robot_obj('ABB_6640_180_255','../config/abb_6640_180_255_robot_default_config.yml',tool_file_path='../config/paintgun.csv',d=50,acc_dict_path='')
+	robot2=robot_obj('ABB_1200_5_90','../config/abb_1200_5_90_robot_default_config.yml',tool_file_path=solution_dir+'tcp.csv',base_transformation_file=solution_dir+'base.csv',acc_dict_path='')
+
+	
+	relative_path,lam_relative_path,lam1,lam2,curve_js1,curve_js2=initialize_data(dataset,data_dir,solution_dir,robot1,robot2)
 
 	min_length=20
-	greedy_fit_obj=greedy_fit(robot1,robot2,curve_js1[::1],curve_js2[::1],base2_p,base2_R,min_length,0.4)
+	greedy_fit_obj=greedy_fit(robot1,robot2,curve_js1[::1],curve_js2[::1],min_length,0.3)
 
 
 	###set primitive choices, defaults are all 3
-	greedy_fit_obj.primitives={'movel_fit':greedy_fit_obj.movel_fit,'movec_fit':greedy_fit_obj.movec_fit}
+	# greedy_fit_obj.primitives={'movel_fit':greedy_fit_obj.movel_fit,'movec_fit':greedy_fit_obj.movec_fit}
+	greedy_fit_obj.primitives={'movel_fit':greedy_fit_obj.movel_fit}
 
 	breakpoints,primitives_choices1,points1,q_bp1,primitives_choices2,points2,q_bp2=greedy_fit_obj.fit_under_error()
 
@@ -241,14 +246,15 @@ def main():
 	plt.legend()
 
 	###3D plot in robot2 tool frame
-	relative_path_fit=[]
-	for i in range(len(greedy_fit_obj.curve_fit1)):
-		#convert to robot2 tool frame
-		pose2_world_now_R=greedy_fit_obj.base2_R@greedy_fit_obj.curve_fit_R2[i]
-		pose2_world_now_p=greedy_fit_obj.base2_R@greedy_fit_obj.curve_fit2[i]+greedy_fit_obj.base2_p
-		relative_path_fit.append(pose2_world_now_R.T@(greedy_fit_obj.curve_fit1[i]-pose2_world_now_p))
+	_,_,_,_,relative_path_fit,relative_path_fit_R=form_relative_path(greedy_fit_obj.curve_fit_js1,greedy_fit_obj.curve_fit_js2,robot1,robot2)
+	# relative_path_fit=[]
+	# for i in range(len(greedy_fit_obj.curve_fit1)):
+	# 	#convert to robot2 tool frame
+	# 	pose2_world_now_R=greedy_fit_obj.base2_R@greedy_fit_obj.curve_fit_R2[i]
+	# 	pose2_world_now_p=greedy_fit_obj.base2_R@greedy_fit_obj.curve_fit2[i]+greedy_fit_obj.base2_p
+	# 	relative_path_fit.append(pose2_world_now_R.T@(greedy_fit_obj.curve_fit1[i]-pose2_world_now_p))
 
-	relative_path_fit=np.array(relative_path_fit)
+	# relative_path_fit=np.array(relative_path_fit)
 	plt.figure()
 	ax = plt.axes(projection='3d')
 	ax.plot3D(greedy_fit_obj.relative_path[:,0], greedy_fit_obj.relative_path[:,1],greedy_fit_obj.relative_path[:,2], 'gray', label='original')
