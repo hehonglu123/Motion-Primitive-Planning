@@ -10,8 +10,6 @@ from pandas import read_csv
 import sys
 from io import StringIO
 from scipy.signal import find_peaks
-# sys.path.append('../abb_motion_program_exec')
-from abb_motion_program_exec_client import *
 sys.path.append('../')
 
 from ilc_toolbox import *
@@ -24,12 +22,12 @@ from dual_arm import *
 from realrobot import *
 
 def main():
-	SAFE_Q1=np.radians([33.89,7.77,57.5,-144.03,55.32,0])
-	SAFE_Q2=np.radians([109.45,23.78,54,-38,-66.55,348.77])
-	dataset='curve_1/'
+	SAFE_Q1=None#np.radians([33.89,7.77,57.5,-144.03,55.32,0])
+	SAFE_Q2=None#np.radians([109.45,23.78,54,-38,-66.55,348.77])
+	dataset='curve_2/'
 	data_dir="../../data/"+dataset
-	solution_dir=data_dir+'dual_arm/'+'diffevo_pose4_2/'
-	cmd_dir=solution_dir+'50J/'
+	solution_dir=data_dir+'dual_arm/'+'diffevo_pose6/'
+	cmd_dir=solution_dir+'30J/'
 	
 	robot1=robot_obj('ABB_6640_180_255','../../config/abb_6640_180_255_robot_default_config.yml',tool_file_path='../../config/paintgun.csv',d=50,acc_dict_path='')
 	robot2=robot_obj('ABB_1200_5_90','../../config/abb_1200_5_90_robot_default_config.yml',tool_file_path=solution_dir+'tcp.csv',base_transformation_file=solution_dir+'base.csv',acc_dict_path='')
@@ -46,7 +44,7 @@ def main():
 	###get lambda at each breakpoint
 	lam_bp=lam_relative_path[np.append(breakpoints1[0],breakpoints1[1:]-1)]
 
-	vd_relative=500
+	vd_relative=1500
 
 	s1_all,s2_all=calc_individual_speed(vd_relative,lam1,lam2,lam_relative_path,breakpoints1)
 	v2_all=[]
