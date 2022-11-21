@@ -13,6 +13,7 @@ from scipy.signal import find_peaks
 import yaml
 from matplotlib import pyplot as plt
 from pathlib import Path
+from copy import deepcopy
 from fanuc_motion_program_exec_client import *
 sys.path.append('../fanuc_toolbox')
 from fanuc_utils import *
@@ -32,7 +33,8 @@ def main():
     # data and curve directory
     curve_data_dir='../../../data/'+data_type+'/'
 
-    test_type='30'
+    # test_type='50L'
+    test_type='30L'
 
     cmd_dir='../data/'+data_type+'/dual_arm_de/'+test_type+'/'
     # cmd_dir='../data/'+data_type+'/dual_arm_de_possibilyimpossible/'+test_type+'/'
@@ -44,9 +46,9 @@ def main():
     base2_R=H_200id[:3,:3]
     base2_p=H_200id[:-1,-1]
     # print(base2_R)
-    # print(base2_p)
+    print(base2_p)
     k,theta=R2rot(base2_R)
-    # print(k,np.degrees(theta))
+    print(k,np.degrees(theta))
 
     robot2_tcp=np.loadtxt(cmd_dir+'../tcp.csv',delimiter=',')
     # print(robot2_tcp)
@@ -69,7 +71,7 @@ def main():
     elif data_type=='curve_2_scale':
         ms = MotionSendFANUC(robot1=robot1,robot2=robot2,utool2=3)
 
-    s=500 # mm/sec in leader frame
+    s=1200 # mm/sec in leader frame
     z=100 # CNT100
     ilc_output=cmd_dir+'results_'+str(s)+'_'+test_type+'/'
     Path(ilc_output).mkdir(exist_ok=True)
@@ -78,36 +80,50 @@ def main():
     breakpoints2,primitives2,p_bp2,q_bp2,_=ms.extract_data_from_cmd(os.getcwd()+'/'+cmd_dir+'command2.csv')
 
     ###extension
-    print(np.degrees(q_bp2[0][-1]))
-    p_bp1,q_bp1,p_bp2,q_bp2=ms.extend_dual(ms.robot1,p_bp1,q_bp1,primitives1,ms.robot2,p_bp2,q_bp2,primitives2,breakpoints1,0,extension_start=35,extension_end=35)
+    # print(np.degrees(q_bp2[0][-1]))
+    # p_bp1,q_bp1,p_bp2,q_bp2=ms.extend_dual(ms.robot1,p_bp1,q_bp1,primitives1,ms.robot2,p_bp2,q_bp2,primitives2,breakpoints1,0,extension_start=25,extension_end=90)  ## curve_1
+    p_bp1,q_bp1,p_bp2,q_bp2=ms.extend_dual(ms.robot1,p_bp1,q_bp1,primitives1,ms.robot2,p_bp2,q_bp2,primitives2,breakpoints1,0,extension_start=50,extension_end=120) ## curve_2_scale
 
-    print(robot2.fwd(q_bp2[0][0]))
-    print(robot2.inv(robot2.fwd(q_bp2[0][0]).p,robot2.fwd(q_bp2[0][0]).R,q_bp2[1][0]))
-    print(robot2.inv(np.array([-646.2,-504.9,1099]),robot2.fwd(q_bp2[0][0]).R,q_bp2[1][0]))
+    # print(robot2.fwd(q_bp2[0][0]))
+    # print(robot2.inv(robot2.fwd(q_bp2[0][0]).p,robot2.fwd(q_bp2[0][0]).R,q_bp2[1][0]))
+    # print(robot2.inv(np.array([-646.2,-504.9,1099]),robot2.fwd(q_bp2[0][0]).R,q_bp2[1][0]))
     # # print(q_bp2)
     # exit()
     print(len(q_bp1))
     print(len(q_bp2))
+    print(len(primitives1))
+    print(len(primitives2))
+
+    breakpoints1,primitives1,p_bp1,q_bp1,_=ms.extract_data_from_cmd(os.getcwd()+'/'+ilc_output+'command_arm1_9.csv')
+    breakpoints2,primitives2,p_bp2,q_bp2,_=ms.extract_data_from_cmd(os.getcwd()+'/'+ilc_output+'command_arm2_9.csv')
+    print(len(q_bp1))
+    print(len(q_bp2))
+    print(len(primitives1))
+    print(len(primitives2))
 
     # print(robot1.jacobian(q_bp1[0][0]))
-    for i in range(len(q_bp1)):
-        u,s,v=np.linalg.svd(robot1.jacobian(q_bp1[i][0]))
-        print(np.min(s))
-        u,s,v=np.linalg.svd(robot2.jacobian(q_bp2[i][0]))
-        print(np.min(s))
-        print('======================')
-    exit()
+    # for i in range(len(q_bp1)):
+    #     u,sv,v=np.linalg.svd(robot1.jacobian(q_bp1[i][0]))
+    #     print(np.min(sv))
+    #     u,sv,v=np.linalg.svd(robot2.jacobian(q_bp2[i][0]))
+    #     print(np.min(sv))
+    #     print('======================')
+    # exit()
 
     ###ilc toolbox def
     ilc=ilc_toolbox([robot1,robot2],[primitives1,primitives2])
 
+    max_error_tolerance=0.5
+    max_ang_error_tolerance=np.radians(3)
+
     multi_peak_threshold=0.2
     ###TODO: extension fix start point, moveC support
-    iteration=100
+    iteration=30
     draw_speed_max=None
     draw_error_max=None
     max_error = 999
     error_localmin_flag=False
+    use_grad=False
     for i in range(iteration):
 
         ###execution with plant
@@ -165,7 +181,7 @@ def main():
         # plt.savefig(ilc_output+'iteration_ '+str(i))
         # plt.clf()
         plt.show()
-        # exit()
+        exit()
 
         df=DataFrame({'primitives':primitives1,'points':p_bp1,'q_bp':q_bp1})
         df.to_csv(ilc_output+'command_arm1_'+str(i)+'.csv',header=True,index=False)
@@ -181,8 +197,18 @@ def main():
 
         if max(error)>max_error:
             error_localmin_flag=True
+            use_grad=True
+        
+        if max(error)<max_error:
+            error_localmin_flag=False
 
-        if error_localmin_flag:
+        max_error=max(error)
+
+        if max(error) < max_error_tolerance and max(angle_error)<max_ang_error_tolerance:
+            time.sleep(1)
+            break
+
+        if use_grad:
             ##########################################calculate gradient for peaks######################################
             ###restore trajectory from primitives
             curve_interp1, curve_R_interp1, curve_js_interp1, breakpoints_blended=form_traj_from_bp(q_bp1,primitives1,robot1)
@@ -237,7 +263,24 @@ def main():
             error_bps_w2=np.zeros(error_bps_w2.shape)
             # error_bps_v1=np.zeros(error_bps_v1.shape)
             # error_bps_v2=np.zeros(error_bps_v2.shape)
-            p_bp1, q_bp1, p_bp2, q_bp2=ilc.update_error_direction_dual(relative_path,p_bp1,q_bp1,p_bp2,q_bp2,error_bps_v1,error_bps_w1,error_bps_v2,error_bps_w2)
+
+            gamma_v=0.2
+            gamma_w=0.1
+            p_bp1_origin=deepcopy(p_bp1)
+            p_bp2_origin=deepcopy(p_bp2)
+            q_bp1_origin=deepcopy(q_bp1)
+            q_bp2_origin=deepcopy(q_bp2)
+            while True:
+                try:
+                    p_bp1, q_bp1, p_bp2, q_bp2=ilc.update_error_direction_dual(relative_path,p_bp1_origin,q_bp1_origin,p_bp2_origin,q_bp2_origin,error_bps_v1,error_bps_w1,error_bps_v2,error_bps_w2,gamma_v,gamma_w)
+                    break
+                except IndexError:
+                    gamma_v*=0.75
+                    gamma_w*=0.75
+                    if gamma_w<0.02:
+                        error_localmin_flag=True
+                        use_grad=True
+                        break
 
 if __name__ == "__main__":
     main()

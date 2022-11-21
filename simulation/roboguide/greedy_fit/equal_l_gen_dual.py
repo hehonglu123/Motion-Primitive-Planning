@@ -11,8 +11,9 @@ from utils import *
 from lambda_calc import *
 from pathlib import Path
 
-all_objtype=['curve_2_scale','curve_1']
-# all_objtype=['curve_1']
+# all_objtype=['curve_2_scale','curve_1']
+all_objtype=['curve_1']
+# all_objtype=['curve_2_scale']
 
 num_ls=[25,30,50,100]
 
@@ -25,8 +26,8 @@ for obj_type in all_objtype:
 
     ## robot
     toolbox_path = '../../../toolbox/'
-    robot1 = robot_obj('FANUC_m10ia',toolbox_path+'robot_info/fanuc_m10ia_robot_default_config.yml',tool_file_path=toolbox_path+'tool_info/paintgun.csv',d=50,acc_dict_path=toolbox_path+'robot_info/m10ia_acc.pickle',j_compensation=[1,1,-1,-1,-1,-1])
-    robot2=robot_obj('FANUC_lrmate200id',toolbox_path+'robot_info/fanuc_lrmate200id_robot_default_config.yml',tool_file_path=data_dir+'tcp.csv',acc_dict_path=toolbox_path+'robot_info/lrmate200id_acc.pickle',j_compensation=[1,1,-1,-1,-1,-1])
+    robot1 = robot_obj('FANUC_m10ia',toolbox_path+'robot_info/fanuc_m10ia_robot_default_config.yml',tool_file_path=toolbox_path+'tool_info/paintgun.csv',d=50,acc_dict_path=toolbox_path+'robot_info/m10ia_acc_compensate.pickle',j_compensation=[1,1,-1,-1,-1,-1])
+    robot2=robot_obj('FANUC_lrmate200id',toolbox_path+'robot_info/fanuc_lrmate200id_robot_default_config.yml',tool_file_path=data_dir+'tcp.csv',acc_dict_path=toolbox_path+'robot_info/lrmate200id_acc_compensate.pickle',j_compensation=[1,1,-1,-1,-1,-1])
 
     curve_js1 = read_csv(data_dir+'arm1.csv',header=None).values
     curve_js2 = read_csv(data_dir+'arm2.csv',header=None).values
@@ -49,7 +50,8 @@ for obj_type in all_objtype:
     curve2=np.array(curve2)
 
     for num_l in num_ls:
-        Path(data_dir+str(num_l)).mkdir(exist_ok=True)
+        Path(data_dir+str(num_l)+'L').mkdir(exist_ok=True)
+        cmd_dir=data_dir+str(num_l)+'L/'
 
         breakpoints1=np.linspace(0,len(curve_js1),num_l+1).astype(int)
         breakpoints2=np.linspace(0,len(curve_js2),num_l+1).astype(int)
@@ -73,6 +75,6 @@ for obj_type in all_objtype:
         primitives_choices2=['movej_fit']+['movel_fit']*num_l
 
         df=DataFrame({'breakpoints':breakpoints1,'primitives':primitives_choices1,'points':points1,'q_bp':q_bp1})
-        df.to_csv(data_dir+str(num_l)+'/command1.csv',header=True,index=False)
+        df.to_csv(cmd_dir+'command1.csv',header=True,index=False)
         df=DataFrame({'breakpoints':breakpoints2,'primitives':primitives_choices2,'points':points2,'q_bp':q_bp2})
-        df.to_csv(data_dir+str(num_l)+'/command2.csv',header=True,index=False)
+        df.to_csv(cmd_dir+'command2.csv',header=True,index=False)

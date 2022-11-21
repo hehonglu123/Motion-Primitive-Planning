@@ -116,7 +116,6 @@ class MotionSendFANUC(object):
         tp_follow = TPMotionProgram(self.utool,self.uframe)
         tp_lead = TPMotionProgram(self.utool2,self.uframe2)
         for i in range(1,len(primitives1)):
-            print(i)
             if i == len(primitives1)-1:
                 # this_zone = zone
                 this_zone = -1
@@ -735,7 +734,7 @@ class MotionSendFANUC(object):
             curve_exe_R1.append(pose1_now.R)
             curve_exe_R2.append(pose2_now.R)
 
-            pose2_world_now=self.robot2.fwd(curve_js2[i],base2_R,base2_p)
+            pose2_world_now=self.robot2.fwd(curve_js2[i],world=True)
 
 
             relative_path_exe.append(np.dot(pose2_world_now.R.T,pose1_now.p-pose2_world_now.p))
