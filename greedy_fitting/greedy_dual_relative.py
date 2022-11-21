@@ -186,7 +186,7 @@ def main():
 	###read in points
 	dataset='curve_2/'
 	data_dir="../data/"+dataset
-	solution_dir=data_dir+'dual_arm/'+'diffevo_pose2/'
+	solution_dir=data_dir+'dual_arm/'+'diffevo_pose3/'
 	
 	robot1=robot_obj('ABB_6640_180_255','../config/abb_6640_180_255_robot_default_config.yml',tool_file_path='../config/paintgun.csv',d=50,acc_dict_path='')
 	robot2=robot_obj('ABB_1200_5_90','../config/abb_1200_5_90_robot_default_config.yml',tool_file_path=solution_dir+'tcp.csv',base_transformation_file=solution_dir+'base.csv',acc_dict_path='')
@@ -196,11 +196,12 @@ def main():
 
 
 	min_length=20
-	greedy_fit_obj=greedy_fit(robot1,robot2,curve_js1[::1],curve_js2[::1],min_length,0.1)
+	greedy_fit_obj=greedy_fit(robot1,robot2,curve_js1[::1],curve_js2[::1],min_length,0.5)
 
 
 	###set primitive choices, defaults are all 3
-	greedy_fit_obj.primitives={'movel_f cit':greedy_fit_obj.movel_fit,'movec_fit':greedy_fit_obj.movec_fit}
+	# greedy_fit_obj.primitives={'movel_fit':greedy_fit_obj.movel_fit,'movec_fit':greedy_fit_obj.movec_fit}
+	greedy_fit_obj.primitives={'movel_fit':greedy_fit_obj.movel_fit}
 
 	breakpoints,primitives_choices1,points1,q_bp1,primitives_choices2,points2,q_bp2=greedy_fit_obj.fit_under_error()
 
@@ -234,9 +235,7 @@ def main():
 	print(len(primitives_choices1))
 	print(len(points1))
 
-	###shift breakpoints
 	breakpoints[1:]=breakpoints[1:]-1
-
 	###save arm1
 	df=DataFrame({'breakpoints':breakpoints,'primitives':primitives_choices1,'p_bp':points1,'q_bp':q_bp1})
 	df.to_csv('greedy_dual_output/command1.csv',header=True,index=False)

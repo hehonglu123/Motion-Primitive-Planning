@@ -18,8 +18,8 @@ from dual_arm import *
 def main():
     dataset='curve_2/'
     data_dir="../../../data/"+dataset
-    solution_dir=data_dir+'dual_arm/'+'diffevo_pose2/'
-    cmd_dir=solution_dir+'greedy_relative0.05/'
+    solution_dir=data_dir+'dual_arm/'+'diffevo_pose6/'
+    cmd_dir=solution_dir+'greedy_relative0.3L/'
     
     robot1=robot_obj('ABB_6640_180_255','../../../config/abb_6640_180_255_robot_default_config.yml',tool_file_path='../../../config/paintgun.csv',d=50,acc_dict_path='')
     robot2=robot_obj('ABB_1200_5_90','../../../config/abb_1200_5_90_robot_default_config.yml',tool_file_path=solution_dir+'tcp.csv',base_transformation_file=solution_dir+'base.csv',acc_dict_path='')
@@ -49,7 +49,7 @@ def main():
 
     s1_cmd,s2_cmd=cmd_speed_profile(breakpoints1,s1_all,s2_all)
 
-    zone=50
+    zone=100
     z= zonedata(False,zone,1.5*zone,1.5*zone,0.15*zone,1.5*zone,0.15*zone)
 
     z1_all=[z]*len(v2_all)
@@ -65,8 +65,8 @@ def main():
 
     lam, curve_exe1,curve_exe2,curve_exe_R1,curve_exe_R2,curve_exe_js1,curve_exe_js2, speed, timestamp, relative_path_exe,relative_path_exe_R = ms.logged_data_analysis_multimove(log_results,robot1,robot2,realrobot=True)
     #############################chop extension off##################################
-    # lam, curve_exe1,curve_exe2,curve_exe_R1,curve_exe_R2,curve_exe_js1,curve_exe_js2, speed, timestamp, relative_path_exe, relative_path_exe_R=\
-    #     ms.chop_extension_dual(lam, curve_exe1,curve_exe2,curve_exe_R1,curve_exe_R2,curve_exe_js1,curve_exe_js2, speed, timestamp, relative_path_exe,relative_path_exe_R,relative_path[0,:3],relative_path[-1,:3])
+    lam, curve_exe1,curve_exe2,curve_exe_R1,curve_exe_R2,curve_exe_js1,curve_exe_js2, speed, timestamp, relative_path_exe, relative_path_exe_R=\
+        ms.chop_extension_dual(lam, curve_exe1,curve_exe2,curve_exe_R1,curve_exe_R2,curve_exe_js1,curve_exe_js2, speed, timestamp, relative_path_exe,relative_path_exe_R,relative_path[0,:3],relative_path[-1,:3])
     
     speed1=get_speed(curve_exe1,timestamp)
     speed2=get_speed(curve_exe2,timestamp)

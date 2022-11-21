@@ -18,7 +18,7 @@ from dual_arm import *
 def main():
     dataset='curve_2/'
     data_dir="../../../data/"+dataset
-    solution_dir=data_dir+'dual_arm/'+'diffevo_pose3/'
+    solution_dir=data_dir+'dual_arm/'+'diffevo_pose5/'
     cmd_dir=solution_dir+'30J/'
     
     robot1=robot_obj('ABB_6640_180_255','../../../config/abb_6640_180_255_robot_default_config.yml',tool_file_path='../../../config/paintgun.csv',d=50,acc_dict_path='')
@@ -40,7 +40,7 @@ def main():
     ###get lambda at each breakpoint
     lam_bp=lam_relative_path[np.append(breakpoints1[0],breakpoints1[1:]-1)]
 
-    vd_relative=2000
+    vd_relative=2222
 
     s1_all,s2_all=calc_individual_speed(vd_relative,lam1,lam2,lam_relative_path,breakpoints1)
     v2_all=[]
