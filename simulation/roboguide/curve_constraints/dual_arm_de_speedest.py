@@ -9,7 +9,7 @@ import yaml
 # sys.path.append('..constraint_solver')
 # sys.path.append('../fanuc_toolbox')
 from constraint_solver import *
-from fanuc_utils import *
+# from fanuc_utils import *
 from error_check import *
 from utils import *
 
@@ -20,6 +20,8 @@ def main():
 
     data_type='curve_1'
     # data_type='curve_2_scale'
+
+    print(data_type)
 
     # data_dir='../../../data/'+data_type+'/'
     data_dir=data_type+'/'
@@ -41,16 +43,22 @@ def main():
 
     base2_k,base2_theta=R2rot(base2_R)
 
-    toolbox_path = ''
+    # toolbox_path = ''
     # robot1=robot_obj('FANUC_m10ia',toolbox_path+'robot_info/fanuc_m10ia_robot_default_config.yml',tool_file_path=toolbox_path+'tool_info/paintgun.csv',d=50,acc_dict_path=toolbox_path+'robot_info/m10ia_acc.pickle',j_compensation=[1,1,-1,-1,-1,-1])
     # robot2=robot_obj('FANUC_lrmate_200id',toolbox_path+'robot_info/fanuc_lrmate200id_robot_default_config.yml',tool_file_path=output_dir+'tcp.csv',acc_dict_path=toolbox_path+'robot_info/lrmate200id_acc.pickle',j_compensation=[1,1,-1,-1,-1,-1])
-    robot1=robot_obj('FANUC_m10ia',toolbox_path+'robot_info/fanuc_m10ia_robot_default_config.yml',tool_file_path=toolbox_path+'tool_info/paintgun.csv',d=50,acc_dict_path=toolbox_path+'robot_info/m10ia_acc.pickle')
-    robot2=robot_obj('FANUC_lrmate_200id',toolbox_path+'robot_info/fanuc_lrmate200id_robot_default_config.yml',tool_file_path=output_dir+'tcp.csv',acc_dict_path=toolbox_path+'robot_info/lrmate200id_acc.pickle')
+    # robot1=robot_obj('FANUC_m10ia',toolbox_path+'robot_info/fanuc_m10ia_robot_default_config.yml',tool_file_path=toolbox_path+'tool_info/paintgun.csv',d=50,acc_dict_path=toolbox_path+'robot_info/m10ia_acc_compensate.pickle')
+    # robot2=robot_obj('FANUC_lrmate_200id',toolbox_path+'robot_info/fanuc_lrmate200id_robot_default_config.yml',tool_file_path=output_dir+'tcp.csv',acc_dict_path=toolbox_path+'robot_info/lrmate200id_acc_compensate.pickle')
+
+    robot2_tcp=np.loadtxt(output_dir+'tcp.csv',delimiter=',')
+
+    robot1=m10ia(d=50,acc_dict_path='robot_info/m10ia_acc.pickle')
+    robot2=lrmate200id(R_tool=Ry(np.pi/2)@robot2_tcp[:3,:3],p_tool=Ry(np.pi/2)@robot2_tcp[:3,-1],acc_dict_path='robot_info/lrmate200id_acc.pickle')
 
     opt=lambda_opt(relative_path[:,:3],relative_path[:,3:],robot1=robot1,robot2=robot2,steps=500,v_cmd=v_cmd)
 
     ## fwd check
-    # print(robot2.fwd(np.radians([0,0,0,0,30,-90])))
+    # print(robot1.fwd(np.radians([0,0,10,10,30,-90])))
+    # print(robot2.fwd(np.radians([0,0,10,10,30,-90])))
     # print(R2wpr(robot2.fwd(np.radians([0,0,0,0,30,-90])).R))
 
     ## find valid x y q_init2
@@ -71,7 +79,7 @@ def main():
     # print(blade_pose)
     # exit()
 
-    q_init2_init=np.radians([0,10,-10,0,30,-90])
+    q_init2_init=np.radians([0,10,10,0,-30,90])
     input_x = np.append(q_init2_init,base2_p[:2])
     input_x = np.append(input_x,base2_theta)
     input_x = np.append(input_x,0)
@@ -96,10 +104,17 @@ def main():
     print(res)
 
     # res=Geeks()
-    # res.x=np.array([-6.67872100e-01, -1.23542719e+00,  3.20409594e-01,  3.14336838e+00,\
-    #                 1.08058166e+00,  1.92212672e+00, -2.89330604e+02, -1.37263222e+03,\
-    #                 -4.08715425e-01,  2.47319695e-01])
+    # res.x=np.array([1.93308869e-02, -9.80895904e-01, -7.26287729e-01,  2.54798516e-01,\
+    #    -8.50067936e-01,  4.85071875e+00,  9.53418192e+02,  5.83962951e+02,\
+    #     8.85032818e-01,  2.36613695e+00])
     # print(opt.dual_arm_opt_w_pose_3dof(res.x))
+    # exit()
+    # res=Geeks()
+    # res.x=np.array([-1.09604735e+00,  1.89831661e+00,  2.33015474e+00,  6.34691327e-01,\
+    #    -1.57684494e+00,  4.87632099e+00,  7.68141579e+02,  3.53649048e+02,\
+    #     2.97814076e+00, -2.58943832e+00])
+    # print(opt.dual_arm_opt_w_pose_3dof(res.x))
+    # exit()
 
     q_init2=res.x[:6]
     base2_p=np.array([res.x[6],res.x[7],0])		###fixed z height
@@ -109,27 +124,37 @@ def main():
     robot2.base_H=H_from_RT(base2_R,base2_p)
     pose2_world_now=robot2.fwd(q_init2,world=True)
 
-    R_temp=direction2R(pose2_world_now.R@opt.curve_normal[0],-opt.curve[1]+opt.curve[0])
+    R_temp=direction2R(pose2_world_now.R@opt.curve_normal[0],pose2_world_now.R@(-opt.curve[1]+opt.curve[0]))
     R=np.dot(R_temp,Rz(res.x[-1]))
 
     # q_init1=robot1.inv(pose2_world_now.p,R)[0]
     q_init1=robot1.inv(np.matmul(pose2_world_now.R,opt.curve[0])+pose2_world_now.p,R)[0]
 
     opt=lambda_opt(relative_path[:,:3],relative_path[:,3:],robot1=robot1,robot2=robot2,steps=50000)
-    q_out1,q_out2=opt.dual_arm_stepwise_optimize(q_init1,q_init2,base2_R=base2_R,base2_p=base2_p,w1=0.01,w2=0.02)
+    q_out1,q_out2,j_out1,j_out2=opt.dual_arm_stepwise_optimize(q_init1,q_init2,base2_R=base2_R,base2_p=base2_p,w1=0.01,w2=0.02)
 
-    ### the joints have different rotation axis as the real robot
-    ### need compenstaion here
+    jac_check_count=500
+    jminall1=[]
+    jminall2=[]
+    for J in j_out1[::jac_check_count]:
+        _,sv,_=np.linalg.svd(J)
+        jminall1.append(sv)
+    for J in j_out2[::jac_check_count]:
+        _,sv,_=np.linalg.svd(J)
+        jminall2.append(sv)
+    print("J1 min svd:",np.min(jminall1))
+    print("J2 min svd:",np.min(jminall2))
 
     ####output to trajectory csv
-    df=DataFrame({'q0':q_out1[:,0],'q1':q_out1[:,1],'q2':-q_out1[:,2],'q3':-q_out1[:,3],'q4':-q_out1[:,4],'q5':-q_out1[:,5]})
+    df=DataFrame({'q0':q_out1[:,0],'q1':q_out1[:,1],'q2':q_out1[:,2],'q3':q_out1[:,3],'q4':q_out1[:,4],'q5':q_out1[:,5]})
     df.to_csv(output_dir+'arm1.csv',header=False,index=False)
-    df=DataFrame({'q0':q_out2[:,0],'q1':q_out2[:,1],'q2':-q_out2[:,2],'q3':-q_out2[:,3],'q4':-q_out2[:,4],'q5':-q_out2[:,5]})
+    df=DataFrame({'q0':q_out2[:,0],'q1':q_out2[:,1],'q2':q_out2[:,2],'q3':q_out2[:,3],'q4':q_out2[:,4],'q5':q_out2[:,5]})
     df.to_csv(output_dir+'arm2.csv',header=False,index=False)
     # df=DataFrame({'q0':q_out1[:,0],'q1':q_out1[:,1],'q2':q_out1[:,2],'q3':q_out1[:,3],'q4':q_out1[:,4],'q5':q_out1[:,5]})
     # df.to_csv(output_dir+'arm1.csv',header=False,index=False)
     # df=DataFrame({'q0':q_out2[:,0],'q1':q_out2[:,1],'q2':q_out2[:,2],'q3':q_out2[:,3],'q4':q_out2[:,4],'q5':q_out2[:,5]})
     # df.to_csv(output_dir+'arm2.csv',header=False,index=False)
+
 
     ###output to pose yaml
     H=np.eye(4)
