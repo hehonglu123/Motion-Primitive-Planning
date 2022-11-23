@@ -6,6 +6,9 @@ from scipy import signal
 import scipy
 from robots_def import *
 
+def H_inverse(H):
+	return H_from_RT(H[:-1,:-1].T,-H[:-1,:-1].T@H[:-1,-1])
+
 def get_speed(curve_exe,timestamp):
 	d_curve_exe=np.gradient(curve_exe,axis=0)
 	speed=np.linalg.norm(d_curve_exe,axis=1)/np.gradient(timestamp)

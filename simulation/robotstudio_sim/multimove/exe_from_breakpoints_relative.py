@@ -18,8 +18,8 @@ from dual_arm import *
 def main():
     dataset='curve_2/'
     data_dir="../../../data/"+dataset
-    solution_dir=data_dir+'dual_arm/'+'diffevo_pose2_2/'
-    cmd_dir=solution_dir+'30L_relative/'
+    solution_dir=data_dir+'dual_arm/'+'diffevo_pose6/'
+    cmd_dir=solution_dir+'greedy_relative0.3L/'
     
     robot1=robot_obj('ABB_6640_180_255','../../../config/abb_6640_180_255_robot_default_config.yml',tool_file_path='../../../config/paintgun.csv',d=50,acc_dict_path='')
     robot2=robot_obj('ABB_1200_5_90','../../../config/abb_1200_5_90_robot_default_config.yml',tool_file_path=solution_dir+'tcp.csv',base_transformation_file=solution_dir+'base.csv',acc_dict_path='')
@@ -27,18 +27,16 @@ def main():
     relative_path,lam_relative_path,lam1,lam2,curve_js1,curve_js2=initialize_data(dataset,data_dir,solution_dir,robot1,robot2)
 
     ms = MotionSend()
-
+    # ms = MotionSend(url='http://192.168.55.1:80')
 
    
 
     breakpoints1,primitives1,p_bp1,q_bp1=ms.extract_data_from_cmd(cmd_dir+'command1.csv')
     breakpoints2,primitives2,p_bp2,q_bp2=ms.extract_data_from_cmd(cmd_dir+'command2.csv')
 
-    breakpoints1[1:]=breakpoints1[1:]-1
-    breakpoints2[2:]=breakpoints2[2:]-1
 
     ###get lambda at each breakpoint
-    lam_bp=lam_relative_path[np.append(breakpoints1[0],breakpoints1[1:]-1)]
+    lam_bp=lam_relative_path[np.append(breakpoints1[0],breakpoints1[1:])]
 
     vd_relative=2000
 
@@ -51,7 +49,7 @@ def main():
 
     s1_cmd,s2_cmd=cmd_speed_profile(breakpoints1,s1_all,s2_all)
 
-    zone=50
+    zone=100
     z= zonedata(False,zone,1.5*zone,1.5*zone,0.15*zone,1.5*zone,0.15*zone)
 
     z1_all=[z]*len(v2_all)
@@ -61,7 +59,7 @@ def main():
     z2_all[3:7]=[z5]*4
 
     ###extension
-    # p_bp1,q_bp1,p_bp2,q_bp2=ms.extend_dual(ms.robot1,p_bp1,q_bp1,primitives1,ms.robot2,p_bp2,q_bp2,primitives2,breakpoints1)
+    p_bp1,q_bp1,p_bp2,q_bp2=ms.extend_dual(robot1,p_bp1,q_bp1,primitives1,robot2,p_bp2,q_bp2,primitives2,breakpoints1,extension_start2=150,extension_end2=150,relative=True)
 
     log_results=ms.exec_motions_multimove_relative(robot1,robot2,primitives1,primitives2,p_bp1,p_bp2,q_bp1,q_bp2,v1,v2_all,z1_all,z2_all)
 
@@ -80,9 +78,9 @@ def main():
     ax2 = ax1.twinx()
     ax1.plot(lam,speed, 'g-', label='Relative Speed')
     ax1.plot(lam,speed1, 'r-', label='TCP1 Speed')
-    ax1.plot(lam_relative_path[2:],s1_cmd,'p-',label='TCP1 cmd Speed')
+    ax1.plot(lam_relative_path[1:],s1_cmd,'p-',label='TCP1 cmd Speed')
     ax1.plot(lam,speed2, 'm-', label='TCP2 Speed')
-    ax1.plot(lam_relative_path[2:],s2_cmd,'p-',label='TCP2 cmd Speed')
+    ax1.plot(lam_relative_path[1:],s2_cmd,'p-',label='TCP2 cmd Speed')
     ax2.plot(lam, error, 'b-',label='Error')
     ax2.plot(lam, np.degrees(angle_error), 'y-',label='Normal Error')
 

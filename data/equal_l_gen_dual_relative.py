@@ -15,7 +15,7 @@ from dual_arm import *
 
 dataset='curve_2/'
 data_dir=dataset
-solution_dir=data_dir+'dual_arm/'+'diffevo_pose2_2/'
+solution_dir=data_dir+'dual_arm/'+'diffevo_pose6/'
 cmd_dir=solution_dir+'30L_relative/'
 num_ls=[30]
 

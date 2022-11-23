@@ -7,12 +7,12 @@ class Geeks:
 
 def main():
 
-	data_dir='../../data/curve_1/'
+	data_dir='../../data/curve_2/'
 	relative_path=read_csv(data_dir+"Curve_dense.csv",header=None).values
 
-	v_cmd=1200
+	v_cmd=3888
 
-	H_1200=np.loadtxt('../../data/curve_1/dual_arm/abb1200_2.csv',delimiter=',')
+	H_1200=np.loadtxt(data_dir+'dual_arm/abb1200.csv',delimiter=',')
 
 	base2_R=H_1200[:3,:3]
 	base2_p=H_1200[:-1,-1]
@@ -31,7 +31,7 @@ def main():
 	bnds=tuple(zip(lower_limit,upper_limit))
 	res = differential_evolution(opt.dual_arm_opt_w_pose_3dof, bnds, args=None,workers=-1,
 									x0 = np.hstack((np.zeros(6),base2_p[0],base2_p[1],base2_theta,[0])),
-									strategy='best1bin', maxiter=700,
+									strategy='best1bin', maxiter=2222,
 									popsize=15, tol=1e-10,
 									mutation=(0.5, 1), recombination=0.7,
 									seed=None, callback=None, disp=True,
@@ -40,9 +40,9 @@ def main():
 	print(res)
 
 	# res=Geeks()
-	# res.x=np.array([ 9.65670201e-01, -5.05316283e-01,  5.69817112e-01, -2.64359959e+00,
- #       -1.07833047e+00, -3.83256160e+00,  2.68322188e+03,  8.62483843e+01,
- #        9.78732092e-01,  1.64867478e+00])
+	# res.x=np.array([ 8.30204750e-01,  1.07473533e+00, -1.50759224e-01,  5.54649365e-02,
+ #       -2.99114694e-01, -5.31835132e+00,  2.40987396e+03,  1.34790369e+03,
+ #        2.61895317e+00,  2.71631470e+00])
 	# print(opt.dual_arm_opt_w_pose_3dof(res.x))
 
 	q_init2=res.x[:6]
@@ -54,13 +54,13 @@ def main():
 	pose2_world_now=robot2.fwd(q_init2,world=True)
 
 
-	R_temp=direction2R(pose2_world_now.R@opt.curve_normal[0],-opt.curve[1]+opt.curve[0])
+	R_temp=direction2R(pose2_world_now.R@opt.curve_normal[0],pose2_world_now.R@(-opt.curve[1]+opt.curve[0]))
 	R=np.dot(R_temp,Rz(res.x[-1]))
 
-	q_init1=robot1.inv(pose2_world_now.p,R)[0]
+	q_init1=robot1.inv(pose2_world_now.R@opt.curve[0]+pose2_world_now.p,R)[0]
 
 	opt=lambda_opt(relative_path[:,:3],relative_path[:,3:],robot1=robot1,robot2=robot2,steps=50000)
-	q_out1,q_out2=opt.dual_arm_stepwise_optimize(q_init1,q_init2,base2_R=base2_R,base2_p=base2_p,w1=0.02,w2=0.01)
+	q_out1,q_out2,_,_=opt.dual_arm_stepwise_optimize(q_init1,q_init2,base2_R=base2_R,base2_p=base2_p,w1=0.01,w2=0.01)
 
 	####output to trajectory csv
 	df=DataFrame({'q0':q_out1[:,0],'q1':q_out1[:,1],'q2':q_out1[:,2],'q3':q_out1[:,3],'q4':q_out1[:,4],'q5':q_out1[:,5]})

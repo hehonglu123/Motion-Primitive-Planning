@@ -16,10 +16,10 @@ from MotionSend import *
 from dual_arm import *
 
 def main():
-    dataset='curve_1/'
+    dataset='curve_2/'
     data_dir="../../../data/"+dataset
-    solution_dir=data_dir+'dual_arm/'+'diffevo_pose4_2/'
-    cmd_dir=solution_dir+'50J/'
+    solution_dir=data_dir+'dual_arm/'+'diffevo_pose6/'
+    cmd_dir=solution_dir+'greedy0.5L/'
     
     robot1=robot_obj('ABB_6640_180_255','../../../config/abb_6640_180_255_robot_default_config.yml',tool_file_path='../../../config/paintgun.csv',d=50,acc_dict_path='')
     robot2=robot_obj('ABB_1200_5_90','../../../config/abb_1200_5_90_robot_default_config.yml',tool_file_path=solution_dir+'tcp.csv',base_transformation_file=solution_dir+'base.csv',acc_dict_path='')
@@ -40,7 +40,7 @@ def main():
     ###get lambda at each breakpoint
     lam_bp=lam_relative_path[np.append(breakpoints1[0],breakpoints1[1:]-1)]
 
-    vd_relative=600
+    vd_relative=1500
 
     s1_all,s2_all=calc_individual_speed(vd_relative,lam1,lam2,lam_relative_path,breakpoints1)
     v2_all=[]
@@ -51,7 +51,7 @@ def main():
 
     s1_cmd,s2_cmd=cmd_speed_profile(breakpoints1,s1_all,s2_all)
 
-    zone=50
+    zone=100
     z= zonedata(False,zone,1.5*zone,1.5*zone,0.15*zone,1.5*zone,0.15*zone)
 
     z1_all=[z]*len(v2_all)
@@ -61,7 +61,7 @@ def main():
     z2_all[3:7]=[z5]*4
 
     ###extension
-    p_bp1,q_bp1,p_bp2,q_bp2=ms.extend_dual(robot1,p_bp1,q_bp1,primitives1,robot2,p_bp2,q_bp2,primitives2,breakpoints1)
+    p_bp1,q_bp1,p_bp2,q_bp2=ms.extend_dual(robot1,p_bp1,q_bp1,primitives1,robot2,p_bp2,q_bp2,primitives2,breakpoints1,extension_start2=200,extension_end2=200)
 
     log_results=ms.exec_motions_multimove(robot1,robot2,primitives1,primitives2,p_bp1,p_bp2,q_bp1,q_bp2,v1,v2_all,z1_all,z2_all)
 

@@ -7,8 +7,8 @@ from utils import *
 from robots_def import *
 
 
-dataset='curve_1/'
-solution_dir='dual_arm/diffevo_pose5/'
+dataset='curve_2/'
+solution_dir='dual_arm/diffevo_pose6/'
 data_dir=dataset+solution_dir
 
 ###reference frame transformation
