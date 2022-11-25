@@ -52,7 +52,6 @@ def main():
 	###ilc toolbox def
 	ilc=ilc_toolbox(robot,primitives)
 
-	###TODO: extension fix start point, moveC support
 	max_error_prev=999
 	max_grad=False
 	inserted_points=[]

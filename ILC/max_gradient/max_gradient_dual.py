@@ -24,7 +24,7 @@ from dual_arm import *
 def main():
 	dataset='curve_2/'
 	data_dir="../../data/"+dataset
-	solution_dir=data_dir+'dual_arm/'+'diffevo_pose6_2/'
+	solution_dir=data_dir+'dual_arm/'+'diffevo_pose6/'
 	cmd_dir=solution_dir+'30L/'
 	
 	robot1=robot_obj('ABB_6640_180_255','../../config/abb_6640_180_255_robot_default_config.yml',tool_file_path='../../config/paintgun.csv',d=50,acc_dict_path='')
