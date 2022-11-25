@@ -544,6 +544,8 @@ class MotionSend(object):
 
 
 	def extend(self,robot,q_bp,primitives,breakpoints,p_bp,extension_start=100,extension_end=100):
+		p_bp_extended=copy.deepcopy(p_bp)
+		q_bp_extended=copy.deepcopy(q_bp)
 		###initial point extension
 		pose_start=robot.fwd(q_bp[0][0])
 		p_start=pose_start.p
@@ -563,8 +565,8 @@ class MotionSend(object):
 			R_start_new=rot(k,theta_new)@R_start
 
 			#solve invkin for initial point
-			p_bp[0][0]=p_start_new
-			q_bp[0][0]=car2js(robot,q_bp[0][0],p_start_new,R_start_new)[0]
+			p_bp_extended[0][0]=p_start_new
+			q_bp_extended[0][0]=car2js(robot,q_bp[0][0],p_start_new,R_start_new)[0]
 
 		elif 'movec' in primitives[1]:
 			#define circle first
@@ -585,7 +587,7 @@ class MotionSend(object):
 
 			#modify mid point to be in the middle of new start and old end (to avoid RS circle uncertain error)
 			modified_bp=arc_from_3point(p_start_new,p_end,p_mid,N=3)
-			p_bp[1][0]=modified_bp[1]
+			p_bp_extendedp_bp_extended[1][0]=modified_bp[1]
 
 			#find new start orientation
 			k,theta=R2rot(R_end@R_start.T)
@@ -593,8 +595,8 @@ class MotionSend(object):
 			R_start_new=rot(k,theta_new)@R_start
 
 			#solve invkin for initial point
-			p_bp[0][0]=p_start_new
-			q_bp[0][0]=car2js(robot,q_bp[0][0],p_start_new,R_start_new)[0]
+			p_bp_extendedp_bp_extended[0][0]=p_start_new
+			q_bp_extended[0][0]=car2js(robot,q_bp[0][0],p_start_new,R_start_new)[0]
 
 
 		else:
@@ -603,8 +605,8 @@ class MotionSend(object):
 			qdot=q_bp[0][0]-q_bp[1][0]
 			v=np.linalg.norm(J_start[3:,:]@qdot)
 			t=extension_start/v
-			q_bp[0][0]=q_bp[0][0]+qdot*t
-			p_bp[0][0]=robot.fwd(q_bp[0][0]).p
+			q_bp_extended[0][0]=q_bp[0][0]+qdot*t
+			p_bp_extended[0][0]=robot.fwd(q_bp_extended[0][0]).p
 
 		###end point extension
 		pose_start=robot.fwd(q_bp[-2][-1])
@@ -625,8 +627,8 @@ class MotionSend(object):
 			R_end_new=rot(k,extension_end*slope_theta)@R_end
 
 			#solve invkin for end point
-			q_bp[-1][0]=car2js(robot,q_bp[-1][0],p_end_new,R_end_new)[0]
-			p_bp[-1][0]=p_end_new
+			q_bp_extended[-1][0]=car2js(robot,q_bp[-1][0],p_end_new,R_end_new)[0]
+			p_bp_extended[-1][0]=p_end_new
 
 
 		elif  'movec' in primitives[-1]:
@@ -647,7 +649,7 @@ class MotionSend(object):
 
 			#modify mid point to be in the middle of new end and old start (to avoid RS circle uncertain error)
 			modified_bp=arc_from_3point(p_start,p_end_new,p_mid,N=3)
-			p_bp[-1][0]=modified_bp[1]
+			p_bp_extended[-1][0]=modified_bp[1]
 
 			#find new end orientation
 			k,theta=R2rot(R_end@R_start.T)
@@ -655,8 +657,8 @@ class MotionSend(object):
 			R_end_new=rot(k,theta_new)@R_end
 
 			#solve invkin for end point
-			q_bp[-1][-1]=car2js(robot,q_bp[-1][-1],p_end_new,R_end_new)[0]
-			p_bp[-1][-1]=p_end_new   #midpoint not changed
+			q_bp_extended[-1][-1]=car2js(robot,q_bp[-1][-1],p_end_new,R_end_new)[0]
+			p_bp_extended[-1][-1]=p_end_new   #midpoint not changed
 
 		else:
 			#find new end point
@@ -665,10 +667,10 @@ class MotionSend(object):
 			v=np.linalg.norm(J_end[3:,:]@qdot)
 			t=extension_end/v
 			
-			q_bp[-1][0]=q_bp[-1][-1]+qdot*t
-			p_bp[-1][0]=robot.fwd(q_bp[-1][-1]).p
+			q_bp_extended[-1][0]=q_bp[-1][-1]+qdot*t
+			p_bp_extended[-1][0]=robot.fwd(q_bp_extended[-1][-1]).p
 
-		return p_bp,q_bp
+		return p_bp_extended,q_bp_extended
 
 	def extend_dual(self,robot1,p_bp1,q_bp1,primitives1,robot2,p_bp2,q_bp2,primitives2,breakpoints,extension_start2=100,extension_end2=100,relative=False):
 		#extend porpotionally
@@ -680,14 +682,14 @@ class MotionSend(object):
 		q2_init=copy.deepcopy(q_bp2[0][0])
 		q2_end=copy.deepcopy(q_bp2[-1][-1])
 
-		p_bp2,q_bp2=self.extend(robot2,q_bp2,primitives2,breakpoints,p_bp2,extension_start=extension_start2,extension_end=extension_end2)
+		p_bp2_extended,q_bp2_extended=self.extend(robot2,q_bp2,primitives2,breakpoints,p_bp2,extension_start=extension_start2,extension_end=extension_end2)
 		
 		if relative:
-			p_bp1,q_bp1=self.extend_relative(robot1,robot2,primitives1,p_bp1,q_bp1,p_bp2,q_bp2,q2_init,q2_end,extension_start=extension_start2*d1_start/d2_start,extension_end=extension_end2*d1_end/d2_end)
+			p_bp1_extended,q_bp1_extended=self.extend_relative(robot1,robot2,primitives1,p_bp1,q_bp1,p_bp2,q_bp2,q2_init,q2_end,extension_start=extension_start2*d1_start/d2_start,extension_end=extension_end2*d1_end/d2_end)
 		else:
-			p_bp1,q_bp1=self.extend(robot1,q_bp1,primitives1,breakpoints,p_bp1,extension_start=extension_start2*d1_start/d2_start,extension_end=extension_end2*d1_end/d2_end)
+			p_bp1_extended,q_bp1_extended=self.extend(robot1,q_bp1,primitives1,breakpoints,p_bp1,extension_start=extension_start2*d1_start/d2_start,extension_end=extension_end2*d1_end/d2_end)
 
-		return p_bp1,q_bp1,p_bp2,q_bp2
+		return p_bp1_extended,q_bp1_extended,p_bp2_extended,q_bp2_extended
 	def extract_data_from_cmd(self,filename):
 		data = read_csv(filename)
 		breakpoints=np.array(data['breakpoints'].tolist())
