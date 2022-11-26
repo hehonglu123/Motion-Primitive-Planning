@@ -34,7 +34,9 @@ def main():
     curve_data_dir='../../../data/'+data_type+'/'
 
     # test_type='50L'
-    test_type='30L'
+    # test_type='30L'
+    # test_type='greedy0.5'
+    test_type='greedy0.2'
 
     cmd_dir='../data/'+data_type+'/dual_arm_de/'+test_type+'/'
     # cmd_dir='../data/'+data_type+'/dual_arm_de_possibilyimpossible/'+test_type+'/'
@@ -71,7 +73,7 @@ def main():
     elif data_type=='curve_2_scale':
         ms = MotionSendFANUC(robot1=robot1,robot2=robot2,utool2=3)
 
-    s=1200 # mm/sec in leader frame
+    s=500 # mm/sec in leader frame
     z=100 # CNT100
     ilc_output=cmd_dir+'results_'+str(s)+'_'+test_type+'/'
     Path(ilc_output).mkdir(exist_ok=True)
@@ -81,8 +83,9 @@ def main():
 
     ###extension
     # print(np.degrees(q_bp2[0][-1]))
-    # p_bp1,q_bp1,p_bp2,q_bp2=ms.extend_dual(ms.robot1,p_bp1,q_bp1,primitives1,ms.robot2,p_bp2,q_bp2,primitives2,breakpoints1,0,extension_start=25,extension_end=90)  ## curve_1
-    p_bp1,q_bp1,p_bp2,q_bp2=ms.extend_dual(ms.robot1,p_bp1,q_bp1,primitives1,ms.robot2,p_bp2,q_bp2,primitives2,breakpoints1,0,extension_start=50,extension_end=120) ## curve_2_scale
+    # p_bp1,q_bp1,p_bp2,q_bp2=ms.extend_dual(ms.robot1,p_bp1,q_bp1,primitives1,ms.robot2,p_bp2,q_bp2,primitives2,breakpoints1,0,extension_start=25,extension_end=90)  ## curve_1, movel
+    p_bp1,q_bp1,p_bp2,q_bp2=ms.extend_dual(ms.robot1,p_bp1,q_bp1,primitives1,ms.robot2,p_bp2,q_bp2,primitives2,breakpoints1,0,extension_start=50,extension_end=120) ## curve_2_scale, movel
+
 
     # print(robot2.fwd(q_bp2[0][0]))
     # print(robot2.inv(robot2.fwd(q_bp2[0][0]).p,robot2.fwd(q_bp2[0][0]).R,q_bp2[1][0]))
@@ -94,12 +97,12 @@ def main():
     print(len(primitives1))
     print(len(primitives2))
 
-    breakpoints1,primitives1,p_bp1,q_bp1,_=ms.extract_data_from_cmd(os.getcwd()+'/'+ilc_output+'command_arm1_9.csv')
-    breakpoints2,primitives2,p_bp2,q_bp2,_=ms.extract_data_from_cmd(os.getcwd()+'/'+ilc_output+'command_arm2_9.csv')
-    print(len(q_bp1))
-    print(len(q_bp2))
-    print(len(primitives1))
-    print(len(primitives2))
+    # breakpoints1,primitives1,p_bp1,q_bp1,_=ms.extract_data_from_cmd(os.getcwd()+'/'+ilc_output+'command_arm1_9.csv')
+    # breakpoints2,primitives2,p_bp2,q_bp2,_=ms.extract_data_from_cmd(os.getcwd()+'/'+ilc_output+'command_arm2_9.csv')
+    # print(len(q_bp1))
+    # print(len(q_bp2))
+    # print(len(primitives1))
+    # print(len(primitives2))
 
     # print(robot1.jacobian(q_bp1[0][0]))
     # for i in range(len(q_bp1)):

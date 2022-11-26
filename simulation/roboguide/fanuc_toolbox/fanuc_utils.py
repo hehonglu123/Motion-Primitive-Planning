@@ -760,19 +760,27 @@ class MotionSendFANUC(object):
         df=DataFrame({'breakpoints':breakpoints,'primitives':primitives,'points':p_bp_new,'q_bp':q_bp_new})
         df.to_csv(filename,header=True,index=False)
 
-    def extend_start_end(self,robot,q_bp,primitives,breakpoints,points_list,extension_start=100,extension_end=100):
+    def extend_start_end(self,robot,q_bp,primitives,breakpoints,points_list,extension_start=100,extension_end=100,workpiece=False,robot2=None,q_bp2=None):
         
-        dist_bp = np.linalg.norm(np.array(points_list[0][0])-np.array(points_list[1][0]))
-        if dist_bp > extension_start:
-            dist_bp=extension_start
-        step_to_extend=round(extension_start/dist_bp)
-        extend_step_d_start=float(extension_start)/step_to_extend
+        # dist_bp = np.linalg.norm(np.array(points_list[0][0])-np.array(points_list[1][0]))
+        # if dist_bp > extension_start:
+        #     dist_bp=extension_start
+        # step_to_extend=round(extension_start/dist_bp)
+        # extend_step_d_start=float(extension_start)/step_to_extend
         
         ###initial point extension
-        pose_start=robot.fwd(q_bp[0][-1])
+        if not workpiece:
+            pose_start=robot.fwd(q_bp[0][-1])
+        else:
+            pose_start_world_r2=robot2.fwd(q_bp[0][-1],world=True)
+            pose_start=pose_start_world_r2.T*robot.fwd(q_bp[0][-1])
         p_start=pose_start.p
         R_start=pose_start.R
-        pose_end=robot.fwd(q_bp[1][-1])
+        if not workpiece:
+            pose_end=robot.fwd(q_bp[1][-1])
+        else:
+            pose_end_world_r2=robot2.fwd(q_bp[1][-1],world=True)
+            pose_end=pose_end_world_r2.T*robot.fwd(q_bp[1][-1])
         p_end=pose_end.p
         R_end=pose_end.R
         if primitives[1]=='movel_fit':
@@ -784,24 +792,6 @@ class MotionSendFANUC(object):
             #find new start orientation
             k,theta=R2rot(R_end@R_start.T)
             theta_new=-extension_start*theta/np.linalg.norm(p_end-p_start)
-
-            # adding extension with uniform space
-            # the_very_start_p = p_start-step_to_extend*extend_step_d_start*slope_p
-            # the_very_start_R = rot(k,-np.linalg.norm(the_very_start_p-p_start)*theta/np.linalg.norm(p_end-p_start))@R_start
-            # if len(car2js(robot,q_bp[0][0],the_very_start_p,the_very_start_R)) > 0:
-            #     for i in range(1,step_to_extend+1):
-            #         p_extend=p_start-i*extend_step_d_start*slope_p
-            #         theta_extend=-np.linalg.norm(p_extend-p_start)*theta/np.linalg.norm(p_end-p_start)
-            #         R_extend=rot(k,theta_extend)@R_start
-            #         points_list.insert(0,[p_extend])
-            #         q_bp.insert(0,[car2js(robot,q_bp[0][0],p_extend,R_extend)[0]])
-            #         primitives.insert(1,'movel_fit')
-            # else:
-            #     for i in range(1,step_to_extend+1):
-            #         p_extend=p_start-i*extend_step_d_start*slope_p
-            #         points_list.insert(0,[p_extend])
-            #         q_bp.insert(0,[car2js(robot,q_bp[0][0],p_extend,R_start)[0]])
-            #         primitives.insert(1,'movel_fit')
 
             R_start_new=rot(k,theta_new)@R_start
             # solve invkin for initial point
@@ -839,8 +829,7 @@ class MotionSendFANUC(object):
 
             #modify mid point to be in the middle of new start and old end (to avoid RS circle uncertain error)
             modified_bp=arc_from_3point(p_start_new,p_end,p_mid,N=3)
-            points_list[1][0]=modified_bp[1]
-
+            
             #find new start orientation
             # k,theta=R2rot(R_end@R_start.T)
             k,theta=R2rot(R_end.T@R_start)
@@ -851,6 +840,7 @@ class MotionSendFANUC(object):
             R_mid_new=R_start@rot(k,theta_new/2)
 
             #solve invkin for initial point
+            points_list[1][0]=modified_bp[1]
             points_list[0][0]=p_start_new
             q_bp[0][0]=car2js(robot,q_bp[0][0],p_start_new,R_start_new)[0]
             q_bp[1][0]=car2js(robot,q_bp[1][0],points_list[1][0],R_start)[0] ## kind of a compromise here
@@ -873,11 +863,11 @@ class MotionSendFANUC(object):
         p_end=pose_end.p
         R_end=pose_end.R
 
-        dist_bp = np.linalg.norm(np.array(points_list[-1][-1])-np.array(points_list[-2][-1]))
-        if dist_bp > extension_end:
-            dist_bp=extension_end
-        step_to_extend=round(extension_end/dist_bp)
-        extend_step_d_end=float(extension_end)/step_to_extend
+        # dist_bp = np.linalg.norm(np.array(points_list[-1][-1])-np.array(points_list[-2][-1]))
+        # if dist_bp > extension_end:
+        #     dist_bp=extension_end
+        # step_to_extend=round(extension_end/dist_bp)
+        # extend_step_d_end=float(extension_end)/step_to_extend
 
         if primitives[-1]=='movel_fit':
             #find new end point
@@ -1246,6 +1236,7 @@ class MotionSendFANUC(object):
         return p_bp1,q_bp1,p_bp2,q_bp2,step_to_extend_end
 
     def extend_dual(self,robot1,p_bp1,q_bp1,primitives1,robot2,p_bp2,q_bp2,primitives2,breakpoints,base2_T,extension_start=100,extension_end=100):
+        
         #extend porpotionally
         d1_start=np.linalg.norm(p_bp1[1][-1]-p_bp1[0][-1])
         d2_start=np.linalg.norm(p_bp2[1][-1]-p_bp2[0][-1])
@@ -1254,6 +1245,7 @@ class MotionSendFANUC(object):
 
         ### First, extend the leader (workpiece robot).
         primitives2,p_bp2,q_bp2=self.extend_start_end(robot2,q_bp2,primitives2,breakpoints,p_bp2,extension_start=extension_start,extension_end=extension_end)
+        # primitives2,p_bp2,q_bp2=self.extend_start_end(robot2,q_bp2,primitives1,breakpoints,p_bp2,extension_start=extension_start,extension_end=extension_end)
         ### Then, extend the follower (tool robot) in the workpiece (i.e. leader robot workpiece) frame.
         primitives1,p_bp1,q_bp1=self.extend_start_end(robot1,q_bp1,primitives1,breakpoints,p_bp1,extension_start=extension_start*d1_start/d2_start,extension_end=extension_end*d1_end/d2_end)
         # primitives1,p_bp1,q_bp1=self.extend_start_end(robot1,q_bp1,primitives1,breakpoints,p_bp1,extension_start=extension_d,extension_end=extension_d)
@@ -1275,7 +1267,10 @@ class MotionSendFANUC(object):
         else:
             breakpoints=[]
         primitives=data['primitives'].tolist()
-        points=data['points'].tolist()
+        if 'points' in data.keys():
+            points=data['points'].tolist()
+        else:
+            points=data['p_bp'].tolist()
         qs=data['q_bp'].tolist()
         if 'speed' in data.keys():
             speed=data['speed'].tolist()
@@ -1286,14 +1281,14 @@ class MotionSendFANUC(object):
         for i in range(len(primitives)):
             if primitives[i]=='movel_fit':
                 point=self.extract_points(primitives[i],points[i])
-                p_bp.append([point])
+                p_bp.append([np.array(point)])
                 q=self.extract_points(primitives[i],qs[i])
                 q_bp.append([q])
 
 
             elif primitives[i]=='movec_fit':
                 point1,point2=self.extract_points(primitives[i],points[i])
-                p_bp.append([point1,point2])
+                p_bp.append([np.array(point1),np.array(point2)])
                 q1,q2=self.extract_points(primitives[i],qs[i])
                 q_bp.append([q1,q2])
 

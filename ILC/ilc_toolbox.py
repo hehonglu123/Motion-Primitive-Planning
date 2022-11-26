@@ -7,7 +7,7 @@ import sys
 sys.path.append('../toolbox')
 from robots_def import *
 from error_check import *
-from MotionSend import *
+# from MotionSend import *
 from lambda_calc import *
 from blending import *
 
