@@ -133,20 +133,22 @@ class greedy_fit(fitting_toolbox):
 
 			###solve inv_kin here
 			if len(self.curve_fit_js1)>1:
-				self.curve_fit_js1.extend(car2js(self.robot1,self.curve_fit_js1[-1],curve_fit1_world,curve_fit_R1_world))
+				curve_fit_js1=car2js(self.robot1,self.curve_fit_js1[-1],curve_fit1_world,curve_fit_R1_world)
+				
 			else:
-				self.curve_fit_js1.extend(car2js(self.robot1,self.curve_js1[0],curve_fit1_world,curve_fit_R1_world))
+				curve_fit_js1=car2js(self.robot1,self.curve_js1[0],curve_fit1_world,curve_fit_R1_world)
+			self.curve_fit_js1.extend(curve_fit_js1)
 
 			###generate output
 			if primitive1=='movec_fit':
 				points1.append([curve_fit1[int(len(curve_fit1)/2)],curve_fit1[-1]])
-				q_bp1.append([self.curve_fit_js1[int(len(curve_fit_R1)/2)],self.curve_fit_js1[-1]])
+				q_bp1.append([curve_fit_js1[int(len(curve_fit_R1)/2)],curve_fit_js1[-1]])
 			elif primitive1=='movel_fit':
 				points1.append([curve_fit1[-1]])
-				q_bp1.append([self.curve_fit_js1[-1]])
+				q_bp1.append([curve_fit_js1[-1]])
 			else:
 				points1.append([curve_fit1[-1]])
-				q_bp1.append([self.curve_fit_js1[-1]])
+				q_bp1.append([curve_fit_js1[-1]])
 
 			
 			

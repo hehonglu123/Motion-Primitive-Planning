@@ -99,7 +99,7 @@ def main():
 		ax2.plot(lam, error, 'b-',label='Error')
 		ax2.scatter(lam[peaks],error[peaks],label='peaks')
 		ax2.plot(lam, np.degrees(angle_error), 'y-',label='Normal Error')
-		ax1.axis(ymin=0,ymax=2.*vd_relative)
+		ax1.axis(ymin=0,ymax=1.2*vd_relative)
 		ax2.axis(ymin=0,ymax=4)
 
 		ax1.set_xlabel('lambda (mm)')
