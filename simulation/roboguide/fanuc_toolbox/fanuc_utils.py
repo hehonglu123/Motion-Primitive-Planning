@@ -1,4 +1,5 @@
 import numpy as np
+from copy import deepcopy
 from pandas import read_csv, DataFrame
 from fanuc_motion_program_exec_client import *
 from general_robotics_toolbox import *
@@ -760,7 +761,7 @@ class MotionSendFANUC(object):
         df=DataFrame({'breakpoints':breakpoints,'primitives':primitives,'points':p_bp_new,'q_bp':q_bp_new})
         df.to_csv(filename,header=True,index=False)
 
-    def extend_start_end(self,robot,q_bp,primitives,breakpoints,points_list,extension_start=100,extension_end=100,workpiece=False,robot2=None,q_bp2=None):
+    def extend_start_end(self,robot,q_bp,primitives,breakpoints,points_list,extension_start=100,extension_end=100,workpiece=False,robot2=None,q_bp2=None,q_bp2_origin=None,moveL=False):
         
         # dist_bp = np.linalg.norm(np.array(points_list[0][0])-np.array(points_list[1][0]))
         # if dist_bp > extension_start:
@@ -772,18 +773,18 @@ class MotionSendFANUC(object):
         if not workpiece:
             pose_start=robot.fwd(q_bp[0][-1])
         else:
-            pose_start_world_r2=robot2.fwd(q_bp[0][-1],world=True)
-            pose_start=pose_start_world_r2.T*robot.fwd(q_bp[0][-1])
+            pose_start_world_r2=robot2.fwd(q_bp2_origin[0][-1],world=True)
+            pose_start=pose_start_world_r2.inv()*robot.fwd(q_bp[0][-1])
         p_start=pose_start.p
         R_start=pose_start.R
         if not workpiece:
             pose_end=robot.fwd(q_bp[1][-1])
         else:
-            pose_end_world_r2=robot2.fwd(q_bp[1][-1],world=True)
-            pose_end=pose_end_world_r2.T*robot.fwd(q_bp[1][-1])
+            pose_end_world_r2=robot2.fwd(q_bp2_origin[1][-1],world=True)
+            pose_end=pose_end_world_r2.inv()*robot.fwd(q_bp[1][-1])
         p_end=pose_end.p
         R_end=pose_end.R
-        if primitives[1]=='movel_fit':
+        if primitives[1]=='movel_fit' or moveL:
             #find new start point
             slope_p=p_end-p_start
             slope_p=slope_p/np.linalg.norm(slope_p)
@@ -794,25 +795,29 @@ class MotionSendFANUC(object):
             theta_new=-extension_start*theta/np.linalg.norm(p_end-p_start)
 
             R_start_new=rot(k,theta_new)@R_start
+            
             # solve invkin for initial point
-            try:
-                # print(p_start_new,R2wpr(R_start_new))
-                # q_bp[0][0]=car2js(robot,q_bp[0][0],p_start_new,R_start_new)[0]
-                # print(robot.fwd(q_bp[0][0]))
-                # points_list[0][0]=p_start_new
+            if not workpiece:
                 q_bp.insert(0,[car2js(robot,q_bp[0][0],p_start_new,R_start_new)[0]])
                 points_list.insert(0,[p_start_new])
                 primitives.insert(1,'movel_fit')
-            except:
-                # print(p_start_new,R2wpr(R_start))
-                q_bp.insert(0,[car2js(robot,q_bp[0][0],p_start_new,R_start)[0]])
-                # print(robot.fwd(q_bp[0][0]))
-                points_list.insert(0,[p_start_new])
+            else:
+                T_start_new_world_r2=robot2.fwd(q_bp2[0][-1],world=True)
+                p_start_new_world_r1 = T_start_new_world_r2.R@p_start_new+T_start_new_world_r2.p
+                R_start_new_world_r1 = T_start_new_world_r2.R@R_start_new
+                q_bp.insert(0,[car2js(robot,q_bp[0][0],p_start_new_world_r1,R_start_new_world_r1)[0]])
+                points_list.insert(0,[p_start_new_world_r1])
                 primitives.insert(1,'movel_fit')
 
         elif  primitives[1]=='movec_fit':
+            
+            if not workpiece:
+                pose_mid=robot.fwd(q_bp[1][0])
+            else:
+                pose_mid_world_r2=robot2.fwd(q_bp2_origin[1][0],world=True)
+                pose_mid=pose_mid_world_r2.inv()*robot.fwd(q_bp[1][0])
+
             #define circle first
-            pose_mid=robot.fwd(q_bp[1][0])
             p_mid=pose_mid.p
             R_mid=pose_mid.R
 
@@ -840,10 +845,23 @@ class MotionSendFANUC(object):
             R_mid_new=R_start@rot(k,theta_new/2)
 
             #solve invkin for initial point
-            points_list[1][0]=modified_bp[1]
-            points_list[0][0]=p_start_new
-            q_bp[0][0]=car2js(robot,q_bp[0][0],p_start_new,R_start_new)[0]
-            q_bp[1][0]=car2js(robot,q_bp[1][0],points_list[1][0],R_start)[0] ## kind of a compromise here
+            if not workpiece:
+                points_list[1][0]=modified_bp[1]
+                points_list[0][0]=p_start_new
+                q_bp[0][0]=car2js(robot,q_bp[0][0],p_start_new,R_start_new)[0]
+                q_bp[1][0]=car2js(robot,q_bp[1][0],points_list[1][0],R_start)[0] ## kind of a compromise here
+            else:
+                T_start_new_world_r2=robot2.fwd(q_bp2[0][0],world=True)
+                T_mid_new_world_r2=robot2.fwd(q_bp2[1][0],world=True)
+                p_start_new_world_r1 = T_start_new_world_r2.R@p_start_new+T_start_new_world_r2.p
+                p_mid_new_world_r1 = T_mid_new_world_r2.R@modified_bp[1]+T_mid_new_world_r2.p
+                R_start_new_world_r1 = T_start_new_world_r2.R@R_start_new
+                R_mid_world_r1 = T_mid_new_world_r2.R@R_start ## kind of a compromise here
+
+                points_list[0][0]=p_start_new_world_r1
+                points_list[1][0]=p_mid_new_world_r1
+                q_bp[0][0]=car2js(robot,q_bp[0][0],points_list[0][0],R_start_new_world_r1)[0]
+                q_bp[1][0]=car2js(robot,q_bp[1][0],points_list[1][0],R_mid_world_r1)[0]
 
         else:
             #find new start point
@@ -856,10 +874,18 @@ class MotionSendFANUC(object):
             points_list[0][0]=robot.fwd(q_bp[0][0]).p
 
         ###end point extension
-        pose_start=robot.fwd(q_bp[-2][-1])
+        if not workpiece:
+            pose_start=robot.fwd(q_bp[-2][-1])
+        else:
+            pose_start_world_r2=robot2.fwd(q_bp2_origin[-2][-1],world=True)
+            pose_start=pose_start_world_r2.inv()*robot.fwd(q_bp[-2][-1])
         p_start=pose_start.p
         R_start=pose_start.R
-        pose_end=robot.fwd(q_bp[-1][-1])
+        if not workpiece:
+            pose_end=robot.fwd(q_bp[-1][-1])
+        else:
+            pose_end_world_r2=robot2.fwd(q_bp2_origin[-1][-1],world=True)
+            pose_end=pose_end_world_r2.inv()*robot.fwd(q_bp[-1][-1])
         p_end=pose_end.p
         R_end=pose_end.R
 
@@ -869,7 +895,7 @@ class MotionSendFANUC(object):
         # step_to_extend=round(extension_end/dist_bp)
         # extend_step_d_end=float(extension_end)/step_to_extend
 
-        if primitives[-1]=='movel_fit':
+        if primitives[-1]=='movel_fit' or moveL:
             #find new end point
             slope_p=p_end-p_start
             slope_p=slope_p/np.linalg.norm(slope_p)
@@ -880,45 +906,42 @@ class MotionSendFANUC(object):
             theta_new=extension_end*theta/np.linalg.norm(p_end-p_start)
             R_end_new=rot(k,theta_new)@R_end
 
-            # adding extension with uniform space
-            # the_very_end_p = p_end+step_to_extend*extend_step_d_end*slope_p
-            # the_very_end_R = rot(k,np.linalg.norm(the_very_end_p-p_end)*theta/np.linalg.norm(p_end-p_start))@R_end
-            # if len(car2js(robot,q_bp[0][0],the_very_end_p,the_very_end_R))>0:
-            #     for i in range(1,step_to_extend+1):
-            #         p_extend=p_end+i*extend_step_d_end*slope_p
-            #         theta_extend=np.linalg.norm(p_extend-p_end)*theta/np.linalg.norm(p_end-p_start)
-            #         R_extend=rot(k,theta_extend)@R_end
-            #         points_list.append([p_extend])
-            #         q_bp.append([car2js(robot,q_bp[-1][0],p_extend,R_extend)[0]])
-            #         primitives.append('movel_fit')
-            # else:
-            #     for i in range(1,step_to_extend+1):
-            #         p_extend=p_end+i*extend_step_d_end*slope_p
-            #         points_list.append([p_extend])
-            #         q_bp.append([car2js(robot,q_bp[-1][0],p_extend,R_end)[0]])
-            #         primitives.append('movel_fit')
-
-            # solve invkin for end point
-            try:
-                # q_bp[-1][-1]=car2js(robot,q_bp[-1][0],p_end_new,R_end_new)[0]
-                # points_list[-1][0]=p_end_new
+            # solve invkin for initial point
+            if not workpiece:
                 q_bp.append([car2js(robot,q_bp[-1][0],p_end_new,R_end_new)[0]])
                 points_list.append([p_end_new])
                 primitives.append('movel_fit')
-            except:
-                q_bp.append([car2js(robot,q_bp[-1][0],p_end_new,R_end)[0]])
-                points_list.append([p_end_new])
+            else:
+                p_end_new_world_r2=robot2.fwd(q_bp2[-1][-1],world=True)
+                p_end_new_world_r1 = p_end_new_world_r2.R@p_end_new+p_end_new_world_r2.p
+                R_end_new_world_r1 = p_end_new_world_r2.R@R_end_new
+                q_bp.append([car2js(robot,q_bp[-1][0],p_end_new_world_r1,R_end_new_world_r1)[0]])
+                points_list.append([p_end_new_world_r1])
                 primitives.append('movel_fit')
 
         elif  primitives[-1]=='movec_fit':
             #define circle first
-            pose_mid=robot.fwd(q_bp[-1][0])
+            if not workpiece:
+                pose_mid=robot.fwd(q_bp[-1][0])
+            else:
+                pose_mid_world_r2=robot2.fwd(q_bp2_origin[-1][0],world=True)
+                pose_mid=pose_mid_world_r2.inv()*robot.fwd(q_bp[-1][0])
             p_mid=pose_mid.p
             R_mid=pose_mid.R
             center, radius=circle_from_3point(p_start,p_end,p_mid)
+            # ax = plt.axes(projection='3d')
+            # ax.scatter3D(p_start[0], p_start[1],p_start[2])
+            # ax.scatter3D(p_mid[0], p_mid[1],p_mid[2])
+            # ax.scatter3D(p_end[0], p_end[1],p_end[2])
+            # ax.scatter3D(center[0], center[1],center[2])
+            # plt.show()
+            # print(radius)
 
             #find desired rotation angle
             angle=extension_end/radius
+            # print(np.degrees(angle))
+
+            angle=min([angle,np.pi/3*2])
 
             #find new end point
             plane_N=np.cross(p_start-center,p_end-center)
@@ -928,7 +951,6 @@ class MotionSendFANUC(object):
 
             #modify mid point to be in the middle of new end and old start (to avoid RS circle uncertain error)
             modified_bp=arc_from_3point(p_start,p_end_new,p_mid,N=3)
-            points_list[-1][0]=modified_bp[1]
             
             #find new end orientation
             k,theta=R2rot(R_end@R_start.T)
@@ -936,10 +958,24 @@ class MotionSendFANUC(object):
             R_end_new=rot(k,theta_new)@R_end
             R_mid_new=rot(k,theta_new/2)@R_end
 
-            #solve invkin for end point
-            q_bp[-1][-1]=car2js(robot,q_bp[-1][-1],p_end_new,R_end_new)[0]
-            points_list[-1][-1]=p_end_new   #midpoint not changed
-            q_bp[-1][0]=car2js(robot,q_bp[-1][0],points_list[-1][0],R_end)[0]
+            #solve invkin for initial point
+            if not workpiece:
+                points_list[-1][0]=modified_bp[1]
+                points_list[-1][-1]=p_end_new   #midpoint not changed
+                q_bp[-1][0]=car2js(robot,q_bp[-1][0],points_list[-1][0],R_end)[0]
+                q_bp[-1][-1]=car2js(robot,q_bp[-1][-1],p_end_new,R_end_new)[0]
+            else:
+                T_mid_new_world_r2=robot2.fwd(q_bp2[-1][0],world=True)
+                T_end_new_world_r2=robot2.fwd(q_bp2[-1][-1],world=True)
+                p_mid_new_world_r1 = T_mid_new_world_r2.R@modified_bp[1]+T_mid_new_world_r2.p
+                p_end_new_world_r1 = T_end_new_world_r2.R@p_end_new+T_end_new_world_r2.p
+                R_mid_new_world_r1 = T_mid_new_world_r2.R@R_end ## kind of a compromise here
+                R_end_world_r1 = T_end_new_world_r2.R@R_end_new
+
+                points_list[-1][0]=p_mid_new_world_r1
+                points_list[-1][-1]=p_end_new_world_r1
+                q_bp[-1][0]=car2js(robot,q_bp[-1][0],points_list[-1][0],R_mid_new_world_r1)[0]
+                q_bp[-1][-1]=car2js(robot,q_bp[-1][-1],points_list[-1][-1],R_end_world_r1)[0]
 
         else:
             #find new end point
@@ -1243,11 +1279,18 @@ class MotionSendFANUC(object):
         d1_end=np.linalg.norm(p_bp1[-1][-1]-p_bp1[-2][-1])
         d2_end=np.linalg.norm(p_bp2[-1][-1]-p_bp2[-2][-1])
 
+        
         ### First, extend the leader (workpiece robot).
-        primitives2,p_bp2,q_bp2=self.extend_start_end(robot2,q_bp2,primitives2,breakpoints,p_bp2,extension_start=extension_start,extension_end=extension_end)
-        # primitives2,p_bp2,q_bp2=self.extend_start_end(robot2,q_bp2,primitives1,breakpoints,p_bp2,extension_start=extension_start,extension_end=extension_end)
+        q_bp2_origin=deepcopy(q_bp2)
+        # primitives2,p_bp2,q_bp2=self.extend_start_end(robot2,q_bp2,primitives2,breakpoints,p_bp2,extension_start=extension_start,extension_end=extension_end)
+        primitives2,p_bp2,q_bp2=self.extend_start_end(robot2,q_bp2,primitives2,breakpoints,p_bp2,extension_start=extension_start,extension_end=extension_end,moveL=True)
         ### Then, extend the follower (tool robot) in the workpiece (i.e. leader robot workpiece) frame.
-        primitives1,p_bp1,q_bp1=self.extend_start_end(robot1,q_bp1,primitives1,breakpoints,p_bp1,extension_start=extension_start*d1_start/d2_start,extension_end=extension_end*d1_end/d2_end)
+        # primitives1,p_bp1,q_bp1=self.extend_start_end(robot1,q_bp1,primitives1,breakpoints,p_bp1,extension_start=extension_start*d1_start/d2_start,extension_end=extension_end*d1_end/d2_end,workpiece=True,robot2=robot2,q_bp2=q_bp2,q_bp2_origin=q_bp2_origin)
+        # primitives1,p_bp1,q_bp1=self.extend_start_end(robot1,q_bp1,primitives1,breakpoints,p_bp1,extension_start=extension_start,extension_end=extension_end,workpiece=True,robot2=robot2,q_bp2=q_bp2,q_bp2_origin=q_bp2_origin,moveL=True)
+        # primitives1,p_bp1,q_bp1=self.extend_start_end(robot1,q_bp1,primitives1,breakpoints,p_bp1,extension_start=extension_start,extension_end=extension_end,workpiece=True,robot2=robot2,q_bp2=q_bp2,q_bp2_origin=q_bp2_origin,moveL=True)
+        primitives1,p_bp1,q_bp1=self.extend_start_end(robot1,q_bp1,primitives1,breakpoints,p_bp1,extension_start=extension_start*d1_start/d2_start,extension_end=extension_end*d1_end/d2_end,moveL=True)
+       
+        
         # primitives1,p_bp1,q_bp1=self.extend_start_end(robot1,q_bp1,primitives1,breakpoints,p_bp1,extension_start=extension_d,extension_end=extension_d)
 
         # ### First, extend the leader (workpiece robot).

@@ -35,8 +35,10 @@ def main():
 
     # test_type='50L'
     # test_type='30L'
-    # test_type='greedy0.5'
-    test_type='greedy0.2'
+    test_type='greedy0.5'
+    # test_type='greedy0.2'
+    # test_type='moveLgreedy0.5'
+    # test_type='moveLgreedy0.2'
 
     cmd_dir='../data/'+data_type+'/dual_arm_de/'+test_type+'/'
     # cmd_dir='../data/'+data_type+'/dual_arm_de_possibilyimpossible/'+test_type+'/'
@@ -73,7 +75,7 @@ def main():
     elif data_type=='curve_2_scale':
         ms = MotionSendFANUC(robot1=robot1,robot2=robot2,utool2=3)
 
-    s=500 # mm/sec in leader frame
+    s=1200 # mm/sec in leader frame
     z=100 # CNT100
     ilc_output=cmd_dir+'results_'+str(s)+'_'+test_type+'/'
     Path(ilc_output).mkdir(exist_ok=True)
@@ -82,9 +84,35 @@ def main():
     breakpoints2,primitives2,p_bp2,q_bp2,_=ms.extract_data_from_cmd(os.getcwd()+'/'+cmd_dir+'command2.csv')
 
     ###extension
+    q_bp1_origin=deepcopy(q_bp1)
+    q_bp2_origin=deepcopy(q_bp2)
     # print(np.degrees(q_bp2[0][-1]))
     # p_bp1,q_bp1,p_bp2,q_bp2=ms.extend_dual(ms.robot1,p_bp1,q_bp1,primitives1,ms.robot2,p_bp2,q_bp2,primitives2,breakpoints1,0,extension_start=25,extension_end=90)  ## curve_1, movel
-    p_bp1,q_bp1,p_bp2,q_bp2=ms.extend_dual(ms.robot1,p_bp1,q_bp1,primitives1,ms.robot2,p_bp2,q_bp2,primitives2,breakpoints1,0,extension_start=50,extension_end=120) ## curve_2_scale, movel
+    # p_bp1,q_bp1,p_bp2,q_bp2=ms.extend_dual(ms.robot1,p_bp1,q_bp1,primitives1,ms.robot2,p_bp2,q_bp2,primitives2,breakpoints1,0,extension_start=25,extension_end=10)  ## curve_1, movel
+    
+    p_bp1,q_bp1,p_bp2,q_bp2=ms.extend_dual(ms.robot1,p_bp1,q_bp1,primitives1,ms.robot2,p_bp2,q_bp2,primitives2,breakpoints1,0,extension_start=50,extension_end=100) ## curve_2_scale, movel
+    
+    # q_bp1_origin_flat=[]
+    # q_bp2_origin_flat=[]
+    # q_bp1_flat=[]
+    # q_bp2_flat=[]
+    # for i in range(len(q_bp1_origin)):
+    #     for j in range(len(q_bp1_origin[i])):
+    #         q_bp1_origin_flat.append(q_bp1_origin[i][j])
+    #         q_bp2_origin_flat.append(q_bp2_origin[i][j])
+    #         q_bp1_flat.append(q_bp1[i][j])
+    #         q_bp2_flat.append(q_bp2[i][j])
+
+    # p_bp_relative,_=ms.form_relative_path(q_bp1_origin_flat,q_bp2_origin_flat,base2_R,base2_p)
+    # p_bp_relative_new,_=ms.form_relative_path(q_bp1_flat,q_bp2_flat,base2_R,base2_p)
+    # ### update visualization
+    # ax = plt.axes(projection='3d')
+    # ax.plot3D(p_bp_relative[:,0], p_bp_relative[:,1],p_bp_relative[:,2], 'red')
+    # ax.scatter3D(p_bp_relative[:,0], p_bp_relative[:,1],p_bp_relative[:,2], 'red')
+    # ax.plot3D(p_bp_relative_new[:,0], p_bp_relative_new[:,1],p_bp_relative_new[:,2], 'blue')
+    # ax.scatter3D(p_bp_relative_new[:,0], p_bp_relative_new[:,1],p_bp_relative_new[:,2], 'blue')
+    # plt.show()
+    # exit()
 
 
     # print(robot2.fwd(q_bp2[0][0]))
@@ -164,6 +192,30 @@ def main():
         ax2.plot(lam, error, 'b-',label='Error')
         ax2.scatter(lam[peaks],error[peaks],label='peaks')
         ax2.plot(lam, np.degrees(angle_error), 'y-',label='Normal Error')
+
+        ##### draw bp #####
+        draw_moveC=False
+        draw_moveL=False
+        dlam=lam[-1]/breakpoints1[-1]
+        for bpi in range(len(p_bp1)-3):
+            bp_num=breakpoints1[bpi]
+            bp_lam=bp_num*dlam
+            if primitives1[bpi+1]=='movec_fit':
+                if draw_moveC:
+                    plt.axvline(x = bp_lam, color = 'c')
+                else:
+                    plt.axvline(x = bp_lam, color = 'c',label='moveC')
+                    draw_moveC=True
+            elif primitives1[bpi+1]=='movel_fit':
+                if draw_moveL:
+                    plt.axvline(x = bp_lam, color = 'm')
+                else:
+                    plt.axvline(x = bp_lam, color = 'm',label='moveL')
+                    draw_moveL=True
+        bp_num=breakpoints1[-1]
+        bp_lam=bp_num*dlam
+        ###################
+
         if draw_speed_max is None:
             draw_speed_max=max(speed)*1.05
         if max(speed) >= draw_speed_max or max(speed) < draw_speed_max*0.1:

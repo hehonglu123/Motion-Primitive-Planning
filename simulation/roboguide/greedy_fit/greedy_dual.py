@@ -199,8 +199,8 @@ class greedy_fit(fitting_toolbox):
 
 def main():
     ###read in points
-    # dataset='curve_1/'
-    dataset='curve_2_scale/'
+    dataset='curve_1/'
+    # dataset='curve_2_scale/'
     curve_dir='../../../data/'+dataset
     data_dir="../data/"+dataset
     solution_dir=data_dir+'dual_arm_de/'
@@ -219,6 +219,7 @@ def main():
     ###set primitive choices, defaults are all 3
     # greedy_fit_obj.primitives={'movel_fit':greedy_fit_obj.movel_fit,'movec_fit':greedy_fit_obj.movec_fit}
     greedy_fit_obj.primitives={'movel_fit':greedy_fit_obj.movel_fit,'movec_fit':greedy_fit_obj.movec_fit}
+    # greedy_fit_obj.primitives={'movel_fit':greedy_fit_obj.movel_fit}
 
     breakpoints,primitives_choices1,points1,q_bp1,primitives_choices2,points2,q_bp2=greedy_fit_obj.fit_under_error()
 
