@@ -734,7 +734,7 @@ class ilc_toolbox(object):
 					curve_original_indices.append(curve_original_idx)			
 				
 				error_bps.append(error_bp)
-				###error direction
+				###get error direction
 				error_bps_v[bp_idx][bp_sub_idx]=(curve[curve_original_idx,:3]-curve_exe[bp_exe_idx])
 				###normal error direction
 				R_temp=rotation_matrix_from_vectors(curve_exe_R[bp_exe_idx][:,-1],curve[curve_original_idx,3:])

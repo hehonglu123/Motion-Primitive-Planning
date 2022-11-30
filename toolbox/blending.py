@@ -19,7 +19,7 @@ def form_traj_from_bp(q_bp,primitives,robot):
 	curve_R=[init_pose.R]
 	breakpoints=[0]
 	for i in range(1,len(primitives)):
-		if primitives[i]=='movej_fit' or primitives[i]=='moveabsj':
+		if 'movej' in primitives[i] or 'moveabsj' in primitives[i]:
 			#interpolate joint space linearly
 			q_movej=np.linspace(curve_js[-1],q_bp[i][0],num=N+1)[1:]
 			curve_js.extend(q_movej)
@@ -28,7 +28,7 @@ def form_traj_from_bp(q_bp,primitives,robot):
 				pose_temp=robot.fwd(q)
 				curve.append(pose_temp.p)
 				curve_R.append(pose_temp.R)
-		elif primitives[i]=='movel_fit':
+		elif 'movel' in primitives[i]:
 			pose_end=robot.fwd(q_bp[i][0])
 			#interpolate xyz linearly
 			p_movel=np.linspace(curve[-1],pose_end.p,num=N+1)[1:]

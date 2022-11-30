@@ -13,9 +13,9 @@ from lambda_calc import *
 from utils import *
 
 
-data_dir='curve_2/dual_arm/'
-solution_dir=data_dir+'diffevo_pose5/'
-cmd_dir=solution_dir+'30J/'
+data_dir='curve_1/dual_arm/'
+solution_dir=data_dir+'diffevo_pose1/'
+cmd_dir=solution_dir+'50J/'
 num_ls=[30]
 
 robot=robot_obj('ABB_6640_180_255','../config/abb_6640_180_255_robot_default_config.yml',tool_file_path='../config/paintgun.csv',d=50,acc_dict_path='')

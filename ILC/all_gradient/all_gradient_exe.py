@@ -10,10 +10,9 @@ from pandas import read_csv
 import sys
 from io import StringIO
 from scipy.signal import find_peaks
-# sys.path.append('../abb_motion_program_exec')
-from abb_motion_program_exec_client import *
+
 sys.path.append('../')
-sys.path.append('../../toolbox')
+
 from ilc_toolbox import *
 
 from robots_def import *
@@ -23,8 +22,8 @@ from lambda_calc import *
 from blending import *
 
 def main():
-	dataset='from_NX/'
-	solution_dir='curve_pose_opt2_R/'
+	dataset='curve_2/'
+	solution_dir='curve_pose_opt2/'
 	data_dir="../../data/"+dataset+solution_dir
 	cmd_dir="../../data/"+dataset+solution_dir+'50L/'
 
@@ -34,7 +33,7 @@ def main():
 
 
 	multi_peak_threshold=0.2
-	robot=abb6640(d=50)
+	robot=robot_obj('ABB_6640_180_255','../../config/abb_6640_180_255_robot_default_config.yml',tool_file_path='../../config/paintgun.csv',d=50,acc_dict_path='')
 
 	v=1200
 	s = speeddata(v,9999999,9999999,999999)
@@ -57,17 +56,14 @@ def main():
 
 		ms = MotionSend()
 		###execution with plant
-		logged_data=ms.exec_motions(robot,primitives,breakpoints,p_bp,q_bp,s,z)
+		log_results=ms.exec_motions(robot,primitives,breakpoints,p_bp,q_bp,s,z)
 		# Write log csv to file
-		with open("recorded_data/curve_exe_v"+str(v)+"_z10.csv","w") as f:
-			f.write(logged_data)
+		np.savetxt('recorded_data/curve_exe_v'+str(v)+'_z10.csv',log_results.data,delimiter=',',comments='',header='timestamp,cmd_num,J1,J2,J3,J4,J5,J6')
 
 		ms.write_data_to_cmd('recorded_data/command.csv',breakpoints,primitives, p_bp,q_bp)
 
-		StringData=StringIO(logged_data)
-		df = read_csv(StringData, sep =",")
 		##############################data analysis#####################################
-		lam, curve_exe, curve_exe_R,curve_exe_js, speed, timestamp=ms.logged_data_analysis(robot,df,realrobot=True)
+		lam, curve_exe, curve_exe_R,curve_exe_js, speed, timestamp=ms.logged_data_analysis(robot,log_results,realrobot=True)
 		#############################chop extension off##################################
 		lam, curve_exe, curve_exe_R,curve_exe_js, speed, timestamp=ms.chop_extension(curve_exe, curve_exe_R,curve_exe_js, speed, timestamp,curve[0,:3],curve[-1,:3])
 
@@ -109,59 +105,9 @@ def main():
 		# ax.scatter3D(p_bp_np[:,0], p_bp_np[:,1], p_bp_np[:,2], c=p_bp_np[:,2], cmap='Greens',label='breakpoints')
 		# ax.scatter(curve_exe[max_error_idx,0], curve_exe[max_error_idx,1], curve_exe[max_error_idx,2],c='orange',label='worst case')
 		
-		
-		##########################################calculate gradient for all errors at bp's######################################
-		###restore trajectory from primitives
-		curve_interp, curve_R_interp, curve_js_interp, breakpoints_blended=form_traj_from_bp(q_bp,primitives,robot)
-		curve_js_blended,curve_blended,curve_R_blended=blend_js_from_primitive(curve_interp, curve_js_interp, breakpoints_blended, primitives,robot,zone=10)
-
-		###find points on curve_exe closest to all p_bp's, and closest point on blended trajectory to all p_bp's
-		bp_exe_indices=[]		###breakpoints on curve_exe
-		curve_original_indices=[]
-		error_bps=[]
-		v_d=[]
-		p_bp_temp=copy.deepcopy(p_bp)
-		q_bp_temp=copy.deepcopy(q_bp)
-		bp_blended_indices=[]
-		for bp_idx in range(len(p_bp)):
-			_,bp_exe_idx=calc_error(p_bp[bp_idx][0],curve_exe)							###find closest point on curve_exe to bp
-			bp_exe_indices.append(bp_exe_idx)
-			error_bp,curve_original_idx=calc_error(curve_exe[bp_exe_idx],curve[:,:3])	###find closest point on curve_original to curve_exe[bp]
-			curve_original_indices.append(curve_original_idx)			
-			error_bps.append(error_bp)
-			###gradient direction
-			vd_temp=(curve[curve_original_idx,:3]-curve_exe[bp_exe_idx])/2
-			v_d.append(vd_temp)
-			###p_bp temp for numerical gradient
-			p_bp_temp[bp_idx][0]+=vd_temp
-			q_bp_temp[bp_idx][0]=car2js(robot,q_bp[bp_idx][0],p_bp_temp[bp_idx][0],robot.fwd(q_bp[bp_idx][0]).R)[0]
-			###on blended trajectory
-			_,blended_idx=calc_error(p_bp[bp_idx][0],curve_blended)
-			bp_blended_indices.append(blended_idx)
-		
-		# ###restore trajectory from primitives with temp bp's
-		# curve_interp_temp, curve_R_interp_temp, curve_js_interp_temp, breakpoints_blended_temp=form_traj_from_bp(q_bp_temp,primitives,robot)
-		# curve_js_blended_temp,curve_blended_temp,curve_R_blended_temp=blend_js_from_primitive(curve_interp_temp, curve_js_interp_temp, breakpoints_blended_temp, primitives,robot,zone=10)
-		# ###find the gradient
-		# shift_vectors=[]
-		# de_dps=[]
-		# for bp_idx in range(len(p_bp)):
-		# 	shift_vector=curve_blended_temp[bp_blended_indices[bp_idx]]-curve_blended[bp_blended_indices[bp_idx]]
-		# 	new_error=np.linalg.norm(curve[curve_original_indices[bp_idx],:3]-(curve_exe[bp_exe_indices[bp_idx]]+shift_vector))
-		# 	de_dps.append(new_error-error_bps[bp_idx])
-
-		# ###find correct gamma
-		# de_dps=np.reshape(de_dps,(-1,1))
-		# gamma=np.linalg.pinv(de_dps)@error_bps
-
-		gamma=1
-
-
-		###update all bp's
-		for bp_idx in range(len(p_bp)):
-			###p_bp temp for numerical gradient
-			p_bp[bp_idx][0]+=gamma*v_d[bp_idx]
-			q_bp[bp_idx][0]=car2js(robot,q_bp[bp_idx][0],p_bp[bp_idx][0],robot.fwd(q_bp[bp_idx][0]).R)[0]
+		###################################################push bp toward error direction########################################################
+		error_bps_v,error_bps_w=ilc.get_error_direction(curve,p_bp,q_bp,curve_exe,curve_exe_R)
+		p_bp, q_bp=ilc.update_error_direction(curve,p_bp,q_bp,error_bps_v,error_bps_w)
 
 
 		# for m in breakpoint_interp_2tweak_indices:

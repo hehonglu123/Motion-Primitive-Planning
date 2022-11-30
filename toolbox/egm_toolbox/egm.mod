@@ -16,22 +16,22 @@ MODULE egm
         VAR jointtarget joints;
         
         ! "Move" a tiny amount to start EGM
-        !joints:= CJointT();
-        joints:=[[0,0,23,67,-50,0],[0,0,0,0,0,0]];
+        joints:= CJointT();
+        !joints:=[[0,0,23,67,-50,0],[0,0,0,0,0,0]];
         !joints.robax.rax_6 := joints.robax.rax_6 + .0001;
         MoveAbsj joints, v1000, fine, tool0;
     
         StartEGM;
     
-        !EGMActJoint egmID1 \Tool:=tool0 \WObj:=wobj0, \J1:=egm_minmax_joint1 \J2:=egm_minmax_joint1 \J3:=egm_minmax_joint1
-        !\J4:=egm_minmax_joint1 \J5:=egm_minmax_joint1 \J6:=egm_minmax_joint1 \LpFilter:=100 \Samplerate:=4 \MaxPosDeviation:=1000 \MaxSpeedDeviation:=1000;            
-        !EGMRunJoint egmID1, EGM_STOP_HOLD \J1 \J2 \J3 \J4 \J5 \J6 \CondTime:=2000000 \RampInTime:=0.01 \PosCorrGain:=1;
+        EGMActJoint egmID1 \Tool:=tool0 \WObj:=wobj0, \J1:=egm_minmax_joint1 \J2:=egm_minmax_joint1 \J3:=egm_minmax_joint1
+        \J4:=egm_minmax_joint1 \J5:=egm_minmax_joint1 \J6:=egm_minmax_joint1 \LpFilter:=100 \Samplerate:=4 \MaxPosDeviation:=1000 \MaxSpeedDeviation:=1000;            
+        EGMRunJoint egmID1, EGM_STOP_HOLD \J1 \J2 \J3 \J4 \J5 \J6 \CondTime:=2000000 \RampInTime:=0.01 \PosCorrGain:=1;
         
-        EGMActPose egmID1 \Tool:=sprayer \WObj:=wobj0, posecorTable, EGM_FRAME_BASE, posesenTable, EGM_FRAME_BASE 
-            \x:=egm_minmax_lin1 \y:=egm_minmax_lin1 \z:=egm_minmax_lin1 \rx:=egm_minmax_rot1
-            \ry:=egm_minmax_rot1 \rz:=egm_minmax_rot1 \LpFilter:=100
-            \Samplerate:=4, \MaxPosDeviation:=1000 \MaxSpeedDeviation:=1000;
-        EGMRunPose egmID1, EGM_STOP_HOLD \x \y \z \rx \ry \rz \CondTime:=2000000 \RampInTime:=0.01 \PosCorrGain:=1;
+        !EGMActPose egmID1 \Tool:=sprayer \WObj:=wobj0, posecorTable, EGM_FRAME_BASE, posesenTable, EGM_FRAME_BASE 
+        !    \x:=egm_minmax_lin1 \y:=egm_minmax_lin1 \z:=egm_minmax_lin1 \rx:=egm_minmax_rot1
+        !    \ry:=egm_minmax_rot1 \rz:=egm_minmax_rot1 \LpFilter:=100
+        !    \Samplerate:=4, \MaxPosDeviation:=1000 \MaxSpeedDeviation:=1000;
+        !EGMRunPose egmID1, EGM_STOP_HOLD \x \y \z \rx \ry \rz \CondTime:=2000000 \RampInTime:=0.01 \PosCorrGain:=1;
 
             
         WaitUntil FALSE;
@@ -60,8 +60,8 @@ MODULE egm
         egmSt1 := EGMGetState(egmID1);        
         
         IF egmSt1 <= EGM_STATE_CONNECTED THEN            
-            !EGMSetupUC ROB_1, egmID1, "conf1", "UCdevice:" \Joint \CommTimeout:=10000;
-            EGMSetupUC ROB_1, egmID1, "conf1", "UCdevice:" \Pose \CommTimeout:=10000;
+            EGMSetupUC ROB_1, egmID1, "conf1", "UCdevice:" \Joint \CommTimeout:=10000;
+            !EGMSetupUC ROB_1, egmID1, "conf1", "UCdevice:" \Pose \CommTimeout:=10000;
         ENDIF
         
         EGMStreamStart egmID1;

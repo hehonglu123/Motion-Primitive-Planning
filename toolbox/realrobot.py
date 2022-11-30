@@ -78,13 +78,13 @@ def average_5_exe(ms,robot,primitives,breakpoints,p_bp,q_bp,v,z,curve,log_path='
 
 	return curve_js_all_new, avg_curve_js, timestamp_d
 
-def average_5_exe_multimove(ms,breakpoints,robot1,primitives1,p_bp1,q_bp1,v1_all,z1_all,robot2,primitives2,p_bp2,q_bp2,v2_all,z2_all,relative_path,safeq1=None,safeq2=None,log_path=''):
+def average_N_exe_multimove(ms,breakpoints,robot1,primitives1,p_bp1,q_bp1,v1_all,z1_all,robot2,primitives2,p_bp2,q_bp2,v2_all,z2_all,relative_path,safeq1=None,safeq2=None,log_path='',N=5):
 	###5 run execute
 	curve_exe_js_all=[]
 	timestamp_all=[]
 	total_time_all=[]
 
-	for r in range(5):
+	for r in range(N):
 		if safeq1:
 			ms.jog_joint_multimove(safeq1,safeq2)
 
