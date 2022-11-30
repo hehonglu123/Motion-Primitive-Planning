@@ -62,7 +62,7 @@ def main():
 	for i in range(iteration):
 
 		ms = MotionSend(url='http://192.168.55.1:80')
-		curve_js_all_new, avg_curve_js, timestamp_d=average_5_exe(ms,robot,primitives,breakpoints,p_bp,q_bp,s,z,curve,"recorded_data")
+		curve_js_all_new, avg_curve_js, timestamp_d=average_N_exe(ms,robot,primitives,breakpoints,p_bp,q_bp,s,z,curve,"recorded_data")
 		###calculat data with average curve
 		lam, curve_exe, curve_exe_R, speed=logged_data_analysis(robot,timestamp_d,avg_curve_js)
 		#############################chop extension off##################################

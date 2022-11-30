@@ -3,7 +3,7 @@ import numpy as np
 from general_robotics_toolbox import *
 from pandas import read_csv, DataFrame
 
-original_dir='curve_2/dual_arm/diffevo_pose6/'
+original_dir='curve_1/dual_arm/diffevo_pose1/'
 
 abb1200_pose = np.loadtxt(original_dir+'base.csv',delimiter=',')
 curve_js = read_csv(original_dir+'arm1.csv',header=None).values
@@ -15,7 +15,7 @@ H_R=np.eye(4)
 H_R[:3,:3]=rot([0,0,1],rotate_angle)
 abb1200_pose_new=H_R@abb1200_pose
 
-new_dir=original_dir[:-1]+'_2/'
+new_dir=original_dir#[:-1]+'_2/'
 np.savetxt(new_dir+'base.csv',abb1200_pose_new,delimiter=',')
 
 curve_js_new=copy.deepcopy(curve_js)

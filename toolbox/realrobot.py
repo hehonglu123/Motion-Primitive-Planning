@@ -42,24 +42,21 @@ def remove_traj_outlier(curve_exe_js_all,timestamp_all,total_time_all):
 
 	return curve_exe_js_all,timestamp_all
 
-def average_5_exe(ms,robot,primitives,breakpoints,p_bp,q_bp,v,z,curve,log_path=''):
-	###5 run execute
+def average_N_exe(ms,robot,primitives,breakpoints,p_bp,q_bp,v,z,curve,log_path='',N=5):
+	###N run execute
 	curve_exe_js_all=[]
 	timestamp_all=[]
 	total_time_all=[]
 
-	for r in range(5):
-		logged_data=ms.exec_motions(robot,primitives,breakpoints,p_bp,q_bp,v,z)
+	for r in range(N):
+		log_results=ms.exec_motions(robot,primitives,breakpoints,p_bp,q_bp,v,z)
 		###save 5 runs
 		if len(log_path)>0:
 			# Write log csv to file
-			with open(log_path+'/run_'+str(r)+'.csv',"w") as f:
-			    f.write(logged_data)
+			np.savetxt(log_path+'/run_'+str(r)+'.csv',log_results.data,delimiter=',',comments='',header='timestamp,cmd_num,J1,J2,J3,J4,J5,J6')
 
-		StringData=StringIO(logged_data)
-		df = read_csv(StringData, sep =",")
 		##############################data analysis#####################################
-		lam, curve_exe, curve_exe_R,curve_exe_js, speed, timestamp=ms.logged_data_analysis(robot,df,realrobot=True)
+		lam, curve_exe, curve_exe_R,curve_exe_js, speed, timestamp=ms.logged_data_analysis(robot,log_results,realrobot=True)
 
 		###throw bad curves
 		_, _, _,_, _, timestamp_temp=ms.chop_extension(curve_exe, curve_exe_R,curve_exe_js, speed, timestamp,curve[0,:3],curve[-1,:3])
@@ -79,7 +76,7 @@ def average_5_exe(ms,robot,primitives,breakpoints,p_bp,q_bp,v,z,curve,log_path='
 	return curve_js_all_new, avg_curve_js, timestamp_d
 
 def average_N_exe_multimove(ms,breakpoints,robot1,primitives1,p_bp1,q_bp1,v1_all,z1_all,robot2,primitives2,p_bp2,q_bp2,v2_all,z2_all,relative_path,safeq1=None,safeq2=None,log_path='',N=5):
-	###5 run execute
+	###N run execute
 	curve_exe_js_all=[]
 	timestamp_all=[]
 	total_time_all=[]

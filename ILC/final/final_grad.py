@@ -10,10 +10,8 @@ from pandas import read_csv
 import sys
 from io import StringIO
 from scipy.signal import find_peaks
-# sys.path.append('../abb_motion_program_exec')
-from abb_motion_program_exec_client import *
+
 sys.path.append('../')
-sys.path.append('../../toolbox')
 from ilc_toolbox import *
 
 from robots_def import *
@@ -23,8 +21,8 @@ from lambda_calc import *
 from blending import *
 
 def main():
-	dataset='wood/'
-	solution_dir='curve_pose_opt7/'
+	dataset='curve_2/'
+	solution_dir='curve_pose_opt2/'
 	data_dir="../../data/"+dataset+solution_dir
 	cmd_dir="../../data/"+dataset+solution_dir+'greedy0.02/'
 
