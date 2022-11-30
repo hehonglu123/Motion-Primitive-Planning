@@ -27,18 +27,21 @@ from blending import *
 
 def main():
     # curve
-    # data_type='curve_1'
-    data_type='curve_2_scale'
+    data_type='curve_1'
+    # data_type='curve_2_scale'
 
     # data and curve directory
     curve_data_dir='../../../data/'+data_type+'/'
 
-    # test_type='50L'
+    test_type='50L'
     # test_type='30L'
-    test_type='greedy0.5'
     # test_type='greedy0.2'
-    # test_type='moveLgreedy0.5'
+    # test_type='greedy0.02'
     # test_type='moveLgreedy0.2'
+    # test_type='moveLgreedy0.02'
+    # test_type='minStepMoveLgreedy0.2'
+    # test_type='minStepgreedy0.02'
+    # test_type='minStepgreedy0.2'
 
     cmd_dir='../data/'+data_type+'/dual_arm_de/'+test_type+'/'
     # cmd_dir='../data/'+data_type+'/dual_arm_de_possibilyimpossible/'+test_type+'/'
@@ -75,10 +78,8 @@ def main():
     elif data_type=='curve_2_scale':
         ms = MotionSendFANUC(robot1=robot1,robot2=robot2,utool2=3)
 
-    s=1200 # mm/sec in leader frame
+    s=500 # mm/sec in leader frame
     z=100 # CNT100
-    ilc_output=cmd_dir+'results_'+str(s)+'_'+test_type+'/'
-    Path(ilc_output).mkdir(exist_ok=True)
 
     breakpoints1,primitives1,p_bp1,q_bp1,_=ms.extract_data_from_cmd(os.getcwd()+'/'+cmd_dir+'command1.csv')
     breakpoints2,primitives2,p_bp2,q_bp2,_=ms.extract_data_from_cmd(os.getcwd()+'/'+cmd_dir+'command2.csv')
@@ -87,10 +88,17 @@ def main():
     q_bp1_origin=deepcopy(q_bp1)
     q_bp2_origin=deepcopy(q_bp2)
     # print(np.degrees(q_bp2[0][-1]))
-    # p_bp1,q_bp1,p_bp2,q_bp2=ms.extend_dual(ms.robot1,p_bp1,q_bp1,primitives1,ms.robot2,p_bp2,q_bp2,primitives2,breakpoints1,0,extension_start=25,extension_end=90)  ## curve_1, movel
-    # p_bp1,q_bp1,p_bp2,q_bp2=ms.extend_dual(ms.robot1,p_bp1,q_bp1,primitives1,ms.robot2,p_bp2,q_bp2,primitives2,breakpoints1,0,extension_start=25,extension_end=10)  ## curve_1, movel
+    # p_bp1,q_bp1,p_bp2,q_bp2=ms.extend_dual(ms.robot1,p_bp1,q_bp1,primitives1,ms.robot2,p_bp2,q_bp2,primitives2,breakpoints1,0,extension_start=25,extension_end=120)  ## curve_1, movel
+    # p_bp1,q_bp1,p_bp2,q_bp2=ms.extend_dual(ms.robot1,p_bp1,q_bp1,primitives1,ms.robot2,p_bp2,q_bp2,primitives2,breakpoints1,0,extension_start=25,extension_end=50)  ## curve_1, movel
+    p_bp1,q_bp1,p_bp2,q_bp2=ms.extend_dual(ms.robot1,p_bp1,q_bp1,primitives1,ms.robot2,p_bp2,q_bp2,primitives2,breakpoints1,0,extension_start=25,extension_end=50)  ## curve_1, greedy 0.2
+    # p_bp1,q_bp1,p_bp2,q_bp2=ms.extend_dual(ms.robot1,p_bp1,q_bp1,primitives1,ms.robot2,p_bp2,q_bp2,primitives2,breakpoints1,0,extension_start=2,extension_end=120)  ## curve_1, movel greedy 0.02
     
-    p_bp1,q_bp1,p_bp2,q_bp2=ms.extend_dual(ms.robot1,p_bp1,q_bp1,primitives1,ms.robot2,p_bp2,q_bp2,primitives2,breakpoints1,0,extension_start=50,extension_end=100) ## curve_2_scale, movel
+    # p_bp1,q_bp1,p_bp2,q_bp2=ms.extend_dual(ms.robot1,p_bp1,q_bp1,primitives1,ms.robot2,p_bp2,q_bp2,primitives2,breakpoints1,0,extension_start=60,extension_end=150) ## curve_2_scale, movel
+    # p_bp1,q_bp1,p_bp2,q_bp2=ms.extend_dual(ms.robot1,p_bp1,q_bp1,primitives1,ms.robot2,p_bp2,q_bp2,primitives2,breakpoints1,0,extension_start=60,extension_end=120) ## curve_2_scale, movel greedy 0.2
+    # p_bp1,q_bp1,p_bp2,q_bp2=ms.extend_dual(ms.robot1,p_bp1,q_bp1,primitives1,ms.robot2,p_bp2,q_bp2,primitives2,breakpoints1,0,extension_start=50,extension_end=120) ## curve_2_scale, movel greedy 0.02
+    # p_bp1,q_bp1,p_bp2,q_bp2=ms.extend_dual(ms.robot1,p_bp1,q_bp1,primitives1,ms.robot2,p_bp2,q_bp2,primitives2,breakpoints1,0,extension_start=50,extension_end=120) ## curve_2_scale, greedy 0.2
+    # p_bp1,q_bp1,p_bp2,q_bp2=ms.extend_dual(ms.robot1,p_bp1,q_bp1,primitives1,ms.robot2,p_bp2,q_bp2,primitives2,breakpoints1,0,extension_start=30,extension_end=80) ## curve_2_scale, greedy 0.02
+    # p_bp1,q_bp1,p_bp2,q_bp2=ms.extend_dual(ms.robot1,p_bp1,q_bp1,primitives1,ms.robot2,p_bp2,q_bp2,primitives2,breakpoints1,0,extension_start=25,extension_end=50) ## curve_2_scale, minstep greedy 0.02
     
     # q_bp1_origin_flat=[]
     # q_bp2_origin_flat=[]
@@ -233,10 +241,13 @@ def main():
         ax1.legend(loc=0)
         ax2.legend(loc=0)
         plt.legend()
-        # plt.savefig(ilc_output+'iteration_ '+str(i))
-        # plt.clf()
-        plt.show()
-        exit()
+
+        ilc_output=cmd_dir+'results_'+str(s)+'_'+test_type+'/'
+        Path(ilc_output).mkdir(exist_ok=True)
+        plt.savefig(ilc_output+'iteration_ '+str(i))
+        plt.clf()
+        # # plt.show()
+        # exit()
 
         df=DataFrame({'primitives':primitives1,'points':p_bp1,'q_bp':q_bp1})
         df.to_csv(ilc_output+'command_arm1_'+str(i)+'.csv',header=True,index=False)
@@ -251,6 +262,7 @@ def main():
             break
 
         if max(error)>max_error:
+            print("Use grad")
             error_localmin_flag=True
             use_grad=True
         
@@ -294,10 +306,21 @@ def main():
                 p_bp1_new, q_bp1_new,p_bp2_new,q_bp2_new=ilc.update_bp_xyz_dual([p_bp1,p_bp2],[q_bp1,q_bp2],de_dp,error[peak],breakpoint_interp_2tweak_indices,alpha=0.5)
 
                 #########plot adjusted breakpoints
-                p_bp_relative_new,_=ms.form_relative_path(np.squeeze(q_bp1_new),np.squeeze(q_bp2_new),base2_R,base2_p)
+                # q_bp1_origin_flat=[]
+                # q_bp2_origin_flat=[]
+                # q_bp1_flat=[]
+                # q_bp2_flat=[]
+                # for i in range(len(q_bp1_origin)):
+                #     for j in range(len(q_bp1_origin[i])):
+                #         q_bp1_origin_flat.append(q_bp1_origin[i][j])
+                #         q_bp2_origin_flat.append(q_bp2_origin[i][j])
+                #         q_bp1_flat.append(q_bp1[i][j])
+                #         q_bp2_flat.append(q_bp2[i][j])
 
-                for bp_new in p_bp_relative_new[breakpoint_interp_2tweak_indices]:
-                    all_new_bp.append(bp_new)
+                # p_bp_relative_new,_=ms.form_relative_path(np.squeeze(q_bp1_new),np.squeeze(q_bp2_new),base2_R,base2_p)
+
+                # for bp_new in p_bp_relative_new[breakpoint_interp_2tweak_indices]:
+                #     all_new_bp.append(bp_new)
                 # print(all_new_bp)
 
 
@@ -333,7 +356,7 @@ def main():
                     gamma_v*=0.75
                     gamma_w*=0.75
                     if gamma_w<0.02:
-                        error_localmin_flag=True
+                        # error_localmin_flag=True
                         use_grad=True
                         break
 

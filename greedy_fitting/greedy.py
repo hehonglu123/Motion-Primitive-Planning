@@ -10,7 +10,7 @@ from toolbox_circular_fit import *
 from robots_def import *
 from general_robotics_toolbox import *
 from error_check import *
-from MotionSend import *
+# from MotionSend import *
 from lambda_calc import *
 
 #####################3d curve-fitting with MoveL, MoveJ, MoveC; stepwise incremental bi-section searched self.breakpoints###############################
@@ -75,6 +75,8 @@ class greedy_fit(fitting_toolbox):
 			###fitting
 			curve_fit,curve_fit_R,curve_fit_js,max_error,max_ori_error=primitive(self.curve[cur_idx:cur_idx+next_point],self.curve_js[cur_idx:cur_idx+next_point],self.curve_R[cur_idx:cur_idx+next_point], rl=rl)
 
+			print(max_error)
+
 			###bp going backward to meet threshold
 			if rl:
 				if np.max(max_error) > self.max_error_threshold or np.max(max_ori_error) > self.max_ori_threshold:
@@ -125,8 +127,10 @@ class greedy_fit(fitting_toolbox):
 
 			###bisection search for each primitive 
 			for key in self.primitives: 
+				print(key)
 				curve_fit[key],curve_fit_R[key],curve_fit_js[key],max_errors[key],max_ori_errors[key]=self.bisect(self.primitives[key],self.breakpoints[-1])
 				length[key]=len(curve_fit[key])
+			exit()
 			###find best primitive
 			if length['movec_fit']==length['movel_fit'] and length['movel_fit']==length['movej_fit']:
 				key=min(max_errors, key=max_errors.get)

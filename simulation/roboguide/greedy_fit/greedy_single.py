@@ -18,22 +18,24 @@ from lambda_calc import *
 from blending import *
 
 # all_objtype=['curve_blade_scale','curve_wood']
-all_objtype=['curve_wood']
+all_objtype=['curve_2_scale']
+# all_objtype=['curve_wood']
 # all_max_error_thres = [0.02,0.05,0.1]
 # all_max_error_thres = [0.05,0.1]
-all_max_error_thres = [0.2,0.5]
+# all_max_error_thres = [0.2,0.5]
+all_max_error_thres = [0.02]
 
 for obj_type in all_objtype:
     print(obj_type)
 
     ### data directory
-    data_dir='../data/baseline_m10ia/'+obj_type+'/'
-    # data_dir='../data/'+obj_type+'/single_arm_de/'
+    # data_dir='../data/baseline_m10ia/'+obj_type+'/'
+    data_dir='../data/'+obj_type+'/single_arm_de/'
     print(data_dir)
 
     ## robot
     toolbox_path = '../../../toolbox/'
-    robot = robot_obj(toolbox_path+'robot_info/fanuc_m10ia_robot_default_config.yml',tool_file_path=toolbox_path+'tool_info/paintgun.csv',d=50,acc_dict_path=toolbox_path+'robot_info/m10ia_acc.pickle',j_compensation=[1,1,-1,-1,-1,-1])
+    robot = robot_obj('FANUC_m10ia',toolbox_path+'robot_info/fanuc_m10ia_robot_default_config.yml',tool_file_path=toolbox_path+'tool_info/paintgun.csv',d=50,acc_dict_path=toolbox_path+'robot_info/m10ia_acc.pickle',j_compensation=[1,1,-1,-1,-1,-1])
     
     ## load curve
     curve_js =np.loadtxt(data_dir+"Curve_js.csv",delimiter=',')

@@ -29,6 +29,7 @@ class fitting_toolbox(object):
 			self.curve_R2.append(pose2_now.R)
 
 			self.relative_path.append(pose2_world_now.R.T@(pose1_now.p-pose2_world_now.p))
+			# self.relative_path.append(np.dot(pose2_world_now.R.T,(pose1_now.p-pose2_world_now.p)))
 			self.relative_R.append(pose2_world_now.R.T@pose1_now.R)
 
 

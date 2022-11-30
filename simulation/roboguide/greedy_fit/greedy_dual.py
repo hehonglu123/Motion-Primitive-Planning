@@ -25,10 +25,15 @@ class greedy_fit(fitting_toolbox):
         self.max_ori_threshold=max_ori_threshold
         self.step=int(len(curve_js1)/25)
 
+        # self.min_step=int(min_length/np.average(np.diff(self.lam)))
+        self.min_step=int(min_length)
+        self.c_min_length=50
+
         self.slope_constraint=np.radians(180)
         self.break_early=False
         ###initial primitive candidates
         self.primitives={'movel_fit':self.movel_fit,'movej_fit':self.movej_fit,'movec_fit':self.movec_fit}
+        # self.primitives={'movel_fit':self.movel_fit_greedy,'movej_fit':self.movej_fit_greedy,'movec_fit':self.movec_fit_greedy}
 
     def update_dict(self,curve_js1,curve_relative,curve_relative_R):
         ###form new error dict
@@ -95,6 +100,84 @@ class greedy_fit(fitting_toolbox):
                 next_point= min(next_point + int(np.abs(next_point-prev_point)),len(self.curve_js1)-cur_idx)
                 prev_point=prev_point_temp
 
+    # def movel_fit_greedy(self,curve,curve_js,curve_R, rl=False):	###unit vector slope
+        
+    #     # return self.movel_fit(curve,curve_js,curve_R,self.curve_fit[-1] if len(self.curve_fit)>0 else [],self.curve_fit_R[-1] if len(self.curve_fit_R)>0 else [], dqdlam_prev=(self.curve_fit_js[-1]-self.curve_fit_js[-2])/(self.lam[len(self.curve_fit_js)-1]-self.lam[len(self.curve_fit_js)-2]) if len(self.curve_fit_js)>1 else [], rl=rl)
+    
+    #     return self.movel_fit(curve,curve_js,curve_R,self.robot1,self.curve_fit1[-1] if len(self.curve_fit1)>0 else [],self.curve_fit_R1[-1] if len(self.curve_fit_R1)>0 else [])
+
+
+    # def movej_fit_greedy(self,curve,curve_js,curve_R, rl=False):
+
+    #     # return self.movej_fit(curve,curve_js,curve_R,self.curve_fit_js[-1] if len(self.curve_fit_js)>0 else [], dqdlam_prev=(self.curve_fit_js[-1]-self.curve_fit_js[-2])/(self.lam[len(self.curve_fit_js)-1]-self.lam[len(self.curve_fit_js)-2]) if len(self.curve_fit_js)>1 else [], rl=rl)
+    #     return self.movej_fit(curve,curve_js,curve_R,self.robot1,self.curve_fit_js1[-1] if len(self.curve_fit_js1)>0 else [])
+
+    # def movec_fit_greedy(self,curve,curve_js,curve_R, rl=False):
+    #     # return self.movec_fit(curve,curve_js,curve_R,self.curve_fit[-1] if len(self.curve_fit)>0 else [],self.curve_fit_R[-1] if len(self.curve_fit_R)>0 else [], dqdlam_prev=(self.curve_fit_js[-1]-self.curve_fit_js[-2])/(self.lam[len(self.curve_fit_js)-1]-self.lam[len(self.curve_fit_js)-2]) if len(self.curve_fit_js)>1 else [], rl=rl)
+
+    #     return self.movec_fit(curve,curve_js,curve_R,self.robot1,self.curve_fit1[-1] if len(self.curve_fit1)>0 else [],self.curve_fit_R1[-1] if len(self.curve_fit_R1)>0 else [])
+
+    # def bisect(self,primitive,cur_idx, rl=False):
+
+    #     next_point = min(self.step,len(self.relative_path)-self.breakpoints[-1])
+    #     prev_point=0
+    #     prev_possible_point=0
+
+    #     print(self.relative_path[cur_idx:cur_idx+next_point])
+
+    #     while True:
+    #         ###end condition, bisection bp converges
+    #         if next_point==prev_point:
+    #             if rl:
+    #                 if np.max(max_error)<self.max_error_threshold and np.max(max_ori_error)<self.max_ori_threshold:
+    #                 # if np.max(max_error)<self.max_error_threshold:
+    #                     return curve_fit,curve_fit_R,curve_fit_js,max_error,max_ori_error
+    #                 else:
+    #                     next_point=max(prev_possible_point,2)
+    #                     return primitive(self.relative_path[cur_idx:cur_idx+next_point],self.curve_js1[cur_idx:cur_idx+next_point],self.relative_R[cur_idx:cur_idx+next_point], rl=rl)
+    #             else:
+    #                 if max_error<self.max_error_threshold and max_ori_error<self.max_ori_threshold:
+    #                 # if max_error<self.max_error_threshold:
+    #                     return curve_fit,curve_fit_R,curve_fit_js,max_error,max_ori_error
+    #                 else:
+    #                     next_point=max(prev_possible_point,2)
+    #                     return primitive(self.relative_path[cur_idx:cur_idx+next_point],self.curve_js1[cur_idx:cur_idx+next_point],self.relative_R[cur_idx:cur_idx+next_point], rl=rl)
+            
+    #         ###end condition2, gurantee minimum segment length, excluding first and last points
+    #         # if prev_point<self.min_step and next_point<self.min_step and self.breakpoints[-1]>0:
+    #         # 	next_point=self.min_step
+    #         # 	return primitive(self.curve[cur_idx:cur_idx+next_point],self.curve_js[cur_idx:cur_idx+next_point],self.curve_R[cur_idx:cur_idx+next_point], rl=rl)
+
+    #         ###fitting
+    #         curve_fit,curve_fit_R,curve_fit_js,max_error,max_ori_error=primitive(self.relative_path[cur_idx:cur_idx+next_point],self.curve_js1[cur_idx:cur_idx+next_point],self.relative_R[cur_idx:cur_idx+next_point], rl=rl)
+
+    #         print(max_error)
+
+    #         ###bp going backward to meet threshold
+    #         if rl:
+    #             if np.max(max_error) > self.max_error_threshold or np.max(max_ori_error) > self.max_ori_threshold:
+    #                 prev_point_temp = next_point
+    #                 next_point -= int(np.abs(next_point - prev_point) / 2)
+    #                 prev_point = prev_point_temp
+
+    #             ###bp going forward to get close to threshold
+    #             else:
+    #                 prev_possible_point = next_point
+    #                 prev_point_temp = next_point
+    #                 next_point = min(next_point + int(np.abs(next_point - prev_point)), len(self.relative_path) - cur_idx)
+    #                 prev_point = prev_point_temp
+    #         else:
+    #             if max_error>self.max_error_threshold or max_ori_error>self.max_ori_threshold:
+    #                 prev_point_temp=next_point
+    #                 next_point-=int(np.abs(next_point-prev_point)/2)
+    #                 prev_point=prev_point_temp
+
+    #             ###bp going forward to get close to threshold
+    #             else:
+    #                 prev_possible_point=next_point
+    #                 prev_point_temp=next_point
+    #                 next_point= min(next_point + int(np.abs(next_point-prev_point)),len(self.relative_path)-cur_idx)
+    #                 prev_point=prev_point_temp
 
     def fit_under_error(self):
 
@@ -108,7 +191,9 @@ class greedy_fit(fitting_toolbox):
         q_bp2=[]
 
         self.curve_fit1=[]
+        self.curve_fit1_world=[]
         self.curve_fit_R1=[]
+        self.curve_fit_R1_world=[]
         self.curve_fit_js1=[]
         self.curve_fit2=[]
         self.curve_fit_R2=[]
@@ -125,7 +210,47 @@ class greedy_fit(fitting_toolbox):
 
             ###bisection search for each primitive 
             ###TODO: pass curve_js from j fit
+
+            ########### from greedy single
+            ###bisection search for each primitive 
+            # max_errors={}
+            # max_ori_errors={}
+            # length={}
+            # curve_fit={}
+            # curve_fit_R={}
+            # curve_fit_js={}
+            # for key in self.primitives: 
+            #     print(key)
+            #     curve_fit[key],curve_fit_R[key],curve_fit_js[key],max_errors[key],max_ori_errors[key]=self.bisect(self.primitives[key],self.breakpoints[-1])
+            #     length[key]=len(curve_fit[key])
+            # exit()
+            # ###find best primitive
+            # if length['movec_fit']==length['movel_fit'] and length['movel_fit']==length['movej_fit']:
+            #     key=min(max_errors, key=max_errors.get)
+            # else:
+            #     key=max(length, key=length.get)
+
+            # ###moveC length thresholding (>50mm)
+            # if key=='movec_fit' and np.linalg.norm(curve_fit['movec_fit'][-1]-curve_fit['movec_fit'][0])<self.c_min_length:
+            #     key='movel_fit'
+            
+            # primitive1=deepcopy(key)
+            # curve_fit1=deepcopy(curve_fit[key])
+            # curve_fit_R1=deepcopy(curve_fit_R[key])
+            ############################################################
+
+            ######## greedy dual
             primitive1,curve_fit1,curve_fit_R1=self.bisect(self.breakpoints[-1])
+            ##################################
+
+            if len(curve_fit1)<self.min_step:
+                print("Smaller than min step")
+                primitive1='movel_fit'
+                indices=range(self.breakpoints[-1],min([self.breakpoints[-1]+self.min_step,len(self.relative_path)]))
+                curve_fit1,curve_fit_R1,_,_,_=self.primitives[primitive1](self.relative_path[indices],self.curve_js1[indices],self.relative_R[indices],\
+                    self.robot1,self.curve_fit1[-1] if len(self.curve_fit1)>0 else [],self.curve_fit_R1[-1] if len(self.curve_fit_R1)>0 else [])
+
+            print(primitive1)
 
             ###convert relative curve_fit into world frame, then solves inv
             curve_fit1_world=copy.deepcopy(curve_fit1)
@@ -150,19 +275,23 @@ class greedy_fit(fitting_toolbox):
 
             ###generate output
             if primitive1=='movec_fit':
-                points1.append([curve_fit1[int(len(curve_fit1)/2)],curve_fit1[-1]])
+                # points1.append([curve_fit1[int(len(curve_fit1)/2)],curve_fit1[-1]])
+                points1.append([curve_fit1_world[int(len(curve_fit1_world)/2)],curve_fit1_world[-1]])
                 q_bp1.append([curve_fit_js1[int(len(curve_fit_R1)/2)],curve_fit_js1[-1]])
             elif primitive1=='movel_fit':
-                points1.append([curve_fit1[-1]])
+                # points1.append([curve_fit1[-1]])
+                points1.append([curve_fit1_world[-1]])
                 q_bp1.append([curve_fit_js1[-1]])
             else:
-                points1.append([curve_fit1[-1]])
+                # points1.append([curve_fit1[-1]])
+                points1.append([curve_fit1_world[-1]])
                 q_bp1.append([curve_fit_js1[-1]])
-
 
             self.breakpoints.append(min(self.breakpoints[-1]+len(curve_fit1),len(self.curve1)))
             self.curve_fit1.extend(curve_fit1)
             self.curve_fit_R1.extend(curve_fit_R1)
+            self.curve_fit1_world.extend(curve_fit1_world)
+            self.curve_fit_R1_world.extend(curve_fit_R1_world)
 
             primitives_choices1.append(primitive1)
             
@@ -178,6 +307,7 @@ class greedy_fit(fitting_toolbox):
 
             print(self.breakpoints)
             print(primitives_choices1)
+            # print(max_errors[key],max_ori_errors[key])
 
         ##############################check error (against fitting back projected curve)##############################
 
@@ -187,7 +317,8 @@ class greedy_fit(fitting_toolbox):
         self.curve_fit1=np.array(self.curve_fit1)
         self.curve_fit_R1=np.array(self.curve_fit_R1)
         self.curve_fit_js1=np.array(self.curve_fit_js1)
-
+        self.curve_fit1_world=np.array(self.curve_fit1_world)
+        self.curve_fit_R1_world=np.array(self.curve_fit_R1_world)
 
         return np.array(self.breakpoints),primitives_choices1,points1,q_bp1,primitives_choices2,points2,q_bp2
 
@@ -208,18 +339,26 @@ def main():
     ## robot
     toolbox_path = '../../../toolbox/'
     robot1 = robot_obj('FANUC_m10ia',toolbox_path+'robot_info/fanuc_m10ia_robot_default_config.yml',tool_file_path=toolbox_path+'tool_info/paintgun.csv',d=50,acc_dict_path=toolbox_path+'robot_info/m10ia_acc_compensate.pickle',j_compensation=[1,1,-1,-1,-1,-1])
-    robot2=robot_obj('FANUC_lrmate200id',toolbox_path+'robot_info/fanuc_lrmate200id_robot_default_config.yml',tool_file_path=solution_dir+'tcp.csv',acc_dict_path=toolbox_path+'robot_info/lrmate200id_acc_compensate.pickle',j_compensation=[1,1,-1,-1,-1,-1])
+    robot2=robot_obj('FANUC_lrmate200id',toolbox_path+'robot_info/fanuc_lrmate200id_robot_default_config.yml',tool_file_path=solution_dir+'tcp.csv',base_transformation_file=solution_dir+'base.csv',acc_dict_path=toolbox_path+'robot_info/lrmate200id_acc_compensate.pickle',j_compensation=[1,1,-1,-1,-1,-1])
 
     relative_path,lam_relative_path,lam1,lam2,curve_js1,curve_js2=initialize_data(dataset,curve_dir,solution_dir,robot1,robot2)
 
-    min_length=20
-    fit_error=0.5
+    # _,_,_,_,relative_path,relative_path_R=form_relative_path(curve_js1,curve_js2,robot1,robot2)
+    # print(relative_path[:10,:])
+
+    # min_length=20
+    # min_length=int(50000/50)
+    min_length=int(50000/30)
+    # min_length=0
+
+    fit_error=0.02
     greedy_fit_obj=greedy_fit(robot1,robot2,curve_js1[::1],curve_js2[::1],min_length,fit_error)
 
     ###set primitive choices, defaults are all 3
     # greedy_fit_obj.primitives={'movel_fit':greedy_fit_obj.movel_fit,'movec_fit':greedy_fit_obj.movec_fit}
     greedy_fit_obj.primitives={'movel_fit':greedy_fit_obj.movel_fit,'movec_fit':greedy_fit_obj.movec_fit}
     # greedy_fit_obj.primitives={'movel_fit':greedy_fit_obj.movel_fit}
+    # greedy_fit_obj.primitives={'movel_fit':greedy_fit_obj.movel_fit_greedy,'movec_fit':greedy_fit_obj.movec_fit_greedy}
 
     breakpoints,primitives_choices1,points1,q_bp1,primitives_choices2,points2,q_bp2=greedy_fit_obj.fit_under_error()
 
@@ -243,7 +382,7 @@ def main():
 
     ############insert initial configuration#################
     primitives_choices1.insert(0,'movej_fit')
-    points1.insert(0,[greedy_fit_obj.curve_fit1[0]])
+    points1.insert(0,[greedy_fit_obj.curve_fit1_world[0]])
     q_bp1.insert(0,[greedy_fit_obj.curve_fit_js1[0]])
 
     primitives_choices2.insert(0,'movej_fit')
@@ -254,7 +393,7 @@ def main():
     print(len(primitives_choices1))
     print(len(points1))
 
-    output_dir=solution_dir+'greedy'+str(fit_error)+'/'
+    output_dir=solution_dir+'minStepgreedy'+str(fit_error)+'/'
     Path(output_dir).mkdir(exist_ok=True)
 
     breakpoints[1:]=breakpoints[1:]-1

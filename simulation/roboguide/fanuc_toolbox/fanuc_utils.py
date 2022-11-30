@@ -798,9 +798,14 @@ class MotionSendFANUC(object):
             
             # solve invkin for initial point
             if not workpiece:
-                q_bp.insert(0,[car2js(robot,q_bp[0][0],p_start_new,R_start_new)[0]])
-                points_list.insert(0,[p_start_new])
-                primitives.insert(1,'movel_fit')
+                try:
+                    q_bp.insert(0,[car2js(robot,q_bp[0][0],p_start_new,R_start_new)[0]])
+                    points_list.insert(0,[p_start_new])
+                    primitives.insert(1,'movel_fit')
+                except:
+                    q_bp.insert(0,[car2js(robot,q_bp[0][0],p_start_new,R_start)[0]])
+                    points_list.insert(0,[p_start_new])
+                    primitives.insert(1,'movel_fit')
             else:
                 T_start_new_world_r2=robot2.fwd(q_bp2[0][-1],world=True)
                 p_start_new_world_r1 = T_start_new_world_r2.R@p_start_new+T_start_new_world_r2.p
@@ -908,9 +913,14 @@ class MotionSendFANUC(object):
 
             # solve invkin for initial point
             if not workpiece:
-                q_bp.append([car2js(robot,q_bp[-1][0],p_end_new,R_end_new)[0]])
-                points_list.append([p_end_new])
-                primitives.append('movel_fit')
+                try:
+                    q_bp.append([car2js(robot,q_bp[-1][0],p_end_new,R_end_new)[0]])
+                    points_list.append([p_end_new])
+                    primitives.append('movel_fit')
+                except:
+                    q_bp.append([car2js(robot,q_bp[-1][0],p_end_new,R_end)[0]])
+                    points_list.append([p_end_new])
+                    primitives.append('movel_fit')
             else:
                 p_end_new_world_r2=robot2.fwd(q_bp2[-1][-1],world=True)
                 p_end_new_world_r1 = p_end_new_world_r2.R@p_end_new+p_end_new_world_r2.p
