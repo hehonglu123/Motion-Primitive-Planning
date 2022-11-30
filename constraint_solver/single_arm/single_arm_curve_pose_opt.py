@@ -14,8 +14,9 @@ def main():
 	robot=robot_obj('ABB_6640_180_255','../../config/ABB_6640_180_255_robot_default_config.yml',tool_file_path='../../config/paintgun.csv',d=50,acc_dict_path='../../toolbox/robot_info/6640acc_new.pickle')
 	# robot = robot_obj('FANUC_m10ia','../../config/FANUC_m10ia_robot_default_config.yml',tool_file_path='../../config/paintgun.csv',d=50,acc_dict_path='../../config/FANUC_m10ia_acc_new.pickle')
 
-	v_cmd=500
-	opt=lambda_opt(curve_dense[:,:3],curve_dense[:,3:],robot1=robot,urdf_path='../../config/urdf/',curve_name=dataset,steps=500,v_cmd=v_cmd)
+	v_cmd=800
+	# opt=lambda_opt(curve_dense[:,:3],curve_dense[:,3:],robot1=robot,urdf_path='../../config/urdf/',curve_name=dataset,steps=500,v_cmd=v_cmd)
+	opt=lambda_opt(curve_dense[:,:3],curve_dense[:,3:],robot1=robot,curve_name=dataset,steps=500,v_cmd=v_cmd)
 
 	#read in initial curve pose
 	with open(data_dir+'baseline/curve_pose.yaml') as file:
