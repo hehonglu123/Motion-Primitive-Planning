@@ -12,7 +12,7 @@ from dual_arm import *
 dataset='curve_1/'
 data_dir="../../../data/"+dataset
 solution_dir=data_dir+'dual_arm/'+'diffevo_pose4/'
-exe_dir='../../../ilc/final/curve1_dual_v500/'
+exe_dir='../../../ilc/final/recorded_data/'
 
 
 robot1=robot_obj('ABB_6640_180_255','../../../config/abb_6640_180_255_robot_default_config.yml',tool_file_path='../../../config/paintgun.csv',d=50,acc_dict_path='')

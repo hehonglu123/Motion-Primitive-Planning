@@ -30,9 +30,9 @@ def main():
 	et1=EGM_toolbox(egm1,robot1)
 	et2=EGM_toolbox(egm2,robot2)
 
-	vd=2222
+	vd=1800
 	idx=et1.downsample24ms(relative_path,vd)
-	extension_start=100
+	extension_start=200
 	extension_end=100
 
 	curve_cmd_js1=curve_js1[idx]
@@ -45,7 +45,21 @@ def main():
 	curve_js1_d=copy.deepcopy(curve_cmd_js1_ext)
 	curve_js2_d=copy.deepcopy(curve_cmd_js2_ext)
 
-	
+	#################FIRST TWO ITERATION, PUSH IN ERROR DIRECTION#########################################################
+	for i in range(2):
+		###jog both arm to start pose
+		et1.jog_joint(curve_cmd_js1_ext[0])
+		timestamp1,curve_exe_js1=et1.traverse_curve_js(curve_cmd_js1_ext)
+
+		et2.jog_joint(curve_cmd_js2_ext[0])
+		timestamp2,curve_exe_js2=et2.traverse_curve_js(curve_cmd_js2_ext)
+
+		error1=curve_js1_d-curve_exe_js1
+		curve_cmd_js1_ext=curve_cmd_js1_ext+error1
+		error2=curve_js2_d-curve_exe_js2
+		curve_cmd_js2_ext=curve_cmd_js2_ext+error2
+
+
 	iteration=100
 	skip=False
 

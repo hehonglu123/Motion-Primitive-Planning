@@ -9,8 +9,6 @@ from general_robotics_toolbox import *
 from pandas import read_csv
 import sys
 from io import StringIO
-# sys.path.append('../abb_motion_program_exec')
-from abb_motion_program_exec_client import *
 sys.path.append('../../../toolbox')
 from robots_def import *
 from error_check import *
@@ -18,7 +16,7 @@ from MotionSend import *
 
 def main():
     ms = MotionSend()
-    dataset='from_NX/'
+    dataset='curve_2/'
     solution_dir='curve_pose_opt2/'
     cmd_dir='../../../data/'+dataset+solution_dir+'100L/'
     data_dir='../../../data/'+dataset+solution_dir
@@ -26,7 +24,7 @@ def main():
     curve = read_csv(data_dir+"Curve_in_base_frame.csv",header=None).values
     lam_original=calc_lam_cs(curve[:,:3])
 
-    robot=robot_obj('../../../config/abb_6640_180_255_robot_default_config.yml',tool_file_path='../../../config/paintgun.csv',d=50,acc_dict_path='')
+    robot=robot_obj('ABB_6640_180_255','../../../config/abb_6640_180_255_robot_default_config.yml',tool_file_path='../../../config/paintgun.csv',d=50,acc_dict_path='')
 
     v250 = speeddata(250,9999999,9999999,999999)
     v350 = speeddata(350,9999999,9999999,999999)
@@ -39,7 +37,7 @@ def main():
     # speed={'v200':v200,'v250':v250,'v300':v300,'v350':v350,'v400':v400,'v450':v450,'v500':v500}
     # speed={'v800':v800,'v900':v900,'v1000':v1000,'v1100':v1100,'v1200':v1200,'v1300':v1300,'v1400':v1400}
     # speed={'v800':v800,'v1000':v1000,'v1200':v1200,'v1500':v1500,'v2000':v2000}
-    speed={'v50':v50}
+    speed={'v1400':v1400}
     zone={'z100':z100}
 
     for s in speed:
