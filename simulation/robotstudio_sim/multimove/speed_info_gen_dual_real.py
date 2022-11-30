@@ -10,10 +10,10 @@ from lambda_calc import *
 from dual_arm import *
 from realrobot import *
 
-dataset='curve_2/'
+dataset='curve_1/'
 data_dir="../../../data/"+dataset
-solution_dir=data_dir+'dual_arm/'+'diffevo_pose6/'
-exe_dir='../../../ilc/final/curve2_dual_v1500_real/'
+solution_dir=data_dir+'dual_arm/'+'diffevo_pose4/'
+exe_dir='../../../ilc/final/curve1_dual_v400_real/'
 
 
 robot1=robot_obj('ABB_6640_180_255','../../../config/abb_6640_180_255_robot_default_config.yml',tool_file_path='../../../config/paintgun.csv',d=50,acc_dict_path='')
