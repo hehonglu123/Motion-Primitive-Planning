@@ -14,8 +14,8 @@ from lambda_calc import *
 from utils import *
 
 
-data_dir='from_NX/'
-solution_dir='baseline/'
+data_dir='curve_1/'
+solution_dir='curve_pose_opt1/'
 
 num_ls=[30]
 robot=abb6640(d=50)
