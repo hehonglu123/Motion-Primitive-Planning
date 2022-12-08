@@ -10,7 +10,7 @@ def main():
 	data_dir='../../data/curve_1/'
 	relative_path=read_csv(data_dir+"Curve_dense.csv",header=None).values
 
-	v_cmd=1555
+	v_cmd=1333
 
 	H_1200=np.loadtxt(data_dir+'dual_arm/abb1200.csv',delimiter=',')
 
@@ -31,7 +31,7 @@ def main():
 	bnds=tuple(zip(lower_limit,upper_limit))
 	res = differential_evolution(opt.dual_arm_opt_w_pose_3dof, bnds, args=None,workers=-1,
 									x0 = np.hstack((np.zeros(6),base2_p[0],base2_p[1],base2_theta,[0])),
-									strategy='best1bin', maxiter=1000,
+									strategy='best1bin', maxiter=700,
 									popsize=15, tol=1e-10,
 									mutation=(0.5, 1), recombination=0.7,
 									seed=None, callback=None, disp=True,
@@ -46,7 +46,7 @@ def main():
 	# print(opt.dual_arm_opt_w_pose_3dof(res.x))
 
 	q_init2=res.x[:6]
-	base2_p=np.array([res.x[6],res.x[7],790.5])		###fixed z height
+	base2_p=np.array([res.x[6],res.x[7],765.5])		###fixed z height
 	base2_theta=res.x[8]
 	base2_R=Rz(base2_theta)
 

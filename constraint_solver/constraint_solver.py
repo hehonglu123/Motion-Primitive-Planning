@@ -646,7 +646,7 @@ class lambda_opt(object):
 	def dual_arm_opt_w_pose_3dof(self,x):
 		##x:q_init2,base2_x,base2_y,base2_theta,theta_0
 		q_init2=x[:6]
-		base2_p=[x[6],x[7],790.5]		###fixed z height
+		base2_p=[x[6],x[7],765.5]		###fixed z height
 		base2_theta=x[8]
 		base2_R=Rz(base2_theta)
 
