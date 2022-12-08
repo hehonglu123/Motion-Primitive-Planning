@@ -955,6 +955,7 @@ def invdebug():
 	print(robot2.upper_limit)
 	print(robot2.lower_limit)
 	print(robot2.tesseract_robot.invkin(Transform(pose.R,pose.p),np.zeros(len(robot2.joint_vel_limit))))
+	print(robot6_sphericalwrist_invkin(robot2.robot,pose))
 
 	# car2js(robot2,q,pose.p,pose.R)[0]
 
