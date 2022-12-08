@@ -15,9 +15,9 @@ from utils import *
 
 
 data_dir='curve_1/'
-solution_dir='curve_pose_opt1/'
+solution_dir='curve_pose_opt1_2/'
 
-num_ls=[30]
+num_ls=[100]
 robot=abb6640(d=50)
 # curve_js = read_csv(data_dir+'Curve_js.csv',header=None).values
 curve_js = read_csv(data_dir+solution_dir+'Curve_js.csv',header=None).values
