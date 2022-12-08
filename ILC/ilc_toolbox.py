@@ -784,6 +784,7 @@ class ilc_toolbox(object):
 
 				q_bp1[bp_idx][bp_sub_idx]=car2js(self.robot[0],q_bp1[bp_idx][bp_sub_idx],p_bp1[bp_idx][bp_sub_idx],R_new)[0]
 
+		
 		for bp_idx in range(len(p_bp2)):
 			for bp_sub_idx in range(len(p_bp2[bp_idx])):				
 				if (bp_idx==0 and bp_sub_idx==0) or (bp_idx==len(p_bp1)-1 and bp_sub_idx==len(p_bp1[bp_idx])-1) and extension:
@@ -793,9 +794,12 @@ class ilc_toolbox(object):
 					step_v=1*gamma_v
 					step_w=1*gamma_w
 				#push toward error direction
+				print(p_bp2[bp_idx][bp_sub_idx])
 				p_bp2[bp_idx][bp_sub_idx]+=step_v*error_bps_v2[bp_idx][bp_sub_idx]
-				R_old=self.robot[1].fwd(q_bp2[bp_idx][bp_sub_idx]).R
+				print(p_bp2[bp_idx][bp_sub_idx])
 
+				R_old=self.robot[1].fwd(q_bp2[bp_idx][bp_sub_idx]).R
+				print(R_old)
 				theta_temp=np.linalg.norm(error_bps_w2[bp_idx][bp_sub_idx])
 				
 				if theta_temp==0 or bp_sub_idx==1:	###if no angle error or it's movec mid point
@@ -804,6 +808,8 @@ class ilc_toolbox(object):
 					k_temp=error_bps_w2[bp_idx][bp_sub_idx]/theta_temp
 					R_new=rot(k_temp,step_w*theta_temp)@R_old
 
+				print(R_new)
+				print(q_bp2[bp_idx][bp_sub_idx])
 				q_bp2[bp_idx][bp_sub_idx]=car2js(self.robot[1],q_bp2[bp_idx][bp_sub_idx],p_bp2[bp_idx][bp_sub_idx],R_new)[0]
 
 

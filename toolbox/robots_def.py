@@ -943,6 +943,21 @@ def invtest():
 	print('inv solutions: ',theta_v)
 	print('equivalent_configurations: ',equivalent_configurations(robot.robot_def, theta_v, last_joints))
 
+def invdebug():
+	from utils import car2js
+	dataset='curve_1/'
+	data_dir="../data/"+dataset
+	solution_dir=data_dir+'dual_arm/'+'diffevo_pose3/'
+	robot2=robot_obj('ABB_1200_5_90','../config/abb_1200_5_90_robot_default_config.yml',tool_file_path=solution_dir+'tcp.csv',base_transformation_file=solution_dir+'base.csv',acc_dict_path='')
+	q=np.array([-0.103733,   -0.49750235, -3.14216517,  0.61162475,  0.45628173,  0.57089247])
+	pose=robot2.fwd(q)
+
+	print(robot2.upper_limit)
+	print(robot2.lower_limit)
+	print(robot2.tesseract_robot.invkin(Transform(pose.R,pose.p),np.zeros(len(robot2.joint_vel_limit))))
+
+	# car2js(robot2,q,pose.p,pose.R)[0]
+
 
 if __name__ == '__main__':
-	invtest()
+	invdebug()

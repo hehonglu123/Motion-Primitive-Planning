@@ -8,7 +8,6 @@ import numpy as np
 from general_robotics_toolbox import *
 from pandas import read_csv
 import sys
-from io import StringIO
 from scipy.signal import find_peaks
 
 sys.path.append('../')
@@ -25,7 +24,7 @@ from realrobot import *
 def main():
 	dataset='curve_1/'
 	data_dir="../../data/"+dataset
-	solution_dir=data_dir+'dual_arm/'+'diffevo_pose4/'
+	solution_dir=data_dir+'dual_arm/'+'diffevo_pose3/'
 	cmd_dir=solution_dir+'50J/'
 
 	SAFE_Q1=None
@@ -45,7 +44,7 @@ def main():
 	###get lambda at each breakpoint
 	lam_bp=lam_relative_path[np.append(breakpoints1[0],breakpoints1[1:]-1)]
 
-	vd_relative=450
+	vd_relative=400
 
 	s1_all,s2_all=calc_individual_speed(vd_relative,lam1,lam2,lam_relative_path,breakpoints1)
 	v2_all=[]
@@ -68,7 +67,7 @@ def main():
 	for i in range(iteration):
 		
 		###execution with real robots
-		curve_js_all_new, avg_curve_js, timestamp_d=average_N_exe_multimove(ms,breakpoints1,robot1,primitives1,p_bp1,q_bp1,vmax,z50,robot2,primitives2,p_bp2,q_bp2,v2_all,z50,relative_path,SAFE_Q1,SAFE_Q2,log_path='recorded_data',N=10)
+		curve_js_all_new, avg_curve_js, timestamp_d=average_N_exe_multimove(ms,breakpoints1,robot1,primitives1,p_bp1,q_bp1,vmax,z50,robot2,primitives2,p_bp2,q_bp2,v2_all,z50,relative_path,SAFE_Q1,SAFE_Q2,log_path='recorded_data',N=2)
 
 		###save commands
 		ms.write_data_to_cmd('recorded_data/command1.csv',breakpoints1,primitives1, p_bp1,q_bp1)
@@ -132,7 +131,7 @@ def main():
 			# error_bps_w1=np.zeros(error_bps_w1.shape)
 			error_bps_w2=np.zeros(error_bps_w2.shape)
 			# error_bps_v1=np.zeros(error_bps_v1.shape)
-			# error_bps_v2=np.zeros(error_bps_v2.shape)
+			error_bps_v2=np.zeros(error_bps_v2.shape)
 
 			p_bp1_new, q_bp1_new, p_bp2_new, q_bp2_new=ilc.update_error_direction_dual(relative_path,p_bp1,q_bp1,p_bp2,q_bp2,error_bps_v1,error_bps_w1,error_bps_v2,error_bps_w2,gamma_v=0.4)
 
