@@ -35,20 +35,22 @@ def main():
 	vd=2000
 	idx=et1.downsample24ms(relative_path,vd)
 	extension_start=100
-	extension_end=100
+	extension_end=idx_delay+1
 
 	curve_cmd_js1=curve_js1[idx]
 	curve_cmd_js2=curve_js2[idx]
-	
-	##add extension
-	curve_cmd_js1_ext=et1.add_extension_egm_js(curve_cmd_js1,extension_start=extension_start,extension_end=extension_end)
-	curve_cmd_js2_ext=et1.add_extension_egm_js(curve_cmd_js2,extension_start=extension_start,extension_end=extension_end)
 
-	curve_js1_d=copy.deepcopy(curve_cmd_js1_ext)
-	curve_js2_d=copy.deepcopy(curve_cmd_js2_ext)
+	curve_js1_d=curve_js1[idx]
+	curve_js2_d=curve_js2[idx]
+	
+	
 
 	#################FIRST TWO ITERATION, PUSH IN ERROR DIRECTION#########################################################
 	for i in range(2):
+		##add extension
+		curve_cmd_js1_ext=et1.add_extension_egm_js(curve_cmd_js1,extension_start=extension_start,extension_end=extension_end)
+		curve_cmd_js2_ext=et1.add_extension_egm_js(curve_cmd_js2,extension_start=extension_start,extension_end=extension_end)
+
 		###jog both arm to start pose
 		et1.jog_joint(curve_cmd_js1_ext[0])
 		timestamp1,curve_exe_js1=et1.traverse_curve_js(curve_cmd_js1_ext)
@@ -56,10 +58,10 @@ def main():
 		et2.jog_joint(curve_cmd_js2_ext[0])
 		timestamp2,curve_exe_js2=et2.traverse_curve_js(curve_cmd_js2_ext)
 
-		error1=curve_js1_d-curve_exe_js1
-		curve_cmd_js1_ext=curve_cmd_js1_ext+error1
-		error2=curve_js2_d-curve_exe_js2
-		curve_cmd_js2_ext=curve_cmd_js2_ext+error2
+		error1=curve_js1_d-curve_exe_js1[extension_start+idx_delay:-extension_end+idx_delay]
+		curve_cmd_js1=curve_cmd_js1+error1
+		error2=curve_js2_d-curve_exe_js2[extension_start+idx_delay:-extension_end+idx_delay]
+		curve_cmd_js2=curve_cmd_js2+error2
 
 
 	iteration=100
@@ -77,18 +79,18 @@ def main():
 			speed=speed_temp
 		else:
 			################################traverse curve for both arms#####################################
-			curve_cmd_js1_ext_ext=et1.add_extension_egm_js(curve_cmd_js1_ext,extension_start=extension_start,extension_end=extension_end)
-			curve_cmd_js2_ext_ext=et1.add_extension_egm_js(curve_cmd_js2_ext,extension_start=extension_start,extension_end=extension_end)
+			curve_cmd_js1_ext=et1.add_extension_egm_js(curve_cmd_js1,extension_start=extension_start,extension_end=extension_end)
+			curve_cmd_js2_ext=et1.add_extension_egm_js(curve_cmd_js2,extension_start=extension_start,extension_end=extension_end)
 			
 			###jog both arm to start pose
-			et1.jog_joint(curve_cmd_js1_ext_ext[0])
-			timestamp1,curve_exe_js1=et1.traverse_curve_js(curve_cmd_js1_ext_ext)
+			et1.jog_joint(curve_cmd_js1_ext[0])
+			timestamp1,curve_exe_js1=et1.traverse_curve_js(curve_cmd_js1_ext)
 
-			et2.jog_joint(curve_cmd_js2_ext_ext[0])
-			timestamp2,curve_exe_js2=et2.traverse_curve_js(curve_cmd_js2_ext_ext)
+			et2.jog_joint(curve_cmd_js2_ext[0])
+			timestamp2,curve_exe_js2=et2.traverse_curve_js(curve_cmd_js2_ext)
 
 			##############################calcualte error########################################
-			_,_,_,_,relative_path_exe,relative_path_exe_R=form_relative_path(curve_exe_js1[2*extension_start+idx_delay:-2*extension_end+idx_delay],curve_exe_js2[2*extension_start+idx_delay:-2*extension_end+idx_delay],robot1,robot2)
+			_,_,_,_,relative_path_exe,relative_path_exe_R=form_relative_path(curve_exe_js1[extension_start+idx_delay:-extension_end+idx_delay],curve_exe_js2[extension_start+idx_delay:-extension_end+idx_delay],robot1,robot2)
 
 			lam=calc_lam_cs(relative_path_exe)
 			speed=np.gradient(lam)/np.gradient(timestamp1[extension_start+idx_delay:-extension_end+idx_delay])
@@ -104,16 +106,15 @@ def main():
 		error1_flip=np.flipud(error1)
 		# print(error1)
 		###calcualte agumented input
-		curve_cmd_js1_aug=curve_cmd_js1_ext+error1_flip*gradient_step
+		curve_cmd_js1_aug=curve_cmd_js1+error1_flip*gradient_step
 
 		error2=curve_exe_js2[extension_start+idx_delay:-extension_end+idx_delay]-curve_js2_d
 		error2=error2
 		error2_flip=np.flipud(error2)
 		###calcualte agumented input
-		curve_cmd_js2_aug=curve_cmd_js2_ext+error2_flip*gradient_step
+		curve_cmd_js2_aug=curve_cmd_js2+error2_flip*gradient_step
 
 		################################traverse curve for both arms#####################################
-
 		curve_cmd_js1_aug_ext=clip_joints(robot1,et1.add_extension_egm_js(curve_cmd_js1_aug,extension_start=extension_start,extension_end=extension_end))
 		curve_cmd_js2_aug_ext=clip_joints(robot2,et1.add_extension_egm_js(curve_cmd_js2_aug,extension_start=extension_start,extension_end=extension_end))
 
@@ -123,8 +124,6 @@ def main():
 
 		et2.jog_joint(curve_cmd_js2_aug_ext[0])
 		_,curve_exe_js2_aug=et2.traverse_curve_js(curve_cmd_js2_aug_ext)
-
-
 
 
 		###get new error
@@ -137,32 +136,32 @@ def main():
 		skip=False
 		#########################################adaptive step size######################
 		for x in range(6):
-			curve_cmd_js1_ext_temp=clip_joints(robot1,curve_cmd_js1_ext-alpha*grad1)
-			curve_cmd_js2_ext_temp=clip_joints(robot2,curve_cmd_js2_ext-alpha*grad2)
+			curve_cmd_js1_temp=clip_joints(robot1,curve_cmd_js1-alpha*grad1)
+			curve_cmd_js2_temp=clip_joints(robot2,curve_cmd_js2-alpha*grad2)
 
-			curve_cmd_js1_ext_temp_ext=et1.add_extension_egm_js(curve_cmd_js1_ext_temp,extension_start=extension_start,extension_end=extension_end)
-			curve_cmd_js2_ext_temp_ext=et1.add_extension_egm_js(curve_cmd_js2_ext_temp,extension_start=extension_start,extension_end=extension_end)
+			curve_cmd_js1_temp_ext=et1.add_extension_egm_js(curve_cmd_js1_temp,extension_start=extension_start,extension_end=extension_end)
+			curve_cmd_js2_temp_ext=et1.add_extension_egm_js(curve_cmd_js2_temp,extension_start=extension_start,extension_end=extension_end)
 
 			###jog both arm to start pose
-			et1.jog_joint(curve_cmd_js1_ext_temp_ext[0])
-			timestamp1_temp,curve_exe_js1_temp=et1.traverse_curve_js(curve_cmd_js1_ext_temp_ext)
+			et1.jog_joint(curve_cmd_js1_temp_ext[0])
+			timestamp1_temp,curve_exe_js1_temp=et1.traverse_curve_js(curve_cmd_js1_temp_ext)
 
-			et2.jog_joint(curve_cmd_js2_ext_temp_ext[0])
-			timestamp2_temp,curve_exe_js2_temp=et2.traverse_curve_js(curve_cmd_js2_ext_temp_ext)
+			et2.jog_joint(curve_cmd_js2_temp_ext[0])
+			timestamp2_temp,curve_exe_js2_temp=et2.traverse_curve_js(curve_cmd_js2_temp_ext)
 
 			###calcualte error
-			_,_,_,_,relative_path_exe_temp,relative_path_exe_R_temp=form_relative_path(curve_exe_js1_temp[2*extension_start+idx_delay:-2*extension_end+idx_delay],curve_exe_js2_temp[2*extension_start+idx_delay:-2*extension_end+idx_delay],robot1,robot2)
+			_,_,_,_,relative_path_exe_temp,relative_path_exe_R_temp=form_relative_path(curve_exe_js1_temp[extension_start+idx_delay:-extension_end+idx_delay],curve_exe_js2_temp[extension_start+idx_delay:-extension_end+idx_delay],robot1,robot2)
 
 			lam_temp=calc_lam_cs(relative_path_exe_temp)
-			speed_temp=np.gradient(lam_temp)/np.gradient(timestamp1_temp[2*extension_start+idx_delay:-2*extension_end+idx_delay])
+			speed_temp=np.gradient(lam_temp)/np.gradient(timestamp1_temp[extension_start+idx_delay:-extension_end+idx_delay])
 			error_temp,angle_error_temp=calc_all_error_w_normal(relative_path_exe_temp,relative_path[:,:3],relative_path_exe_R_temp[:,:,-1],relative_path[:,3:])
 			if np.max(error_temp)>np.max(error):
 				alpha/=2
 			else:
 				skip=True
 				break
-		curve_cmd_js1_ext=curve_cmd_js1_ext_temp
-		curve_cmd_js2_ext=curve_cmd_js2_ext_temp
+		curve_cmd_js1=curve_cmd_js1_temp
+		curve_cmd_js2=curve_cmd_js2_temp
 		print('step size: ',alpha)
 		##############################plot error#####################################
 
