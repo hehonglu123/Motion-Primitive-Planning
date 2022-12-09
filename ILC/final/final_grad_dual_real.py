@@ -67,7 +67,7 @@ def main():
 	for i in range(iteration):
 		
 		###execution with real robots
-		curve_js_all_new, avg_curve_js, timestamp_d=average_N_exe_multimove(ms,breakpoints1,robot1,primitives1,p_bp1,q_bp1,vmax,z50,robot2,primitives2,p_bp2,q_bp2,v2_all,z50,relative_path,SAFE_Q1,SAFE_Q2,log_path='recorded_data',N=2)
+		curve_js_all_new, avg_curve_js, timestamp_d=average_N_exe_multimove(ms,breakpoints1,robot1,primitives1,p_bp1,q_bp1,vmax,z50,robot2,primitives2,p_bp2,q_bp2,v2_all,z50,relative_path,SAFE_Q1,SAFE_Q2,log_path='recorded_data',N=5)
 
 		###save commands
 		ms.write_data_to_cmd('recorded_data/command1.csv',breakpoints1,primitives1, p_bp1,q_bp1)
@@ -131,7 +131,7 @@ def main():
 			# error_bps_w1=np.zeros(error_bps_w1.shape)
 			error_bps_w2=np.zeros(error_bps_w2.shape)
 			# error_bps_v1=np.zeros(error_bps_v1.shape)
-			error_bps_v2=np.zeros(error_bps_v2.shape)
+			# error_bps_v2=np.zeros(error_bps_v2.shape)
 
 			p_bp1_new, q_bp1_new, p_bp2_new, q_bp2_new=ilc.update_error_direction_dual(relative_path,p_bp1,q_bp1,p_bp2,q_bp2,error_bps_v1,error_bps_w1,error_bps_v2,error_bps_w2,gamma_v=0.4)
 
@@ -145,7 +145,7 @@ def main():
 				p_bp2=p_bp2_prev
 				q_bp2=q_bp2_prev
 				###execution with real robots
-				curve_js_all_new, avg_curve_js, timestamp_d=average_N_exe_multimove(ms,breakpoints1,robot1,primitives1,p_bp1,q_bp1,vmax,z50,robot2,primitives2,p_bp2,q_bp2,v2_all,z50,relative_path,SAFE_Q1,SAFE_Q2,N=10)
+				curve_js_all_new, avg_curve_js, timestamp_d=average_N_exe_multimove(ms,breakpoints1,robot1,primitives1,p_bp1,q_bp1,vmax,z50,robot2,primitives2,p_bp2,q_bp2,v2_all,z50,relative_path,SAFE_Q1,SAFE_Q2,N=5)
 
 				###calculat data with average curve
 				lam, curve_exe1,curve_exe2,curve_exe_R1,curve_exe_R2,curve_exe_js1,curve_exe_js2, speed, timestamp, relative_path_exe, relative_path_exe_R =\
@@ -214,15 +214,15 @@ def main():
 
 
 		###cmd speed adjustment
-		# speed_alpha=0.1
+		speed_alpha=0.1
 
-		# for m in range(1,len(lam_bp)):
-		# 	###get segment average speed
-		# 	segment_avg=np.average(speed[np.argmin(np.abs(lam-lam_bp[m-1])):np.argmin(np.abs(lam-lam_bp[m]))])
-		# 	###cap above 100m/s for robot2
-		# 	s2_all[m]+=speed_alpha*(vd_relative-segment_avg)
-		# 	s2_all[m]=max(s2_all[m],100)
-		# 	v2_all[m]=speeddata(s2_all[m],9999999,9999999,999999)
+		for m in range(1,len(lam_bp)):
+			###get segment average speed
+			segment_avg=np.average(speed[np.argmin(np.abs(lam-lam_bp[m-1])):np.argmin(np.abs(lam-lam_bp[m]))])
+			###cap above 100m/s for robot2
+			s2_all[m]+=speed_alpha*(vd_relative-segment_avg)
+			s2_all[m]=max(s2_all[m],100)
+			v2_all[m]=speeddata(s2_all[m],9999999,9999999,999999)
 
 		if max(error)<0.5:
 			break

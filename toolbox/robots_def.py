@@ -175,16 +175,19 @@ class robot_obj(object):
 		return self.tesseract_robot.jacobian(q)
 
 	def inv(self,p,R,last_joints=[]):
-		# self.check_tesseract_robot()
-		if len(last_joints)==0:
-			return self.tesseract_robot.invkin(Transform(R,p),np.zeros(len(self.joint_vel_limit)))
-		else:	###sort solutions
-			theta_v=self.tesseract_robot.invkin(Transform(R,p),last_joints)
-			eq_theta_v=equivalent_configurations(self.robot, theta_v, last_joints)
-			theta_v.extend(eq_theta_v)
+		# if len(last_joints)==0:
+		# 	return self.tesseract_robot.invkin(Transform(R,p),np.zeros(len(self.joint_vel_limit)))
+		# else:	###sort solutions
+		# 	theta_v=self.tesseract_robot.invkin(Transform(R,p),last_joints)
+		# 	eq_theta_v=equivalent_configurations(self.robot, theta_v, last_joints)
+		# 	theta_v.extend(eq_theta_v)
 
-			theta_dist = np.linalg.norm(np.subtract(theta_v,last_joints), axis=1)
-			return [theta_v[i] for i in list(np.argsort(theta_dist))]
+		# 	theta_dist = np.linalg.norm(np.subtract(theta_v,last_joints), axis=1)
+		# 	return [theta_v[i] for i in list(np.argsort(theta_dist))]
+
+		pose=Transform(R,p)
+		q_all=robot6_sphericalwrist_invkin(self.robot,pose,last_joints)
+		return q_all
 
 			
 #ALL in mm
