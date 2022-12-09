@@ -3,7 +3,7 @@ import numpy as np
 from general_robotics_toolbox import *
 from pandas import read_csv, DataFrame
 
-original_dir='curve_1/dual_arm/diffevo_pose3/'
+original_dir='curve_1/dual_arm/diffevo_pose2/'
 
 abb1200_pose = np.loadtxt(original_dir+'base.csv',delimiter=',')
 curve_js = read_csv(original_dir+'arm1.csv',header=None).values

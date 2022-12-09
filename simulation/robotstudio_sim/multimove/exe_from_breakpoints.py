@@ -18,7 +18,7 @@ from dual_arm import *
 def main():
     dataset='curve_1/'
     data_dir="../../../data/"+dataset
-    solution_dir=data_dir+'dual_arm/'+'diffevo_pose3/'
+    solution_dir=data_dir+'dual_arm/'+'diffevo_pose1/'
     cmd_dir=solution_dir+'50J/'
     
     robot1=robot_obj('ABB_6640_180_255','../../../config/abb_6640_180_255_robot_default_config.yml',tool_file_path='../../../config/paintgun.csv',d=50,acc_dict_path='')
@@ -27,8 +27,8 @@ def main():
 
     relative_path,lam_relative_path,lam1,lam2,curve_js1,curve_js2=initialize_data(dataset,data_dir,solution_dir,robot1,robot2)
 
-    # ms = MotionSend()
-    ms = MotionSend(url='http://192.168.55.1:80')
+    ms = MotionSend()
+    # ms = MotionSend(url='http://192.168.55.1:80')
 
 
     breakpoints1,primitives1,p_bp1,q_bp1=ms.extract_data_from_cmd(cmd_dir+'command1.csv')
