@@ -14,7 +14,7 @@ from utils import *
 
 
 data_dir='curve_2/dual_arm/'
-solution_dir=data_dir+'diffevo_pose10/'
+solution_dir=data_dir+'diffevo_pose14/'
 cmd_dir=solution_dir+'30L/'
 num_ls=[30]
 
