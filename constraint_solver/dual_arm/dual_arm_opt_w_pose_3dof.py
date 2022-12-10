@@ -7,10 +7,10 @@ class Geeks:
 
 def main():
 
-	data_dir='../../data/curve_1/'
+	data_dir='../../data/curve_2/'
 	relative_path=read_csv(data_dir+"Curve_dense.csv",header=None).values
 
-	v_cmd=1333
+	v_cmd=3333
 
 	H_1200=np.loadtxt(data_dir+'dual_arm/abb1200.csv',delimiter=',')
 
@@ -20,7 +20,7 @@ def main():
 	base2_k,base2_theta=R2rot(base2_R)
 
 	robot1=robot_obj('ABB_6640_180_255','../../config/abb_6640_180_255_robot_default_config.yml',tool_file_path='../../config/paintgun.csv',d=50,acc_dict_path='../../toolbox/robot_info/6640acc_new.pickle')
-	robot2=robot_obj('ABB_1200_5_90','../../config/abb_1200_5_90_robot_default_config.yml',tool_file_path=data_dir+'dual_arm/tcp.csv',acc_dict_path='../../toolbox/robot_info/1200acc_new.pickle')
+	robot2=robot_obj('ABB_1200_5_90','../../config/abb_1200_5_90_robot_default_config.yml',tool_file_path=data_dir+'dual_arm/tcp_new.csv',acc_dict_path='../../toolbox/robot_info/1200acc_new.pickle')
 
 	opt=lambda_opt(relative_path[:,:3],relative_path[:,3:],robot1=robot1,robot2=robot2,steps=500,v_cmd=v_cmd)
 
@@ -31,7 +31,7 @@ def main():
 	bnds=tuple(zip(lower_limit,upper_limit))
 	res = differential_evolution(opt.dual_arm_opt_w_pose_3dof, bnds, args=None,workers=-1,
 									x0 = np.hstack((np.zeros(6),base2_p[0],base2_p[1],base2_theta,[0])),
-									strategy='best1bin', maxiter=1800,
+									strategy='best1bin', maxiter=1,
 									popsize=15, tol=1e-10,
 									mutation=(0.5, 1), recombination=0.7,
 									seed=None, callback=None, disp=True,
@@ -60,7 +60,7 @@ def main():
 	q_init1=robot1.inv(pose2_world_now.R@opt.curve[0]+pose2_world_now.p,R)[0]
 
 	opt=lambda_opt(relative_path[:,:3],relative_path[:,3:],robot1=robot1,robot2=robot2,steps=50000)
-	q_out1,q_out2,_,_=opt.dual_arm_stepwise_optimize(q_init1,q_init2,base2_R=base2_R,base2_p=base2_p,w1=0.01,w2=0.025)
+	q_out1,q_out2,_,_=opt.dual_arm_stepwise_optimize(q_init1,q_init2,base2_R=base2_R,base2_p=base2_p,w1=0.01,w2=0.01)
 
 	####output to trajectory csv
 	df=DataFrame({'q0':q_out1[:,0],'q1':q_out1[:,1],'q2':q_out1[:,2],'q3':q_out1[:,3],'q4':q_out1[:,4],'q5':q_out1[:,5]})
