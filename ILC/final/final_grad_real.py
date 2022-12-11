@@ -187,5 +187,8 @@ def main():
 
 		max_error_prev=max(error)
 
+		if max(error)<0.5:
+			break
+
 if __name__ == "__main__":
 	main()

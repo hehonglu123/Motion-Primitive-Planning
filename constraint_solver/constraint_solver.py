@@ -646,7 +646,7 @@ class lambda_opt(object):
 	def dual_arm_opt_w_pose_3dof(self,x):
 		##x:q_init2,base2_x,base2_y,base2_theta,theta_0
 		q_init2=x[:6]
-		base2_p=[x[6],x[7],765.5]		###fixed z height
+		base2_p=[x[6],x[7],770.5]		###fixed z height
 		base2_theta=x[8]
 		base2_R=Rz(base2_theta)
 
@@ -657,7 +657,7 @@ class lambda_opt(object):
 		R=np.dot(R_temp,Rz(x[-1]))
 		try:
 			q_init1=self.robot1.inv(pose2_world_now.R@self.curve[0]+pose2_world_now.p,R)[0]
-			q_out1,q_out2,j_out1,j_out2=self.dual_arm_stepwise_optimize(q_init1,q_init2,base2_R=base2_R,base2_p=base2_p,w1=0.01,w2=0.02)
+			q_out1,q_out2,j_out1,j_out2=self.dual_arm_stepwise_optimize(q_init1,q_init2,base2_R=base2_R,base2_p=base2_p,w1=0.01,w2=0.01)
 		except:
 			# traceback.print_exc()
 			return 999

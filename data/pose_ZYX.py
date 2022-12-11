@@ -7,12 +7,13 @@ from utils import *
 from robots_def import *
 
 
-dataset='curve_2/'
-solution_dir='dual_arm/diffevo_pose10/'
+dataset='curve_1/'
+# solution_dir='dual_arm/diffevo_pose1/'
+solution_dir='curve_pose_opt1/'
 data_dir=dataset+solution_dir
 
 ###reference frame transformation
-curve_pose=np.loadtxt(data_dir+'base.csv',delimiter=',')
+curve_pose=np.loadtxt(data_dir+'curve_pose.csv',delimiter=',')
 
 print(curve_pose[:-1,-1])
 print(np.degrees(rotationMatrixToEulerAngles(curve_pose[:3,:3])))
