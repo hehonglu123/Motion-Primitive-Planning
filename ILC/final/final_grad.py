@@ -8,7 +8,6 @@ import numpy as np
 from general_robotics_toolbox import *
 from pandas import read_csv
 import sys
-from io import StringIO
 from scipy.signal import find_peaks
 
 sys.path.append('../')

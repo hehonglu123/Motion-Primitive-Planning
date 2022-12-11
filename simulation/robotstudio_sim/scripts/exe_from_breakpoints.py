@@ -8,15 +8,15 @@ import numpy as np
 from general_robotics_toolbox import *
 from pandas import read_csv
 import sys
-from io import StringIO
+
 sys.path.append('../../../toolbox')
 from robots_def import *
 from error_check import *
 from MotionSend import *
 
 def main():
-    ms = MotionSend()
-    # ms = MotionSend(url='http://192.168.55.1:80')
+    # ms = MotionSend()
+    ms = MotionSend(url='http://192.168.55.1:80')
 
     dataset='curve_1/'
     solution_dir='curve_pose_opt1/'

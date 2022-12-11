@@ -21,21 +21,21 @@ from blending import *
 from realrobot import *
 def main():
 	dataset='curve_1/'
-	solution_dir='curve_pose_opt2/'
+	solution_dir='curve_pose_opt1/'
 	data_dir="../../data/"+dataset+solution_dir
-	cmd_dir="../../data/"+dataset+solution_dir+'greedy0.02/'
+	cmd_dir="../../data/"+dataset+solution_dir+'greedy0.02_m/'
 
 
 
 	curve = read_csv(data_dir+"Curve_in_base_frame.csv",header=None).values
 
 
-	multi_peak_threshold=0.5
+	multi_peak_threshold=0.4
 	robot=robot_obj('ABB_6640_180_255','../../config/abb_6640_180_255_robot_default_config.yml',tool_file_path='../../config/paintgun.csv',d=50,acc_dict_path='')
 
 	v=400
 	s = speeddata(v,9999999,9999999,999999)
-	zone=10
+	zone=50
 	z = zonedata(False,zone,1.5*zone,1.5*zone,0.15*zone,1.5*zone,0.15*zone)
 
 	gamma_v_max=1
@@ -56,10 +56,12 @@ def main():
 	max_grad=False
 	inserted_points=[]
 	iteration=50
+
+	N=5 	###N-run average
 	for i in range(iteration):
 
 		ms = MotionSend(url='http://192.168.55.1:80')
-		curve_js_all_new, avg_curve_js, timestamp_d=average_N_exe(ms,robot,primitives,breakpoints,p_bp,q_bp,s,z,curve,"recorded_data")
+		curve_js_all_new, avg_curve_js, timestamp_d=average_N_exe(ms,robot,primitives,breakpoints,p_bp,q_bp,s,z,curve,"recorded_data",N=N)
 		###calculat data with average curve
 		lam, curve_exe, curve_exe_R, speed=logged_data_analysis(robot,timestamp_d,avg_curve_js)
 		#############################chop extension off##################################
@@ -124,12 +126,13 @@ def main():
 			error_bps_v,error_bps_w=ilc.get_error_direction(curve,p_bp,q_bp,curve_exe,curve_exe_R)
 			###line search on gamma
 			max_error=[]
-			gamma_all=np.linspace(gamma_v_min,gamma_v_max,num=int(1+(gamma_v_max-gamma_v_min)/0.2))
+			# gamma_all=np.linspace(gamma_v_min,gamma_v_max,num=int(1+(gamma_v_max-gamma_v_min)/0.2))
+			gamma_all=[0.5]
 			print(gamma_all)
 			for gamma_v in gamma_all:
 				p_bp_temp, q_bp_temp=ilc.update_error_direction(curve,p_bp,q_bp,error_bps_v,error_bps_w,gamma_v=gamma_v,gamma_w=0.1)
 				ms = MotionSend(url='http://192.168.55.1:80')
-				curve_js_all_new, avg_curve_js, timestamp_d=average_5_exe(ms,robot,primitives,breakpoints,p_bp_temp,q_bp_temp,s,z,curve,"recorded_data")
+				curve_js_all_new, avg_curve_js, timestamp_d=average_N_exe(ms,robot,primitives,breakpoints,p_bp_temp,q_bp_temp,s,z,curve,"recorded_data",N=5)
 				###calculat data with average curve
 				lam, curve_exe, curve_exe_R, speed=logged_data_analysis(robot,timestamp_d,avg_curve_js)
 				#############################chop extension off##################################
