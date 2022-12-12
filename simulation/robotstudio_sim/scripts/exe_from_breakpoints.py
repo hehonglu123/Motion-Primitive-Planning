@@ -23,6 +23,7 @@ def main():
 
     data_dir='../../../data/'+dataset+solution_dir
     cmd_dir=data_dir+'greedy0.02_m/'
+    # cmd_dir=data_dir+'grad_result/real/'
 
     curve = read_csv(data_dir+"Curve_in_base_frame.csv",header=None).values
     lam_original=calc_lam_cs(curve[:,:3])
