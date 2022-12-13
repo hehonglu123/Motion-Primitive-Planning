@@ -23,7 +23,7 @@ def main():
 	dataset='curve_2/'
 	solution_dir='curve_pose_opt2/'
 	data_dir="../../data/"+dataset+solution_dir
-	cmd_dir="../../data/"+dataset+solution_dir+'greedy0.02/'
+	cmd_dir="../../data/"+dataset+solution_dir+'100L/'
 
 
 
@@ -33,7 +33,7 @@ def main():
 	multi_peak_threshold=0.3
 	robot=robot_obj('ABB_6640_180_255','../../config/abb_6640_180_255_robot_default_config.yml',tool_file_path='../../config/paintgun.csv',d=50,acc_dict_path='')
 
-	v=1200
+	v=1000
 	s = speeddata(v,9999999,9999999,999999)
 	zone=50
 	z = zonedata(False,zone,1.5*zone,1.5*zone,0.15*zone,1.5*zone,0.15*zone)
