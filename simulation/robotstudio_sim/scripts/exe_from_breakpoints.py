@@ -18,11 +18,11 @@ def main():
     ms = MotionSend()
     # ms = MotionSend(url='http://192.168.55.1:80')
 
-    dataset='curve_1/'
-    solution_dir='curve_pose_opt1/'
+    dataset='curve_2/'
+    solution_dir='curve_pose_opt2/'
 
     data_dir='../../../data/'+dataset+solution_dir
-    cmd_dir=data_dir+'greedy0.02_m/'
+    cmd_dir=data_dir+'greedy0.02/'
     # cmd_dir=data_dir+'grad_result/real/'
 
     curve = read_csv(data_dir+"Curve_in_base_frame.csv",header=None).values
