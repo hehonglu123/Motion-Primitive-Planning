@@ -11,12 +11,12 @@ from lambda_calc import *
 from realrobot import *
 
 def main():
-    realrobot=False
-    v_start=1000
+    realrobot=True
+    v_start=500
     dataset='curve_2/'
     solution_dir='curve_pose_opt2/'
     data_dir=dataset+solution_dir
-    cmd_dir=data_dir+'greedy0.02/'
+    cmd_dir=data_dir+'100L/'
 
 
     robot=robot_obj('ABB_6640_180_255','../config/abb_6640_180_255_robot_default_config.yml',tool_file_path='../config/paintgun.csv',d=50,acc_dict_path='')
@@ -43,7 +43,7 @@ def main():
         v_cmd = speeddata(v,9999999,9999999,999999)
         #execute 
         if realrobot:
-            curve_js_all_new, curve_exe_js, timestamp=average_N_exe(ms,robot,primitives,breakpoints,p_bp,q_bp,v_cmd,z50,curve,log_path=cmd_dir+'realrobot/',N=5)
+            curve_js_all_new, curve_exe_js, timestamp=average_N_exe(ms,robot,primitives,breakpoints,p_bp,q_bp,v_cmd,z50,curve,log_path=cmd_dir+'realrobot',N=5)
             ###calculat data with average curve
             lam, curve_exe, curve_exe_R, speed=logged_data_analysis(robot,timestamp,curve_exe_js)
         else:
@@ -71,7 +71,7 @@ def main():
         v_prev=v_prev_temp
 
         #if stuck
-        if abs(v-v_prev)<0.1:
+        if abs(v-v_prev)<1:
             v=v_prev_possible
             v_cmd = speeddata(v,9999999,9999999,999999)
 
