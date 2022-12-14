@@ -13,9 +13,9 @@ from realrobot import *
 
 N=5
 
-dataset='curve_1/'
+dataset='curve_2/'
 data_dir="../../../data/"+dataset
-solution_dir=data_dir+'dual_arm/'+'diffevo_pose3/'
+solution_dir=data_dir+'dual_arm/'+'diffevo_pose6_3/'
 exe_dir='../../../ilc/final/recorded_data/'
 
 

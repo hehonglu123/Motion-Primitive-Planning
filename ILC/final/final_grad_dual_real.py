@@ -24,7 +24,7 @@ from realrobot import *
 def main():
 	dataset='curve_2/'
 	data_dir="../../data/"+dataset
-	solution_dir=data_dir+'dual_arm/'+'diffevo_pose6_2/'
+	solution_dir=data_dir+'dual_arm/'+'diffevo_pose6_3/'
 	cmd_dir=solution_dir+'30L/'
 
 	SAFE_Q1=None
@@ -44,7 +44,7 @@ def main():
 	###get lambda at each breakpoint
 	lam_bp=lam_relative_path[np.append(breakpoints1[0],breakpoints1[1:]-1)]
 
-	vd_relative=1500
+	vd_relative=1400
 
 	s1_all,s2_all=calc_individual_speed(vd_relative,lam1,lam2,lam_relative_path,breakpoints1)
 	v2_all=[]
@@ -63,7 +63,7 @@ def main():
 	max_grad=False
 	iteration=100
 
-	N=10 		###N-run average
+	N=5 		###N-run average
 	
 	for i in range(iteration):
 		
@@ -125,7 +125,7 @@ def main():
 		
 		# plt.show()
 
-		if max(error)<max_error_prev and not max_grad:
+		if max(error)<1.1*max_error_prev and not max_grad:
 			print('all bps adjustment')
 			##########################################move towards error direction######################################
 			error_bps_v1,error_bps_w1,error_bps_v2,error_bps_w2=ilc.get_error_direction_dual(relative_path,p_bp1,q_bp1,p_bp2,q_bp2,relative_path_exe,relative_path_exe_R,curve_exe1,curve_exe_R1,curve_exe2,curve_exe_R2)

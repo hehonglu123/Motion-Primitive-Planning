@@ -14,9 +14,9 @@ from utils import *
 
 
 data_dir='curve_2/dual_arm/'
-solution_dir=data_dir+'diffevo_pose1/'
-cmd_dir=solution_dir+'30L/'
-num_ls=[30]
+solution_dir=data_dir+'diffevo_pose6_3/'
+cmd_dir=solution_dir+'35L/'
+num_ls=[35]
 
 robot=robot_obj('ABB_6640_180_255','../config/abb_6640_180_255_robot_default_config.yml',tool_file_path='../config/paintgun.csv',d=50,acc_dict_path='')
 curve_js = read_csv(solution_dir+'arm1.csv',header=None).values
