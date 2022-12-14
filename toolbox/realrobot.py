@@ -42,14 +42,33 @@ def remove_traj_outlier(curve_exe_js_all,timestamp_all,total_time_all):
 
 	return curve_exe_js_all,timestamp_all
 
-def average_N_exe(ms,robot,primitives,breakpoints,p_bp,q_bp,v,z,curve,log_path='',N=5):
+def average_N_exe(ms,robot,primitives,breakpoints,p_bp,q_bp,v,z,curve,log_path='',N=5,safe_q=None):
 	###N run execute
 	curve_exe_js_all=[]
 	timestamp_all=[]
 	total_time_all=[]
 
 	for r in range(N):
+		# if safe_q is not None:
+		# 	primitives_exe=copy.deepcopy(primitives)
+		# 	breakpoints_exe=copy.deepcopy(breakpoints)
+		# 	p_bp_exe=copy.deepcopy(p_bp)
+		# 	q_bp_exe=copy.deepcopy(q_bp)
+
+		# 	# ms.jog_joint(safe_q)
+		# 	primitives_exe.insert(0, "moveabsj")
+		# 	breakpoints_exe=np.insert(breakpoints_exe, 0, 0.)
+		# 	p_bp_exe.insert(0,[robot.fwd(safe_q).p])
+		# 	q_bp_exe.insert(0,[safe_q])
+		# 	log_results=ms.exec_motions(robot,primitives_exe,breakpoints_exe,p_bp_exe,q_bp_exe,v,z)
+
+		# else:
+		# 	log_results=ms.exec_motions(robot,primitives,breakpoints,p_bp,q_bp,v,z)
+
 		log_results=ms.exec_motions(robot,primitives,breakpoints,p_bp,q_bp,v,z)
+		if safe_q is not None:
+			ms.jog_joint(safe_q)
+
 		###save 5 runs
 		if len(log_path)>0:
 			# Write log csv to file

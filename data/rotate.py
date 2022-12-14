@@ -3,14 +3,14 @@ import numpy as np
 from general_robotics_toolbox import *
 from pandas import read_csv, DataFrame
 
-data_dir='curve_1/'
-original_dir=data_dir+'curve_pose_opt1/'
+data_dir='curve_2/'
+original_dir=data_dir+'curve_pose_opt2/'
 curve_pose = np.loadtxt(original_dir+'curve_pose.csv',delimiter=',')
 curve_js = read_csv(original_dir+'Curve_js.csv',header=None).values
 curve_dense = read_csv(data_dir+'Curve_dense.csv',header=None).values
 
 
-rotate_angle=-np.pi/2
+rotate_angle=np.pi/8
 
 H_R=np.eye(4)
 H_R[:3,:3]=rot([0,0,1],rotate_angle)
@@ -21,6 +21,7 @@ np.savetxt(new_dir+'curve_pose.csv',curve_pose_new,delimiter=',')
 
 curve_js_new=copy.deepcopy(curve_js)
 curve_js_new[:,0]=curve_js[:,0]+rotate_angle
+
 
 curve_new=np.dot(curve_pose_new[:3,:3],curve_dense[:,:3].T).T+np.tile(curve_pose_new[:-1,-1],(len(curve_dense),1))
 curve_normal_new=np.dot(curve_pose_new[:3,:3],curve_dense[:,3:].T).T

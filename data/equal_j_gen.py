@@ -4,24 +4,21 @@ import sys, traceback
 from general_robotics_toolbox import *
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
-sys.path.append('../toolbox')
 from robots_def import *
 from utils import *
 from lambda_calc import *
 
-sys.path.append('../../toolbox')
-from lambda_calc import *
-from utils import *
 
 
-data_dir='wood/'
-solution_dir='curve_pose_opt3/'
+data_dir='curve_2/'
+solution_dir='curve_pose_opt2_2/'
 
-num_js=[100]
-robot=abb6640(d=50)
+num_js=[50]
+robot=robot_obj('ABB_6640_180_255','../config/abb_6640_180_255_robot_default_config.yml',tool_file_path='../config/paintgun.csv',d=50,acc_dict_path='')
 # curve_js = read_csv(data_dir+'Curve_js.csv',header=None).values
 curve_js = read_csv(data_dir+solution_dir+'Curve_js.csv',header=None).values
 curve = read_csv(data_dir+solution_dir+"Curve_in_base_frame.csv",header=None).values
+
 
 curve_fit=[]
 curve_fit_js=np.zeros((len(curve_js),6))
@@ -45,7 +42,7 @@ for num_j in num_js:
 		
 	primitives_choices=['moveabsj_fit']*(num_j+1)
 	breakpoints[1:]=breakpoints[1:]-1
-	df=DataFrame({'breakpoints':breakpoints,'primitives':primitives_choices,'points':points,'q_bp':q_bp})
+	df=DataFrame({'breakpoints':breakpoints,'primitives':primitives_choices,'p_bp':points,'q_bp':q_bp})
 	df.to_csv(cmd_dir+'command.csv',header=True,index=False)
 
 	for i in range(len(curve_fit_js)):
