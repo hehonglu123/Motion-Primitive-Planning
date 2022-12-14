@@ -202,26 +202,26 @@ def main():
         ax2.plot(lam, np.degrees(angle_error), 'y-',label='Normal Error')
 
         ##### draw bp #####
-        draw_moveC=False
-        draw_moveL=False
-        dlam=lam[-1]/breakpoints1[-1]
-        for bpi in range(len(p_bp1)-3):
-            bp_num=breakpoints1[bpi]
-            bp_lam=bp_num*dlam
-            if primitives1[bpi+1]=='movec_fit':
-                if draw_moveC:
-                    plt.axvline(x = bp_lam, color = 'c')
-                else:
-                    plt.axvline(x = bp_lam, color = 'c',label='moveC')
-                    draw_moveC=True
-            elif primitives1[bpi+1]=='movel_fit':
-                if draw_moveL:
-                    plt.axvline(x = bp_lam, color = 'm')
-                else:
-                    plt.axvline(x = bp_lam, color = 'm',label='moveL')
-                    draw_moveL=True
-        bp_num=breakpoints1[-1]
-        bp_lam=bp_num*dlam
+        # draw_moveC=False
+        # draw_moveL=False
+        # dlam=lam[-1]/breakpoints1[-1]
+        # for bpi in range(len(p_bp1)-3):
+        #     bp_num=breakpoints1[bpi]
+        #     bp_lam=bp_num*dlam
+        #     if primitives1[bpi+1]=='movec_fit':
+        #         if draw_moveC:
+        #             plt.axvline(x = bp_lam, color = 'c')
+        #         else:
+        #             plt.axvline(x = bp_lam, color = 'c',label='moveC')
+        #             draw_moveC=True
+        #     elif primitives1[bpi+1]=='movel_fit':
+        #         if draw_moveL:
+        #             plt.axvline(x = bp_lam, color = 'm')
+        #         else:
+        #             plt.axvline(x = bp_lam, color = 'm',label='moveL')
+        #             draw_moveL=True
+        # bp_num=breakpoints1[-1]
+        # bp_lam=bp_num*dlam
         ###################
 
         if draw_speed_max is None:

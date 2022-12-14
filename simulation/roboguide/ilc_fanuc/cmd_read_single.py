@@ -24,9 +24,9 @@ from error_check import *
 from lambda_calc import *
 from blending import *
 
-# obj_type='wood'
-obj_type='blade_scale'
-data_dir='../data/baseline_m10ia/'+obj_type+'/'
+# obj_type='curve_1'
+obj_type='curve_2_scale'
+data_dir='../data/'+obj_type+'/single_arm_de/'
 
 robot=m10ia(d=50)
 curve = read_csv(data_dir+"Curve_in_base_frame.csv",header=None).values
@@ -39,14 +39,16 @@ robot=m10ia(d=50)
 ms = MotionSendFANUC()
 
 num_l=25
-s=243
+s=727
 z=100
-iteration=3
-cmd_dir='../data/baseline_m10ia/'+obj_type+'/'+str(num_l)+'/'+'results_'+str(s)+'/'
+iteration=2
+# cmd_dir='../data/baseline_m10ia/'+obj_type+'/'+str(num_l)+'/'+'results_'+str(s)+'/'
+cmd_dir=data_dir+'greedy_20/results_727/'
 try:
     breakpoints,primitives,p_bp,q_bp,_=ms.extract_data_from_cmd(os.getcwd()+'/'+cmd_dir+'command_arm1_'+str(iteration)+'.csv')
     # breakpoints,primitives,p_bp,q_bp=extract_data_from_cmd(os.getcwd()+'/'+ilc_output+'command_25.csv')
-except:
+except Exception as e:
+    print(e)
     print("Convert bp to command")
     exit()
 
@@ -83,20 +85,19 @@ fig, ax1 = plt.subplots(figsize=(6,4))
 ax2 = ax1.twinx()
 ax1.plot(lam, speed, 'g-', label='Speed')
 ax2.plot(lam, error, 'b-',label='Error')
-ax2.scatter(lam[peaks],error[peaks],label='peaks')
 ax2.plot(lam, np.degrees(angle_error), 'y-',label='Normal Error')
 draw_speed_max=max(speed)*1.05
-draw_error_max=max(error)*1.05
 ax1.axis(ymin=0,ymax=draw_speed_max)
+draw_error_max=max(np.append(error,np.degrees(angle_error)))*1.05
 ax2.axis(ymin=0,ymax=draw_error_max)
 
 ax1.set_xlabel('lambda (mm)')
 ax1.set_ylabel('Speed/lamdot (mm/s)', color='g')
 ax2.set_ylabel('Error/Normal Error (mm/deg)', color='b')
 plt.title("Speed and Error Plot")
-ax1.legend(loc=0)
-ax2.legend(loc=0)
 
-# save fig
-plt.legend()
-plt.plot()
+h1, l1 = ax1.get_legend_handles_labels()
+h2, l2 = ax2.get_legend_handles_labels()
+ax1.legend(h1+h2, l1+l2, loc=1)
+
+plt.show()
