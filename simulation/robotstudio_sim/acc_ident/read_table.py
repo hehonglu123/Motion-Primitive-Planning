@@ -8,7 +8,7 @@ import numpy as np
 #             dic=i #string
 # dic = eval(dic) # this is orignal dict with instace dict
 
-dic = pickle.load(open('test.pickle','rb'))
+dic = pickle.load(open('1200/1200acc_new.pickle','rb'))
 
 
 
