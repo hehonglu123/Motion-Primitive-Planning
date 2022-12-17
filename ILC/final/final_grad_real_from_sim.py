@@ -41,15 +41,10 @@ def main():
 	gamma_v_max=1
 	gamma_v_min=0.2
 	
-	# ms = MotionSend(url='http://192.168.55.1:80')
-	ms=MotionSend()
+	ms = MotionSend(url='http://192.168.55.1:80')
+	# ms=MotionSend()
 	breakpoints,primitives,p_bp,q_bp=ms.extract_data_from_cmd(cmd_dir+'grad_result/real_from_sim/sim_command.csv')
 	breakpoints,primitives,p_bp,q_bp=ms.extract_data_from_cmd(cmd_dir+'grad_result/real_from_sim/sim_command.csv')
-
-
-	###extension
-	p_bp,q_bp=ms.extend(robot,q_bp,primitives,breakpoints,p_bp,extension_start=150,extension_end=100)
-	# breakpoints,primitives,p_bp,q_bp=ms.extract_data_from_cmd('curve2_pose_opt2_v1200/command.csv')
 
 	
 	###ilc toolbox def
