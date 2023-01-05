@@ -1,4 +1,3 @@
-from io import StringIO
 from pandas import read_csv
 from sklearn.cluster import KMeans
 import numpy as np
