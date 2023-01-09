@@ -50,12 +50,15 @@ def arc(q1,q3,q2):
 	client.execute_multimove_motion_program([mp2,mp])
 
 def rotate(q1,theta):
+	v_temp=speeddata(100,50,9999999,999999)
 	mp = MotionProgram()
-	mp.MoveAbsJ(jointtarget(np.degrees(q1),[0]*6),v100,fine)
+	mp.MoveAbsJ(jointtarget(np.degrees(q1),[0]*6),v_temp,fine)
 	mp.WaitTime(1)
 	q1_new=copy.deepcopy(q1)
 	q1_new[-1]+=theta
-	mp.MoveAbsJ(jointtarget(np.degrees(q1_new),[0]*6),v100,fine)
+
+	
+	mp.MoveAbsJ(jointtarget(np.degrees(q1_new),[0]*6),v_temp,fine)
 	client.execute_multimove_motion_program([mp2,mp])
 
 

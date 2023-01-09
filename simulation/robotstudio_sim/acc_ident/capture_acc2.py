@@ -49,7 +49,7 @@ def exec(q_d,joint,displacement):
 	return get_acc(log_results,q_d,joint)
 
 robot=robot_obj('ABB_6640_180_255','../../../config/abb_6640_180_255_robot_default_config.yml',tool_file_path='../../../config/paintgun.csv',d=50,acc_dict_path='')
-resolution=0.5 ###rad
+resolution=0.05 ###rad
 displacement=0.02
 
 dict_table={}
