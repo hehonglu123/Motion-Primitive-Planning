@@ -305,17 +305,17 @@ class greedy_fit(fitting_toolbox):
 
 
 def main():
-	dataset='wood/'
-	solution_dir='baseline/'
+	dataset='curve_1/'
+	solution_dir='curve_pose_opt1/'
 	data_dir="../data/"+dataset+solution_dir
 
 	###read in points
 	# curve_js = read_csv("../train_data/wood/Curve_js.csv",header=None).values
 	curve_js = read_csv(data_dir+'Curve_js.csv',header=None).values
 
-	robot=abb6640(d=50)
+	robot=robot_obj('ABB_6640_180_255','../config/abb_6640_180_255_robot_default_config.yml',tool_file_path='../config/paintgun.csv',d=50,acc_dict_path='')
 
-	max_error_threshold=0.3
+	max_error_threshold=0.05
 	min_length=10
 	greedy_fit_obj=greedy_fit(robot,curve_js, min_length=min_length,max_error_threshold=max_error_threshold)
 
@@ -368,8 +368,8 @@ def main():
 
 
 def merging():
-	dataset='wood/'
-	solution_dir='curve_pose_opt7/'
+	dataset='curve_1/'
+	solution_dir='curve_pose_opt1/'
 	data_dir="../data/"+dataset+solution_dir
 
 	###read in points
@@ -394,6 +394,6 @@ def merging():
 	df.to_csv('greedy_output/command_merged.csv',header=True,index=False)
 
 if __name__ == "__main__":
-	# merging()
+	merging()
 	# greedy_execute()
-	main()
+	# main()

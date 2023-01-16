@@ -62,6 +62,11 @@ class MotionSend(object):
 		jointt = jointtarget([q[0],q[1],q[2],q[3],q[4],q[5]],[0]*6)
 		return jointt
 
+	def jog_joint(self,q):
+		mp = MotionProgram()
+		mp.MoveAbsJ(self.moveJ_target(q),v500,fine)
+		self.client.execute_motion_program(mp)
+
 	def jog_joint_multimove(self,q1,q2):
 		mp1 = MotionProgram()
 		mp2 = MotionProgram()
@@ -587,7 +592,7 @@ class MotionSend(object):
 
 			#modify mid point to be in the middle of new start and old end (to avoid RS circle uncertain error)
 			modified_bp=arc_from_3point(p_start_new,p_end,p_mid,N=3)
-			p_bp_extendedp_bp_extended[1][0]=modified_bp[1]
+			p_bp_extended[1][0]=modified_bp[1]
 
 			#find new start orientation
 			k,theta=R2rot(R_end@R_start.T)
@@ -595,7 +600,7 @@ class MotionSend(object):
 			R_start_new=rot(k,theta_new)@R_start
 
 			#solve invkin for initial point
-			p_bp_extendedp_bp_extended[0][0]=p_start_new
+			p_bp_extended[0][0]=p_start_new
 			q_bp_extended[0][0]=car2js(robot,q_bp[0][0],p_start_new,R_start_new)[0]
 
 

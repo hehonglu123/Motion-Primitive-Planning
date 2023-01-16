@@ -8,12 +8,9 @@ import numpy as np
 from general_robotics_toolbox import *
 from pandas import read_csv
 import sys
-from io import StringIO
 from scipy.signal import find_peaks
-# sys.path.append('../abb_motion_program_exec')
-from abb_motion_program_exec_client import *
+
 sys.path.append('../')
-sys.path.append('../../toolbox')
 from ilc_toolbox import *
 
 from robots_def import *
@@ -23,59 +20,55 @@ from lambda_calc import *
 from blending import *
 
 def main():
-	dataset='wood/'
-	solution_dir='curve_pose_opt7/'
+	dataset='curve_2/'
+	solution_dir='curve_pose_opt2/'
 	data_dir="../../data/"+dataset+solution_dir
 	cmd_dir="../../data/"+dataset+solution_dir+'100L/'
-
 
 
 	curve = read_csv(data_dir+"Curve_in_base_frame.csv",header=None).values
 
 
 	multi_peak_threshold=0.2
-	robot=abb6640(d=50)
+	robot=robot_obj('ABB_6640_180_255','../../config/abb_6640_180_255_robot_default_config.yml',tool_file_path='../../config/paintgun.csv',d=50,acc_dict_path='')
 
-	v=500
+	v=1000
 	s = speeddata(v,9999999,9999999,999999)
-	zone=10
+	zone=20
 	z = zonedata(False,zone,1.5*zone,1.5*zone,0.15*zone,1.5*zone,0.15*zone)
 
-
+	
 	ms = MotionSend()
 	breakpoints,primitives,p_bp,q_bp=ms.extract_data_from_cmd(cmd_dir+'command.csv')
 
 	###extension
 	p_bp,q_bp=ms.extend(robot,q_bp,primitives,breakpoints,p_bp,extension_start=100,extension_end=100)
-
 	###ilc toolbox def
 	ilc=ilc_toolbox(robot,primitives)
 
-	###TODO: extension fix start point, moveC support
-	max_error=999
+	max_error_prev=999
+	max_grad=False
 	inserted_points=[]
 	iteration=50
 	for i in range(iteration):
 
 		ms = MotionSend()
 		###execution with plant
-		logged_data=ms.exec_motions(robot,primitives,breakpoints,p_bp,q_bp,s,z)
+		log_results=ms.exec_motions(robot,primitives,breakpoints,p_bp,q_bp,s,z)
 		# Write log csv to file
-		with open("recorded_data/curve_exe_v"+str(v)+'_z'+str(zone)+'.csv',"w") as f:
-			f.write(logged_data)
+		np.savetxt("recorded_data/curve_exe_v"+str(v)+"_z10.csv",log_results.data,delimiter=',',header='timestamp,cmd_num,J1,J2,J3,J4,J5,J6')
 
 		ms.write_data_to_cmd('recorded_data/command.csv',breakpoints,primitives, p_bp,q_bp)
 
-		StringData=StringIO(logged_data)
-		df = read_csv(StringData, sep =",")
 		##############################data analysis#####################################
-		lam, curve_exe, curve_exe_R,curve_exe_js, speed, timestamp=ms.logged_data_analysis(robot,df,realrobot=True)
+		lam, curve_exe, curve_exe_R,curve_exe_js, speed, timestamp=ms.logged_data_analysis(robot,log_results,realrobot=True)
 		#############################chop extension off##################################
 		lam, curve_exe, curve_exe_R,curve_exe_js, speed, timestamp=ms.chop_extension(curve_exe, curve_exe_R,curve_exe_js, speed, timestamp,curve[0,:3],curve[-1,:3])
 
 		##############################calcualte error########################################
 		error,angle_error=calc_all_error_w_normal(curve_exe,curve[:,:3],curve_exe_R[:,:,-1],curve[:,3:])
 		print(max(error))
+
 		#############################error peak detection###############################
 		peaks,_=find_peaks(error,height=multi_peak_threshold,prominence=0.05,distance=20/(lam[int(len(lam)/2)]-lam[int(len(lam)/2)-1]))		###only push down peaks higher than height, distance between each peak is 20mm, threshold to filter noisy peaks
 		
@@ -96,11 +89,10 @@ def main():
 		ax1.set_ylabel('Speed/lamdot (mm/s)', color='g')
 		ax2.set_ylabel('Error/Normal Error (mm/deg)', color='b')
 		plt.title("Speed and Error Plot")
-		ax1.legend(loc="upper right")
-
-		ax2.legend(loc="upper left")
-
-		plt.legend()
+		h1, l1 = ax1.get_legend_handles_labels()
+		h2, l2 = ax2.get_legend_handles_labels()
+		ax1.legend(h1+h2, l1+l2, loc=1)
+		
 		plt.savefig('recorded_data/iteration_'+str(i))
 		plt.clf()
 		# plt.show()
@@ -112,12 +104,18 @@ def main():
 		# ax = plt.axes(projection='3d')
 		# ax.plot3D(curve[:,0], curve[:,1], curve[:,2], c='gray',label='original')
 		# ax.plot3D(curve_exe[:,0], curve_exe[:,1], curve_exe[:,2], c='red',label='execution')
-		# p_bp_np=np.array([item[0] for item in p_bp])      ###np version, avoid first and last extended points
-		# ax.scatter3D(p_bp_np[:,0], p_bp_np[:,1], p_bp_np[:,2], c=p_bp_np[:,2], cmap='Greens',label='breakpoints')
-		# ax.scatter(curve_exe[max_error_idx,0], curve_exe[max_error_idx,1], curve_exe[max_error_idx,2],c='orange',label='worst case')
+		# p_bp_np=[]
+		# for m in range(len(p_bp)):
+		# 	for bp_sub_idx in range(len(p_bp[m])):
+		# 		p_bp_np.append(p_bp[m][bp_sub_idx])
+		# p_bp_np=np.array(p_bp_np)      ###np version
+		# ax.scatter(p_bp_np[:,0], p_bp_np[:,1], p_bp_np[:,2], c='green',label='breakpoints')
+		# ax.scatter(curve_exe[peaks,0], curve_exe[peaks,1], curve_exe[peaks,2],c='orange',label='worst case')
 		
 		
-		##########################################calculate gradient for peaks######################################
+		
+
+		##########################################Multipeak Max Gradient######################################
 		###restore trajectory from primitives
 		curve_interp, curve_R_interp, curve_js_interp, breakpoints_blended=form_traj_from_bp(q_bp,primitives,robot)
 
@@ -133,7 +131,7 @@ def main():
 			###############get numerical gradient#####
 			###find closest 3 breakpoints
 			order=np.argsort(np.abs(breakpoints_blended-peak_error_curve_blended_idx))
-			breakpoint_interp_2tweak_indices=order[:3]
+			breakpoint_interp_2tweak_indices=order[:2]
 
 			peak_pose=robot.fwd(curve_exe_js[peak])
 			##################################################################XYZ Gradient######################################################################
@@ -145,17 +143,13 @@ def main():
 			de_ori_dp=ilc.get_gradient_from_model_ori(p_bp,q_bp,breakpoints_blended,curve_blended_R,peak_error_curve_blended_idx,peak_pose,curve[peak_error_curve_idx,3:],breakpoint_interp_2tweak_indices)
 			q_bp=ilc.update_bp_ori(p_bp,q_bp,de_ori_dp,angle_error[peak],breakpoint_interp_2tweak_indices)
 
+			# for m in breakpoint_interp_2tweak_indices:
+			# 	for bp_sub_idx in range(len(p_bp[m]))
+			# 		ax.scatter(p_bp[m][bp_sub_idx][0], p_bp[m][bp_sub_idx][1], p_bp[m][bp_sub_idx][2],c='blue')
+			# plt.legend()
+			# plt.show()
 
-			##################################################################Joint Gradiant####################################################################
-			# de_dp, _=ilc.get_gradient_from_model_6j(q_bp,breakpoints_blended,curve_blended,curve_R_blended,peak_error_curve_blended_idx,robot.fwd(curve_exe_js[peak]),curve[peak_error_curve_idx,:3],curve[peak_error_curve_idx,3:],breakpoint_interp_2tweak_indices)
-			# p_bp, q_bp=ilc.update_bp_6j(p_bp,q_bp,de_dp,np.zeros(len(de_dp))[np.newaxis],error[peak],0,breakpoint_interp_2tweak_indices)
-
-
-		# for m in breakpoint_interp_2tweak_indices:
-		# 	ax.scatter(p_bp[m][0][0], p_bp[m][0][1], p_bp[m][0][2],c='blue',label='adjusted breakpoints')
-		# plt.legend()
-		# plt.show()
-
+		max_error_prev=max(error)
 
 if __name__ == "__main__":
 	main()

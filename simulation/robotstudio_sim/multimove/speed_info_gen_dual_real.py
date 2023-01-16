@@ -10,10 +10,13 @@ from lambda_calc import *
 from dual_arm import *
 from realrobot import *
 
+
+N=5
+
 dataset='curve_2/'
 data_dir="../../../data/"+dataset
-solution_dir=data_dir+'dual_arm/'+'diffevo_pose6/'
-exe_dir='../../../ilc/final/curve2_dual_v1500_real/'
+solution_dir=data_dir+'dual_arm/'+'diffevo_pose6_3/'
+exe_dir='../../../ilc/final/recorded_data/'
 
 
 robot1=robot_obj('ABB_6640_180_255','../../../config/abb_6640_180_255_robot_default_config.yml',tool_file_path='../../../config/paintgun.csv',d=50,acc_dict_path='')
@@ -28,7 +31,7 @@ curve_exe_js_all=[]
 timestamp_all=[]
 total_time_all=[]
 
-for i in range(10):
+for i in range(N):
     data = np.loadtxt(exe_dir+'run_'+str(i)+'.csv',delimiter=',', skiprows=1)
     ##############################data analysis#####################################
     lam, curve_exe1,curve_exe2,curve_exe_R1,curve_exe_R2,curve_exe_js1,curve_exe_js2, speed, timestamp, relative_path_exe, relative_path_exe_R=ms.logged_data_analysis_multimove(MotionProgramResultLog(None, None, data),robot1,robot2,realrobot=True)

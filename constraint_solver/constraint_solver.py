@@ -28,6 +28,8 @@ class lambda_opt(object):
 		if urdf_path:
 			self.tes_env=Tess_Env(urdf_path)
 			self.tes_env.update_pose(self.robot1.robot_name,np.eye(4))
+		else:
+			self.tes_env=None
 
 		self.curve_name=curve_name
 
@@ -585,6 +587,7 @@ class lambda_opt(object):
 
 		speed=traj_speed_est(self.robot1,q_out,self.lam,self.v_cmd)
 
+		###TODO: FIX TESSERACT MEMORY ERROR
 		if self.tes_env:
 			self.tes_env.update_pose(self.curve_name,H_from_RT(R_curve,shift/1000.))
 			if self.tes_env.check_collision_single(self.robot1.robot_name,self.curve_name,q_out):

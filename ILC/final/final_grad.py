@@ -8,12 +8,9 @@ import numpy as np
 from general_robotics_toolbox import *
 from pandas import read_csv
 import sys
-from io import StringIO
 from scipy.signal import find_peaks
-# sys.path.append('../abb_motion_program_exec')
-from abb_motion_program_exec_client import *
+
 sys.path.append('../')
-sys.path.append('../../toolbox')
 from ilc_toolbox import *
 
 from robots_def import *
@@ -23,8 +20,8 @@ from lambda_calc import *
 from blending import *
 
 def main():
-	dataset='wood/'
-	solution_dir='curve_pose_opt7/'
+	dataset='curve_2/'
+	solution_dir='curve_pose_opt2/'
 	data_dir="../../data/"+dataset+solution_dir
 	cmd_dir="../../data/"+dataset+solution_dir+'greedy0.02/'
 
@@ -33,12 +30,12 @@ def main():
 	curve = read_csv(data_dir+"Curve_in_base_frame.csv",header=None).values
 
 
-	multi_peak_threshold=0.2
-	robot=robot_obj('../../config/abb_6640_180_255_robot_default_config.yml',tool_file_path='../../config/paintgun.csv',d=50,acc_dict_path='')
+	multi_peak_threshold=0.3
+	robot=robot_obj('ABB_6640_180_255','../../config/abb_6640_180_255_robot_default_config.yml',tool_file_path='../../config/paintgun.csv',d=50,acc_dict_path='')
 
-	v=400
+	v=1200
 	s = speeddata(v,9999999,9999999,999999)
-	zone=20
+	zone=50
 	z = zonedata(False,zone,1.5*zone,1.5*zone,0.15*zone,1.5*zone,0.15*zone)
 
 	all_bp_threshold=0.8
@@ -57,8 +54,6 @@ def main():
 	inserted_points=[]
 	iteration=50
 	for i in range(iteration):
-
-		ms = MotionSend()
 		###execution with plant
 		log_results=ms.exec_motions(robot,primitives,breakpoints,p_bp,q_bp,s,z)
 		# Write log csv to file
@@ -163,6 +158,9 @@ def main():
 			# plt.show()
 
 		max_error_prev=max(error)
+
+		if max(error)<0.3:
+			break
 
 if __name__ == "__main__":
 	main()

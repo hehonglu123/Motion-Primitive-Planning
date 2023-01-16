@@ -8,12 +8,9 @@ import numpy as np
 from general_robotics_toolbox import *
 from pandas import read_csv
 import sys
-from io import StringIO
 from scipy.signal import find_peaks
-# sys.path.append('../abb_motion_program_exec')
-from abb_motion_program_exec_client import *
+
 sys.path.append('../')
-sys.path.append('../../toolbox')
 from ilc_toolbox import *
 
 from robots_def import *
@@ -23,8 +20,8 @@ from lambda_calc import *
 from blending import *
 from realrobot import *
 def main():
-	dataset='wood/'
-	solution_dir='curve_pose_opt7/'
+	dataset='curve_2/'
+	solution_dir='curve_pose_opt2/'
 	data_dir="../../data/"+dataset+solution_dir
 	cmd_dir="../../data/"+dataset+solution_dir+'greedy0.02/'
 
@@ -33,12 +30,12 @@ def main():
 	curve = read_csv(data_dir+"Curve_in_base_frame.csv",header=None).values
 
 
-	multi_peak_threshold=0.5
-	robot=abb6640(d=50)
+	multi_peak_threshold=0.4
+	robot=robot_obj('ABB_6640_180_255','../../config/abb_6640_180_255_robot_default_config.yml',tool_file_path='../../config/paintgun.csv',d=50,acc_dict_path='')
 
-	v=400
+	v=1200
 	s = speeddata(v,9999999,9999999,999999)
-	zone=10
+	zone=50
 	z = zonedata(False,zone,1.5*zone,1.5*zone,0.15*zone,1.5*zone,0.15*zone)
 
 	gamma_v_max=1
@@ -47,7 +44,7 @@ def main():
 	ms = MotionSend()
 	breakpoints,primitives,p_bp,q_bp=ms.extract_data_from_cmd(cmd_dir+'command.csv')
 	###extension
-	p_bp,q_bp=ms.extend(robot,q_bp,primitives,breakpoints,p_bp,extension_start=100,extension_end=100)
+	p_bp,q_bp=ms.extend(robot,q_bp,primitives,breakpoints,p_bp,extension_start=150,extension_end=100)
 	# breakpoints,primitives,p_bp,q_bp=ms.extract_data_from_cmd('curve2_pose_opt2_v1200/command.csv')
 
 	
@@ -59,10 +56,12 @@ def main():
 	max_grad=False
 	inserted_points=[]
 	iteration=50
+
+	N=5 	###N-run average
 	for i in range(iteration):
 
 		ms = MotionSend(url='http://192.168.55.1:80')
-		curve_js_all_new, avg_curve_js, timestamp_d=average_5_exe(ms,robot,primitives,breakpoints,p_bp,q_bp,s,z,curve,"recorded_data")
+		curve_js_all_new, avg_curve_js, timestamp_d=average_N_exe(ms,robot,primitives,breakpoints,p_bp,q_bp,s,z,curve,"recorded_data",N=N)
 		###calculat data with average curve
 		lam, curve_exe, curve_exe_R, speed=logged_data_analysis(robot,timestamp_d,avg_curve_js)
 		#############################chop extension off##################################
@@ -125,32 +124,33 @@ def main():
 			print('all bps adjustment')
 			##########################################adjust bp's toward error direction######################################
 			error_bps_v,error_bps_w=ilc.get_error_direction(curve,p_bp,q_bp,curve_exe,curve_exe_R)
-			###line search on gamma
-			max_error=[]
-			gamma_all=np.linspace(gamma_v_min,gamma_v_max,num=int(1+(gamma_v_max-gamma_v_min)/0.2))
-			print(gamma_all)
-			for gamma_v in gamma_all:
-				p_bp_temp, q_bp_temp=ilc.update_error_direction(curve,p_bp,q_bp,error_bps_v,error_bps_w,gamma_v=gamma_v,gamma_w=0.1)
-				ms = MotionSend(url='http://192.168.55.1:80')
-				curve_js_all_new, avg_curve_js, timestamp_d=average_5_exe(ms,robot,primitives,breakpoints,p_bp_temp,q_bp_temp,s,z,curve,"recorded_data")
-				###calculat data with average curve
-				lam, curve_exe, curve_exe_R, speed=logged_data_analysis(robot,timestamp_d,avg_curve_js)
-				#############################chop extension off##################################
-				lam, curve_exe, curve_exe_R,curve_exe_js, speed, timestamp=ms.chop_extension(curve_exe, curve_exe_R,avg_curve_js, speed, timestamp_d,curve[0,:3],curve[-1,:3])
-				##############################calcualte error########################################
-				error_temp,angle_error_temp=calc_all_error_w_normal(curve_exe,curve[:,:3],curve_exe_R[:,:,-1],curve[:,3:])
-				max_error.append(max(error_temp))
+			# ###line search on gamma
+			# max_error=[]
+			# # gamma_all=np.linspace(gamma_v_min,gamma_v_max,num=int(1+(gamma_v_max-gamma_v_min)/0.2))
+			# gamma_all=[0.5]
+			# print(gamma_all)
+			# for gamma_v in gamma_all:
+			# 	p_bp_temp, q_bp_temp=ilc.update_error_direction(curve,p_bp,q_bp,error_bps_v,error_bps_w,gamma_v=gamma_v,gamma_w=0.1)
+			# 	ms = MotionSend(url='http://192.168.55.1:80')
+			# 	curve_js_all_new, avg_curve_js, timestamp_d=average_N_exe(ms,robot,primitives,breakpoints,p_bp_temp,q_bp_temp,s,z,curve,"recorded_data",N=5)
+			# 	###calculat data with average curve
+			# 	lam, curve_exe, curve_exe_R, speed=logged_data_analysis(robot,timestamp_d,avg_curve_js)
+			# 	#############################chop extension off##################################
+			# 	lam, curve_exe, curve_exe_R,curve_exe_js, speed, timestamp=ms.chop_extension(curve_exe, curve_exe_R,avg_curve_js, speed, timestamp_d,curve[0,:3],curve[-1,:3])
+			# 	##############################calcualte error########################################
+			# 	error_temp,angle_error_temp=calc_all_error_w_normal(curve_exe,curve[:,:3],curve_exe_R[:,:,-1],curve[:,3:])
+			# 	max_error.append(max(error_temp))
 
 			
-			print(max_error)
-			min_error_idx=np.argmin(max_error)
-			gamma_v=gamma_all[min_error_idx]
-			if min(max_error)>max(error):
-				gamma_v=0
-				max_grad=True
-			print("FINAL GAMMA",gamma_v)
-			gamma_v_max=gamma_v
-			p_bp, q_bp=ilc.update_error_direction(curve,p_bp,q_bp,error_bps_v,error_bps_w,gamma_v=gamma_v,gamma_w=0.1)
+			# print(max_error)
+			# min_error_idx=np.argmin(max_error)
+			# gamma_v=gamma_all[min_error_idx]
+			# if min(max_error)>max(error):
+			# 	gamma_v=0
+			# 	max_grad=True
+			# print("FINAL GAMMA",gamma_v)
+			# gamma_v_max=gamma_v
+			p_bp, q_bp=ilc.update_error_direction(curve,p_bp,q_bp,error_bps_v,error_bps_w,gamma_v=0.5,gamma_w=0.1)
 		else:
 			max_grad=True
 			print('max gradient')
@@ -189,6 +189,9 @@ def main():
 			# plt.show()
 
 		max_error_prev=max(error)
+
+		if max(error)<0.5:
+			break
 
 if __name__ == "__main__":
 	main()

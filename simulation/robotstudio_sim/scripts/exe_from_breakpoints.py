@@ -8,9 +8,7 @@ import numpy as np
 from general_robotics_toolbox import *
 from pandas import read_csv
 import sys
-from io import StringIO
-# sys.path.append('../abb_motion_program_exec')
-from abb_motion_program_exec_client import *
+
 sys.path.append('../../../toolbox')
 from robots_def import *
 from error_check import *
@@ -18,15 +16,19 @@ from MotionSend import *
 
 def main():
     ms = MotionSend()
-    dataset='from_NX/'
+    # ms = MotionSend(url='http://192.168.55.1:80')
+
+    dataset='curve_2/'
     solution_dir='curve_pose_opt2/'
-    cmd_dir='../../../data/'+dataset+solution_dir+'100L/'
+
     data_dir='../../../data/'+dataset+solution_dir
+    cmd_dir=data_dir+'greedy0.02/'
+    # cmd_dir=data_dir+'grad_result/real/'
 
     curve = read_csv(data_dir+"Curve_in_base_frame.csv",header=None).values
     lam_original=calc_lam_cs(curve[:,:3])
 
-    robot=robot_obj('../../../config/abb_6640_180_255_robot_default_config.yml',tool_file_path='../../../config/paintgun.csv',d=50,acc_dict_path='')
+    robot=robot_obj('ABB_6640_180_255','../../../config/abb_6640_180_255_robot_default_config.yml',tool_file_path='../../../config/paintgun.csv',d=50,acc_dict_path='')
 
     v250 = speeddata(250,9999999,9999999,999999)
     v350 = speeddata(350,9999999,9999999,999999)
@@ -39,24 +41,20 @@ def main():
     # speed={'v200':v200,'v250':v250,'v300':v300,'v350':v350,'v400':v400,'v450':v450,'v500':v500}
     # speed={'v800':v800,'v900':v900,'v1000':v1000,'v1100':v1100,'v1200':v1200,'v1300':v1300,'v1400':v1400}
     # speed={'v800':v800,'v1000':v1000,'v1200':v1200,'v1500':v1500,'v2000':v2000}
-    speed={'v50':v50}
+    speed={'v500':v500}
     zone={'z100':z100}
 
     for s in speed:
         for z in zone: 
             breakpoints,primitives, p_bp,q_bp=ms.extract_data_from_cmd(cmd_dir+"command.csv")
             q_bp_end=q_bp[-1][0]
-            p_bp, q_bp = ms.extend(robot, q_bp, primitives, breakpoints, p_bp,extension_start=100,extension_end=100)
+            # p_bp, q_bp = ms.extend(robot, q_bp, primitives, breakpoints, p_bp,extension_start=150,extension_end=100)
             log_results = ms.exec_motions(robot,primitives,breakpoints,p_bp,q_bp,speed[s],zone[z])
-
-            plt.plot(log_results.data[:,0])
-            # plt.title('logging timestamp diff')
-            plt.show()
 
             ##############################data analysis#####################################
             lam, curve_exe, curve_exe_R,curve_exe_js, exe_speed, timestamp=ms.logged_data_analysis(robot,log_results,realrobot=True)
             #############################chop extension off##################################
-            lam, curve_exe, curve_exe_R,curve_exe_js, exe_speed, timestamp=ms.chop_extension(curve_exe, curve_exe_R,curve_exe_js, exe_speed, timestamp,curve[0,:3],curve[-1,:3])
+            # lam, curve_exe, curve_exe_R,curve_exe_js, exe_speed, timestamp=ms.chop_extension(curve_exe, curve_exe_R,curve_exe_js, exe_speed, timestamp,curve[0,:3],curve[-1,:3])
             ##############################calcualte error########################################
             error,angle_error=calc_all_error_w_normal(curve_exe,curve[:,:3],curve_exe_R[:,:,-1],curve[:,3:])
 
@@ -85,11 +83,11 @@ def main():
             plt.show()
 
             ####joint limit visualization
-            for i in range(len(curve_exe_js[0])):
-                plt.plot(curve_exe_js[:,i])
-                plt.title('joint'+str(i+1))
-                plt.ylim([robot.lower_limit[i],robot.upper_limit[i]])
-                plt.show()
+            # for i in range(len(curve_exe_js[0])):
+            #     plt.plot(curve_exe_js[:,i])
+            #     plt.title('joint'+str(i+1))
+            #     plt.ylim([robot.lower_limit[i],robot.upper_limit[i]])
+            #     plt.show()
 
 
 
