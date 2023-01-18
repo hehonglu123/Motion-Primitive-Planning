@@ -1,5 +1,4 @@
 # from abb_motion_program_exec_client import *
-from re import L
 from fanuc_motion_program_exec_client import *
 from io import StringIO
 from pandas import *

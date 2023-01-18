@@ -197,9 +197,9 @@ def moving_average(a, n=11, padding=False):
 	return ret[n - 1:] / n
 
 
-def lfilter(x, y):
+def lfilter(x, y,n=10):
 	x,y=linear_interp(x,y)
-	n=10
+	# n=10
 	y1=moving_average(y,n)
 	y2=moving_average(np.flip(y,axis=0),n)
 

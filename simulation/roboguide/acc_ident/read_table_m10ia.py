@@ -27,12 +27,22 @@ y=[]
 q1_acc=[]
 q2_acc=[]
 q3_acc=[]
+close_id=None
+count_id=0
+close_dis=9999999
 for key, value in dic_comp.items():
    x.append(key[0])
    y.append(key[1])
+   if np.linalg.norm([key[0]-0,key[1]-0])<close_dis:
+      close_id=count_id
+      close_dis=np.linalg.norm([key[0]-0,key[1]-0])
    q1_acc.append(value[0])
    q2_acc.append(value[1])
    q3_acc.append(value[2])
+   count_id+=1
+
+print(x[close_id],y[close_id],q3_acc[close_id])
+exit()
 
 #####################################################################get acc from q###########################################################
 # q=np.array([2,0,-1,1,3,4])
