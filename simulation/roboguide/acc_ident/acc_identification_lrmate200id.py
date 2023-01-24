@@ -2,7 +2,7 @@ from fanuc_motion_program_exec_client import *
 from math import degrees,radians
 from pandas import *
 from io import StringIO
-import json
+from pathlib import Path
 import pickle
 
 import copy
@@ -12,20 +12,71 @@ from utils import *
 from robots_def import *
 import matplotlib.pyplot as plt
 
-client = FANUCClient()
+###### put IP address here ######
+IP_ADDRESS='127.0.0.2'
+#################################
 
-group_num = [1,2]
-uframe = [1,1]
-utool = [4,4]
+client = FANUCClient(robot_ip=IP_ADDRESS)
+
+###### check your group,uframe number and utool number here ######
+group_num = [2]
+uframe = [2]
+utool = [2]
+##################################################################
 
 zone=95
 resolution=0.05 ###rad
 displacement=radians(5)
 waves_num=8
 
+def robot_joint_limits(q,robot,joint):
+	
+	### robot joint limits
+	q2_up_sample=np.radians([20,90])
+	q3_low_sample=np.radians(np.array([-70,0]))
+	# q2_low_sample=np.radians([-90,-65])
+	# q3_up_sample=np.radians(np.array([180,205]))
+	q2_low_sample=np.radians([-45,45])
+	q3_up_sample=np.radians(np.array([10,180]))
+
+	fq3low_q2=interp1d(q2_up_sample,q3_low_sample)
+	fq2up_q3=interp1d(q3_low_sample,q2_up_sample)
+	fq3up_q2=interp1d(q2_low_sample,q3_up_sample)
+	fq2low_q3=interp1d(q3_up_sample,q2_low_sample)
+
+	lower_limit=robot.lower_limit[joint]
+	upper_limit=robot.upper_limit[joint]
+	if joint==1: # joint 2
+		if q<= np.max(q3_low_sample):
+			if q>np.min(q3_low_sample):
+				upper_limit=fq2up_q3(q)
+			else:
+				upper_limit=np.min(q2_up_sample)
+		if q>=np.min(q3_up_sample):
+			if q<np.max(q3_up_sample):
+				lower_limit=fq2low_q3(q)
+			else:
+				lower_limit=np.max(q2_low_sample)
+	if joint==2: # joint 3
+		if q<= np.max(q2_low_sample):
+			if q>np.min(q2_low_sample):
+				upper_limit=fq3up_q2(q)
+			else:
+				upper_limit=np.min(q3_up_sample)
+		if q>=np.min(q2_up_sample):
+			if q<np.max(q2_up_sample):
+				lower_limit=fq3low_q2(q)
+			else:
+				lower_limit=np.max(q3_low_sample)
+	
+	return lower_limit,upper_limit
+
 def get_acc(log_results,qds,joint):
 	StringData=StringIO(log_results.decode('utf-8'))
 	df = read_csv(StringData, sep =",")
+
+	# print(df)
+	# exit()
 
 	q1_1=df['J11'].tolist()[1:]
 	q1_2=df['J12'].tolist()[1:]
@@ -76,7 +127,7 @@ def get_acc(log_results,qds,joint):
 	all_qddot_max_p=[]
 	all_qddot_max_n=[]
 	###get qdot, qddot
-	joint_vel=np.gradient(joint_data1)/np.gradient(timestamp1)
+	joint_vel=np.gradient(joint_data2)/np.gradient(timestamp1)
 	joint_acc=np.gradient(joint_vel)/np.gradient(timestamp1)
 	timestampacc, joint_acc_filter=lfilter(timestamp1[5:-5], joint_acc[5:-5],n=4)
 	qddot_sorted=np.sort(joint_acc_filter)
@@ -93,24 +144,11 @@ def get_acc(log_results,qds,joint):
 	# plt.show()
 	print(qddot_max_p,qddot_max_n)
 
-	joint_vel=np.gradient(joint_data2)/np.gradient(timestamp2)
-	joint_acc=np.gradient(joint_vel)/np.gradient(timestamp2)
-	timestampacc, joint_acc_filter=lfilter(timestamp2[5:-5], joint_acc[5:-5],n=4)
-	qddot_sorted=np.sort(joint_acc_filter)
-	qddot_max_p=np.average(qddot_sorted[-5:])
-	qddot_max_n=-np.average(qddot_sorted[:5])
-	all_qddot_max_p.append(qddot_max_p)
-	all_qddot_max_n.append(qddot_max_n)
+	#### logged joint data
+	joint_data = np.hstack((np.reshape(timestamp,(-1,1)),curve_exe_js2))
+	######################
 
-	# plt.plot(timestamp2,joint_data2,label='position')
-	# plt.plot(timestamp2,joint_vel,label='velocity')
-	# plt.plot(timestamp2[5:-5],joint_acc[5:-5],label='acceleration')
-	# plt.plot(timestampacc,joint_acc_filter,label='acceleration filter')
-	# plt.legend()
-	# plt.show()
-	print(qddot_max_p,qddot_max_n)
-
-	return all_qddot_max_p, all_qddot_max_n
+	return all_qddot_max_p, all_qddot_max_n, joint_data
 
 def exec(qds,joint,displacement):
 	###move joint at q_d configuration
@@ -134,88 +172,38 @@ def exec(qds,joint,displacement):
 		tp.moveJ(j_end,100,'%',-1)
 		tps.append(tp)
 	
-	log_results=client.execute_motion_program_multi(tps[0],tps[1])
+	# log_results=client.execute_motion_program_multi(tps[0],tps[1])
+	log_results=client.execute_motion_program(tps[0])
 
 	return get_acc(log_results,qds,joint)
 
-robot1=m10ia(Ry(np.radians(90)),p_tool=np.array([0,0,0]))
+# robot1=m10ia(Ry(np.radians(90)),p_tool=np.array([0,0,0]))
 robot2=lrmate200id(Ry(np.radians(90)),p_tool=np.array([0,0,0]))
 robots=[]
-robots.append(robot1)
+# robots.append(robot1)
 robots.append(robot2)
 
-### robot joint limits
-q2_up_sample=[]
-q3_low_sample =[]
-q2_low_sample = []
-q3_up_sample = []
-fq3low_q2=[]
-fq2up_q3=[]
-fq3up_q2=[]
-fq2low_q3=[]
-
-# robot1 limits
-q2_up_sample.append(np.radians(np.arange(40,160+0.1,10)))
-q3_low_sample.append(np.radians(np.array([-89,-87.5,-84.5,-79,-71.5,-63.5,-57.5,-51,-45,-38.5,-32.5,-26,-19.5])))
-q2_low_sample.append(np.radians(np.array([-80,-85,-90])))
-q3_up_sample.append(np.radians(np.array([180,177.5,174.5])))
-# robot2 limits
-q2_up_sample.append(np.radians(np.arange(60,145+0.1,5)))
-q3_low_sample.append(np.radians(np.array([-70,-68,-65.5,-62.5,-59,-54.5,-50,-44.5,-39,-32.5,-25.5,-18,-10,-2,6.5,15,24,33])))
-q2_low_sample.append(np.radians(np.arange(-100,-75+0.1,5)))
-q3_up_sample.append(np.radians(np.array([180,185,190,195,200,205])))
-
-for i in range(len(q2_up_sample)):
-	fq3low_q2.append(interp1d(q2_up_sample[i],q3_low_sample[i]))
-	fq2up_q3.append(interp1d(q3_low_sample[i],q2_up_sample[i]))
-	fq3up_q2.append(interp1d(q2_low_sample[i],q3_up_sample[i]))
-	fq2low_q3.append(interp1d(q3_up_sample[i],q2_low_sample[i]))
+q2_test_lower=radians(-45)
+q2_test_upper=radians(70)
 
 ### arrange all q2 q3 pairs between robot1 and robot2
 robots_qds=[]
 total_runs=0
 for i in range(len(robots)):
 	qds=[]
-	q2_test_lower = robots[i].lower_limit[1]
-	q2_test_upper = robots[i].upper_limit[1]
 	for q2 in np.arange(q2_test_lower,q2_test_upper,resolution):
 
-		if q2 < np.max(q2_low_sample[i]):
-			q3_test_upper =fq3up_q2[i](q2)
-		else:
-			q3_test_upper = np.max(q3_up_sample[i])
-		if q2 > np.min(q2_up_sample[i]):
-			q3_test_lower = fq3low_q2[i](q2)
-		else:
-			q3_test_lower = np.min(q3_low_sample[i])
+		q3_test_lower,q3_test_upper=robot_joint_limits(q2,robots[i],2)
 
 		for q3 in np.arange(q3_test_lower,q3_test_upper,resolution):
-			q_d=np.array([0,q2,q3,0,0,0])
+			
+			q_d=np.array([radians(90),q2,q3,0,radians(0),0])
 
 			travel_lower_limit = copy.deepcopy(robots[i].lower_limit)
 			travel_upper_limit = copy.deepcopy(robots[i].upper_limit)
 
-			## get actual travel limits
-			if q_d[2] > np.min(q3_up_sample[i]):
-				if q_d[2] <= np.max(q3_up_sample[i]):
-					travel_lower_limit[1] = fq2low_q3[i](q_d[2])
-				else:
-					travel_lower_limit[1] = np.max(q2_low_sample[i])
-			if q_d[2] < np.max(q3_low_sample[i]):
-				if q_d[2] >= np.min(q3_low_sample[i]):
-					travel_upper_limit[1] = fq2up_q3[i](q_d[2])
-				else:
-					travel_upper_limit[1] = np.min(q2_up_sample[i])
-			if q_d[1] < np.max(q2_low_sample[i]):
-				if q_d[1] >=  np.min(q2_low_sample[i]):
-					travel_upper_limit[2] = fq3up_q2[i](q_d[1])
-				else:
-					travel_upper_limit[2] = np.min(q3_up_sample[i])
-			if q_d[1] > np.min(q2_up_sample[i]):
-				if q_d[1] <= np.max(q2_up_sample[i]):
-					travel_lower_limit[2] = fq3low_q2[i](q_d[1])
-				else:
-					travel_lower_limit[2] = np.max(q3_low_sample[i])
+			travel_lower_limit[2],travel_upper_limit[2]=robot_joint_limits(q_d[1],robots[i],2)
+			travel_lower_limit[1],travel_upper_limit[1]=robot_joint_limits(q_d[2],robots[i],1)
 			
 			if np.any((q_d-displacement)<travel_lower_limit) or np.any((q_d+displacement)>travel_upper_limit):
 				continue
@@ -225,23 +213,22 @@ for i in range(len(robots)):
 	if len(qds)>total_runs:
 		total_runs=len(qds)
 
-print("robot1 total:",len(robots_qds[0]))
-print("robot2 total:",len(robots_qds[1]))
 print("Total runs:",total_runs)
 
-for i in range(2):
-	qds=np.array(robots_qds[i])
-	plt.scatter(np.degrees(qds[:,1]),np.degrees(qds[:,2]))
-	plt.xlabel('q2 (deg)')
-	plt.ylabel('q3 (deg)')
-	plt.title("lrmate200id Sampling Points")
-	plt.show()
-exit()
+# qds=np.array(robots_qds[0])
+# plt.scatter(np.degrees(qds[:,1]),np.degrees(qds[:,2]))
+# plt.xlabel('q2 (deg)')
+# plt.ylabel('q3 (deg)')
+# plt.title("m10ia Sampling Points")
+# plt.show()
+# exit()
 
-dict_tables=[{},{}]
-
+dict_tables=[{}]
 #####################first & second joint acc both depends on second and third joint#####################################
-for i_run in range(4681,total_runs):
+Path('lrmate200id').mkdir(exist_ok=True)
+acc_filename='lrmate200id/lrmate200id_acc_shake'
+st=time.monotonic()
+for i_run in range(0,total_runs):
 	print(i_run,'in total',total_runs)
 
 	qds=[]
@@ -251,36 +238,17 @@ for i_run in range(4681,total_runs):
 
 	for joint in range(3):
 		print("joint",joint)
-		all_qddot_max_p,all_qddot_max_n=exec(qds,joint,displacement)
+		all_qddot_max_p,all_qddot_max_n,joint_data=exec(qds,joint,displacement)
+		## save joint data
+		np.save('lrmate200id/log_'+str(i_run)+'_'+str(joint)+'.npy',joint_data)
 		for i in range(len(robots)):
 			dict_tables[i][(qds[i][1],qds[i][2])][2*joint]=all_qddot_max_p[i]
 			dict_tables[i][(qds[i][1],qds[i][2])][2*joint+1]=all_qddot_max_n[i]
+	dt=time.monotonic()-st
+	print("Time Elapse:",dt,'(sec)')
 	print("================================")
 	
 	# save when a qd is finished
-	with open('m10ia/acc_shake3.txt','w+') as f:
+	with open(acc_filename+'.txt','w+') as f:
 		f.write(str(dict_tables[0]))
-	pickle.dump(dict_tables[0], open('m10ia/acc_shake3.pickle','wb'))
-	with open('lrmate200id/acc_shake3.txt','w+') as f:
-		f.write(str(dict_tables[1]))
-	pickle.dump(dict_tables[1], open('lrmate200id/acc_shake3.pickle','wb'))
-
-# for q2 in np.arange(robot.lower_limit[1]+displacement+0.01,robot.upper_limit[1]-displacement-0.01,resolution):
-# 	for q3 in np.arange(robot.lower_limit[2]+displacement+0.01,robot.upper_limit[2]-displacement-0.01,resolution):
-# 		###initialize keys, and desired pose
-
-# 		dict_table[(q2,q3)]=[0]*6 		###[+j1,-j1,+j2,-j2,+j3,-j3]
-# 		q_d=[0,q2,q3,0,0,0]
-
-# 		#measure first joint first
-# 		qddot_max,_=exec(q_d,0,displacement)
-# 		###update dict
-# 		dict_table[(q2,q3)][0]=qddot_max
-# 		dict_table[(q2,q3)][1]=qddot_max
-
-# 		for joint in range(1,3):
-# 			###move first q2 and q3
-# 			qddot_max_p,qddot_max_n=exec(q_d,joint,displacement)
-# 			###update dict
-# 			dict_table[(q2,q3)][2*joint]=qddot_max_p
-# 			dict_table[(q2,q3)][2*joint+1]=qddot_max_n
+	pickle.dump(dict_tables[0], open(acc_filename+'.pickle','wb'))

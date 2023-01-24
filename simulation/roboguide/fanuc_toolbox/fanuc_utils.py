@@ -25,14 +25,14 @@ class MotionSendFANUC(object):
         # robot1 roboguide info
         self.group = group
         self.uframe = uframe
-        self.uframe1_base_T = uframe1_T.inv()*Transform(np.eye(3),-1*robot1.H[0])
+        self.uframe1_base_T = uframe1_T.inv()*Transform(np.eye(3),-1*robot1.P[:,0])
         self.utool = utool
 
         # robot2 roboguide info
         self.group2 = group2
         self.uframe2 = uframe2
         self.uframe2_T = uframe2_T
-        self.uframe2_base_T = uframe2_T.inv()*Transform(np.eye(3),-1*robot2.H[0])
+        self.uframe2_base_T = uframe2_T.inv()*Transform(np.eye(3),-1*robot2.P[:,0])
         self.utool2 = utool2
 
         # robots
