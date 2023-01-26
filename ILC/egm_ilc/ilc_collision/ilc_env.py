@@ -23,7 +23,7 @@ def H42H3(H):
 	H3=np.vstack((H3,np.array([0,0,1])))
 	return H3
 
-class Tess_Env(object):
+class ILC_Tess_Env(object):
 	def __init__(self,urdf_path):
 
 		#link and joint names in urdf
@@ -119,7 +119,7 @@ class Tess_Env(object):
 
 
 def collision_test():
-	t=Tess_Env('../../../config/urdf/')				#create obj
+	t=ILC_Tess_Env('../../../config/urdf/')				#create obj
 
 
 	q=np.array([0,0.5,0.7,1,1,1.])
