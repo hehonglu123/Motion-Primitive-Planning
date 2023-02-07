@@ -33,7 +33,8 @@ def robot_joint_limits(q,robot,joint):
 	
 	### robot joint limits
 	q2_up_sample=np.radians([20,90])
-	q3_low_sample=np.radians(np.array([-70,0]))
+	# q3_low_sample=np.radians(np.array([-70,0]))
+	q3_low_sample=np.radians(np.array([-65,0]))
 	# q2_low_sample=np.radians([-90,-65])
 	# q3_up_sample=np.radians(np.array([180,205]))
 	q2_low_sample=np.radians([-45,45])

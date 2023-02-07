@@ -1,7 +1,6 @@
 import pickle
 import matplotlib.pyplot as plt
 import numpy as np
-import ast
 
 # dic = ''
 # with open(r'test.txt','r') as f:
@@ -9,33 +8,9 @@ import ast
 #             dic=i #string
 # dic = eval(dic) # this is orignal dict with instace dict
 
-# dic={}
-# try:
-#    dic = pickle.load(open('lrmate200id/acc.pickle','rb'))
-# except EOFError:
-#    print("EOF Error")
-#    with open('lrmate200id/acc.txt', 'r+') as handle:
-#       data = handle.read()
-#    dic = ast.literal_eval(data)
+dic = pickle.load(open('m10ia_realrobot/m10ia_acc_shake.pickle','rb'))
 
-robot_name='m10ia'
-# robot_name='lrmate200id'
-
-dic = pickle.load(open(robot_name+'/acc_shake.pickle','rb'))
-
-for i in range(2,4):
-   this_dic=pickle.load(open(robot_name+'/acc_shake'+str(i)+'.pickle','rb'))
-   dic.update(this_dic)
-
-pickle.dump(dic, open(robot_name+'/'+robot_name+'_acc_shake.pickle','wb'))
-exit()
-
-dic_comp={}
-for key, value in dic.items():
-   dic_comp[(key[0],-key[1])]=value
-
-pickle.dump(dic_comp, open(robot_name+'/'+robot_name+'_acc_shake_compensate.pickle','wb'))
-
+###surface plots of accleration limits, x as q2, y as q3
 ###surface plots of accleration limits, x as q2, y as q3
 x=[]
 y=[]

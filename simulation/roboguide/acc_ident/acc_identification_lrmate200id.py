@@ -33,7 +33,7 @@ def robot_joint_limits(q,robot,joint):
 	
 	### robot joint limits
 	q2_up_sample=np.radians([20,90])
-	q3_low_sample=np.radians(np.array([-70,0]))
+	q3_low_sample=np.radians(np.array([-65,0]))
 	# q2_low_sample=np.radians([-90,-65])
 	# q3_up_sample=np.radians(np.array([180,205]))
 	q2_low_sample=np.radians([-45,45])
@@ -136,12 +136,12 @@ def get_acc(log_results,qds,joint):
 	all_qddot_max_p.append(qddot_max_p)
 	all_qddot_max_n.append(qddot_max_n)
 
-	# plt.plot(timestamp1,joint_data1,label='position')
-	# plt.plot(timestamp1,joint_vel,label='velocity')
-	# plt.plot(timestamp1[5:-5],joint_acc[5:-5],label='acceleration')
-	# plt.plot(timestampacc,joint_acc_filter,label='acceleration filter')
-	# plt.legend()
-	# plt.show()
+	plt.plot(timestamp1,joint_data1,label='position')
+	plt.plot(timestamp1,joint_vel,label='velocity')
+	plt.plot(timestamp1[5:-5],joint_acc[5:-5],label='acceleration')
+	plt.plot(timestampacc,joint_acc_filter,label='acceleration filter')
+	plt.legend()
+	plt.show()
 	print(qddot_max_p,qddot_max_n)
 
 	#### logged joint data
@@ -240,7 +240,7 @@ for i_run in range(0,total_runs):
 		print("joint",joint)
 		all_qddot_max_p,all_qddot_max_n,joint_data=exec(qds,joint,displacement)
 		## save joint data
-		np.save('lrmate200id/log_'+str(i_run)+'_'+str(joint)+'.npy',joint_data)
+		# np.save('lrmate200id/log_'+str(i_run)+'_'+str(joint)+'.npy',joint_data)
 		for i in range(len(robots)):
 			dict_tables[i][(qds[i][1],qds[i][2])][2*joint]=all_qddot_max_p[i]
 			dict_tables[i][(qds[i][1],qds[i][2])][2*joint+1]=all_qddot_max_n[i]
@@ -249,6 +249,6 @@ for i_run in range(0,total_runs):
 	print("================================")
 	
 	# save when a qd is finished
-	with open(acc_filename+'.txt','w+') as f:
-		f.write(str(dict_tables[0]))
-	pickle.dump(dict_tables[0], open(acc_filename+'.pickle','wb'))
+	# with open(acc_filename+'.txt','w+') as f:
+	# 	f.write(str(dict_tables[0]))
+	# pickle.dump(dict_tables[0], open(acc_filename+'.pickle','wb'))

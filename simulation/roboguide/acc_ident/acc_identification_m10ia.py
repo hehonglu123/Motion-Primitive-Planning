@@ -224,9 +224,9 @@ for i in range(len(robots)):
 		for q3 in np.arange(q3_test_lower,q3_test_upper,resolution):
 			
 			if q2<0:
-				q_d=np.array([radians(-90),q2,q3,0,radians(-90),0])
+				q_d=np.array([radians(0),q2,q3,0,radians(-90),0])
 			else:
-				q_d=np.array([radians(-45),q2,q3,0,radians(-90),0])
+				q_d=np.array([radians(0),q2,q3,0,radians(-90),0])
 
 			travel_lower_limit = copy.deepcopy(robots[i].lower_limit)
 			travel_upper_limit = copy.deepcopy(robots[i].upper_limit)
