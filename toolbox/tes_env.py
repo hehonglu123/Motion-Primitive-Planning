@@ -43,9 +43,11 @@ class Tess_Env(object):
 		
 
 		######tesseract environment setup:
-		with open(urdf_path+'combined.urdf','r') as f:
+		# cell_name='combined'
+		cell_name='fanuc_cell'
+		with open(urdf_path+cell_name+'.urdf','r') as f:
 			combined_urdf = f.read()
-		with open(urdf_path+'combined.srdf','r') as f:
+		with open(urdf_path+cell_name+'.srdf','r') as f:
 			combined_srdf = f.read()
 
 		self.t_env= Environment()
@@ -89,7 +91,7 @@ class Tess_Env(object):
 		###iterate all joints config 
 
 		for q in curve_js:
-			self.t_env.setState(self.robot_jointname[robot_name], q)
+			self.t_env.setState(self.robot_jointname[robot_name], np.array(q))
 			env_state = self.t_env.getState()
 			self.manager.setCollisionObjectsTransform(env_state.link_transforms)
 
@@ -99,6 +101,7 @@ class Tess_Env(object):
 			tesseract_collision.flattenResults(result,result_vector)
 			###iterate all collision instances
 			for c in result_vector:
+				print(c)
 				cond1=(robot_name in c.link_names[0]) and (robot_name in c.link_names[1])	#self collision
 				cond2=(robot_name in c.link_names[0]) and (part_name in c.link_names[1])	#part collision
 				cond3=(part_name in c.link_names[0]) and (robot_name in c.link_names[1])	#part collision
