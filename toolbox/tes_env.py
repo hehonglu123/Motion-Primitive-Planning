@@ -101,7 +101,6 @@ class Tess_Env(object):
 			tesseract_collision.flattenResults(result,result_vector)
 			###iterate all collision instances
 			for c in result_vector:
-				print(c)
 				cond1=(robot_name in c.link_names[0]) and (robot_name in c.link_names[1])	#self collision
 				cond2=(robot_name in c.link_names[0]) and (part_name in c.link_names[1])	#part collision
 				cond3=(part_name in c.link_names[0]) and (robot_name in c.link_names[1])	#part collision
