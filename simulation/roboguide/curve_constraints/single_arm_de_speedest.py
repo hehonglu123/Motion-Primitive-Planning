@@ -13,10 +13,13 @@ from tes_env import *
 
 def main():
     # data_type='curve_1'
-    data_type='curve_2_scale'
+    # data_type='curve_2_scale'
+
+    data_type='curve_1_half'
+    # data_type='curve_2_scale_half'
 
     ## using our paintgun
-    tooltype='paintgun'
+    # tooltype='paintgun'
     ## using GE laser
     tooltype='laser_ge'
 
@@ -33,18 +36,21 @@ def main():
 
     toolbox_path = '../../../toolbox/'
     robot_name='FANUC_m10ia'
-    robot = robot_obj(robot_name,toolbox_path+'robot_info/fanuc_m10ia_robot_default_config.yml',tool_file_path=toolbox_path+'tool_info/'+tooltype+'.csv',d=50,acc_dict_path=toolbox_path+'robot_info/m10ia_acc.pickle')
+    robot = robot_obj(robot_name,toolbox_path+'robot_info/fanuc_m10ia_robot_default_config.yml',tool_file_path=toolbox_path+'tool_info/'+tooltype+'.csv',d=0,acc_dict_path=toolbox_path+'robot_info/m10ia_acc.pickle')
 
     v_cmd=350
-    opt=lambda_opt(curve_dense[:,:3],curve_dense[:,3:],robot1=robot,urdf_path='../../../config/urdf/',steps=500,v_cmd=v_cmd)
+    opt=lambda_opt(curve_dense[:,:3],curve_dense[:,3:],robot1=robot,steps=500,v_cmd=v_cmd)
 
-    print('tes done')
-    # opt.tes_env.check_collision_single(robot_name,data_type,np.array([[0,0,0,0,0,0],[1,0,0,0,0,0]]))
-    time.sleep(300)
+    # tes_env=Tess_Env('../../../config/urdf/')
+    # tes_env.update_pose(robot_name,np.eye(4))
+    # print('tes done')
+    # tes_env.check_collision_single(robot_name,data_type,np.array([[0,0,0,0,0,0],[1,0,0,0,0,0]]))
+    # time.sleep(300)
 
     #read in initial curve pose
-    with open(data_dir+'blade_pose.yaml') as file:
-        curve_pose = np.array(yaml.safe_load(file)['H'],dtype=np.float64)
+    # with open(data_dir+'blade_pose.yaml') as file:
+    #     curve_pose = np.array(yaml.safe_load(file)['H'],dtype=np.float64)
+    curve_pose=np.loadtxt(data_dir+'curve_pose.csv',delimiter=',')
 
     k,theta=R2rot(curve_pose[:3,:3])
 
@@ -54,11 +60,15 @@ def main():
     bnds=tuple(zip(lowerer_limit,upper_limit))
 
     x_init = np.hstack((k*theta,curve_pose[:-1,-1],[0]))
+    print(x_init)
+
+    use_tes=False
+    if use_tes:
+        opt.tes_env=tes_env
 
     print("Sanity Check")
     print(opt.curve_pose_opt2(x_init))
     print("Sanity Check Done")
-    time.sleep(300)
 
     def print_cb(xk,convergence):
         print(xk)

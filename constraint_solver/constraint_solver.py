@@ -124,7 +124,7 @@ class lambda_opt(object):
 					ezdotd=(curve_normal[i]-pose_now.R[:,-1])
 
 					f=-np.dot(np.transpose(Jp),vd)-Kw*np.dot(np.transpose(JR_mod),ezdotd)
-					qdot=solve_qp(H,f,lb=self.robot1.lower_limit-q_all[-1]+self.lim_factor*np.ones(6),ub=self.robot1.upper_limit-q_all[-1]-self.lim_factor*np.ones(6))
+					qdot=solve_qp(H,f,lb=self.robot1.lower_limit-q_all[-1]+self.lim_factor*np.ones(6),ub=self.robot1.upper_limit-q_all[-1]-self.lim_factor*np.ones(6),solver='quadprog')
 
 					#avoid getting stuck
 					if abs(error_fb-error_fb_prev)<0.0001:
@@ -568,7 +568,10 @@ class lambda_opt(object):
 		if np.min(curve_new[:,2])<0:
 			return 999
 
-		R_temp=direction2R(curve_normal_new[0],-curve_new[1]+curve_new[0])
+		curve_origin_0_new = np.dot(R_curve,self.curve_original[0])+shift
+		curve_origin_1_new = np.dot(R_curve,self.curve_original[1])+shift
+		# R_temp=direction2R(curve_normal_new[0],-curve_origin_1_new+curve_origin_0_new)
+		R_temp=direction2R_Y(curve_normal_new[0],curve_origin_1_new-curve_origin_0_new)
 		R=np.dot(R_temp,Rz(theta1))
 		try:
 			q_init=self.robot1.inv(curve_new[0],R)[0]
@@ -578,7 +581,7 @@ class lambda_opt(object):
 				q_out=self.single_arm_stepwise_optimize(q_init,curve_new,curve_normal_new)
 			
 		except:
-			# traceback.print_exc()
+			traceback.print_exc()
 			return 999
 		
 		###make sure extension possible by checking start & end configuration
