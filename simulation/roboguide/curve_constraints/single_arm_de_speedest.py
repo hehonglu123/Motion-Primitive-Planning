@@ -18,8 +18,8 @@ def main():
     # data_type='curve_1'
     # data_type='curve_2_scale'
 
-    data_type='curve_1_half'
-    # data_type='curve_2_scale_half'
+    # data_type='curve_1_half'
+    data_type='curve_2_scale_half'
 
     ## using our paintgun
     # tooltype='paintgun'
@@ -87,8 +87,18 @@ def main():
 	# 								atol=0.)
 
     res=Geeks()
-    res.x=np.array([2.90640650e+00, -4.20905594e+00,  7.27557922e-01,  4.75611551e+02,
-        4.67387948e+02,  8.16317533e+02, -3.00079346e+00])
+    ### curve 1 half
+    # res.x=np.array([2.90640650e+00, -4.20905594e+00,  7.27557922e-01,  4.75611551e+02,
+    #     4.67387948e+02,  8.16317533e+02, -3.00079346e+00]) # succeed
+    ### curve 2 half
+    # res.x=np.array([ -1.70459622,   -1.54911388,   -1.48389176,  162.58006352,
+    #    -721.44047356,  151.42764626,   -3.13299495]) # collision
+    # res.x=np.array([  6.28298572e+00,  8.76919813e-01, -5.45853273e+00,  2.98874175e+02,
+    #     3.12765851e+02,  1.11483945e+03, -3.46921909e-01]) # succeed
+    res.x=np.array([  1.14148832,   3.47654058,   0.60404727, 554.55751725,
+       -51.50916994, 185.52444646,  -3.0517301]) # succeed
+    # res.x=np.array([  3.31469735e-03,  2.32464200e+00,  3.78272403e+00, -4.72299854e+01,
+    #     7.58435940e+02,  1.05767544e+03, -1.39878777e+00]) # collision
 
     print(res)
     theta0=np.linalg.norm(res.x[:3])	###pose rotation angle
@@ -156,6 +166,9 @@ def main():
     df=DataFrame({'x':curve_new[:,0],'y':curve_new[:,1],'z':curve_new[:,2],'nx':curve_normal_new[:,0],'ny':curve_normal_new[:,1],'nz':curve_normal_new[:,2]})
     df.to_csv(output_dir+'Curve_in_base_frame.csv',header=False,index=False)
     #########################################restore all 50,000 points, END##########################################################
+
+    speed=traj_speed_est(opt.robot1,q_out,opt.lam,opt.v_cmd)
+    print(min(speed))
 
 
 if __name__ == "__main__":
