@@ -107,8 +107,9 @@ def main():
     theta1=res.x[-1]	
     R_curve=rot(k,theta0)
     curve_pose=np.vstack((np.hstack((R_curve,np.array([shift]).T)),np.array([0,0,0,1])))
-    with open(data_dir+'curve_pose.yaml', 'w') as file:
+    with open(output_dir+'curve_pose.yaml', 'w') as file:
         documents = yaml.dump({'H':curve_pose.tolist()}, file)
+    np.savetxt(output_dir+'curve_pose.yaml',curve_pose,delimiter=',')
 
     ###get initial q
     curve_new=np.dot(R_curve,opt.curve.T).T+np.tile(shift,(len(opt.curve),1))
