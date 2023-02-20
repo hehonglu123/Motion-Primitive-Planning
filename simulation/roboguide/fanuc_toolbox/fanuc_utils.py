@@ -417,12 +417,20 @@ class MotionSendFANUC(object):
     
     def logged_data_analysis(self,robot,df):
 
-        q1=df['J1'].tolist()[1:]
-        q2=df['J2'].tolist()[1:]
-        q3=df['J3'].tolist()[1:]
-        q4=df['J4'].tolist()[1:]
-        q5=df['J5'].tolist()[1:]
-        q6=df['J6'].tolist()[1:]
+        if 'J1' in df.keys():
+            q1=df['J1'].tolist()[1:]
+            q2=df['J2'].tolist()[1:]
+            q3=df['J3'].tolist()[1:]
+            q4=df['J4'].tolist()[1:]
+            q5=df['J5'].tolist()[1:]
+            q6=df['J6'].tolist()[1:]
+        else:
+            q1=df['J11'].tolist()[1:]
+            q2=df['J12'].tolist()[1:]
+            q3=df['J13'].tolist()[1:]
+            q4=df['J14'].tolist()[1:]
+            q5=df['J15'].tolist()[1:]
+            q6=df['J16'].tolist()[1:]
         curve_exe_js=np.radians(np.vstack((q1,q2,q3,q4,q5,q6)).T.astype(float))
         timestamp=np.array(df['timestamp'].tolist()[1:]).astype(float)*1e-3 # from msec to sec
 

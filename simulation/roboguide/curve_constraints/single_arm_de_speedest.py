@@ -47,7 +47,8 @@ def main():
     tes_env=Tess_Env('../../../config/urdf/')
     tes_env.update_pose(robot_name,np.eye(4))
     print('tes done')
-    print(tes_env.check_collision_single(robot_name,data_type,np.array([[0,0,0,0,0,0],[1,0,0,0,0,0]]).astype(float)))
+    tes_env.viewer_joints_update(robot_name,np.array([0,0,0,0,0,0]).astype(float))
+    print(tes_env.check_collision_single(robot_name,data_type,np.array([[0,0,0,0,0,0]]).astype(float)))
     # time.sleep(300)
 
     #read in initial curve pose
@@ -69,9 +70,9 @@ def main():
     if use_tes:
         opt.tes_env=tes_env
 
-    print("Sanity Check")
-    print(opt.curve_pose_opt2(x_init))
-    print("Sanity Check Done")
+    # print("Sanity Check")
+    # print(opt.curve_pose_opt2(x_init))
+    # print("Sanity Check Done")
 
     def print_cb(xk,convergence):
         print(xk)
@@ -88,15 +89,20 @@ def main():
 
     res=Geeks()
     ### curve 1 half
+    # res.x=np.array([ 1.25875939,   -0.50601005,    0.64165078,  348.6279294 ,
+    #    -472.96223033,  498.93252423,    2.21941196]) # collision
     # res.x=np.array([2.90640650e+00, -4.20905594e+00,  7.27557922e-01,  4.75611551e+02,
-    #     4.67387948e+02,  8.16317533e+02, -3.00079346e+00]) # succeed
+    #     4.67387948e+02,  8.16317533e+02, -3.00079346e+00]) # collision
     ### curve 2 half
     # res.x=np.array([ -1.70459622,   -1.54911388,   -1.48389176,  162.58006352,
     #    -721.44047356,  151.42764626,   -3.13299495]) # collision
     # res.x=np.array([  6.28298572e+00,  8.76919813e-01, -5.45853273e+00,  2.98874175e+02,
-    #     3.12765851e+02,  1.11483945e+03, -3.46921909e-01]) # succeed
+    #     3.12765851e+02,  1.11483945e+03, -3.46921909e-01]) # collision
+    ##########
     res.x=np.array([  1.14148832,   3.47654058,   0.60404727, 554.55751725,
        -51.50916994, 185.52444646,  -3.0517301]) # succeed
+    rot_in_j1=np.radians(-50)
+    ##########
     # res.x=np.array([  3.31469735e-03,  2.32464200e+00,  3.78272403e+00, -4.72299854e+01,
     #     7.58435940e+02,  1.05767544e+03, -1.39878777e+00]) # collision
 
@@ -106,10 +112,15 @@ def main():
     shift=res.x[3:-1]					###pose translation
     theta1=res.x[-1]	
     R_curve=rot(k,theta0)
+
+    
+    shift=np.matmul(rot([0,0,1],rot_in_j1),shift)
+    R_curve=np.matmul(rot([0,0,1],rot_in_j1),R_curve)
+    
     curve_pose=np.vstack((np.hstack((R_curve,np.array([shift]).T)),np.array([0,0,0,1])))
     with open(output_dir+'curve_pose.yaml', 'w') as file:
         documents = yaml.dump({'H':curve_pose.tolist()}, file)
-    np.savetxt(output_dir+'curve_pose.yaml',curve_pose,delimiter=',')
+    np.savetxt(output_dir+'curve_pose.csv',curve_pose,delimiter=',')
 
     ###get initial q
     curve_new=np.dot(R_curve,opt.curve.T).T+np.tile(shift,(len(opt.curve),1))
@@ -120,6 +131,7 @@ def main():
     # R_temp=direction2R(curve_normal_base[0],-curve_base[1]+curve_base[0])
     R_temp=direction2R_Y(curve_normal_new[0],curve_origin_1_new-curve_origin_0_new)
     R=np.dot(R_temp,Rz(theta1))
+    # print(robot.inv(curve_new[0],R))
     q_init=robot.inv(curve_new[0],R)[0]
 
     #########################################restore only given points, saves time##########################################################
@@ -127,7 +139,7 @@ def main():
     # q_out=opt.followx(curve_base,curve_normal_new)
 
     print("Collision? (scarse)")
-    print(tes_env.check_collision_single(robot_name,data_type,q_out))
+    # print(tes_env.check_collision_single(robot_name,data_type,q_out))
     print("===================")
 
     ####output to trajectory csv
@@ -136,6 +148,8 @@ def main():
     df=DataFrame({'x':curve_new[:,0],'y':curve_new[:,1],'z':curve_new[:,2],'nx':curve_normal_new[:,0],'ny':curve_normal_new[:,1],'nz':curve_normal_new[:,2]})
     df.to_csv(output_dir+'curve_pose_opt_cs.csv',header=False,index=False)
     #########################################restore only given points, END##########################################################
+
+    tes_env.viewer_trajectory(robot_name,q_out)
 
     # dlam_out=calc_lamdot(q_out,opt.lam,opt.robot1,1)
     speed=traj_speed_est(opt.robot1,q_out,opt.lam,opt.v_cmd)
@@ -158,7 +172,7 @@ def main():
     q_out=opt.single_arm_stepwise_optimize(q_init,curve_new,curve_normal_new)
 
     print("Collision? (dense)")
-    print(tes_env.check_collision_single(robot_name,data_type,q_out))
+    # print(tes_env.check_collision_single(robot_name,data_type,q_out))
     print("===================")
 
     ####output to trajectory csv
@@ -167,6 +181,8 @@ def main():
     df=DataFrame({'x':curve_new[:,0],'y':curve_new[:,1],'z':curve_new[:,2],'nx':curve_normal_new[:,0],'ny':curve_normal_new[:,1],'nz':curve_normal_new[:,2]})
     df.to_csv(output_dir+'Curve_in_base_frame.csv',header=False,index=False)
     #########################################restore all 50,000 points, END##########################################################
+
+    tes_env.viewer_trajectory(robot_name,q_out)
 
     speed=traj_speed_est(opt.robot1,q_out,opt.lam,opt.v_cmd)
     print(min(speed))

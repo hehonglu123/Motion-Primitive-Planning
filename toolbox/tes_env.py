@@ -101,14 +101,20 @@ class Tess_Env(object):
 			tesseract_collision.flattenResults(result,result_vector)
 			###iterate all collision instances
 			for c in result_vector:
-				cond1=(robot_name in c.link_names[0]) and (robot_name in c.link_names[1])	#self collision
-				cond2=(robot_name in c.link_names[0]) and (part_name in c.link_names[1])	#part collision
-				cond3=(part_name in c.link_names[0]) and (robot_name in c.link_names[1])	#part collision
-				collision_cond=c.distance<0 #actual collision
+				# cond1=(robot_name in c.link_names[0]) and (robot_name in c.link_names[1])	#self collision
+				# cond2=(robot_name in c.link_names[0]) and (part_name in c.link_names[1])	#part collision
+				# cond3=(part_name in c.link_names[0]) and (robot_name in c.link_names[1])	#part collision
+				# collision_cond=c.distance<0 #actual collision
 
-				if (cond1 or cond2 or cond3) and collision_cond:
-					# print(c.link_names[0],c.link_names[1],c.distance)
-					return True
+				# if (cond1 or cond2 or cond3) and collision_cond:
+				# 	# print(c.link_names[0],c.link_names[1],c.distance)
+				# 	return True
+				
+				if (c.link_names[0] in self.robot_linkname[robot_name] or c.link_names[1] in self.robot_linkname[robot_name]):
+					for i in range(len(c.link_names)):
+						print(c.link_names[i])
+					print(c.link_names[0], c.link_names[1], c.distance)
+					# return True
 
 		return False
 
