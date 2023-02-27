@@ -20,7 +20,7 @@ ez=np.array([[0.],[0.],[1.]])
 
 class robot_obj(object):
 	###robot object class
-	def __init__(self,robot_name,def_path,tool_file_path='',base_transformation_file='',d=0,acc_dict_path='',j_compensation=[1,1,1,1,1,1]):
+	def __init__(self,robot_name,def_path,tool_file_path='',base_transformation_file='',d=0,acc_dict_path='',j_compensation=[1,1,1,1,1,1],pulse2deg_file_path=''):
 		#def_path: robot 			definition yaml file, name must include robot vendor
 		#tool_file_path: 			tool transformation to robot flange csv file
 		#base_transformation_file: 	base transformation to world frame csv file
@@ -47,6 +47,9 @@ class robot_obj(object):
 		else:
 			self.base_H=np.eye(4)
 
+		if len(pulse2deg_file_path)>0:
+			self.pulse2deg=np.abs(np.loadtxt(pulse2deg_file_path,delimiter=',')) #negate joint 2, 4, 6
+			
 		###set attributes
 		self.upper_limit=self.robot.joint_upper_limit 
 		self.lower_limit=self.robot.joint_lower_limit 
