@@ -3,7 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.interpolate import interp1d
 from scipy import signal
-import scipy
+import scipy, math
 from robots_def import *
 
 def H_inverse(H):
