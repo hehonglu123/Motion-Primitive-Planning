@@ -32,4 +32,4 @@ client = MotionProgramExecClient(base_url="http://192.168.55.1:80")
 # Execute both motion programs simultaneously
 log_results = client.execute_multimove_motion_program([mp1,mp2])
 
-client.abb_client.logout()
+# client.abb_client.logout()
