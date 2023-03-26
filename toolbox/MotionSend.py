@@ -148,6 +148,11 @@ class MotionSend(object):
 		log_results = self.client.execute_motion_program(mp)
 		return log_results
 
+	def parse_logged_data(self,log_results):		###convert packet to timestamp and joint angle in radians
+
+		return log_results.data[:,0], np.radians(log_results.data[:,2:8])
+
+
 	def exe_from_file(self,robot,filename,speed,zone):
 		breakpoints,primitives, p_bp,q_bp=self.extract_data_from_cmd(filename)
 		return self.exec_motions(robot,primitives,breakpoints,p_bp,q_bp,speed,zone)

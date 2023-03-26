@@ -210,6 +210,57 @@ class MotionSend(object):
 
 		return p_bp_extended,q_bp_extended
 
+	def extend2(self,robot,q_bp,primitives,breakpoints,p_bp,extension_start=100,extension_end=100):
+		##########################extend by adding another segment
+		###initial point extension
+		pose_start=robot.fwd(q_bp[0][0])
+		p_start=pose_start.p
+		R_start=pose_start.R
+		pose_end=robot.fwd(q_bp[1][-1])
+		p_end=pose_end.p
+		R_end=pose_end.R
+
+		#find new start point
+		slope_p=p_end-p_start
+		slope_p=slope_p/np.linalg.norm(slope_p)
+		p_start_new=p_start-extension_start*slope_p        ###extend 5cm backward
+
+		#find new start orientation
+		k,theta=R2rot(R_end@R_start.T)
+		theta_new=-extension_start*theta/np.linalg.norm(p_end-p_start)
+		R_start_new=rot(k,theta_new)@R_start
+
+		#solve invkin for initial point
+		p_bp.insert(0,[p_start_new])
+		q_bp.insert(0,[car2js(robot,q_bp[0][0],p_start_new,R_start_new)[0]])
+		primitives.insert(1,'movel')
+
+
+
+		###end point extension
+		pose_start=robot.fwd(q_bp[-2][-1])
+		p_start=pose_start.p
+		R_start=pose_start.R
+		pose_end=robot.fwd(q_bp[-1][-1])
+		p_end=pose_end.p
+		R_end=pose_end.R
+
+		#find new end point
+		slope_p=(p_end-p_start)/np.linalg.norm(p_end-p_start)
+		p_end_new=p_end+extension_end*slope_p        ###extend 5cm backward
+
+		#find new end orientation
+		k,theta=R2rot(R_end@R_start.T)
+		slope_theta=theta/np.linalg.norm(p_end-p_start)
+		R_end_new=rot(k,extension_end*slope_theta)@R_end
+
+		#solve invkin for end point
+		p_bp.append([p_end_new])
+		q_bp.append([car2js(robot,q_bp[-1][0],p_end_new,R_end_new)[0]])
+		primitives.append('movel')
+		return p_bp,q_bp
+
+
 	def extract_data_from_cmd(self,filename):
 		data = read_csv(filename)
 		breakpoints=np.array(data['breakpoints'].tolist())
@@ -254,6 +305,8 @@ class MotionSend(object):
 		df=DataFrame({'breakpoints':breakpoints,'primitives':primitives,'p_bp':p_bp_new,'q_bp':q_bp_new})
 		df.to_csv(filename,header=True,index=False)
 
+	def parse_logged_data(self,log_results):		###convert packet to timestamp and joint angle
+		return log_results[0], log_results[1]
 
 	def logged_data_analysis(self,robot,log_results,realrobot=True):
 		(timestamp, curve_exe_js)=log_results
