@@ -14,29 +14,30 @@ def main():
 
     ms = MotionSend(robot)
 
-    dataset='curve_2/'
+    dataset='curve_1/'
     solution_dir='baseline_motoman/'
 
     data_dir='../../data/'+dataset+solution_dir
-    cmd_dir=data_dir+'50L/'
+    cmd_dir=data_dir+'100L/'
 
     curve = read_csv(data_dir+"Curve_in_base_frame.csv",header=None).values
     lam_original=calc_lam_cs(curve[:,:3])
 
     
 
-    speed={'v50':50}
+    speed={'v200':200}
 
     for s in speed:
         breakpoints,primitives, p_bp,q_bp=ms.extract_data_from_cmd(cmd_dir+"command.csv")
         q_bp_end=q_bp[-1][0]
-        p_bp, q_bp = ms.extend(robot, q_bp, primitives, breakpoints, p_bp,extension_start=150,extension_end=100)
-        log_results = ms.exec_motions(robot,primitives,breakpoints,p_bp,q_bp,speed[s])
+        p_bp, q_bp = ms.extend(robot, q_bp, primitives, breakpoints, p_bp,extension_start=150,extension_end=150)
+        zone=[None]*(len(primitives)-1)+[0]
+        log_results = ms.exec_motions(robot,primitives,breakpoints,p_bp,q_bp,speed[s],zone)
 
         ##############################data analysis#####################################
         lam, curve_exe, curve_exe_R,curve_exe_js, exe_speed, timestamp=ms.logged_data_analysis(robot,log_results,realrobot=True)
         #############################chop extension off##################################
-        # lam, curve_exe, curve_exe_R,curve_exe_js, exe_speed, timestamp=ms.chop_extension(curve_exe, curve_exe_R,curve_exe_js, exe_speed, timestamp,curve[0,:3],curve[-1,:3])
+        lam, curve_exe, curve_exe_R,curve_exe_js, exe_speed, timestamp=ms.chop_extension(curve_exe, curve_exe_R,curve_exe_js, exe_speed, timestamp,curve[0,:3],curve[-1,:3])
         ##############################calcualte error########################################
         error,angle_error=calc_all_error_w_normal(curve_exe,curve[:,:3],curve_exe_R[:,:,-1],curve[:,3:])
 
@@ -45,23 +46,22 @@ def main():
         ax1.plot(lam, exe_speed, 'g-', label='Speed')
         ax2.plot(lam, error, 'b-',label='Error')
         ax2.plot(lam, np.degrees(angle_error), 'y-',label='Normal Error')
-        ax2.axis(ymin=0,ymax=6)
+        ax2.axis(ymin=0,ymax=2)
         ax1.axis(ymin=0,ymax=1500)
 
         ax1.set_xlabel('lambda (mm)')
         ax1.set_ylabel('Speed/lamdot (mm/s)', color='g')
         ax2.set_ylabel('Error/Normal Error (mm/deg)', color='b')
         plt.title("Speed and Error Plot")
-        ax1.legend(loc="upper right")
-
-        ax2.legend(loc="upper left")
+        h1, l1 = ax1.get_legend_handles_labels()
+        h2, l2 = ax2.get_legend_handles_labels()
+        ax1.legend(h1+h2, l1+l2, loc=1)
 
         ###plot breakpoints index
         breakpoints[1:]=breakpoints[1:]-1
         for bp in breakpoints:
             plt.axvline(x=lam_original[bp])
 
-        plt.legend()
         plt.show()
 
 

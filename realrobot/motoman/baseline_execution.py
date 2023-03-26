@@ -13,7 +13,7 @@ def main():
     pulse2deg_file_path='../../config/MA2010_A0_pulse2deg.csv',d=50)
     ms = MotionSend(robot)
 
-    dataset='curve_2/'
+    dataset='curve_1/'
     solution_dir='baseline_motoman/'
     data_dir='../../data/'+dataset+solution_dir
     cmd_dir=data_dir+'50L/'

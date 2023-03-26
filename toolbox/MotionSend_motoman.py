@@ -9,7 +9,7 @@ from toolbox_circular_fit import *
 from lambda_calc import *
 
 
-name_map={'MA2010_A0':('RB1',range(0,6)),'MA1440_A0':('RB2',range(6,12)),'D500B':('ST1',range(12,14))}
+name_map={'MA2010_A0':('RB1',0,6),'MA1440_A0':('RB2',6,12),'D500B':('ST1',12,14)}
 
 class MotionSend(object):
 	def __init__(self,robot1,robot2=None,IP='192.168.1.31') -> None:
@@ -74,7 +74,7 @@ class MotionSend(object):
 
 		self.client.ProgEnd()
 		timestamp, joint_recording = self.client.execute_motion_program()
-		return (timestamp, joint_recording[name_map[robot.robot_name][0]])
+		return (timestamp, joint_recording[:,name_map[robot.robot_name][1]:name_map[robot.robot_name][2]])
 
 	def exe_from_file(self,robot,filename,speed,zone=None):
 		breakpoints,primitives, p_bp,q_bp=self.extract_data_from_cmd(filename)
@@ -286,7 +286,8 @@ class MotionSend(object):
 	def chop_extension(self,curve_exe, curve_exe_R,curve_exe_js, speed, timestamp,p_start,p_end):
 		start_idx=np.argmin(np.linalg.norm(p_start-curve_exe,axis=1))
 		end_idx=np.argmin(np.linalg.norm(p_end-curve_exe,axis=1))
-
+		print(start_idx,end_idx)
+		print(len(curve_exe))
 		#make sure extension doesn't introduce error
 		if np.linalg.norm(curve_exe[start_idx]-p_start)>0.5:
 			start_idx+=1

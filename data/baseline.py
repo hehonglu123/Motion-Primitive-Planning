@@ -103,7 +103,7 @@ def find_js(robot,curve,curve_normal):
 
 def main():
 	#select dataset
-	data_dir='curve_2/'
+	data_dir='curve_1/'
 	output_dir=data_dir+'baseline_motoman/'
 
 	###read in curves
