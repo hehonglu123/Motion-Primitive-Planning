@@ -30,8 +30,8 @@ def main():
     for s in speed:
         breakpoints,primitives, p_bp,q_bp=ms.extract_data_from_cmd(cmd_dir+"command.csv")
         q_bp_end=q_bp[-1][0]
-        # p_bp, q_bp = ms.extend(robot, q_bp, primitives, breakpoints, p_bp,extension_start=150,extension_end=100)
-        log_results = ms.exec_motions(robot,primitives,breakpoints,p_bp,q_bp,[5]+[speed[s]]*len(breakpoints))
+        p_bp, q_bp = ms.extend(robot, q_bp, primitives, breakpoints, p_bp,extension_start=150,extension_end=100)
+        log_results = ms.exec_motions(robot,primitives,breakpoints,p_bp,q_bp,speed[s])
 
         ##############################data analysis#####################################
         lam, curve_exe, curve_exe_R,curve_exe_js, exe_speed, timestamp=ms.logged_data_analysis(robot,log_results,realrobot=True)

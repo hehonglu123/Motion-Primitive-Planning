@@ -9,13 +9,14 @@ from toolbox_circular_fit import *
 from lambda_calc import *
 
 
-name_map={'MA2010_A0':'RB1','MA1440_A0':'RB2','D500B':'ST1'}
+name_map={'MA2010_A0':('RB1',range(0,6)),'MA1440_A0':('RB2',range(6,12)),'D500B':('ST1',range(12,14))}
+
 class MotionSend(object):
 	def __init__(self,robot1,robot2=None,IP='192.168.1.31') -> None:
 		if robot2:
-			self.client=MotionProgramExecClient(ROBOT_CHOICE=name_map[robot1.robot_name],ROBOT_CHOICE2=name_map[robot2.robot_name],pulse2deg=robot1.pulse2deg,pulse2deg_2=robot2.pulse2deg)
+			self.client=MotionProgramExecClient(ROBOT_CHOICE=name_map[robot1.robot_name][0],ROBOT_CHOICE2=name_map[robot2.robot_name][0],pulse2deg=robot1.pulse2deg,pulse2deg_2=robot2.pulse2deg)
 		else:
-			self.client=MotionProgramExecClient(ROBOT_CHOICE=name_map[robot1.robot_name],pulse2deg=robot1.pulse2deg)
+			self.client=MotionProgramExecClient(ROBOT_CHOICE=name_map[robot1.robot_name][0],pulse2deg=robot1.pulse2deg)
 
 
 
@@ -54,20 +55,26 @@ class MotionSend(object):
 						mp.MoveC(np.degrees(q_bp[i][0]),np.degrees(q_bp[i][1]),speed,zone)
 
 			else:
-				if type(speed) is list:
-					if type(zone) is list:
-						self.client.MoveJ(np.degrees(q_bp[i][0]), speed[i], zone[i])
-					else:
-						self.client.MoveJ(np.degrees(q_bp[i][0]), speed[i], zone)
+				###special case for motoman, speed is in %
+				if i==0 and type(speed) is not list:
+					self.client.MoveJ(np.degrees(q_bp[i][0]), 5)
+
 				else:
-					if type(zone) is list:
-						self.client.MoveJ(np.degrees(q_bp[i][0]), speed, zone[i])
+
+					if type(speed) is list:
+						if type(zone) is list:
+							self.client.MoveJ(np.degrees(q_bp[i][0]), speed[i], zone[i])
+						else:
+							self.client.MoveJ(np.degrees(q_bp[i][0]), speed[i], zone)
 					else:
-						self.client.MoveJ(np.degrees(q_bp[i][0]), speed, zone)
+						if type(zone) is list:
+							self.client.MoveJ(np.degrees(q_bp[i][0]), speed, zone[i])
+						else:
+							self.client.MoveJ(np.degrees(q_bp[i][0]), speed, zone)
 
 		self.client.ProgEnd()
 		timestamp, joint_recording = self.client.execute_motion_program()
-		return (timestamp, joint_recording)
+		return (timestamp, joint_recording[name_map[robot.robot_name][0]])
 
 	def exe_from_file(self,robot,filename,speed,zone=None):
 		breakpoints,primitives, p_bp,q_bp=self.extract_data_from_cmd(filename)
