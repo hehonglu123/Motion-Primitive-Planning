@@ -16,11 +16,11 @@ def main():
     dataset='curve_1/'
     solution_dir='baseline_motoman/'
     data_dir='../../data/'+dataset+solution_dir
-    cmd_dir=data_dir+'50L/'
+    cmd_dir=data_dir+'100L/'
 
     curve = read_csv(data_dir+"Curve_in_base_frame.csv",header=None).values
     breakpoints,primitives, p_bp,q_bp=ms.extract_data_from_cmd(cmd_dir+"command.csv")
-    p_bp,q_bp=ms.extend(robot,q_bp,primitives,breakpoints,p_bp)
+    p_bp,q_bp=ms.extend2(robot,q_bp,primitives,breakpoints,p_bp)
 
    
     error_threshold=0.5
