@@ -211,7 +211,7 @@ class MotionSend(object):
 		return p_bp_extended,q_bp_extended
 
 	def extend2(self,robot,q_bp,primitives,breakpoints,p_bp,extension_start=100,extension_end=100):
-		##########################extend by adding another segment
+		##########################extend by adding another segment, adjust bp/primitives by reference
 		###initial point extension
 		pose_start=robot.fwd(q_bp[0][0])
 		p_start=pose_start.p
@@ -234,6 +234,7 @@ class MotionSend(object):
 		p_bp.insert(0,[p_start_new])
 		q_bp.insert(0,[car2js(robot,q_bp[0][0],p_start_new,R_start_new)[0]])
 		primitives.insert(1,'movel')
+		breakpoints=np.insert(breakpoints,0,0)
 
 
 
@@ -258,7 +259,8 @@ class MotionSend(object):
 		p_bp.append([p_end_new])
 		q_bp.append([car2js(robot,q_bp[-1][0],p_end_new,R_end_new)[0]])
 		primitives.append('movel')
-		return p_bp,q_bp
+		breakpoints=np.append(breakpoints,breakpoints[-1])
+		return p_bp,q_bp,primitives,breakpoints
 
 
 	def extract_data_from_cmd(self,filename):
@@ -339,8 +341,7 @@ class MotionSend(object):
 	def chop_extension(self,curve_exe, curve_exe_R,curve_exe_js, speed, timestamp,p_start,p_end):
 		start_idx=np.argmin(np.linalg.norm(p_start-curve_exe,axis=1))
 		end_idx=np.argmin(np.linalg.norm(p_end-curve_exe,axis=1))
-		print(start_idx,end_idx)
-		print(len(curve_exe))
+
 		#make sure extension doesn't introduce error
 		if np.linalg.norm(curve_exe[start_idx]-p_start)>0.5:
 			start_idx+=1

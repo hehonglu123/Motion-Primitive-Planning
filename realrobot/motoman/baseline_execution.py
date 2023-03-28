@@ -20,7 +20,7 @@ def main():
 
     curve = read_csv(data_dir+"Curve_in_base_frame.csv",header=None).values
     breakpoints,primitives, p_bp,q_bp=ms.extract_data_from_cmd(cmd_dir+"command.csv")
-    p_bp,q_bp=ms.extend2(robot,q_bp,primitives,breakpoints,p_bp)
+    p_bp,q_bp,primitives,breakpoints=ms.extend2(robot,q_bp,primitives,breakpoints,p_bp)
 
    
     error_threshold=0.5
@@ -31,7 +31,7 @@ def main():
     v_prev_possible=100
     z=None
 
-    N=5
+    N=2
     
 
     max_error=999
