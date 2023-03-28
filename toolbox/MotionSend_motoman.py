@@ -233,7 +233,7 @@ class MotionSend(object):
 		#solve invkin for initial point
 		p_bp.insert(0,[p_start_new])
 		q_bp.insert(0,[car2js(robot,q_bp[0][0],p_start_new,R_start_new)[0]])
-		primitives.insert(1,'movel')
+		primitives.insert(1,'movel_fit')
 		breakpoints=np.insert(breakpoints,0,0)
 
 
@@ -258,7 +258,7 @@ class MotionSend(object):
 		#solve invkin for end point
 		p_bp.append([p_end_new])
 		q_bp.append([car2js(robot,q_bp[-1][0],p_end_new,R_end_new)[0]])
-		primitives.append('movel')
+		primitives.append('movel_fit')
 		breakpoints=np.append(breakpoints,breakpoints[-1])
 		return p_bp,q_bp,primitives,breakpoints
 
