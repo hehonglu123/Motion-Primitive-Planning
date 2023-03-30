@@ -31,7 +31,7 @@ def main():
     v_prev_possible=100
     z=None
 
-    N=2
+    N=5
     
     i=0
     max_error=999

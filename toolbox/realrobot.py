@@ -74,8 +74,8 @@ def average_N_exe(ms,robot,primitives,breakpoints,p_bp,q_bp,v,z,curve,log_path='
 		###save 5 runs
 		if len(log_path)>0:
 			# Write log csv to file
-			timestamp,curve_exe_js=ms.parse_logged_data(log_results)
-			np.savetxt(log_path+'/run_'+str(r)+'.csv',np.hstack((timestamp.reshape((-1,1)),curve_exe_js)),delimiter=',',comments='')
+			timestamp,curve_exe_js,cmd_num=ms.parse_logged_data(log_results)
+			np.savetxt(log_path+'/run_'+str(r)+'.csv',np.hstack((timestamp.reshape((-1,1)),cmd_num.reshape((-1,1)),curve_exe_js)),delimiter=',',comments='')
 
 		##############################data analysis#####################################
 		lam, curve_exe, curve_exe_R,curve_exe_js, speed, timestamp=ms.logged_data_analysis(robot,log_results,realrobot=True)

@@ -25,7 +25,7 @@ def main():
 
     
 
-    speed={'v400':400}
+    speed={'v50':50}
 
     for s in speed:
         breakpoints,primitives, p_bp,q_bp=ms.extract_data_from_cmd(cmd_dir+"command.csv")
@@ -35,8 +35,8 @@ def main():
         log_results = ms.exec_motions(robot,primitives,breakpoints,p_bp,q_bp,speed[s],zone)
 
         ###save results
-        timestamp,curve_exe_js=ms.parse_logged_data(log_results)
-        np.savetxt('output.csv',np.hstack((timestamp.reshape((-1,1)),curve_exe_js)),delimiter=',',comments='')
+        timestamp,curve_exe_js,cmd_num=ms.parse_logged_data(log_results)
+        np.savetxt('output.csv',np.hstack((timestamp.reshape((-1,1)),cmd_num.reshape((-1,1)),curve_exe_js)),delimiter=',',comments='')
 
         ##############################data analysis#####################################
         lam, curve_exe, curve_exe_R,curve_exe_js, exe_speed, timestamp=ms.logged_data_analysis(robot,log_results,realrobot=True)

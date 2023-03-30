@@ -57,7 +57,11 @@ class MotionSend(object):
 			else:
 				###special case for motoman, speed is in %
 				if i==0 and type(speed) is not list:
+
 					self.client.MoveJ(np.degrees(q_bp[i][0]), 5)
+					self.client.setWaitTime(1)
+					self.client.MoveJ(np.degrees(q_bp[i][0]), 1)
+					self.client.setWaitTime(0.1)
 
 				else:
 
@@ -72,9 +76,8 @@ class MotionSend(object):
 						else:
 							self.client.MoveJ(np.degrees(q_bp[i][0]), speed, zone)
 
-		self.client.ProgEnd()
-		timestamp, joint_recording = self.client.execute_motion_program()
-		return (timestamp, joint_recording[:,name_map[robot.robot_name][1]:name_map[robot.robot_name][2]])
+		timestamp, joint_recording, job_line,job_step = self.client.execute_motion_program()
+		return (timestamp, joint_recording[:,name_map[robot.robot_name][1]:name_map[robot.robot_name][2]], job_line,job_step)
 
 	def exe_from_file(self,robot,filename,speed,zone=None):
 		breakpoints,primitives, p_bp,q_bp=self.extract_data_from_cmd(filename)
@@ -308,10 +311,18 @@ class MotionSend(object):
 		df.to_csv(filename,header=True,index=False)
 
 	def parse_logged_data(self,log_results):		###convert packet to timestamp and joint angle
-		return log_results[0], log_results[1]
+		return log_results[0], log_results[1], log_results[2].astype(int)
 
 	def logged_data_analysis(self,robot,log_results,realrobot=True):
-		(timestamp, curve_exe_js)=log_results
+		timestamp, curve_exe_js,job_line=self.parse_logged_data(log_results)
+
+		#find closest to 5 cmd_num
+		idx = np.absolute(job_line-5).argmin()
+		start_idx=np.where(job_line==job_line[idx])[0][0]
+
+		timestamp=timestamp[start_idx:]
+		curve_exe_js=curve_exe_js[start_idx:]
+
 		###filter noise
 		timestamp, curve_exe_js=lfilter(timestamp, curve_exe_js)
 
