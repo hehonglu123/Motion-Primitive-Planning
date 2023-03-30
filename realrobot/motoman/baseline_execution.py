@@ -33,12 +33,14 @@ def main():
 
     N=2
     
-
+    i=0
     max_error=999
     while True:
         ms = MotionSend(robot)
 
-        curve_js_all_new, avg_curve_js, timestamp_d=average_N_exe(ms,robot,primitives,breakpoints,p_bp,q_bp,v,z,curve,"recorded_data",N=N)
+        curve_js_all_new, avg_curve_js, timestamp_d=average_N_exe(ms,robot,primitives,breakpoints,p_bp,q_bp,v,z,curve,'recorded_data/iteration_'+str(i),N=N)
+        
+
         ###calculat data with average curve
         lam, curve_exe, curve_exe_R, speed=logged_data_analysis(robot,timestamp_d,avg_curve_js)
         #############################chop extension off##################################
@@ -51,6 +53,30 @@ def main():
         max_error=np.max(error)
 
         print('cmd speed: ',v, 'max error: ',max_error, 'max ori error: ', max(angle_error), 'std(speed): ',np.std(speed), 'avg(speed): ',np.average(speed))
+        ##############################plot error#####################################
+
+        fig, ax1 = plt.subplots()
+        ax2 = ax1.twinx()
+        ax1.plot(lam, speed, 'g-', label='Speed')
+        ax2.plot(lam, error, 'b-',label='Error')
+        ax2.plot(lam, np.degrees(angle_error), 'y-',label='Normal Error')
+        ax2.axis(ymin=0,ymax=5)
+        ax1.axis(ymin=0,ymax=1.2*v)
+
+        ax1.set_xlabel('lambda (mm)')
+        ax1.set_ylabel('Speed/lamdot (mm/s)', color='g')
+        ax2.set_ylabel('Error/Normal Error (mm/deg)', color='b')
+        plt.title("Speed and Error Plot")
+        h1, l1 = ax1.get_legend_handles_labels()
+        h2, l2 = ax2.get_legend_handles_labels()
+        ax1.legend(h1+h2, l1+l2, loc=1)
+
+        plt.savefig('recorded_data/iteration_'+str(i)+'/plot')
+        plt.clf()
+
+
+        i+=1
+
         v_prev_temp=v
         if max_error>error_threshold or np.std(speed)>np.average(speed)/20 or max(angle_error)>angle_threshold:
             v-=abs(v_prev-v)/2

@@ -1,9 +1,8 @@
 from pandas import read_csv
 from sklearn.cluster import KMeans
 import numpy as np
-import scipy
+import scipy, os, time
 from utils import *
-import time
 
 def average_curve(curve_all,timestamp_all):
 	###get desired synced timestamp first
@@ -42,6 +41,10 @@ def remove_traj_outlier(curve_exe_js_all,timestamp_all,total_time_all):
 	return curve_exe_js_all,timestamp_all
 
 def average_N_exe(ms,robot,primitives,breakpoints,p_bp,q_bp,v,z,curve,log_path='',N=5,safe_q=None):
+
+	if not os.path.exists(log_path):
+	   os.makedirs(log_path)
+
 	###N run execute
 	curve_exe_js_all=[]
 	timestamp_all=[]

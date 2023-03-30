@@ -30,7 +30,7 @@ def main():
 	robot=robot_obj('MA2010_A0',def_path='../../config/MA2010_A0_robot_default_config.yml',tool_file_path='../../config/weldgun2.csv',\
     pulse2deg_file_path='../../config/MA2010_A0_pulse2deg.csv',d=50)
 
-	v=300
+	v=200
 	z=None
 
 	gamma_v_max=1

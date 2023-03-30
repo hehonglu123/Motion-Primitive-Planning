@@ -25,12 +25,12 @@ def main():
 
     
 
-    speed={'v200':200}
+    speed={'v400':400}
 
     for s in speed:
         breakpoints,primitives, p_bp,q_bp=ms.extract_data_from_cmd(cmd_dir+"command.csv")
         q_bp_end=q_bp[-1][0]
-        p_bp, q_bp = ms.extend2(robot, q_bp, primitives, breakpoints, p_bp,extension_start=150,extension_end=150)
+        p_bp,q_bp,primitives,breakpoints = ms.extend2(robot, q_bp, primitives, breakpoints, p_bp,extension_start=150,extension_end=150)
         zone=[None]*(len(primitives)-1)+[0]
         log_results = ms.exec_motions(robot,primitives,breakpoints,p_bp,q_bp,speed[s],zone)
 
@@ -51,7 +51,7 @@ def main():
         ax2.plot(lam, error, 'b-',label='Error')
         ax2.plot(lam, np.degrees(angle_error), 'y-',label='Normal Error')
         ax2.axis(ymin=0,ymax=2)
-        ax1.axis(ymin=0,ymax=1500)
+        ax1.axis(ymin=0,ymax=1.2*speed[s])
 
         ax1.set_xlabel('lambda (mm)')
         ax1.set_ylabel('Speed/lamdot (mm/s)', color='g')
