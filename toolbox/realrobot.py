@@ -33,7 +33,9 @@ def remove_traj_outlier(curve_exe_js_all,timestamp_all,total_time_all):
 	major_indices=np.where(index==major_index)[0]
 	time_mode_avg=cluster[major_index]
 
-	if abs(cluster[0][0]-cluster[1][0])>0.02*time_mode_avg:
+	# threshold=0.2 ###ms 
+	threshold=0.02*time_mode_avg
+	if abs(cluster[0][0]-cluster[1][0])>threshold:
 		curve_exe_js_all=[curve_exe_js_all[iii] for iii in major_indices]
 		timestamp_all=[timestamp_all[iii] for iii in major_indices]
 		print('outlier traj detected')

@@ -354,9 +354,9 @@ class MotionSend(object):
 		end_idx=np.argmin(np.linalg.norm(p_end-curve_exe,axis=1))
 
 		#make sure extension doesn't introduce error
-		if np.linalg.norm(curve_exe[start_idx]-p_start)>0.5:
+		if np.linalg.norm(curve_exe[start_idx]-p_start)>0.3:
 			start_idx+=1
-		if np.linalg.norm(curve_exe[end_idx]-p_end)>0.5:
+		if np.linalg.norm(curve_exe[end_idx]-p_end)>0.3:
 			end_idx-=1
 
 		curve_exe=curve_exe[start_idx:end_idx+1]

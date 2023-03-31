@@ -13,7 +13,7 @@ def main():
     pulse2deg_file_path='../../config/MA2010_A0_pulse2deg.csv',d=50)
     ms = MotionSend(robot)
 
-    dataset='curve_1/'
+    dataset='curve_2/'
     solution_dir='baseline_motoman/'
     data_dir='../../data/'+dataset+solution_dir
     cmd_dir=data_dir+'100L/'
@@ -30,13 +30,15 @@ def main():
     v_prev=2*v
     v_prev_possible=100
     z=None
+    # z=8
 
     N=5
     
     i=0
     max_error=999
+
     while True:
-        ms = MotionSend(robot)
+        
 
         curve_js_all_new, avg_curve_js, timestamp_d=average_N_exe(ms,robot,primitives,breakpoints,p_bp,q_bp,v,z,curve,'recorded_data/iteration_'+str(i),N=N)
         
@@ -66,7 +68,7 @@ def main():
         ax1.set_xlabel('lambda (mm)')
         ax1.set_ylabel('Speed/lamdot (mm/s)', color='g')
         ax2.set_ylabel('Error/Normal Error (mm/deg)', color='b')
-        plt.title("Speed and Error Plot")
+        plt.title("Speed and Error Plot v=%f" % v)
         h1, l1 = ax1.get_legend_handles_labels()
         h2, l2 = ax2.get_legend_handles_labels()
         ax1.legend(h1+h2, l1+l2, loc=1)
@@ -92,7 +94,6 @@ def main():
         #if stuck
         if abs(v-v_prev)<1:
             v=v_prev_possible
-            ms = MotionSend(robot)
             curve_js_all_new, avg_curve_js, timestamp_d=average_N_exe(ms,robot,primitives,breakpoints,p_bp,q_bp,s,z,curve,"recorded_data",N=N)
             ###calculat data with average curve
             lam, curve_exe, curve_exe_R, speed=logged_data_analysis(robot,timestamp_d,avg_curve_js)
@@ -111,7 +112,7 @@ def main():
         'average error':[np.average(error)],'max error':[max_error],'min error':[np.amin(error)],'std error':[np.std(error)],\
         'average angle(rad) error':[np.average(angle_error)],'max angle(rad) error':[max(angle_error)],'min angle(rad) error':[np.amin(angle_error)],'std angle(rad) error':[np.std(angle_error)]})
 
-    df.to_csv(data_dir+'realrobot/bisect/speed_info.csv',header=True,index=False)
+    df.to_csv('recorded_data/iteration_'+str(i)+'/speed_info.csv',header=True,index=False)
 
 
 
