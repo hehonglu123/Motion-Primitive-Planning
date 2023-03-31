@@ -26,11 +26,11 @@ def main():
     error_threshold=0.5
     angle_threshold=np.radians(3)
 
-    v=400
+    v=100
     v_prev=2*v
     v_prev_possible=100
-    z=None
-    # z=8
+    # z=None
+    z=1
 
     N=5
     
