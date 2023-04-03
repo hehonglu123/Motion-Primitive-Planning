@@ -39,7 +39,7 @@ def main():
 
     while True:
         
-
+        ms = MotionSend(robot)
         curve_js_all_new, avg_curve_js, timestamp_d=average_N_exe(ms,robot,primitives,breakpoints,p_bp,q_bp,v,z,curve,'recorded_data/iteration_'+str(i),N=N)
         
 

@@ -11,22 +11,23 @@ def main():
 
     ms = MotionSend(robot)
     # datasets=['movec_smooth','movec_30_car','movec_30_ori','movec+movel_smooth']#,'movel_smooth','movel_30_car','movel_30_ori']
-    datasets=['movel_smooth','movel_30_car','movel_30_ori']
-    # datasets=['movel_30_car']
+    datasets=['movel_smooth_fixedR','movel_smooth','movel_30_car','movel_30_ori']
+    # datasets=['movel_smooth','movel_30_car','movel_30_ori']
     # datasets=['movec_30_car','movec_30_ori','movec+movel_smooth']
-    speed=[50,200,400,800,2000]
-
+    speed=[50,200,400,800,1500]
+    # speed=[1500,800,400,200,50]
     zone=[None,0,1,3,5,8]
 
     for dataset in datasets:
         for v in speed:
             for z in zone: 
-                curve_exe_js=ms.exe_from_file(robot,'../data/'+dataset+"/command.csv",v,z)
+                timestamp,curve_exe_js,cmd_num,_=ms.exe_from_file(robot,'../data/'+dataset+"/command.csv",v,z)
        
+                if not os.path.exists(dataset):
+                   os.makedirs(dataset)
 
-                f = open(dataset+"/curve_exe"+"_"+str(v)+"_"+str(z)+".csv", "w")
-                f.write(curve_exe_js)
-                f.close()
+                np.savetxt(dataset+"/curve_exe"+"_"+str(v)+"_"+str(z)+".csv",np.hstack((timestamp.reshape((-1,1)),cmd_num.reshape((-1,1)),curve_exe_js)),delimiter=',',comments='')
+
 
 if __name__ == "__main__":
     main()

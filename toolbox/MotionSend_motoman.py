@@ -26,7 +26,6 @@ class MotionSend(object):
 	
 
 	def exec_motions(self,robot,primitives,breakpoints,p_bp,q_bp,speed,zone=None):
-
 		for i in range(len(primitives)):
 			if 'movel' in primitives[i]:
 				if type(speed) is list:
@@ -81,7 +80,7 @@ class MotionSend(object):
 
 	def exe_from_file(self,robot,filename,speed,zone=None):
 		breakpoints,primitives, p_bp,q_bp=self.extract_data_from_cmd(filename)
-		return self.exec_motions(robot,primitives,breakpoints,p_bp,q_bp,speed,zone=None)
+		return self.exec_motions(robot,primitives,breakpoints,p_bp,q_bp,speed,zone)
 
 
 	def extend(self,robot,q_bp,primitives,breakpoints,p_bp,extension_start=100,extension_end=100):

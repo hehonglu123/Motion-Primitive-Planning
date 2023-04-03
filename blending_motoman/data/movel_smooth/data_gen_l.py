@@ -8,7 +8,7 @@ from utils import *
 from robots_def import *
 
 dataset='movel_smooth'
-robot=robot_obj('MA2010_A0',def_path='../../../config/MA2010_A0_robot_default_config.yml',tool_file_path='../../../config/weldgun.csv',\
+robot=robot_obj('MA2010_A0',def_path='../../../config/MA2010_A0_robot_default_config.yml',tool_file_path='../../../config/weldgun2.csv',\
     pulse2deg_file_path='../../../config/MA2010_A0_pulse2deg.csv',d=50)
 
 start_p = np.array([1300,500, 300])
@@ -26,12 +26,14 @@ a3,b3,c3=lineFromPoints([lam[0],start_p[2]],[lam[-1],end_p[2]])
 curve=np.vstack(((-a1*lam-c1)/b1,(-a2*lam-c2)/b2,(-a3*lam-c3)/b3)).T
 
 #get orientation
-R=np.array([[ 0.7071, -0.7071, -0.    ],
-	[-0.7071, -0.7071,  0.    ],
-	[-0.,      0.,     -1.    ]])
+R=np.array([[ -1, 0, -0.    ],
+	[0, 1,  0.    ],
+	[0.,      0.,     -1.    ]])
 q_init=robot.inv(start_p,R,np.zeros(6))[0]
 R_init=robot.fwd(q_init).R
-R_end=Ry(np.radians(90))
+R_end=np.array([[ -1, 0, 0    ],
+				[0, 0,  1.    ],
+				[0,1., 0.    ]])
 #interpolate orientation and solve inv kin
 curve_js=[q_init]
 R_all=[R_init]

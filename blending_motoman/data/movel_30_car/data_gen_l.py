@@ -8,7 +8,7 @@ from utils import *
 from robots_def import *
 
 dataset='movel_smooth'
-robot=robot_obj('MA2010_A0',def_path='../../../config/MA2010_A0_robot_default_config.yml',tool_file_path='../../../config/weldgun.csv',\
+robot=robot_obj('MA2010_A0',def_path='../../../config/MA2010_A0_robot_default_config.yml',tool_file_path='../../../config/weldgun2.csv',\
     pulse2deg_file_path='../../../config/MA2010_A0_pulse2deg.csv',d=50)
 
 start_p = np.array([1300,500, 300])
@@ -50,13 +50,14 @@ curve=np.vstack((line1,line2[1:]))
 
 
 #get orientation
-R=np.array([[ 0.7071, -0.7071, -0.    ],
-	[-0.7071, -0.7071,  0.    ],
-	[-0.,      0.,     -1.    ]])
+R=np.array([[ -1, 0, -0.    ],
+	[0, 1,  0.    ],
+	[0.,      0.,     -1.    ]])
 q_init=robot.inv(start_p,R,np.zeros(6))[0]
-
 R_init=robot.fwd(q_init).R
-R_end=Ry(np.radians(90))
+R_end=np.array([[ -1, 0, 0    ],
+				[0, 0,  1.    ],
+				[0,1., 0.    ]])
 #interpolate orientation and solve inv kin
 curve_js=[q_init]
 R_all=[R_init]
@@ -78,7 +79,7 @@ R_all=np.array(R_all)
 
 visualize_curve_w_normal(curve,R_all[:,:,-1],50)
 # ###########save to csv####################
-df=DataFrame({'breakpoints':np.array([0,int((len(curve)+1)/2),len(curve)]),'primitives':['movej_fit','movel_fit','movel_fit'],'points':[[q_init],[curve[int((len(curve)+1)/2)]],[curve[-1]]]})
+df=DataFrame({'breakpoints':np.array([0,int((len(curve)+1)/2),len(curve)]),'primitives':['moveabsj_fit','movel_fit','movel_fit'],'p_bp':[[curve[0]],[curve[int((len(curve)+1)/2)]],[curve[-1]]],'q_bp':[[curve_js[0]],[curve_js[int((len(curve_js)+1)/2)]],[curve_js[-1]]]})
 df.to_csv('command.csv',header=True,index=False)
 
 df=DataFrame({'x':curve[:,0],'y':curve[:,1], 'z':curve[:,2],'x_dir':R_all[:,0,-1],'y_dir':R_all[:,1,-1], 'z_dir':R_all[:,2,-1]})
