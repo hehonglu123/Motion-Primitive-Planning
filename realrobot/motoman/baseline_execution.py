@@ -16,7 +16,7 @@ def main():
     dataset='curve_2/'
     solution_dir='baseline_motoman/'
     data_dir='../../data/'+dataset+solution_dir
-    cmd_dir=data_dir+'100L/'
+    cmd_dir=data_dir+'200L/'
 
     curve = read_csv(data_dir+"Curve_in_base_frame.csv",header=None).values
     breakpoints,primitives, p_bp,q_bp=ms.extract_data_from_cmd(cmd_dir+"command.csv")
@@ -25,12 +25,13 @@ def main():
    
     error_threshold=0.5
     angle_threshold=np.radians(3)
+    vel_uniformity=0.05
 
     v=100
     v_prev=2*v
     v_prev_possible=100
     # z=None
-    z=1
+    z=8
 
     N=5
     
@@ -54,7 +55,7 @@ def main():
         error,angle_error=calc_all_error_w_normal(curve_exe,curve[:,:3],curve_exe_R[:,:,-1],curve[:,3:])
         max_error=np.max(error)
 
-        print('cmd speed: ',v, 'max error: ',max_error, 'max ori error: ', max(angle_error), 'std(speed): ',np.std(speed), 'avg(speed): ',np.average(speed))
+        print('cmd speed: ',v, 'max error: ',max_error, 'max ori error: ', max(angle_error), 'std(speed)/avg(speed): ',np.std(speed)/np.average(speed))
         ##############################plot error#####################################
 
         fig, ax1 = plt.subplots()
@@ -80,7 +81,7 @@ def main():
         i+=1
 
         v_prev_temp=v
-        if max_error>error_threshold or np.std(speed)>np.average(speed)/20 or max(angle_error)>angle_threshold:
+        if max_error>error_threshold or np.std(speed)/np.average(speed)>vel_uniformity or max(angle_error)>angle_threshold:
             v-=abs(v_prev-v)/2
         else:
             v_prev_possible=v
