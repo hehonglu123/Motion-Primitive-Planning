@@ -31,7 +31,7 @@ def main():
     speed=[200]
     num_runs=[2]
     z=8
-    for N in num_runs:
+    for N in range(2):
         for v in speed:  
             ms=MotionSend(robot)
             log_results=ms.exec_motions(robot,primitives,breakpoints,p_bp,q_bp,v,z)
@@ -39,13 +39,13 @@ def main():
             lam, curve_exe, curve_exe_R,curve_exe_js, exe_speed, timestamp=ms.logged_data_analysis(robot,log_results,realrobot=True)
             #############################chop extension off##################################
             lam, curve_exe, curve_exe_R,curve_exe_js, exe_speed, timestamp=ms.chop_extension(curve_exe, curve_exe_R,curve_exe_js, exe_speed, timestamp,curve[0,:3],curve[-1,:3])
-            error,angle_error=calc_all_error_w_normal(curve_exe_temp,curve[:,:3],curve_exe_R_temp[:,:,-1],curve[:,3:])
+            error,angle_error=calc_all_error_w_normal(curve_exe,curve[:,:3],curve_exe_R[:,:,-1],curve[:,3:])
             ######################################PLOT############################
             fig, ax1 = plt.subplots()
             ax2 = ax1.twinx()
-            ax1.plot(lam_temp, speed_temp, 'g-', label='Speed')
-            ax2.plot(lam_temp, error, 'b-',label='Error')
-            ax2.plot(lam_temp, np.degrees(angle_error), 'y-',label='Normal Error')
+            ax1.plot(lam, exe_speed, 'g-', label='Speed')
+            ax2.plot(lam, error, 'b-',label='Error')
+            ax2.plot(lam, np.degrees(angle_error), 'y-',label='Normal Error')
             ax2.axis(ymin=0,ymax=5)
             # ax1.axis(ymin=0,ymax=1.2*v)
 

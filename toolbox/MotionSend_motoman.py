@@ -13,10 +13,11 @@ name_map={'MA2010_A0':('RB1',0,6),'MA1440_A0':('RB2',6,12),'D500B':('ST1',12,14)
 
 class MotionSend(object):
 	def __init__(self,robot1,robot2=None,IP='192.168.1.31') -> None:
+		###SPECIFY TOOL NUMBER HERE
 		if robot2:
 			self.client=MotionProgramExecClient(ROBOT_CHOICE=name_map[robot1.robot_name][0],ROBOT_CHOICE2=name_map[robot2.robot_name][0],pulse2deg=robot1.pulse2deg,pulse2deg_2=robot2.pulse2deg)
 		else:
-			self.client=MotionProgramExecClient(ROBOT_CHOICE=name_map[robot1.robot_name][0],pulse2deg=robot1.pulse2deg)
+			self.client=MotionProgramExecClient(ROBOT_CHOICE=name_map[robot1.robot_name][0],pulse2deg=robot1.pulse2deg, tool_num = 11)
 
 
 
