@@ -9,10 +9,10 @@ from robots_def import *
 from utils import *
 
 
-data_dir='curve_2/'
+data_dir='curve_1/'
 solution_dir='baseline_motoman/'
 
-num_ls=[200]
+num_ls=[500]
 # robot=robot_obj('ABB_6640_180_255','../config/abb_6640_180_255_robot_default_config.yml',tool_file_path='../config/paintgun.csv',d=50,acc_dict_path='')
 robot=robot_obj('MA2010_A0',def_path='../config/MA2010_A0_robot_default_config.yml',tool_file_path='../config/weldgun2.csv',\
 	pulse2deg_file_path='../config/MA2010_A0_pulse2deg.csv',d=50)
