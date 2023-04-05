@@ -14,18 +14,18 @@ def main():
 
     ms = MotionSend(robot)
 
-    dataset='curve_1/'
+    dataset='curve_2/'
     solution_dir='baseline_motoman/'
 
     data_dir='../../data/'+dataset+solution_dir
-    cmd_dir=data_dir+'100L/'
+    cmd_dir=data_dir+'greedy_0.05/'
 
     curve = read_csv(data_dir+"Curve_in_base_frame.csv",header=None).values
     lam_original=calc_lam_cs(curve[:,:3])
 
     
 
-    speed={'v50':50}
+    speed={'v200':200}
 
     for s in speed:
         breakpoints,primitives, p_bp,q_bp=ms.extract_data_from_cmd(cmd_dir+"command.csv")

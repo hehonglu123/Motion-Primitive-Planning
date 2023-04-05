@@ -45,14 +45,15 @@ class MotionSend(object):
 
 				if type(speed) is list:
 					if type(zone) is list:
-						mp.MoveC(np.degrees(q_bp[i][0]),np.degrees(q_bp[i][1]),speed[i],zone[i])
+						self.client.MoveC(np.degrees(q_bp[i-1][-1]),np.degrees(q_bp[i][0]),np.degrees(q_bp[i][1]),speed[i],zone[i])
+
 					else:
-						mp.MoveC(np.degrees(q_bp[i][0]),np.degrees(q_bp[i][1]),speed[i],zone)
+						self.client.MoveC(np.degrees(q_bp[i-1][-1]),np.degrees(q_bp[i][0]),np.degrees(q_bp[i][1]),speed[i],zone)
 				else:
 					if type(zone) is list:
-						mp.MoveC(np.degrees(q_bp[i][0]),np.degrees(q_bp[i][1]),speed,zone[i])
+						self.client.MoveC(np.degrees(q_bp[i-1][-1]),np.degrees(q_bp[i][0]),np.degrees(q_bp[i][1]),speed,zone[i])
 					else:
-						mp.MoveC(np.degrees(q_bp[i][0]),np.degrees(q_bp[i][1]),speed,zone)
+						self.client.MoveC(np.degrees(q_bp[i-1][-1]),np.degrees(q_bp[i][0]),np.degrees(q_bp[i][1]),speed,zone)
 
 			else:
 				###special case for motoman, speed is in %

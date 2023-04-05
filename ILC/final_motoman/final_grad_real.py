@@ -20,7 +20,7 @@ def main():
 	dataset='curve_1/'
 	solution_dir='baseline_motoman/'
 	data_dir="../../data/"+dataset+solution_dir
-	cmd_dir="../../data/"+dataset+solution_dir+'100L/'
+	cmd_dir="../../data/"+dataset+solution_dir+'200L/'
 
 
 	curve = read_csv(data_dir+"Curve_in_base_frame.csv",header=None).values
