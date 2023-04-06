@@ -13,10 +13,10 @@ def main():
     pulse2deg_file_path='../../config/MA2010_A0_pulse2deg.csv',d=50)
     ms = MotionSend(robot)
 
-    dataset='curve_1/'
+    dataset='curve_2/'
     solution_dir='baseline_motoman/'
     data_dir='../../data/'+dataset+solution_dir
-    cmd_dir=data_dir+'400L/'
+    cmd_dir=data_dir+'200L/'
 
     curve = read_csv(data_dir+"Curve_in_base_frame.csv",header=None).values
     breakpoints,primitives, p_bp,q_bp=ms.extract_data_from_cmd(cmd_dir+"command.csv")
@@ -27,7 +27,7 @@ def main():
     angle_threshold=np.radians(3)
     vel_uniformity=0.05
 
-    v=45
+    v=800
     v_prev=2*v
     v_prev_possible=100
     z=None

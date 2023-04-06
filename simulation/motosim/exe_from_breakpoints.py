@@ -18,7 +18,7 @@ def main():
     solution_dir='baseline_motoman/'
 
     data_dir='../../data/'+dataset+solution_dir
-    cmd_dir=data_dir+'greedy0.02/'
+    cmd_dir=data_dir+'100L/'
 
     curve = read_csv(data_dir+"Curve_in_base_frame.csv",header=None).values
     lam_original=calc_lam_cs(curve[:,:3])
@@ -31,7 +31,9 @@ def main():
         breakpoints,primitives, p_bp,q_bp=ms.extract_data_from_cmd(cmd_dir+"command.csv")
         q_bp_end=q_bp[-1][0]
         p_bp,q_bp,primitives,breakpoints = ms.extend2(robot, q_bp, primitives, breakpoints, p_bp,extension_start=150,extension_end=150)
-        zone=[None]*(len(primitives)-1)+[0]
+        # p_bp,q_bp = ms.extend(robot, q_bp, primitives, breakpoints, p_bp,extension_start=150,extension_end=150)
+        # zone=[None]*(len(primitives)-1)+[8]
+        zone=8
         log_results = ms.exec_motions(robot,primitives,breakpoints,p_bp,q_bp,speed[s],zone)
 
         ###save results
