@@ -20,7 +20,7 @@ def main():
 	dataset='curve_1/'
 	solution_dir='baseline_motoman/'
 	data_dir="../../data/"+dataset+solution_dir
-	cmd_dir="../../data/"+dataset+solution_dir+'200L/'
+	cmd_dir="../../data/"+dataset+solution_dir+'greedy0.05/'
 
 
 	curve = read_csv(data_dir+"Curve_in_base_frame.csv",header=None).values
@@ -28,7 +28,7 @@ def main():
 
 	multi_peak_threshold=0.4
 	robot=robot_obj('MA2010_A0',def_path='../../config/MA2010_A0_robot_default_config.yml',tool_file_path='../../config/weldgun2.csv',\
-    pulse2deg_file_path='../../config/MA2010_A0_pulse2deg.csv',d=50)
+    	pulse2deg_file_path='../../config/MA2010_A0_pulse2deg.csv',d=50)
 
 	v=200
 	z=None

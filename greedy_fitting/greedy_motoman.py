@@ -10,7 +10,7 @@ curve_js = np.loadtxt(data_dir+'Curve_js.csv',delimiter=',')
 robot=robot_obj('MA2010_A0',def_path='../config/MA2010_A0_robot_default_config.yml',tool_file_path='../config/weldgun2.csv',\
     pulse2deg_file_path='../config/MA2010_A0_pulse2deg.csv',d=50)
 
-max_error_threshold=0.05
+max_error_threshold=0.02
 min_length=10
 greedy_fit_obj=greedy_fit(robot,curve_js, min_length=min_length,max_error_threshold=max_error_threshold)
 

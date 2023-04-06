@@ -14,11 +14,11 @@ def main():
 
     ms = MotionSend(robot)
 
-    dataset='curve_2/'
+    dataset='curve_1/'
     solution_dir='baseline_motoman/'
 
     data_dir='../../data/'+dataset+solution_dir
-    cmd_dir=data_dir+'greedy_0.05/'
+    cmd_dir=data_dir+'greedy0.02/'
 
     curve = read_csv(data_dir+"Curve_in_base_frame.csv",header=None).values
     lam_original=calc_lam_cs(curve[:,:3])
