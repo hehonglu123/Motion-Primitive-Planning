@@ -10,7 +10,7 @@ from MotionSend_motoman import *
 
 def main():
     robot=robot_obj('MA2010_A0',def_path='../../config/MA2010_A0_robot_default_config.yml',tool_file_path='../../config/weldgun2.csv',\
-    pulse2deg_file_path='../../config/MA2010_A0_pulse2deg.csv',d=50)
+    pulse2deg_file_path='../../config/MA2010_A0_pulse2deg_real.csv',d=50)
 
     ms = MotionSend(robot)
 
@@ -25,7 +25,7 @@ def main():
 
     
 
-    speed={'v200':200}
+    speed=[150]
 
     for s in speed:
         breakpoints,primitives, p_bp,q_bp=ms.extract_data_from_cmd(cmd_dir+"command.csv")
@@ -33,8 +33,8 @@ def main():
         p_bp,q_bp,primitives,breakpoints = ms.extend2(robot, q_bp, primitives, breakpoints, p_bp,extension_start=150,extension_end=150)
         # p_bp,q_bp = ms.extend(robot, q_bp, primitives, breakpoints, p_bp,extension_start=150,extension_end=150)
         # zone=[None]*(len(primitives)-1)+[8]
-        zone=8
-        log_results = ms.exec_motions(robot,primitives,breakpoints,p_bp,q_bp,speed[s],zone)
+        zone=None
+        log_results = ms.exec_motions(robot,primitives,breakpoints,p_bp,q_bp,s,zone)
 
         ###save results
         timestamp,curve_exe_js,cmd_num=ms.parse_logged_data(log_results)
@@ -47,13 +47,14 @@ def main():
         ##############################calcualte error########################################
         error,angle_error=calc_all_error_w_normal(curve_exe,curve[:,:3],curve_exe_R[:,:,-1],curve[:,3:])
 
+        print(np.std(exe_speed)/np.average(exe_speed))
         fig, ax1 = plt.subplots()
         ax2 = ax1.twinx()
         ax1.plot(lam, exe_speed, 'g-', label='Speed')
         ax2.plot(lam, error, 'b-',label='Error')
         ax2.plot(lam, np.degrees(angle_error), 'y-',label='Normal Error')
         ax2.axis(ymin=0,ymax=2)
-        ax1.axis(ymin=0,ymax=1.2*speed[s])
+        ax1.axis(ymin=0,ymax=1.2*s)
 
         ax1.set_xlabel('lambda (mm)')
         ax1.set_ylabel('Speed/lamdot (mm/s)', color='g')

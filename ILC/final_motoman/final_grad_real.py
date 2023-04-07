@@ -20,7 +20,7 @@ def main():
 	dataset='curve_1/'
 	solution_dir='baseline_motoman/'
 	data_dir="../../data/"+dataset+solution_dir
-	cmd_dir="../../data/"+dataset+solution_dir+'greedy0.05/'
+	cmd_dir="../../data/"+dataset+solution_dir+'100L/'
 
 
 	curve = read_csv(data_dir+"Curve_in_base_frame.csv",header=None).values
@@ -28,9 +28,9 @@ def main():
 
 	multi_peak_threshold=0.4
 	robot=robot_obj('MA2010_A0',def_path='../../config/MA2010_A0_robot_default_config.yml',tool_file_path='../../config/weldgun2.csv',\
-    	pulse2deg_file_path='../../config/MA2010_A0_pulse2deg.csv',d=50)
+    	pulse2deg_file_path='../../config/MA2010_A0_pulse2deg_real.csv',d=50)
 
-	v=200
+	v=150
 	z=None
 
 	gamma_v_max=1
@@ -52,7 +52,7 @@ def main():
 	inserted_points=[]
 	iteration=50
 
-	N=2 	###N-run average
+	N=5 	###N-run average
 
 	for i in range(iteration):
 
@@ -68,11 +68,11 @@ def main():
 		#############################chop extension off##################################
 		lam, curve_exe, curve_exe_R,curve_exe_js, speed, timestamp=ms.chop_extension(curve_exe, curve_exe_R,avg_curve_js, speed, timestamp_d,curve[0,:3],curve[-1,:3])
 
-		# ms.write_data_to_cmd('recorded_data/command.csv',breakpoints,primitives, p_bp,q_bp)
+		ms.write_data_to_cmd('recorded_data/command%i.csv'%i,breakpoints,primitives, p_bp,q_bp)
 
 		##############################calcualte error########################################
 		error,angle_error=calc_all_error_w_normal(curve_exe,curve[:,:3],curve_exe_R[:,:,-1],curve[:,3:])
-		print(max(error))
+		print(max(error),np.std(speed)/np.average(speed))
 
 		#############################error peak detection###############################
 		peaks,_=find_peaks(error,height=multi_peak_threshold,prominence=0.2,distance=20/(lam[int(len(lam)/2)]-lam[int(len(lam)/2)-1]))		###only push down peaks higher than height, distance between each peak is 20mm, threshold to filter noisy peaks
@@ -93,7 +93,7 @@ def main():
 		ax1.set_xlabel('lambda (mm)')
 		ax1.set_ylabel('Speed/lamdot (mm/s)', color='g')
 		ax2.set_ylabel('Error/Normal Error (mm/deg)', color='b')
-		plt.title("Speed and Error Plot")
+		plt.title("Speed and Error Plot v=%f"%v)
 		h1, l1 = ax1.get_legend_handles_labels()
 		h2, l2 = ax2.get_legend_handles_labels()
 		ax1.legend(h1+h2, l1+l2, loc=1)
@@ -121,36 +121,10 @@ def main():
 		
 		
 		
-		if not max_grad:
+		if max(error)<1.2*max_error_prev and not max_grad:
 			print('all bps adjustment')
 			##########################################adjust bp's toward error direction######################################
 			error_bps_v,error_bps_w=ilc.get_error_direction(curve,p_bp,q_bp,curve_exe,curve_exe_R)
-			# ###line search on gamma
-			# max_error=[]
-			# # gamma_all=np.linspace(gamma_v_min,gamma_v_max,num=int(1+(gamma_v_max-gamma_v_min)/0.2))
-			# gamma_all=[0.5]
-			# print(gamma_all)
-			# for gamma_v in gamma_all:
-			# 	p_bp_temp, q_bp_temp=ilc.update_error_direction(curve,p_bp,q_bp,error_bps_v,error_bps_w,gamma_v=gamma_v,gamma_w=0.1)
-			# 	ms = MotionSend(url='http://192.168.55.1:80')
-			# 	curve_js_all_new, avg_curve_js, timestamp_d=average_N_exe(ms,robot,primitives,breakpoints,p_bp_temp,q_bp_temp,s,z,curve,"recorded_data",N=5)
-			# 	###calculat data with average curve
-			# 	lam, curve_exe, curve_exe_R, speed=logged_data_analysis(robot,timestamp_d,avg_curve_js)
-			# 	#############################chop extension off##################################
-			# 	lam, curve_exe, curve_exe_R,curve_exe_js, speed, timestamp=ms.chop_extension(curve_exe, curve_exe_R,avg_curve_js, speed, timestamp_d,curve[0,:3],curve[-1,:3])
-			# 	##############################calcualte error########################################
-			# 	error_temp,angle_error_temp=calc_all_error_w_normal(curve_exe,curve[:,:3],curve_exe_R[:,:,-1],curve[:,3:])
-			# 	max_error.append(max(error_temp))
-
-			
-			# print(max_error)
-			# min_error_idx=np.argmin(max_error)
-			# gamma_v=gamma_all[min_error_idx]
-			# if min(max_error)>max(error):
-			# 	gamma_v=0
-			# 	max_grad=True
-			# print("FINAL GAMMA",gamma_v)
-			# gamma_v_max=gamma_v
 			p_bp, q_bp=ilc.update_error_direction(curve,p_bp,q_bp,error_bps_v,error_bps_w,gamma_v=0.5,gamma_w=0.1)
 		else:
 			max_grad=True

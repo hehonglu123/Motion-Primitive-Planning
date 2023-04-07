@@ -16,7 +16,7 @@ curve = read_csv(data_dir+"Curve_in_base_frame.csv",header=None).values
 robot=robot_obj('MA2010_A0',def_path='../../config/MA2010_A0_robot_default_config.yml',tool_file_path='../../config/weldgun2.csv',\
 	pulse2deg_file_path='../../config/MA2010_A0_pulse2deg.csv',d=50)
 
-recorded_dir='recorded_data/iteration_0/'
+recorded_dir='recorded_data/100L/curve2_baseline_PL8/iteration_6/'
 
 ms=MotionSend(robot)
 ###N run execute

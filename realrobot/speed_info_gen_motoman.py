@@ -12,19 +12,20 @@ from lambda_calc import *
 from realrobot import *
 
 robot=robot_obj('MA2010_A0',def_path='../config/MA2010_A0_robot_default_config.yml',tool_file_path='../config/weldgun2.csv',\
-    pulse2deg_file_path='../config/MA2010_A0_pulse2deg.csv',d=50)
+    pulse2deg_file_path='../config/MA2010_A0_pulse2deg_real.csv',d=50)
 ms=MotionSend(robot)
 
 
 dataset='curve_2/'
 
 solution_dir='baseline_motoman/'
-cmd_dir='../data/'+dataset+solution_dir+'200L/'
+cmd_dir='../data/'+dataset+solution_dir+'100L/'
 data_dir='../data/'+dataset+solution_dir
 
 curve = read_csv(data_dir+"Curve_in_base_frame.csv",header=None).values
 
-exe_dir=cmd_dir+'iteration_7/'
+# exe_dir='motoman/recorded_data/100L/curve2_baseline_PL8/iteration_6/'
+exe_dir='motoman/recorded_data/100L/'+dataset[:-1]+'_baseline_nPL/iteration_2/'
 
 N=5
 curve_exe_js_all=[]

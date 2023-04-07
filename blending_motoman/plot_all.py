@@ -12,7 +12,7 @@ from lambda_calc import *
 
 robot=robot_obj('MA2010_A0',def_path='../config/MA2010_A0_robot_default_config.yml',tool_file_path='../config/weldgun.csv',\
     pulse2deg_file_path='../config/MA2010_A0_pulse2deg.csv',d=50)
-dataset='movel_30_car'
+dataset='movec_30_car'
 
 ###read in original curve
 curve = read_csv('data/'+dataset+'/Curve_in_base_frame.csv',header=None).values

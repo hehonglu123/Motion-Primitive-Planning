@@ -10,13 +10,13 @@ from lambda_calc import *
 
 def main():
     robot=robot_obj('MA2010_A0',def_path='../../config/MA2010_A0_robot_default_config.yml',tool_file_path='../../config/weldgun2.csv',\
-    pulse2deg_file_path='../../config/MA2010_A0_pulse2deg.csv',d=50)
+    pulse2deg_file_path='../../config/MA2010_A0_pulse2deg_real.csv',d=50)
     ms = MotionSend(robot)
 
-    dataset='curve_2/'
+    dataset='curve_1/'
     solution_dir='baseline_motoman/'
     data_dir='../../data/'+dataset+solution_dir
-    cmd_dir=data_dir+'200L/'
+    cmd_dir=data_dir+'100L/'
 
     curve = read_csv(data_dir+"Curve_in_base_frame.csv",header=None).values
     breakpoints,primitives, p_bp,q_bp=ms.extract_data_from_cmd(cmd_dir+"command.csv")
@@ -27,7 +27,7 @@ def main():
     angle_threshold=np.radians(3)
     vel_uniformity=0.05
 
-    v=800
+    v=200
     v_prev=2*v
     v_prev_possible=100
     z=None
@@ -40,7 +40,7 @@ def main():
 
     while True:
         
-        curve_js_all_new, avg_curve_js, timestamp_d=average_N_exe(ms,robot,primitives,breakpoints,p_bp,q_bp,v,z,curve,'recorded_data/iteration_'+str(i),N=N)
+        _, avg_curve_js, timestamp_d=average_N_exe(ms,robot,primitives,breakpoints,p_bp,q_bp,v,z,curve,'recorded_data/iteration_'+str(i),N=N)
         
 
         ###calculat data with average curve
@@ -94,7 +94,7 @@ def main():
         #if stuck
         if abs(v-v_prev)<1:
             v=v_prev_possible
-            curve_js_all_new, avg_curve_js, timestamp_d=average_N_exe(ms,robot,primitives,breakpoints,p_bp,q_bp,s,z,curve,"recorded_data",N=N)
+            _, avg_curve_js, timestamp_d=average_N_exe(ms,robot,primitives,breakpoints,p_bp,q_bp,s,z,curve,"recorded_data",N=N)
             ###calculat data with average curve
             lam, curve_exe, curve_exe_R, speed=logged_data_analysis(robot,timestamp_d,avg_curve_js)
             #############################chop extension off##################################
@@ -112,7 +112,7 @@ def main():
         'average error':[np.average(error)],'max error':[max_error],'min error':[np.amin(error)],'std error':[np.std(error)],\
         'average angle(rad) error':[np.average(angle_error)],'max angle(rad) error':[max(angle_error)],'min angle(rad) error':[np.amin(angle_error)],'std angle(rad) error':[np.std(angle_error)]})
 
-    df.to_csv('recorded_data/iteration_'+str(i)+'/speed_info.csv',header=True,index=False)
+    df.to_csv('recorded_data/iteration_'+str(i-1)+'/speed_info.csv',header=True,index=False)
 
 
 
