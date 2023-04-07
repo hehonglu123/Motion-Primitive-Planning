@@ -12,10 +12,10 @@ def main():
     ms = MotionSend(robot)
     # datasets=['movec_smooth','movec_30_car','movec_30_ori','movec+movel_smooth']#,'movel_smooth','movel_30_car','movel_30_ori']
     # datasets=['movel_smooth_fixedR','movel_smooth','movel_30_car','movel_30_ori']
-    datasets=['movel_30_car']
+    datasets=['movec_smooth']
     # datasets=['movec_30_car','movec_30_ori','movec+movel_smooth']
-    speed=[50,200,400,800,1500]
-    # speed=[1500,800,400,200,50]
+    # speed=[50,200,400,800,1500]
+    speed=[800]
     zone=[None,0,1,3,5,8]
 
     for dataset in datasets:

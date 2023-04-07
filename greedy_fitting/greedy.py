@@ -128,9 +128,12 @@ class greedy_fit(fitting_toolbox):
 				curve_fit[key],curve_fit_R[key],curve_fit_js[key],max_errors[key],max_ori_errors[key]=self.bisect(self.primitives[key],self.breakpoints[-1])
 				length[key]=len(curve_fit[key])
 			###find best primitive
-			if length['movec_fit']==length['movel_fit']:# and length['movel_fit']==length['movej_fit']:
-				key=min(max_errors, key=max_errors.get)
-			else:
+			try:
+				if length['movec_fit']==length['movel_fit'] and length['movel_fit']==length['movej_fit']:
+					key=min(max_errors, key=max_errors.get)
+				else:
+					key=max(length, key=length.get)
+			except:
 				key=max(length, key=length.get)
 
 			###moveC length thresholding (>50mm)
