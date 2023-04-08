@@ -9,7 +9,7 @@ from robots_def import *
 
 dataset='movel_smooth'
 robot=robot_obj('MA2010_A0',def_path='../../../config/MA2010_A0_robot_default_config.yml',tool_file_path='../../../config/weldgun2.csv',\
-    pulse2deg_file_path='../../../config/MA2010_A0_pulse2deg.csv',d=50)
+    pulse2deg_file_path='../../../config/MA2010_A0_pulse2deg_real.csv',d=50)
 
 start_p = np.array([1300,500, 300])
 end_p = np.array([1300, -500, 300])
@@ -38,6 +38,7 @@ R_end=np.array([[ -1, 0, 0    ],
 curve_js=[q_init]
 R_all=[R_init]
 k,theta=R2rot(np.dot(R_end,R_init.T))
+print(k,theta)
 k2=np.array([-1/2.,-np.sqrt(3)/2.,0])
 
 bp_idx=int((len(curve)+1)/2)
@@ -55,6 +56,7 @@ for i in range(1,bp_idx):
 ###second half orientation
 for i in range(bp_idx,len(curve)):
 	angle=(theta/2)*(i-bp_idx+1)/(len(curve)-bp_idx)
+	print(R_all[bp_idx-1])
 	R_temp=rot(k2,angle)
 	R_all.append(np.dot(R_temp,R_all[bp_idx-1]))
 	

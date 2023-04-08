@@ -25,7 +25,8 @@ data_dir='../data/'+dataset+solution_dir
 curve = read_csv(data_dir+"Curve_in_base_frame.csv",header=None).values
 
 # exe_dir='motoman/recorded_data/100L/curve2_baseline_PL8/iteration_6/'
-exe_dir='motoman/recorded_data/100L/'+dataset[:-1]+'_baseline_nPL/iteration_2/'
+# exe_dir='motoman/recorded_data/100L/'+dataset[:-1]+'_baseline_nPL/iteration_2/'
+exe_dir='../ILC/final_motoman/curve2_baseline_100L_nPL/'
 
 N=5
 curve_exe_js_all=[]

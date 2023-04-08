@@ -8,15 +8,15 @@ from realrobot import *
 from MotionSend_motoman import *
 from lambda_calc import *
 
-dataset='curve_2/'
+dataset='curve_1/'
 solution_dir='baseline_motoman/'
 data_dir='../../data/'+dataset+solution_dir
 cmd_dir=data_dir+'100L/'
 curve = read_csv(data_dir+"Curve_in_base_frame.csv",header=None).values
 robot=robot_obj('MA2010_A0',def_path='../../config/MA2010_A0_robot_default_config.yml',tool_file_path='../../config/weldgun2.csv',\
-	pulse2deg_file_path='../../config/MA2010_A0_pulse2deg.csv',d=50)
+	pulse2deg_file_path='../../config/MA2010_A0_pulse2deg_real.csv',d=50)
 
-recorded_dir='recorded_data/100L/curve2_baseline_PL8/iteration_6/'
+recorded_dir='recorded_data/100L/curve_1_baseline_PL8/iteration_2/'
 
 ms=MotionSend(robot)
 ###N run execute
@@ -82,7 +82,7 @@ ax1.plot(lam, speed, 'g-', label='Speed')
 ax2.plot(lam, error, 'b-',label='Error')
 ax2.plot(lam, np.degrees(angle_error), 'y-',label='Normal Error')
 ax2.axis(ymin=0,ymax=5)
-# ax1.axis(ymin=0,ymax=1.2*v)
+ax1.axis(ymin=0,ymax=1.2*np.max(speed))
 
 ax1.set_xlabel('lambda (mm)')
 ax1.set_ylabel('Speed/lamdot (mm/s)', color='g')
