@@ -165,7 +165,7 @@ class MotionSend(object):
 
 			#find new end orientation
 			k,theta=R2rot(R_end@R_start.T)
-			slope_theta=theta/np.linalg.norm(p_end-p_start)
+			slope_theta=-theta/np.linalg.norm(p_end-p_start)
 			R_end_new=rot(k,extension_end*slope_theta)@R_end
 
 			#solve invkin for end point
@@ -195,7 +195,7 @@ class MotionSend(object):
 
 			#find new end orientation
 			k,theta=R2rot(R_end@R_start.T)
-			theta_new=extension_end*theta/np.linalg.norm(p_end-p_start)
+			theta_new=-extension_end*theta/np.linalg.norm(p_end-p_start)
 			R_end_new=rot(k,theta_new)@R_end
 
 			#solve invkin for end point
@@ -256,7 +256,7 @@ class MotionSend(object):
 
 		#find new end orientation
 		k,theta=R2rot(R_end@R_start.T)
-		slope_theta=theta/np.linalg.norm(p_end-p_start)
+		slope_theta=-theta/np.linalg.norm(p_end-p_start)
 		R_end_new=rot(k,extension_end*slope_theta)@R_end
 
 		#solve invkin for end point

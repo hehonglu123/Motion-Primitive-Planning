@@ -17,10 +17,10 @@ from ilc_toolbox import *
 
 
 def main():
-	dataset='curve_1/'
+	dataset='curve_2/'
 	solution_dir='baseline_motoman/'
 	data_dir="../../data/"+dataset+solution_dir
-	cmd_dir="../../data/"+dataset+solution_dir+'100L/'
+	cmd_dir="../../data/"+dataset+solution_dir+'greedy0.1L/'
 
 
 	curve = read_csv(data_dir+"Curve_in_base_frame.csv",header=None).values
@@ -30,7 +30,7 @@ def main():
 	robot=robot_obj('MA2010_A0',def_path='../../config/MA2010_A0_robot_default_config.yml',tool_file_path='../../config/weldgun2.csv',\
     	pulse2deg_file_path='../../config/MA2010_A0_pulse2deg_real.csv',d=50)
 
-	v=150
+	v=400
 	z=None
 
 	gamma_v_max=1
@@ -39,7 +39,8 @@ def main():
 	ms = MotionSend(robot)
 	breakpoints,primitives,p_bp,q_bp=ms.extract_data_from_cmd(cmd_dir+'command.csv')
 	###extension
-	p_bp,q_bp,primitives,breakpoints=ms.extend2(robot,q_bp,primitives,breakpoints,p_bp)
+	p_bp,q_bp=ms.extend(robot,q_bp,primitives,breakpoints,p_bp)
+	# p_bp,q_bp,primitives,breakpoints=ms.extend2(robot,q_bp,primitives,breakpoints,p_bp)
 	# breakpoints,primitives,p_bp,q_bp=ms.extract_data_from_cmd('curve2_pose_opt2_v1200/command.csv')
 
 	
@@ -56,7 +57,6 @@ def main():
 
 	for i in range(iteration):
 
-		ms = MotionSend(robot)
 		_, avg_curve_js, timestamp_d=average_N_exe(ms,robot,primitives,breakpoints,p_bp,q_bp,v,z,curve,"recorded_data",N=N)
 
 		# data=np.loadtxt('../../realrobot/motoman/recorded_data/run_0.csv',delimiter=',')
@@ -120,12 +120,15 @@ def main():
 		# ax.scatter(curve_exe[peaks,0], curve_exe[peaks,1], curve_exe[peaks,2],c='orange',label='worst case')
 		
 		
-		
+		p_bp_old=copy.deepcopy(p_bp)
+		q_bp_old=copy.deepcopy(q_bp)
 		if max(error)<1.2*max_error_prev and not max_grad:
-			print('all bps adjustment')
+			print('ALL BPs ADJUSTMENT')
 			##########################################adjust bp's toward error direction######################################
 			error_bps_v,error_bps_w=ilc.get_error_direction(curve,p_bp,q_bp,curve_exe,curve_exe_R)
 			p_bp, q_bp=ilc.update_error_direction(curve,p_bp,q_bp,error_bps_v,error_bps_w,gamma_v=0.5,gamma_w=0.1)
+			# for m in range(len(p_bp)):
+			# 	print(np.linalg.norm(q_bp[m][0]-q_bp_old[m][0]),np.linalg.norm(p_bp[m][0]-p_bp_old[m][0]))
 		else:
 			max_grad=True
 			print('max gradient')
