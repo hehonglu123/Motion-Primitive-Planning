@@ -571,7 +571,7 @@ class MotionSend(object):
 
 			#find new start orientation
 			k,theta=R2rot(R_end@R_start.T)
-			theta_new=-extension_start*theta/np.linalg.norm(p_end-p_start)
+			theta_new=extension_start*theta/np.linalg.norm(p_end-p_start)
 			R_start_new=rot(k,theta_new)@R_start
 
 			#solve invkin for initial point
@@ -601,7 +601,7 @@ class MotionSend(object):
 
 			#find new start orientation
 			k,theta=R2rot(R_end@R_start.T)
-			theta_new=-extension_start*theta/np.linalg.norm(p_end-p_start)
+			theta_new=extension_start*theta/np.linalg.norm(p_end-p_start)
 			R_start_new=rot(k,theta_new)@R_start
 
 			#solve invkin for initial point
@@ -633,8 +633,8 @@ class MotionSend(object):
 
 			#find new end orientation
 			k,theta=R2rot(R_end@R_start.T)
-			slope_theta=theta/np.linalg.norm(p_end-p_start)
-			R_end_new=rot(k,extension_end*slope_theta)@R_end
+			theta_new=-extension_end*theta/np.linalg.norm(p_end-p_start)
+			R_end_new=rot(k,theta_new)@R_end
 
 			#solve invkin for end point
 			q_bp_extended[-1][0]=car2js(robot,q_bp[-1][0],p_end_new,R_end_new)[0]
@@ -663,7 +663,7 @@ class MotionSend(object):
 
 			#find new end orientation
 			k,theta=R2rot(R_end@R_start.T)
-			theta_new=extension_end*theta/np.linalg.norm(p_end-p_start)
+			theta_new=-extension_end*theta/np.linalg.norm(p_end-p_start)
 			R_end_new=rot(k,theta_new)@R_end
 
 			#solve invkin for end point
