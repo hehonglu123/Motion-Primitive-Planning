@@ -1,8 +1,10 @@
 import sys, yaml
+sys.path.append('../../toolbox')
+from robots_def import *
+from lambda_calc import *
+# from tes_env import *
 sys.path.append('../')
 from constraint_solver import *
-sys.path.append('../../')
-from tes_env import *
 
 def main():
 	dataset='curve_1'
@@ -11,16 +13,18 @@ def main():
 	curve_dense = read_csv(data_dir+"Curve_dense.csv",header=None).values
 
 
-	robot=robot_obj('ABB_6640_180_255','../../config/ABB_6640_180_255_robot_default_config.yml',tool_file_path='../../config/paintgun.csv',d=50,acc_dict_path='../../toolbox/robot_info/6640acc_new.pickle')
+	# robot=robot_obj('ABB_6640_180_255','../../config/ABB_6640_180_255_robot_default_config.yml',tool_file_path='../../config/paintgun.csv',d=50,acc_dict_path='../../toolbox/robot_info/6640acc_new.pickle')
 	# robot = robot_obj('FANUC_m10ia','../../config/FANUC_m10ia_robot_default_config.yml',tool_file_path='../../config/paintgun.csv',d=50,acc_dict_path='../../config/FANUC_m10ia_acc_new.pickle')
-
+	robot=robot_obj('MA2010_A0',def_path='../../config/MA2010_A0_robot_default_config.yml',tool_file_path='../../config/weldgun2.csv',\
+    pulse2deg_file_path='../../config/MA2010_A0_pulse2deg_real.csv',d=50,acc_dict_path='../../config/acceleration/MA2010_A0.pickle')
+    
 	v_cmd=800
 	# opt=lambda_opt(curve_dense[:,:3],curve_dense[:,3:],robot1=robot,urdf_path='../../config/urdf/',curve_name=dataset,steps=500,v_cmd=v_cmd)
 	opt=lambda_opt(curve_dense[:,:3],curve_dense[:,3:],robot1=robot,curve_name=dataset,steps=500,v_cmd=v_cmd)
 
 	#read in initial curve pose
-	with open(data_dir+'baseline/curve_pose.yaml') as file:
-		curve_pose = np.array(yaml.safe_load(file)['H'],dtype=np.float64)
+	# curve_pose=np.loadtxt(data_dir+'baseline/curve_pose.csv',delimiter=',')
+	curve_pose=np.loadtxt(data_dir+'baseline_motoman/curve_pose.csv',delimiter=',')
 
 	k,theta=R2rot(curve_pose[:3,:3])
 
@@ -32,7 +36,7 @@ def main():
 
 	res = differential_evolution(opt.curve_pose_opt2, bnds, args=None,workers=-1,
 									x0 = np.hstack((k*theta,curve_pose[:-1,-1],[0])),
-									strategy='best1bin', maxiter=700,
+									strategy='best1bin', maxiter=50,
 									popsize=15, tol=1e-10,
 									mutation=(0.5, 1), recombination=0.7,
 									seed=None, callback=None, disp=True,

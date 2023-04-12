@@ -15,7 +15,7 @@ def main():
     ms = MotionSend(robot)
 
     dataset='curve_1/'
-    solution_dir='baseline_motoman/'
+    solution_dir='curve_pose_opt1_motoman/'
 
     data_dir='../../data/'+dataset+solution_dir
     cmd_dir=data_dir+'100L/'
@@ -30,7 +30,7 @@ def main():
     for s in speed:
         breakpoints,primitives, p_bp,q_bp=ms.extract_data_from_cmd(cmd_dir+"command.csv")
         q_bp_end=q_bp[-1][0]
-        p_bp,q_bp,primitives,breakpoints = ms.extend2(robot, q_bp, primitives, breakpoints, p_bp,extension_start=150,extension_end=150)
+        p_bp,q_bp,primitives,breakpoints = ms.extend2(robot, q_bp, primitives, breakpoints, p_bp)
         # p_bp,q_bp = ms.extend(robot, q_bp, primitives, breakpoints, p_bp,extension_start=150,extension_end=150)
         # zone=[None]*(len(primitives)-1)+[8]
         zone=None

@@ -5,16 +5,11 @@ from general_robotics_toolbox import *
 import matplotlib.pyplot as plt
 from scipy.optimize import differential_evolution, shgo, NonlinearConstraint, minimize, fminbound
 from qpsolvers import solve_qp
-
-from tes_env import *
-from robots_def import *
 from lambda_calc import *
-from blending import *
-from utils import *
 
 class lambda_opt(object):
 	###robot1 hold paint gun, robot2 hold part
-	def __init__(self,curve,curve_normal,robot1,robot2=abb1200(),urdf_path=None,curve_name='',steps=50,breakpoints=[],primitives=[],v_cmd=1000):
+	def __init__(self,curve,curve_normal,robot1,robot2=None,urdf_path=None,curve_name='',steps=50,breakpoints=[],primitives=[],v_cmd=1000):
 
 		self.curve_original=curve
 		self.curve_normal_original=curve_normal
