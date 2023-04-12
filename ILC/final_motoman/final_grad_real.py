@@ -57,7 +57,7 @@ def main():
 
 	for i in range(iteration):
 
-		_, avg_curve_js, timestamp_d=average_N_exe(ms,robot,primitives,breakpoints,p_bp,q_bp,v,z,curve,"recorded_data",N=N)
+		_, avg_curve_js, timestamp_d=average_N_exe(ms,robot,primitives,breakpoints,p_bp,q_bp,v,z,curve,"recorded_data/iteration_%i" % i,N=N)
 
 		# data=np.loadtxt('../../realrobot/motoman/recorded_data/run_0.csv',delimiter=',')
 		# avg_curve_js=data[:,1:]
