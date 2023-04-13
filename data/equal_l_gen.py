@@ -10,7 +10,7 @@ from utils import *
 
 
 data_dir='curve_1/'
-solution_dir='curve_pose_opt1_motoman/'
+solution_dir='curve_pose_opt2_motoman/'
 
 num_ls=[100]
 # robot=robot_obj('ABB_6640_180_255','../config/abb_6640_180_255_robot_default_config.yml',tool_file_path='../config/paintgun.csv',d=50,acc_dict_path='')

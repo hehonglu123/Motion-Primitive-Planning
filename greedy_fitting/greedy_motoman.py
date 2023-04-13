@@ -1,16 +1,16 @@
 from greedy import *
 
 dataset='curve_1/'
-solution_dir='baseline_motoman/'
+solution_dir='curve_pose_opt1_motoman/'
 data_dir='../data/'+dataset+solution_dir
 
 ###read in points
 curve_js = np.loadtxt(data_dir+'Curve_js.csv',delimiter=',')
 
 robot=robot_obj('MA2010_A0',def_path='../config/MA2010_A0_robot_default_config.yml',tool_file_path='../config/weldgun2.csv',\
-    pulse2deg_file_path='../config/MA2010_A0_pulse2deg.csv',d=50)
+    pulse2deg_file_path='../config/MA2010_A0_pulse2deg_real.csv',d=50)
 
-max_error_threshold=0.4
+max_error_threshold=0.05
 min_length=10
 greedy_fit_obj=greedy_fit(robot,curve_js, min_length=min_length,max_error_threshold=max_error_threshold)
 

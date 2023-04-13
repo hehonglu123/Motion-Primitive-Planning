@@ -36,7 +36,7 @@ def main():
 
 	res = differential_evolution(opt.curve_pose_opt2, bnds, args=None,workers=-1,
 									x0 = np.hstack((k*theta,curve_pose[:-1,-1],[0])),
-									strategy='best1bin', maxiter=50,
+									strategy='best1bin', maxiter=500,
 									popsize=15, tol=1e-10,
 									mutation=(0.5, 1), recombination=0.7,
 									seed=None, callback=None, disp=True,
