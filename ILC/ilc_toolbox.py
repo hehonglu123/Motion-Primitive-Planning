@@ -690,7 +690,7 @@ class ilc_toolbox(object):
 					k_temp=error_bps_w[bp_idx][bp_sub_idx]/theta_temp
 					R_new=rot(k_temp,step_w*theta_temp)@R_old
 
-				q_bp_new[bp_idx][bp_sub_idx]=car2js(self.robot,q_bp[bp_idx][bp_sub_idx],p_bp[bp_idx][bp_sub_idx],R_new)[0]
+				q_bp_new[bp_idx][bp_sub_idx]=car2js(self.robot,q_bp[bp_idx][bp_sub_idx],p_bp_new[bp_idx][bp_sub_idx],R_new)[0]
 
 		return p_bp_new, q_bp_new
 

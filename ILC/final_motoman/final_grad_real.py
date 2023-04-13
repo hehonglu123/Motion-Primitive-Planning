@@ -39,9 +39,8 @@ def main():
 	ms = MotionSend(robot)
 	breakpoints,primitives,p_bp,q_bp=ms.extract_data_from_cmd(cmd_dir+'command.csv')
 	###extension
+	# p_bp,q_bp=ms.extend(robot,q_bp,primitives,breakpoints,p_bp,extension_start=60,extension_end=60)
 	p_bp,q_bp=ms.extend(robot,q_bp,primitives,breakpoints,p_bp)
-	# p_bp,q_bp,primitives,breakpoints=ms.extend2(robot,q_bp,primitives,breakpoints,p_bp)
-	# breakpoints,primitives,p_bp,q_bp=ms.extract_data_from_cmd('curve2_pose_opt2_v1200/command.csv')
 
 	
 	###ilc toolbox def

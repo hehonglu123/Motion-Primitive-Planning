@@ -20,9 +20,9 @@ def main():
 	dataset='curve_2/'
 	solution_dir='baseline_motoman/'
 	data_dir="../../data/"+dataset+solution_dir
-	cmd_dir="../../data/"+dataset+solution_dir+'greedy0.1L/'
+	iteration=0
 
-	recorded_dir='curve2_baseline_100L_nPL/'
+	recorded_dir='curve_2_baseline_greedy0.1L/iteration_%i/'%iteration
 
 	curve = read_csv(data_dir+"Curve_in_base_frame.csv",header=None).values
 
@@ -38,11 +38,7 @@ def main():
 	gamma_v_min=0.2
 	
 	ms = MotionSend(robot)
-	breakpoints,primitives,p_bp,q_bp=ms.extract_data_from_cmd(cmd_dir+'command.csv')
-	###extension
-	p_bp,q_bp=ms.extend(robot,q_bp,primitives,breakpoints,p_bp)
-	# p_bp,q_bp,primitives,breakpoints=ms.extend2(robot,q_bp,primitives,breakpoints,p_bp)
-	# breakpoints,primitives,p_bp,q_bp=ms.extract_data_from_cmd('curve2_pose_opt2_v1200/command.csv')
+	breakpoints,primitives,p_bp,q_bp=ms.extract_data_from_cmd(recorded_dir+'../command%i.csv'%iteration)
 
 	
 	###ilc toolbox def
@@ -52,7 +48,6 @@ def main():
 	max_error_prev=999
 	max_grad=False
 	inserted_points=[]
-	iteration=50
 
 	N=5 	###N-run average
 	curve_exe_js_all=[]
@@ -81,7 +76,7 @@ def main():
 	#############################chop extension off##################################
 	lam, curve_exe, curve_exe_R,curve_exe_js, speed, timestamp=ms.chop_extension(curve_exe, curve_exe_R,avg_curve_js, speed, timestamp_d,curve[0,:3],curve[-1,:3])
 
-	ms.write_data_to_cmd('recorded_data/command%i.csv'%i,breakpoints,primitives, p_bp,q_bp)
+	
 
 	##############################calcualte error########################################
 	error,angle_error=calc_all_error_w_normal(curve_exe,curve[:,:3],curve_exe_R[:,:,-1],curve[:,3:])
@@ -126,6 +121,7 @@ def main():
 		for m in range(len(p_bp)):
 			print(np.linalg.norm(q_bp[m][0]-q_bp_old[m][0]),np.linalg.norm(p_bp[m][0]-p_bp_old[m][0]))
 	
+	ms.write_data_to_cmd('recorded_data/command_out.csv',breakpoints,primitives, p_bp,q_bp)
 
 if __name__ == "__main__":
 	main()
