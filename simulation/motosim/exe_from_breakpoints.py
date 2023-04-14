@@ -14,12 +14,12 @@ def main():
 
     ms = MotionSend(robot)
 
-    dataset='curve_1/'
-    solution_dir='curve_pose_opt2_motoman/'
+    dataset='curve_2/'
+    solution_dir='curve_pose_opt1_motoman/'
     # solution_dir='baseline_motoman/'
 
     data_dir='../../data/'+dataset+solution_dir
-    cmd_dir=data_dir+'greedy0.1L/'
+    cmd_dir=data_dir+'100L/'
 
     curve = read_csv(data_dir+"Curve_in_base_frame.csv",header=None).values
     lam_original=calc_lam_cs(curve[:,:3])
@@ -32,7 +32,7 @@ def main():
         breakpoints,primitives, p_bp,q_bp=ms.extract_data_from_cmd(cmd_dir+"command.csv")
         q_bp_end=q_bp[-1][0]
         # p_bp,q_bp,primitives,breakpoints = ms.extend2(robot, q_bp, primitives, breakpoints, p_bp)
-        p_bp,q_bp = ms.extend(robot, q_bp, primitives, breakpoints, p_bp,extension_start=60,extension_end=60)
+        p_bp,q_bp = ms.extend(robot, q_bp, primitives, breakpoints, p_bp,extension_start=30,extension_end=30)
         zone=None
         log_results = ms.exec_motions(robot,primitives,breakpoints,p_bp,q_bp,s,zone)
 

@@ -1,22 +1,23 @@
-import sys, yaml, copy
+import sys, yaml, copy, os
 import numpy as np
 from general_robotics_toolbox import *
 from pandas import read_csv, DataFrame
 
 data_dir='curve_2/'
-original_dir=data_dir+'curve_pose_opt2/'
+original_dir=data_dir+'curve_pose_opt2_motoman/'
 curve_pose = np.loadtxt(original_dir+'curve_pose.csv',delimiter=',')
 curve_js = read_csv(original_dir+'Curve_js.csv',header=None).values
 curve_dense = read_csv(data_dir+'Curve_dense.csv',header=None).values
 
 
-rotate_angle=np.pi/8
+rotate_angle=np.pi/4
 
 H_R=np.eye(4)
 H_R[:3,:3]=rot([0,0,1],rotate_angle)
 curve_pose_new=H_R@curve_pose
 
 new_dir=original_dir[:-1]+'_2/'
+os.mkdir(new_dir)
 np.savetxt(new_dir+'curve_pose.csv',curve_pose_new,delimiter=',')
 
 curve_js_new=copy.deepcopy(curve_js)
