@@ -4,7 +4,7 @@ from general_robotics_toolbox import *
 from pandas import read_csv, DataFrame
 
 data_dir='curve_2/'
-original_dir=data_dir+'curve_pose_opt2_motoman/'
+original_dir=data_dir+'curve_pose_opt3_motoman/'
 curve_pose = np.loadtxt(original_dir+'curve_pose.csv',delimiter=',')
 curve_js = read_csv(original_dir+'Curve_js.csv',header=None).values
 curve_dense = read_csv(data_dir+'Curve_dense.csv',header=None).values

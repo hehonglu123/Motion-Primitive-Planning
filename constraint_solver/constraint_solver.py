@@ -113,7 +113,7 @@ class lambda_opt(object):
 					ezdotd=(curve_normal[i]-pose_now.R[:,-1])
 
 					f=-np.dot(np.transpose(Jp),vd)-Kw*np.dot(np.transpose(JR_mod),ezdotd)
-					qdot=solve_qp(H,f,lb=self.robot1.lower_limit-q_all[-1]+self.lim_factor*np.ones(6),ub=self.robot1.upper_limit-q_all[-1]-self.lim_factor*np.ones(6))
+					qdot=solve_qp(H,f,lb=(self.robot1.lower_limit+0.1)-q_all[-1]+self.lim_factor*np.ones(6),ub=(self.robot1.upper_limit-0.1)-q_all[-1]-self.lim_factor*np.ones(6))
 
 					#avoid getting stuck
 					if abs(error_fb-error_fb_prev)<0.0001:
@@ -563,7 +563,8 @@ class lambda_opt(object):
 			return 999
 		
 		###make sure extension possible by checking start & end configuration
-		if np.min(self.robot1.upper_limit-q_out[0])<0.2 or  np.min(q_out[0]-self.robot1.lower_limit)<0.2 or np.min(self.robot1.upper_limit-q_out[-1])<0.2 or  np.min(q_out[-1]-self.robot1.lower_limit)<0.2:
+		ext_threshold=0.3
+		if np.min(self.robot1.upper_limit-q_out[0])<ext_threshold or  np.min(q_out[0]-self.robot1.lower_limit)<ext_threshold or np.min(self.robot1.upper_limit-q_out[-1])<ext_threshold or  np.min(q_out[-1]-self.robot1.lower_limit)<ext_threshold:
 			return 999
 
 		speed=traj_speed_est(self.robot1,q_out,self.lam,self.v_cmd)
