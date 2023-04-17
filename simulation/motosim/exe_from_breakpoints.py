@@ -53,7 +53,7 @@ def main():
         ax1.plot(lam, exe_speed, 'g-', label='Speed')
         ax2.plot(lam, error, 'b-',label='Error')
         ax2.plot(lam, np.degrees(angle_error), 'y-',label='Normal Error')
-        ax2.axis(ymin=0,ymax=2)
+        ax2.axis(ymin=0,ymax=4)
         ax1.axis(ymin=0,ymax=1.2*s)
 
         ax1.set_xlabel('lambda (mm)')
