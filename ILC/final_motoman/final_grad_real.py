@@ -18,9 +18,9 @@ from ilc_toolbox import *
 
 def main():
 	dataset='curve_2/'
-	solution_dir='baseline_motoman/'
+	solution_dir='curve_pose_opt1_motoman/'
 	data_dir="../../data/"+dataset+solution_dir
-	cmd_dir="../../data/"+dataset+solution_dir+'greedy0.1L/'
+	cmd_dir="../../data/"+dataset+solution_dir+'greedy0.5L/'
 
 
 	curve = read_csv(data_dir+"Curve_in_base_frame.csv",header=None).values
@@ -30,7 +30,7 @@ def main():
 	robot=robot_obj('MA2010_A0',def_path='../../config/MA2010_A0_robot_default_config.yml',tool_file_path='../../config/weldgun2.csv',\
     	pulse2deg_file_path='../../config/MA2010_A0_pulse2deg_real.csv',d=50)
 
-	v=400
+	v=580
 	z=None
 
 	gamma_v_max=1
