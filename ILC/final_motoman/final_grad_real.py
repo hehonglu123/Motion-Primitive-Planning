@@ -17,10 +17,10 @@ from ilc_toolbox import *
 
 
 def main():
-	dataset='curve_2/'
-	solution_dir='curve_pose_opt1_motoman/'
+	dataset='curve_1/'
+	solution_dir='curve_pose_opt2_motoman/'
 	data_dir="../../data/"+dataset+solution_dir
-	cmd_dir="../../data/"+dataset+solution_dir+'greedy0.5L/'
+	cmd_dir="../../data/"+dataset+solution_dir+'greedy0.4L/'
 
 
 	curve = read_csv(data_dir+"Curve_in_base_frame.csv",header=None).values
@@ -30,7 +30,7 @@ def main():
 	robot=robot_obj('MA2010_A0',def_path='../../config/MA2010_A0_robot_default_config.yml',tool_file_path='../../config/weldgun2.csv',\
     	pulse2deg_file_path='../../config/MA2010_A0_pulse2deg_real.csv',d=50)
 
-	v=580
+	v=333
 	z=None
 
 	gamma_v_max=1
@@ -40,7 +40,7 @@ def main():
 	breakpoints,primitives,p_bp,q_bp=ms.extract_data_from_cmd(cmd_dir+'command.csv')
 	###extension
 	# p_bp,q_bp=ms.extend(robot,q_bp,primitives,breakpoints,p_bp,extension_start=60,extension_end=60)
-	p_bp,q_bp=ms.extend(robot,q_bp,primitives,breakpoints,p_bp)
+	p_bp,q_bp=ms.extend(robot,q_bp,primitives,breakpoints,p_bp,extension_start=50,extension_end=50)
 
 	
 	###ilc toolbox def
