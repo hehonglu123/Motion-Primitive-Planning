@@ -14,7 +14,7 @@ def main():
 
     ms = MotionSend(robot)
 
-    dataset='curve_2/'
+    dataset='curve_1/'
     solution_dir='curve_pose_opt3_motoman/'
     # solution_dir='baseline_motoman/'
 
