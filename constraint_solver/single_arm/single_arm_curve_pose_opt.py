@@ -7,7 +7,7 @@ sys.path.append('../')
 from constraint_solver import *
 
 def main():
-	dataset='curve_2'
+	dataset='curve_1'
 	data_dir='../../data/'+dataset+'/'
 	###read actual curve
 	curve_dense = read_csv(data_dir+"Curve_dense.csv",header=None).values
@@ -18,7 +18,7 @@ def main():
 	robot=robot_obj('MA2010_A0',def_path='../../config/MA2010_A0_robot_default_config.yml',tool_file_path='../../config/weldgun2.csv',\
     pulse2deg_file_path='../../config/MA2010_A0_pulse2deg_real.csv',d=50,acc_dict_path='../../config/acceleration/MA2010_A0.pickle')
     
-	v_cmd=1000
+	v_cmd=800
 	# opt=lambda_opt(curve_dense[:,:3],curve_dense[:,3:],robot1=robot,urdf_path='../../config/urdf/',curve_name=dataset,steps=500,v_cmd=v_cmd)
 	opt=lambda_opt(curve_dense[:,:3],curve_dense[:,3:],robot1=robot,curve_name=dataset,steps=500,v_cmd=v_cmd)
 
@@ -36,7 +36,7 @@ def main():
 
 	res = differential_evolution(opt.curve_pose_opt2, bnds, args=None,workers=-1,
 									x0 = np.hstack((k*theta,curve_pose[:-1,-1],[0])),
-									strategy='best1bin', maxiter=600,
+									strategy='best1bin', maxiter=700,
 									popsize=15, tol=1e-10,
 									mutation=(0.5, 1), recombination=0.7,
 									seed=None, callback=None, disp=True,
