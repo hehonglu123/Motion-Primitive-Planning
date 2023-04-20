@@ -65,3 +65,13 @@ df=DataFrame({'average speed':[np.average(speed)],'max speed':[np.amax(speed)],'
     'average angle error':[np.average(angle_error)],'max angle error':[max(angle_error)],'min angle error':[np.amin(angle_error)],'std angle error':[np.std(angle_error)]})
 
 df.to_csv(exe_dir+'speed_info.csv',header=True,index=False)
+
+
+qdot=np.gradient(curve_exe_js,axis=0)/np.tile([np.gradient(timestamp)],(6,1)).T
+for i in range(6):
+    plt.plot(timestamp,qdot[:,i],label='joint %i'%i)
+plt.title('Joint Velocity Plot')
+plt.xlabel('Timestamp (s)')
+plt.ylabel('Joint Velocity (rad/s)')
+plt.legend()
+plt.show()
