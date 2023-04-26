@@ -7,7 +7,7 @@ from scipy.signal import find_peaks
 sys.path.append('../../toolbox')
 from robots_def import *
 from error_check import *
-from MotionSend_motoman import *
+from MotionSend_motoman_new import *
 from lambda_calc import *
 from blending import *
 from realrobot import *
