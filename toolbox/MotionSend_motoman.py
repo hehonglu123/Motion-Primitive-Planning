@@ -2,7 +2,7 @@ import numpy as np
 from general_robotics_toolbox import *
 from pandas import read_csv
 import sys
-from dx200_motion_program_exec_client import *
+from dx200_motion_program_exec_client_new import *
 from robots_def import *
 from error_check import *
 from toolbox_circular_fit import *
@@ -14,12 +14,7 @@ name_map={'MA2010_A0':('RB1',0,6),'MA1440_A0':('RB2',6,12),'D500B':('ST1',12,14)
 class MotionSend(object):
 	def __init__(self,robot1,robot2=None,IP='192.168.1.31') -> None:
 		###SPECIFY TOOL NUMBER HERE
-		if robot2:
-			self.client=MotionProgramExecClient(ROBOT_CHOICE=name_map[robot1.robot_name][0],ROBOT_CHOICE2=name_map[robot2.robot_name][0],pulse2deg=robot1.pulse2deg,pulse2deg_2=robot2.pulse2deg)
-		else:
-			self.client=MotionProgramExecClient(ROBOT_CHOICE=name_map[robot1.robot_name][0],pulse2deg=robot1.pulse2deg, tool_num = 11)
-
-
+		self.client=MotionProgramExecClient()
 
 	def jog_joint(self,q):
 		mp = MotionProgram()
@@ -27,57 +22,59 @@ class MotionSend(object):
 	
 
 	def exec_motions(self,robot,primitives,breakpoints,p_bp,q_bp,speed,zone=None):
+		mp=MotionProgram(ROBOT_CHOICE=name_map[robot.robot_name][0],pulse2deg=robot.pulse2deg, tool_num = 11)
+
 		for i in range(len(primitives)):
 			if 'movel' in primitives[i]:
 				if type(speed) is list:
 					if type(zone) is list:
-						self.client.MoveL(np.degrees(q_bp[i][0]), speed[i], zone[i])
+						mp.MoveL(np.degrees(q_bp[i][0]), speed[i], zone[i])
 					else:
-						self.client.MoveL(np.degrees(q_bp[i][0]), speed[i], zone)
+						mp.MoveL(np.degrees(q_bp[i][0]), speed[i], zone)
 				else:
 					if type(zone) is list:
-						self.client.MoveL(np.degrees(q_bp[i][0]), speed, zone[i])
+						mp.MoveL(np.degrees(q_bp[i][0]), speed, zone[i])
 					else:
-						self.client.MoveL(np.degrees(q_bp[i][0]), speed, zone)
+						mp.MoveL(np.degrees(q_bp[i][0]), speed, zone)
 				
 
 			elif 'movec' in primitives[i]:
 
 				if type(speed) is list:
 					if type(zone) is list:
-						self.client.MoveC(np.degrees(q_bp[i-1][-1]),np.degrees(q_bp[i][0]),np.degrees(q_bp[i][1]),speed[i],zone[i])
+						mp.MoveC(np.degrees(q_bp[i-1][-1]),np.degrees(q_bp[i][0]),np.degrees(q_bp[i][1]),speed[i],zone[i])
 
 					else:
-						self.client.MoveC(np.degrees(q_bp[i-1][-1]),np.degrees(q_bp[i][0]),np.degrees(q_bp[i][1]),speed[i],zone)
+						mp.MoveC(np.degrees(q_bp[i-1][-1]),np.degrees(q_bp[i][0]),np.degrees(q_bp[i][1]),speed[i],zone)
 				else:
 					if type(zone) is list:
-						self.client.MoveC(np.degrees(q_bp[i-1][-1]),np.degrees(q_bp[i][0]),np.degrees(q_bp[i][1]),speed,zone[i])
+						mp.MoveC(np.degrees(q_bp[i-1][-1]),np.degrees(q_bp[i][0]),np.degrees(q_bp[i][1]),speed,zone[i])
 					else:
-						self.client.MoveC(np.degrees(q_bp[i-1][-1]),np.degrees(q_bp[i][0]),np.degrees(q_bp[i][1]),speed,zone)
+						mp.MoveC(np.degrees(q_bp[i-1][-1]),np.degrees(q_bp[i][0]),np.degrees(q_bp[i][1]),speed,zone)
 
 			else:
 				###special case for motoman, speed is in %
 				if i==0 and type(speed) is not list:
 
-					self.client.MoveJ(np.degrees(q_bp[i][0]), 5)
-					self.client.setWaitTime(1)
-					self.client.MoveJ(np.degrees(q_bp[i][0]), 1)
-					self.client.setWaitTime(0.1)
+					mp.MoveJ(np.degrees(q_bp[i][0]), 5)
+					mp.setWaitTime(1)
+					mp.MoveJ(np.degrees(q_bp[i][0]), 1)
+					mp.setWaitTime(0.1)
 
 				else:
 
 					if type(speed) is list:
 						if type(zone) is list:
-							self.client.MoveJ(np.degrees(q_bp[i][0]), speed[i], zone[i])
+							mp.MoveJ(np.degrees(q_bp[i][0]), speed[i], zone[i])
 						else:
-							self.client.MoveJ(np.degrees(q_bp[i][0]), speed[i], zone)
+							mp.MoveJ(np.degrees(q_bp[i][0]), speed[i], zone)
 					else:
 						if type(zone) is list:
-							self.client.MoveJ(np.degrees(q_bp[i][0]), speed, zone[i])
+							mp.MoveJ(np.degrees(q_bp[i][0]), speed, zone[i])
 						else:
-							self.client.MoveJ(np.degrees(q_bp[i][0]), speed, zone)
+							mp.MoveJ(np.degrees(q_bp[i][0]), speed, zone)
 
-		timestamp, joint_recording, job_line,job_step = self.client.execute_motion_program()
+		timestamp, joint_recording, job_line,job_step = self.client.execute_motion_program(mp)
 		return (timestamp, joint_recording[:,name_map[robot.robot_name][1]:name_map[robot.robot_name][2]], job_line,job_step)
 
 	def exe_from_file(self,robot,filename,speed,zone=None):
