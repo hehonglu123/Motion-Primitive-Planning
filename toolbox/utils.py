@@ -4,7 +4,6 @@ import matplotlib.pyplot as plt
 from scipy.interpolate import interp1d
 from scipy import signal
 import scipy, math
-from robots_def import *
 
 def H_inverse(H):
 	return H_from_RT(H[:-1,:-1].T,-H[:-1,:-1].T@H[:-1,-1])

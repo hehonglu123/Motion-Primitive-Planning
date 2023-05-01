@@ -4,7 +4,6 @@ from pandas import *
 import sys, traceback
 from general_robotics_toolbox import *
 import matplotlib.pyplot as plt
-from robots_def import *
 from error_check import *
 from utils import * 
 from scipy.optimize import fminbound

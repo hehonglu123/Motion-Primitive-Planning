@@ -2,16 +2,28 @@ import numpy as np
 from general_robotics_toolbox import *
 from pandas import read_csv
 import sys
+from RobotRaconteur.Client import *
 
 sys.path.append('../../toolbox')
-from robots_def import *
+from robot_def import *
 from error_check import *
 from MotionSend_motoman import *
 
 def main():
-    robot=robot_obj('MA2010_A0',def_path='../../config/MA2010_A0_robot_default_config.yml',tool_file_path='../../config/weldgun2.csv',\
-    pulse2deg_file_path='../../config/MA2010_A0_pulse2deg_real.csv',d=50)
+    config_dir='../../config/'
+    robot_weld=robot_obj('MA2010_A0',def_path=config_dir+'MA2010_A0_robot_default_config.yml',tool_file_path=config_dir+'weldgun2.csv',\
+        pulse2deg_file_path=config_dir+'MA2010_A0_pulse2deg_real.csv',d=50,  base_marker_config_file=config_dir+'MA2010_marker_config.yaml',\
+        tool_marker_config_file=config_dir+'weldgun_marker_config.yaml')
 
+    ###D=50！！！
+    mocap_url = 'rr+tcp://localhost:59823?service=optitrack_mocap'
+    mocap_url = mocap_url
+    mocap_cli = RRN.ConnectService(mocap_url)
+
+    # mpl_obj = MocapPoseListener(mocap_cli,[robot_weld],collect_base_stop=1000)
+    mpl_obj = MocapPoseListener(mocap_cli,[robot_weld],collect_base_stop=1,use_static_base=True)
+
+    
     ms = MotionSend(robot)
 
     dataset='curve_2/'
@@ -34,16 +46,19 @@ def main():
         # p_bp,q_bp,primitives,breakpoints = ms.extend2(robot, q_bp, primitives, breakpoints, p_bp)
         p_bp,q_bp = ms.extend(robot, q_bp, primitives, breakpoints, p_bp,extension_start=100,extension_end=100)
         zone=None
+        mpl_obj.run_pose_listener()
+    
         log_results = ms.exec_motions(robot,primitives,breakpoints,p_bp,q_bp,s,zone)
 
+        mpl_obj.stop_pose_listener()
+        curve_exe,curve_exe_R,timestamp = mpl_obj.get_robots_traj()
         ###save results
-        timestamp,curve_exe_js,cmd_num=ms.parse_logged_data(log_results)
-        np.savetxt('output.csv',np.hstack((timestamp.reshape((-1,1)),cmd_num.reshape((-1,1)),curve_exe_js)),delimiter=',',comments='')
+        # curve_exe_w=R2w(curve_exe_R,np.eye(3))
+        # np.savetxt('output.csv',np.hstack((timestamp.reshape((-1,1)),curve_exe_w)),delimiter=',',comments='')
 
-        ##############################data analysis#####################################
-        lam, curve_exe, curve_exe_R,curve_exe_js, exe_speed, timestamp=ms.logged_data_analysis(robot,log_results,realrobot=True)
-        #############################chop extension off##################################
-        lam, curve_exe, curve_exe_R,curve_exe_js, exe_speed, timestamp=ms.chop_extension(curve_exe, curve_exe_R,curve_exe_js, exe_speed, timestamp,curve[0,:3],curve[-1,:3])
+        speed=get_speed(curve_exe,timestam)
+        lam, curve_exe, curve_exe_R, exe_speed, timestamp=ms.chop_extension_mocap(curve_exe, curve_exe_R, speed, timestamp,curve[0,:3],curve[-1,:3])
+      
         ##############################calcualte error########################################
         error,angle_error=calc_all_error_w_normal(curve_exe,curve[:,:3],curve_exe_R[:,:,-1],curve[:,3:])
 

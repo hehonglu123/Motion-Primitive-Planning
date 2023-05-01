@@ -3,7 +3,6 @@ from general_robotics_toolbox import *
 from pandas import read_csv
 import sys
 from dx200_motion_program_exec_client_new import *
-from robots_def import *
 from error_check import *
 from toolbox_circular_fit import *
 from lambda_calc import *
@@ -364,6 +363,23 @@ class MotionSend(object):
 		lam=calc_lam_cs(curve_exe)
 
 		return lam, curve_exe, curve_exe_R,curve_exe_js, speed, timestamp[start_idx:end_idx+1]-timestamp[start_idx]
+
+	def chop_extension_mocap(self,curve_exe, curve_exe_R, speed, timestamp,p_start,p_end):
+		start_idx=np.argmin(np.linalg.norm(p_start-curve_exe,axis=1))
+		end_idx=np.argmin(np.linalg.norm(p_end-curve_exe,axis=1))
+
+		#make sure extension doesn't introduce error
+		if np.linalg.norm(curve_exe[start_idx]-p_start)>0.3:
+			start_idx+=1
+		if np.linalg.norm(curve_exe[end_idx]-p_end)>0.3:
+			end_idx-=1
+
+		curve_exe=curve_exe[start_idx:end_idx+1]
+		curve_exe_R=curve_exe_R[start_idx:end_idx+1]
+		speed=speed[start_idx:end_idx+1]
+		lam=calc_lam_cs(curve_exe)
+
+		return lam, curve_exe, curve_exe_R, speed, timestamp[start_idx:end_idx+1]-timestamp[start_idx]
 
 	
 	def calc_robot2_q_from_blade_pose(self,blade_pose,base2_R,base2_p):
