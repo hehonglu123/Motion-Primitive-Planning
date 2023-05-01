@@ -8,84 +8,91 @@ sys.path.append('../../toolbox')
 from robot_def import *
 from error_check import *
 from MotionSend_motoman import *
+from MocapPoseListener import *
 
 def main():
-    config_dir='../../config/'
-    robot_weld=robot_obj('MA2010_A0',def_path=config_dir+'MA2010_A0_robot_default_config.yml',tool_file_path=config_dir+'weldgun2.csv',\
-        pulse2deg_file_path=config_dir+'MA2010_A0_pulse2deg_real.csv',d=50,  base_marker_config_file=config_dir+'MA2010_marker_config.yaml',\
-        tool_marker_config_file=config_dir+'weldgun_marker_config.yaml')
+	config_dir='../../config/'
+	robot=robot_obj('MA2010_A0',def_path=config_dir+'MA2010_A0_robot_default_config.yml',tool_file_path=config_dir+'weldgun2.csv',\
+		pulse2deg_file_path=config_dir+'MA2010_A0_pulse2deg_real.csv',d=50,  base_marker_config_file=config_dir+'MA2010_marker_config.yaml',\
+		tool_marker_config_file=config_dir+'weldgun_marker_config.yaml')
+	# add d
+	d=50-15
+	T_d1_d2 = Transform(np.eye(3),p=[0,0,d])
+	robot.T_tool_toolmarker = robot.T_tool_toolmarker*T_d1_d2
 
-    ###D=50！！！
-    mocap_url = 'rr+tcp://localhost:59823?service=optitrack_mocap'
-    mocap_url = mocap_url
-    mocap_cli = RRN.ConnectService(mocap_url)
+	mocap_url = 'rr+tcp://192.168.55.10:59823?service=optitrack_mocap'
+	mocap_url = mocap_url
+	mocap_cli = RRN.ConnectService(mocap_url)
 
-    # mpl_obj = MocapPoseListener(mocap_cli,[robot_weld],collect_base_stop=1000)
-    mpl_obj = MocapPoseListener(mocap_cli,[robot_weld],collect_base_stop=1,use_static_base=True)
+	mpl_obj = MocapPoseListener(mocap_cli,[robot],collect_base_stop=1,use_static_base=True)
 
-    
-    ms = MotionSend(robot)
+	
+	ms = MotionSend(robot)
 
-    dataset='curve_2/'
-    solution_dir='curve_pose_opt1_motoman/'
-    # solution_dir='baseline_motoman/'
+	dataset='curve_1/'
+	solution_dir='curve_pose_opt2_motoman/'
+	# solution_dir='baseline_motoman/'
 
-    data_dir='../../data/'+dataset+solution_dir
-    cmd_dir=data_dir+'greedy0.1L/'
+	data_dir='../../data/'+dataset+solution_dir
+	cmd_dir=data_dir+'greedy0.4L/'
 
-    curve = read_csv(data_dir+"Curve_in_base_frame.csv",header=None).values
-    lam_original=calc_lam_cs(curve[:,:3])
+	curve = read_csv(data_dir+"Curve_in_base_frame.csv",header=None).values
+	lam_original=calc_lam_cs(curve[:,:3])
 
-    
+	
 
-    speed=[380]
+	speed=[300]
 
-    for s in speed:
-        breakpoints,primitives, p_bp,q_bp=ms.extract_data_from_cmd(cmd_dir+"command.csv")
-        q_bp_end=q_bp[-1][0]
-        # p_bp,q_bp,primitives,breakpoints = ms.extend2(robot, q_bp, primitives, breakpoints, p_bp)
-        p_bp,q_bp = ms.extend(robot, q_bp, primitives, breakpoints, p_bp,extension_start=100,extension_end=100)
-        zone=None
-        mpl_obj.run_pose_listener()
-    
-        log_results = ms.exec_motions(robot,primitives,breakpoints,p_bp,q_bp,s,zone)
+	for s in speed:
+		breakpoints,primitives, p_bp,q_bp=ms.extract_data_from_cmd(cmd_dir+"command.csv")
+		q_bp_end=q_bp[-1][0]
+		# p_bp,q_bp,primitives,breakpoints = ms.extend2(robot, q_bp, primitives, breakpoints, p_bp)
+		p_bp,q_bp = ms.extend(robot, q_bp, primitives, breakpoints, p_bp,extension_start=50,extension_end=50)
+		zone=None
+		mpl_obj.run_pose_listener()
+	
+		log_results = ms.exec_motions(robot,primitives,breakpoints,p_bp,q_bp,s,zone)
 
-        mpl_obj.stop_pose_listener()
-        curve_exe,curve_exe_R,timestamp = mpl_obj.get_robots_traj()
-        ###save results
-        # curve_exe_w=R2w(curve_exe_R,np.eye(3))
-        # np.savetxt('output.csv',np.hstack((timestamp.reshape((-1,1)),curve_exe_w)),delimiter=',',comments='')
+		mpl_obj.stop_pose_listener()
+		curve_exe,curve_exe_R,timestamp = mpl_obj.get_robots_traj()
+		curve_exe = np.array(curve_exe[robot.robot_name])
+		curve_exe_R = np.array(curve_exe_R[robot.robot_name])
+		timestamp = np.array(timestamp[robot.robot_name])
 
-        speed=get_speed(curve_exe,timestam)
-        lam, curve_exe, curve_exe_R, exe_speed, timestamp=ms.chop_extension_mocap(curve_exe, curve_exe_R, speed, timestamp,curve[0,:3],curve[-1,:3])
-      
-        ##############################calcualte error########################################
-        error,angle_error=calc_all_error_w_normal(curve_exe,curve[:,:3],curve_exe_R[:,:,-1],curve[:,3:])
+		###save results
+		# curve_exe_w=R2w(curve_exe_R,np.eye(3))
+		# np.savetxt('output.csv',np.hstack((timestamp.reshape((-1,1)),curve_exe, curve_exe_w)),delimiter=',',comments='')
 
-        print(np.std(exe_speed)/np.average(exe_speed))
-        fig, ax1 = plt.subplots()
-        ax2 = ax1.twinx()
-        ax1.plot(lam, exe_speed, 'g-', label='Speed')
-        ax2.plot(lam, error, 'b-',label='Error')
-        ax2.plot(lam, np.degrees(angle_error), 'y-',label='Normal Error')
-        ax2.axis(ymin=0,ymax=4)
-        ax1.axis(ymin=0,ymax=1.2*s)
+		speed=get_speed(curve_exe,timestamp)
+		lam, curve_exe, curve_exe_R, exe_speed, timestamp=ms.chop_extension_mocap(curve_exe, curve_exe_R, speed, timestamp,curve[0,:3],curve[-1,:3],p_bp[0][0])
+	  
+		##############################calcualte error########################################
+		error,angle_error=calc_all_error_w_normal(curve_exe,curve[:,:3],curve_exe_R[:,:,-1],curve[:,3:])
 
-        ax1.set_xlabel('lambda (mm)')
-        ax1.set_ylabel('Speed/lamdot (mm/s)', color='g')
-        ax2.set_ylabel('Error/Normal Error (mm/deg)', color='b')
-        plt.title("Speed and Error Plot")
-        h1, l1 = ax1.get_legend_handles_labels()
-        h2, l2 = ax2.get_legend_handles_labels()
-        ax1.legend(h1+h2, l1+l2, loc=1)
+		print(np.std(exe_speed)/np.average(exe_speed))
+		fig, ax1 = plt.subplots()
+		ax2 = ax1.twinx()
+		ax1.plot(lam, exe_speed, 'g-', label='Speed')
+		ax2.plot(lam, error, 'b-',label='Error')
+		ax2.plot(lam, np.degrees(angle_error), 'y-',label='Normal Error')
+		# ax2.axis(ymin=0,ymax=4)
+		ax1.axis(ymin=0,ymax=1.2*s)
 
-        ###plot breakpoints index
-        breakpoints[1:]=breakpoints[1:]-1
-        for bp in breakpoints:
-            plt.axvline(x=lam_original[bp])
+		ax1.set_xlabel('lambda (mm)')
+		ax1.set_ylabel('Speed/lamdot (mm/s)', color='g')
+		ax2.set_ylabel('Error/Normal Error (mm/deg)', color='b')
+		plt.title("Speed and Error Plot")
+		h1, l1 = ax1.get_legend_handles_labels()
+		h2, l2 = ax2.get_legend_handles_labels()
+		ax1.legend(h1+h2, l1+l2, loc=1)
 
-        plt.show()
+		###plot breakpoints index
+		breakpoints[1:]=breakpoints[1:]-1
+		for bp in breakpoints:
+			plt.axvline(x=lam_original[bp])
+
+		plt.show()
 
 
 if __name__ == "__main__":
-    main()
+	main()

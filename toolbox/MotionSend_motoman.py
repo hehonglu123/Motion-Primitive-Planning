@@ -364,9 +364,11 @@ class MotionSend(object):
 
 		return lam, curve_exe, curve_exe_R,curve_exe_js, speed, timestamp[start_idx:end_idx+1]-timestamp[start_idx]
 
-	def chop_extension_mocap(self,curve_exe, curve_exe_R, speed, timestamp,p_start,p_end):
-		start_idx=np.argmin(np.linalg.norm(p_start-curve_exe,axis=1))
-		end_idx=np.argmin(np.linalg.norm(p_end-curve_exe,axis=1))
+	def chop_extension_mocap(self,curve_exe, curve_exe_R, speed, timestamp,p_start,p_end,ext_start):
+		start_idx1=np.argmin(np.linalg.norm(ext_start-curve_exe,axis=1))
+
+		start_idx=np.argmin(np.linalg.norm(p_start-curve_exe[start_idx1:],axis=1))+start_idx1
+		end_idx=np.argmin(np.linalg.norm(p_end-curve_exe[start_idx1:],axis=1))+start_idx1
 
 		#make sure extension doesn't introduce error
 		if np.linalg.norm(curve_exe[start_idx]-p_start)>0.3:

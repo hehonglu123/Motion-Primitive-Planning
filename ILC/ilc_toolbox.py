@@ -3,8 +3,6 @@ from general_robotics_toolbox import *
 from pandas import read_csv
 import sys
 
-sys.path.append('../toolbox')
-from robots_def import *
 from error_check import *
 from lambda_calc import *
 from blending import *

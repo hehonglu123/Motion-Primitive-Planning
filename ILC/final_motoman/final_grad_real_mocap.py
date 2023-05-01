@@ -5,11 +5,10 @@ import sys
 from scipy.signal import find_peaks
 
 sys.path.append('../../toolbox')
-from robots_def import *
+from robot_def import *
 from error_check import *
 from MotionSend_motoman import *
-from lambda_calc import *
-from blending import *
+from MocapPoseListener import *
 from realrobot import *
 
 sys.path.append('../')
@@ -17,6 +16,22 @@ from ilc_toolbox import *
 
 
 def main():
+	config_dir='../../config/'
+	robot=robot_obj('MA2010_A0',def_path=config_dir+'MA2010_A0_robot_default_config.yml',tool_file_path=config_dir+'weldgun2.csv',\
+		pulse2deg_file_path=config_dir+'MA2010_A0_pulse2deg_real.csv',d=50,  base_marker_config_file=config_dir+'MA2010_marker_config.yaml',\
+		tool_marker_config_file=config_dir+'weldgun_marker_config.yaml')
+	# add d
+	d=50-15
+	T_d1_d2 = Transform(np.eye(3),p=[0,0,d])
+	robot.T_tool_toolmarker = robot.T_tool_toolmarker*T_d1_d2
+
+	mocap_url = 'rr+tcp://192.168.55.10:59823?service=optitrack_mocap'
+	mocap_url = mocap_url
+	mocap_cli = RRN.ConnectService(mocap_url)
+
+	mpl_obj = MocapPoseListener(mocap_cli,[robot],collect_base_stop=1,use_static_base=True)
+
+	
 	dataset='curve_1/'
 	solution_dir='curve_pose_opt2_motoman/'
 	data_dir="../../data/"+dataset+solution_dir
@@ -27,8 +42,6 @@ def main():
 
 
 	multi_peak_threshold=0.4
-	robot=robot_obj('MA2010_A0',def_path='../../config/MA2010_A0_robot_default_config.yml',tool_file_path='../../config/weldgun2.csv',\
-    	pulse2deg_file_path='../../config/MA2010_A0_pulse2deg_real.csv',d=50)
 
 	v=333
 	z=None
@@ -52,20 +65,15 @@ def main():
 	inserted_points=[]
 	iteration=50
 
-	N=5 	###N-run average
+	N=2 	###N-run average
 
 	for i in range(iteration):
 
-		_, avg_curve_js, timestamp_d=average_N_exe(ms,robot,primitives,breakpoints,p_bp,q_bp,v,z,curve,"recorded_data/iteration_%i" % i,N=N)
+		curve_exe, curve_exe_R, timestamp=average_N_exe_mocap(mpl_obj,ms,robot,primitives,breakpoints,p_bp,q_bp,v,z,curve,"recorded_data/iteration_%i" % i,N=N)
 
-		# data=np.loadtxt('../../realrobot/motoman/recorded_data/run_0.csv',delimiter=',')
-		# avg_curve_js=data[:,1:]
-		# timestamp_d=data[:,0]
-
-		###calculat data with average curve
-		lam, curve_exe, curve_exe_R, speed=logged_data_analysis(robot,timestamp_d,avg_curve_js)
+		speed=get_speed(curve_exe,timestamp)
 		#############################chop extension off##################################
-		lam, curve_exe, curve_exe_R,curve_exe_js, speed, timestamp=ms.chop_extension(curve_exe, curve_exe_R,avg_curve_js, speed, timestamp_d,curve[0,:3],curve[-1,:3])
+		lam, curve_exe, curve_exe_R, speed, timestamp=ms.chop_extension_mocap(curve_exe, curve_exe_R, speed, timestamp,curve[0,:3],curve[-1,:3],p_bp[0][0])
 
 		ms.write_data_to_cmd('recorded_data/command%i.csv'%i,breakpoints,primitives, p_bp,q_bp)
 
@@ -86,7 +94,7 @@ def main():
 		ax2.plot(lam, error, 'b-',label='Error')
 		ax2.scatter(lam[peaks],error[peaks],label='peaks')
 		ax2.plot(lam, np.degrees(angle_error), 'y-',label='Normal Error')
-		ax2.axis(ymin=0,ymax=5)
+		# ax2.axis(ymin=0,ymax=5)
 		ax1.axis(ymin=0,ymax=1.2*v)
 
 		ax1.set_xlabel('lambda (mm)')
@@ -149,7 +157,7 @@ def main():
 				order=np.argsort(np.abs(breakpoints_blended-peak_error_curve_blended_idx))
 				breakpoint_interp_2tweak_indices=order[:2]
 
-				peak_pose=robot.fwd(curve_exe_js[peak])
+				peak_pose=Transform(curve_exe_R[peak],curve_exe[peak])
 				##################################################################XYZ Gradient######################################################################
 				de_dp=ilc.get_gradient_from_model_xyz(p_bp,q_bp,breakpoints_blended,curve_blended,peak_error_curve_blended_idx,peak_pose,curve[peak_error_curve_idx,:3],breakpoint_interp_2tweak_indices)
 				p_bp, q_bp=ilc.update_bp_xyz(p_bp,q_bp,de_dp,error[peak],breakpoint_interp_2tweak_indices,alpha=0.25)

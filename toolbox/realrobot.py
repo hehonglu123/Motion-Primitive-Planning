@@ -24,6 +24,30 @@ def average_curve(curve_all,timestamp_all):
 
 	return curve_all_new, np.average(curve_all_new,axis=0),timestamp_d
 
+def average_curve_mocap(curve_exe_all,curve_exe_w_all,timestamp_all):
+	###get desired synced timestamp first
+	max_length=[]
+	max_time=[]
+	for i in range(len(timestamp_all)):
+		max_length.append(len(timestamp_all[i]))
+		max_time.append(timestamp_all[i][-1])
+	max_length=np.max(max_length)
+	max_time=np.max(max_time)
+	timestamp_d=np.linspace(0,max_time,num=max_length)
+
+	###linear interpolate each curve with synced timestamp
+	curve_exe_all_new=[]
+	curve_exe_w_all_new=[]
+	for i in range(len(timestamp_all)):
+		curve_exe_all_new.append(interplate_timestamp(curve_exe_all[i],timestamp_all[i],timestamp_d))
+		curve_exe_w_all_new.append(interplate_timestamp(curve_exe_w_all[i],timestamp_all[i],timestamp_d))
+
+	curve_exe_all_new=np.array(curve_exe_all_new)
+	curve_exe_w_all_new=np.array(curve_exe_w_all_new)
+
+	return np.average(curve_exe_all_new,axis=0), np.average(curve_exe_w_all_new,axis=0), timestamp_d
+
+
 def remove_traj_outlier(curve_exe_js_all,timestamp_all,total_time_all):
 
 	km = KMeans(n_clusters=2)
@@ -41,6 +65,25 @@ def remove_traj_outlier(curve_exe_js_all,timestamp_all,total_time_all):
 		print('outlier traj detected')
 
 	return curve_exe_js_all,timestamp_all
+
+def remove_traj_outlier_mocap(curve_exe_all,curve_exe_R_all,timestamp_all,total_time_all):
+
+	km = KMeans(n_clusters=2)
+	index=km.fit_predict(np.array(total_time_all).reshape(-1,1))
+	cluster=km.cluster_centers_
+	major_index=scipy.stats.mode(index)[0][0]       ###mostly appeared index
+	major_indices=np.where(index==major_index)[0]
+	time_mode_avg=cluster[major_index]
+
+	# threshold=0.2 ###ms 
+	threshold=0.02*time_mode_avg
+	if abs(cluster[0][0]-cluster[1][0])>threshold:
+		curve_exe_all=[curve_exe_all[iii] for iii in major_indices]
+		curve_exe_R_all=[curve_exe_R_all[iii] for iii in major_indices]
+		timestamp_all=[timestamp_all[iii] for iii in major_indices]
+		print('outlier traj detected')
+
+	return curve_exe_all,curve_exe_R_all,timestamp_all
 
 def average_N_exe(ms,robot,primitives,breakpoints,p_bp,q_bp,v,z,curve,log_path='',N=5,safe_q=None):
 
@@ -98,6 +141,58 @@ def average_N_exe(ms,robot,primitives,breakpoints,p_bp,q_bp,v,z,curve,log_path='
 	curve_js_all_new, avg_curve_js, timestamp_d=average_curve(curve_exe_js_all,timestamp_all)
 
 	return curve_js_all_new, avg_curve_js, timestamp_d
+
+
+def average_N_exe_mocap(mpl_obj,ms,robot,primitives,breakpoints,p_bp,q_bp,v,z,curve,log_path='',N=5,safe_q=None):
+
+	if not os.path.exists(log_path):
+	   os.makedirs(log_path)
+
+	###N run execute
+	timestamp_all=[]
+	total_time_all=[]
+	curve_exe_all=[]
+	curve_exe_w_all=[]
+	for r in range(N):
+		mpl_obj.run_pose_listener()
+		log_results=ms.exec_motions(robot,primitives,breakpoints,p_bp,q_bp,v,z)
+		mpl_obj.stop_pose_listener()
+		
+		curve_exe,curve_exe_R,timestamp = mpl_obj.get_robots_traj()
+		curve_exe = np.array(curve_exe[robot.robot_name])
+		curve_exe_R = np.array(curve_exe_R[robot.robot_name])
+		timestamp = np.array(timestamp[robot.robot_name])
+		curve_exe_w=R2w(curve_exe_R,np.eye(3))
+
+		if safe_q is not None:
+			ms.jog_joint(safe_q)
+
+		###save 5 runs
+		if len(log_path)>0:
+			
+			# Write log csv to file
+			np.savetxt(log_path+'/run_'+str(r)+'.csv',np.hstack((timestamp.reshape((-1,1)),curve_exe,curve_exe_w)),delimiter=',',comments='')
+
+		###throw bad curves
+		speed=get_speed(curve_exe,timestamp)
+		_, _, _, _, timestamp_temp=ms.chop_extension_mocap(curve_exe, curve_exe_R, speed, timestamp,curve[0,:3],curve[-1,:3],p_bp[0][0])
+		total_time_all.append(timestamp_temp[-1]-timestamp_temp[0])
+
+		timestamp=timestamp-timestamp[0]
+
+		curve_exe_all.append(curve_exe)
+		curve_exe_w_all.append(curve_exe_w)
+		timestamp_all.append(timestamp)
+		time.sleep(0.1)
+
+	print(total_time_all)
+	###trajectory outlier detection, based on chopped time
+	curve_exe_all,curve_exe_w_all,timestamp_all=remove_traj_outlier_mocap(curve_exe_all,curve_exe_w_all,timestamp_all,total_time_all)
+
+	###infer average curve from linear interplateion
+	curve_exe_avg, curve_exe_w_avg, timestamp_d=average_curve_mocap(curve_exe_all,curve_exe_w_all,timestamp_all)
+
+	return curve_exe_avg, w2R(curve_exe_w_avg,np.eye(3)), timestamp_d
 
 def average_N_exe_multimove(ms,breakpoints,robot1,primitives1,p_bp1,q_bp1,v1_all,z1_all,robot2,primitives2,p_bp2,q_bp2,v2_all,z2_all,relative_path,safeq1=None,safeq2=None,log_path='',N=5):
 	###N run execute
