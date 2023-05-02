@@ -28,8 +28,8 @@ def main():
 
     # speed=[100,150,200,250,300]
     # num_runs=[4,5,6]
-    speed=[200,100,50]
-    num_runs=[4]
+    speed=[200]
+    num_runs=[2]
     z=8
     for N in num_runs:
         for v in speed:  

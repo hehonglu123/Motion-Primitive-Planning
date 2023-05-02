@@ -162,6 +162,9 @@ def average_N_exe_mocap(mpl_obj,ms,robot,primitives,breakpoints,p_bp,q_bp,v,z,cu
 		curve_exe = np.array(curve_exe[robot.robot_name])
 		curve_exe_R = np.array(curve_exe_R[robot.robot_name])
 		timestamp = np.array(timestamp[robot.robot_name])
+		print(robot.robot_name)
+		print(curve_exe.shape)
+		print(curve_exe_R.shape)
 		curve_exe_w=R2w(curve_exe_R,np.eye(3))
 
 		if safe_q is not None:

@@ -3,6 +3,7 @@ from general_robotics_toolbox import *
 from pandas import read_csv
 import sys
 from scipy.signal import find_peaks
+from RobotRaconteur.Client import *
 
 sys.path.append('../../toolbox')
 from robot_def import *
