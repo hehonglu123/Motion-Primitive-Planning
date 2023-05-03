@@ -19,10 +19,9 @@ def main():
 	robot=robot_obj('MA2010_A0',def_path=config_dir+'MA2010_A0_robot_default_config.yml',tool_file_path=config_dir+'weldgun2.csv',\
 		pulse2deg_file_path=config_dir+'MA2010_A0_pulse2deg_real.csv',d=50,  base_marker_config_file=config_dir+'MA2010_marker_config.yaml',\
 		tool_marker_config_file=config_dir+'weldgun_marker_config.yaml')
-	# add d
-	d=50-15
-	T_d1_d2 = Transform(np.eye(3),p=[0,0,d])
-	robot.T_tool_toolmarker = robot.T_tool_toolmarker*T_d1_d2
+	robot_calib=copy.deepcopy(robot)
+	robot_calib.P = robot.calib_P
+	robot_calib.H = robot.calib_H
 
 	mocap_url = 'rr+tcp://192.168.55.10:59823?service=optitrack_mocap'
 	mocap_url = mocap_url
@@ -31,10 +30,10 @@ def main():
 	mpl_obj = MocapPoseListener(mocap_cli,[robot],collect_base_stop=1,use_static_base=True)
 
 	
-	dataset='curve_2/'
-	solution_dir='curve_pose_opt1_motoman/'
+	dataset='curve_1/'
+	solution_dir='curve_pose_opt2_motoman/'
 	data_dir="../../data/"+dataset+solution_dir
-	cmd_dir="../../data/"+dataset+solution_dir+'greedy0.5L/'
+	cmd_dir="../../data/"+dataset+solution_dir+'greedy0.4L/'
 
 
 	curve = read_csv(data_dir+"Curve_in_base_frame.csv",header=None).values
@@ -56,7 +55,7 @@ def main():
 
 	
 	###ilc toolbox def
-	ilc=ilc_toolbox(robot,primitives)
+	ilc=ilc_toolbox(robot_calib,primitives)
 
 	###TODO: extension fix start point, moveC support
 	max_error_prev=999
@@ -74,10 +73,13 @@ def main():
 		curve_exe = np.array(curve_exe[robot.robot_name])
 		curve_exe_R = np.array(curve_exe_R[robot.robot_name])
 		timestamp = np.array(timestamp[robot.robot_name])
+		len_min=min(len(timestamp),len(curve_exe))
+		curve_exe=curve_exe[:len_min]
+		timestamp=timestamp[:len_min]
 
 		###save results
-		# curve_exe_w=R2w(curve_exe_R,np.eye(3))
-		# np.savetxt('output.csv',np.hstack((timestamp.reshape((-1,1)),curve_exe, curve_exe_w)),delimiter=',',comments='')
+		curve_exe_w=R2w(curve_exe_R,np.eye(3))
+		np.savetxt('recorded_data/iteration_'+str(i)+'.csv',np.hstack((timestamp.reshape((-1,1)),curve_exe,curve_exe_w)),delimiter=',',comments='')
 
 		speed=get_speed(curve_exe,timestamp)
 		lam, curve_exe, curve_exe_R, speed, timestamp=ms.chop_extension_mocap(curve_exe, curve_exe_R, speed, timestamp,curve[0,:3],curve[-1,:3],p_bp[0][0])

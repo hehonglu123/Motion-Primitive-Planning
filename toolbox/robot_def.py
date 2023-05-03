@@ -5,6 +5,7 @@ from general_robotics_toolbox import robotraconteur as rr_rox
 import numpy as np
 import yaml, copy, time
 import pickle
+from utils import *
 
 def Rx(theta):
 	return np.array([[1,0,0],[0,np.cos(theta),-np.sin(theta)],[0,np.sin(theta),np.cos(theta)]])
@@ -108,6 +109,15 @@ class robot_obj(object):
 						marker_data['calib_base_mocap_pose']['orientation']['y'],
 						marker_data['calib_base_mocap_pose']['orientation']['z']]
 					self.T_base_mocap = Transform(q2R(q),p)
+				if 'calib_tool_flange_pose' in marker_data.keys():
+					p = [marker_data['calib_tool_flange_pose']['position']['x'],
+						marker_data['calib_tool_flange_pose']['position']['y'],
+						marker_data['calib_tool_flange_pose']['position']['z']]
+					q = [marker_data['calib_tool_flange_pose']['orientation']['w'],
+						marker_data['calib_tool_flange_pose']['orientation']['x'],
+						marker_data['calib_tool_flange_pose']['orientation']['y'],
+						marker_data['calib_tool_flange_pose']['orientation']['z']]
+					self.T_tool_flange = Transform(q2R(q),p)
 				if 'P' in marker_data.keys():
 					self.calib_P = np.zeros(self.robot.P.shape)
 					for i in range(len(marker_data['P'])):
@@ -137,6 +147,9 @@ class robot_obj(object):
 						marker_data['calib_tool_toolmarker_pose']['orientation']['y'],
 						marker_data['calib_tool_toolmarker_pose']['orientation']['z']]
 					self.T_tool_toolmarker = Transform(q2R(q),p)
+					# add d
+					T_d1_d2 = Transform(np.eye(3),p=[0,0,d-15])
+					self.T_tool_toolmarker = self.T_tool_toolmarker*T_d1_d2
 
 	def get_acc(self,q_all,direction=[]):
 		###get acceleration limit from q config, assume last 3 joints acc fixed direction is 3 length vector, 0 is -, 1 is +
