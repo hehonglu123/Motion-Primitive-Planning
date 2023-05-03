@@ -47,7 +47,7 @@ for N in num_runs:
 
 			###throw bad curves
 			lam_temp, curve_exe_temp, curve_exe_R_temp, speed_temp, timestamp_temp=ms.chop_extension_mocap(curve_exe, curve_exe_R, speed, timestamp,curve[0,:3],curve[-1,:3],p_bp[0][0])
-
+			curve_exe_w_temp=R2w(curve_exe_R_temp,np.eye(3))
 			error,angle_error=calc_all_error_w_normal(curve_exe_temp,curve[:,:3],curve_exe_R_temp[:,:,-1],curve[:,3:])
 			
 			######################################PLOT############################
@@ -56,8 +56,8 @@ for N in num_runs:
 			ax1.plot(lam_temp, speed_temp, 'g-', label='Speed')
 			ax2.plot(lam_temp, error, 'b-',label='Error')
 			ax2.plot(lam_temp, np.degrees(angle_error), 'y-',label='Normal Error')
-			ax2.axis(ymin=0,ymax=5)
-			# ax1.axis(ymin=0,ymax=1.2*v)
+			# ax2.axis(ymin=0,ymax=5)
+			ax1.axis(ymin=0,ymax=1.2*v)
 
 			ax1.set_xlabel('lambda (mm)')
 			ax1.set_ylabel('Speed/lamdot (mm/s)', color='g')
@@ -72,14 +72,9 @@ for N in num_runs:
 
 			total_time_all.append(timestamp_temp[-1]-timestamp_temp[0])
 			timestamp=timestamp-timestamp[0]
-			curve_exe_all.append(curve_exe)
-			curve_exe_w_all.append(curve_exe_w)
-			timestamp_all.append(timestamp)
-
-
-
-
-
+			curve_exe_all.append(curve_exe_temp)
+			curve_exe_w_all.append(curve_exe_w_temp)
+			timestamp_all.append(timestamp_temp)
 
 
 		###trajectory outlier detection, based on chopped time
@@ -91,16 +86,19 @@ for N in num_runs:
 		speed=get_speed(curve_exe_avg,timestamp_d)
 
 		#############################chop extension off##################################
-		lam, curve_exe, curve_exe_R, speed, timestamp=ms.chop_extension_mocap(curve_exe_avg, curve_exe_R_avg, speed, timestamp_d,curve[0,:3],curve[-1,:3],p_bp[0][0])
+		# lam, curve_exe, curve_exe_R, speed, timestamp=ms.chop_extension_mocap(curve_exe_avg, curve_exe_R_avg, speed, timestamp_d,curve[0,:3],curve[-1,:3],p_bp[0][0])
+		# error,angle_error=calc_all_error_w_normal(curve_exe,curve[:,:3],curve_exe_R[:,:,-1],curve[:,3:])
 
-		error,angle_error=calc_all_error_w_normal(curve_exe,curve[:,:3],curve_exe_R[:,:,-1],curve[:,3:])
+		lam=calc_lam_cs(curve_exe_avg)
+		error,angle_error=calc_all_error_w_normal(curve_exe_avg,curve[:,:3],curve_exe_R_avg[:,:,-1],curve[:,3:])
 
+		
 		fig, ax1 = plt.subplots()
 		ax2 = ax1.twinx()
 		ax1.plot(lam, speed, 'g-', label='Speed')
 		ax2.plot(lam, error, 'b-',label='Error')
 		ax2.plot(lam, np.degrees(angle_error), 'y-',label='Normal Error')
-		ax2.axis(ymin=0,ymax=5)
+		# ax2.axis(ymin=0,ymax=5)
 		ax1.axis(ymin=0,ymax=1.2*v)
 
 		ax1.set_xlabel('lambda (mm)')
