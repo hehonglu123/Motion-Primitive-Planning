@@ -47,7 +47,8 @@ for N in num_runs:
 
 			###throw bad curves
 			lam_temp, curve_exe_temp, curve_exe_R_temp, speed_temp, timestamp_temp=ms.chop_extension_mocap(curve_exe, curve_exe_R, speed, timestamp,curve[0,:3],curve[-1,:3],p_bp[0][0])
-			curve_exe_w_temp=R2w(curve_exe_R_temp,np.eye(3))
+			curve_exe_w_temp=smooth_w(R2w(curve_exe_R_temp,np.eye(3)))
+
 			error,angle_error=calc_all_error_w_normal(curve_exe_temp,curve[:,:3],curve_exe_R_temp[:,:,-1],curve[:,3:])
 			
 			######################################PLOT############################
@@ -79,11 +80,15 @@ for N in num_runs:
 
 		###trajectory outlier detection, based on chopped time
 		curve_exe_all,curve_exe_w_all,timestamp_all=remove_traj_outlier_mocap(curve_exe_all,curve_exe_w_all,timestamp_all,total_time_all)
+		
 
 		###infer average curve from linear interplateion
 		curve_exe_avg, curve_exe_w_avg, timestamp_d=average_curve_mocap(curve_exe_all,curve_exe_w_all,timestamp_all)
 		curve_exe_R_avg=w2R(curve_exe_w_avg,np.eye(3))
 		speed=get_speed(curve_exe_avg,timestamp_d)
+
+		np.savetxt(recorded_dir+'/avg.csv',np.hstack((timestamp_d.reshape((-1,1)),curve_exe_avg,curve_exe_w_avg)),delimiter=',',comments='')
+
 
 		#############################chop extension off##################################
 		# lam, curve_exe, curve_exe_R, speed, timestamp=ms.chop_extension_mocap(curve_exe_avg, curve_exe_R_avg, speed, timestamp_d,curve[0,:3],curve[-1,:3],p_bp[0][0])

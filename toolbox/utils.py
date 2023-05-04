@@ -248,6 +248,24 @@ def car2js(robot,q_init,curve_fit,curve_fit_R):
 
 	return curve_fit_js
 
+def smooth_w(curve_w):
+	###resolve crossing singularity issue (+/- pi) with k\theta
+	curve_w_new=[curve_w[0]]
+	for i in range(1,len(curve_w)):
+		theta_next=np.linalg.norm(curve_w[i])
+		theta_prev=np.linalg.norm(curve_w_new[-1])
+		k_next=curve_w[i]/theta_next
+
+		if (curve_w_new[-1]/theta_prev) @  k_next < -0.99:		###if rotation axis flipped
+			curve_w_new.append(-k_next*(2*np.pi-theta_next))
+		else:
+			curve_w_new.append(curve_w[i])
+		
+
+	return np.array(curve_w_new)
+
+
+
 def R2w(curve_R,R_constraint=[]):
 	if len(R_constraint)==0:
 		R_init=curve_R[0]
