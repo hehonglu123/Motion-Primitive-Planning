@@ -344,7 +344,22 @@ class MotionSend(object):
 		speed=moving_average(speed,padding=True)
 		return np.array(lam), np.array(curve_exe), np.array(curve_exe_R),np.array(curve_exe_js), np.array(speed), timestamp-timestamp[0]
 
-	
+	def logged_data_analysis_mocap(self,robot,curve_exe_dict,curve_exe_R_dict,timestamp_dict):
+		curve_exe = np.array(curve_exe_dict[robot.robot_name])
+		curve_exe_R = np.array(curve_exe_R_dict[robot.robot_name])
+		timestamp = np.array(timestamp_dict[robot.robot_name])
+		len_min=min(len(timestamp),len(curve_exe),len(curve_exe_R))
+		curve_exe=curve_exe[:len_min]
+		timestamp=timestamp[:len_min]
+		curve_exe_R=curve_exe_R[:len_min]
+
+		curve_exe_w=smooth_w(R2w(curve_exe_R,np.eye(3)))
+		###filter noise
+		timestamp, curve_exe_pw=lfilter(timestamp, np.hstack((curve_exe,curve_exe_w)))
+
+
+		return  curve_exe_pw[:,:3], curve_exe_pw[:,3:], timestamp
+
 
 	def chop_extension(self,curve_exe, curve_exe_R,curve_exe_js, speed, timestamp,p_start,p_end):
 		start_idx=np.argmin(np.linalg.norm(p_start-curve_exe,axis=1))

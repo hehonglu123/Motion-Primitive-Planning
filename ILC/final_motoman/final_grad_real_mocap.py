@@ -30,7 +30,7 @@ def main():
 	mocap_url = mocap_url
 	mocap_cli = RRN.ConnectService(mocap_url)
 
-	mpl_obj = MocapPoseListener(mocap_cli,[robot],collect_base_stop=1,use_static_base=True)
+	mpl_obj = MocapPoseListener(mocap_cli,[robot],collect_base_window=240)
 
 	
 	dataset='curve_1/'
@@ -66,7 +66,7 @@ def main():
 	inserted_points=[]
 	iteration=50
 
-	N=2 	###N-run average
+	N=5 	###N-run average
 
 	for i in range(iteration):
 

@@ -27,13 +27,13 @@ def main():
 	mocap_url = mocap_url
 	mocap_cli = RRN.ConnectService(mocap_url)
 
-	mpl_obj = MocapPoseListener(mocap_cli,[robot],collect_base_stop=1,use_static_base=True)
+	mpl_obj = MocapPoseListener(mocap_cli,[robot],collect_base_window=240)
 
 	
-	dataset='curve_1/'
-	solution_dir='curve_pose_opt2_motoman/'
+	dataset='curve_2/'
+	solution_dir='curve_pose_opt1_motoman/'
 	data_dir="../../data/"+dataset+solution_dir
-	cmd_dir="../../data/"+dataset+solution_dir+'greedy0.4L/'
+	cmd_dir="../../data/"+dataset+solution_dir+'greedy0.5L/'
 
 
 	curve = read_csv(data_dir+"Curve_in_base_frame.csv",header=None).values
@@ -69,16 +69,11 @@ def main():
 		log_results = ms.exec_motions(robot,primitives,breakpoints,p_bp,q_bp,v,z)
 
 		mpl_obj.stop_pose_listener()
-		curve_exe,curve_exe_R,timestamp = mpl_obj.get_robots_traj()
-		curve_exe = np.array(curve_exe[robot.robot_name])
-		curve_exe_R = np.array(curve_exe_R[robot.robot_name])
-		timestamp = np.array(timestamp[robot.robot_name])
-		len_min=min(len(timestamp),len(curve_exe))
-		curve_exe=curve_exe[:len_min]
-		timestamp=timestamp[:len_min]
+		curve_exe_dict,curve_exe_R_dict,timestamp_dict = mpl_obj.get_robots_traj()
+		curve_exe,curve_exe_w,timestamp=ms.logged_data_analysis_mocap(robot,curve_exe_dict,curve_exe_R_dict,timestamp_dict)
+		curve_exe_R=w2R(curve_exe_w,np.eye(3))
 
 		###save results
-		curve_exe_w=R2w(curve_exe_R,np.eye(3))
 		np.savetxt('recorded_data/iteration_'+str(i)+'.csv',np.hstack((timestamp.reshape((-1,1)),curve_exe,curve_exe_w)),delimiter=',',comments='')
 
 		speed=get_speed(curve_exe,timestamp)

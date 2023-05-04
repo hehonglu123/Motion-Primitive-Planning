@@ -21,17 +21,17 @@ def main():
 	mocap_url = mocap_url
 	mocap_cli = RRN.ConnectService(mocap_url)
 
-	mpl_obj = MocapPoseListener(mocap_cli,[robot],collect_base_stop=1,use_static_base=True)
+	mpl_obj = MocapPoseListener(mocap_cli,[robot],collect_base_window=240)
 
 	
 	ms = MotionSend(robot)
 
-	dataset='curve_1/'
-	solution_dir='curve_pose_opt2_motoman/'
+	dataset='curve_2/'
+	solution_dir='curve_pose_opt1_motoman/'
 	# solution_dir='baseline_motoman/'
 
 	data_dir='../../data/'+dataset+solution_dir
-	cmd_dir=data_dir+'greedy0.4L/'
+	cmd_dir=data_dir+'greedy0.5L/'
 
 	curve = read_csv(data_dir+"Curve_in_base_frame.csv",header=None).values
 	lam_original=calc_lam_cs(curve[:,:3])
