@@ -18,7 +18,7 @@ from ilc_toolbox import *
 
 def main():
 	config_dir='../../config/'
-	robot=robot_obj('MA2010_A0',def_path=config_dir+'MA2010_A0_robot_default_config.yml',tool_file_path=config_dir+'weldgun2.csv',\
+	robot=robot_obj('MA2010_A0',def_path=config_dir+'MA2010_A0_robot_default_config.yml',tool_file_path=config_dir+'torch.csv',\
 		pulse2deg_file_path=config_dir+'MA2010_A0_pulse2deg_real.csv',d=50,  base_marker_config_file=config_dir+'MA2010_marker_config.yaml',\
 		tool_marker_config_file=config_dir+'weldgun_marker_config.yaml')
 	robot_calib=copy.deepcopy(robot)
@@ -33,10 +33,10 @@ def main():
 	mpl_obj = MocapPoseListener(mocap_cli,[robot],collect_base_window=240)
 
 	
-	dataset='curve_1/'
-	solution_dir='curve_pose_opt2_motoman/'
+	dataset='curve_2/'
+	solution_dir='baseline_motoman/'
 	data_dir="../../data/"+dataset+solution_dir
-	cmd_dir="../../data/"+dataset+solution_dir+'greedy0.4L/'
+	cmd_dir="../../data/"+dataset+solution_dir+'100L/'
 
 
 	curve = read_csv(data_dir+"Curve_in_base_frame.csv",header=None).values
@@ -44,7 +44,7 @@ def main():
 
 	multi_peak_threshold=0.4
 
-	v=333
+	v=300
 	z=None
 
 	gamma_v_max=1
@@ -58,7 +58,7 @@ def main():
 
 	
 	###ilc toolbox def
-	ilc=ilc_toolbox(robot_calib,primitives)
+	ilc=ilc_toolbox(robot,primitives)
 
 	###TODO: extension fix start point, moveC support
 	max_error_prev=999

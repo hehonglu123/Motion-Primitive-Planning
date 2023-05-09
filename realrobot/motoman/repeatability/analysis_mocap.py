@@ -13,7 +13,7 @@ solution_dir='baseline_motoman/'
 data_dir='../../../data/'+dataset+solution_dir
 cmd_dir=data_dir+'100L/'
 curve = read_csv(data_dir+"Curve_in_base_frame.csv",header=None).values
-robot=robot_obj('MA2010_A0',def_path='../../../config/MA2010_A0_robot_default_config.yml',tool_file_path='../../../config/weldgun2.csv',\
+robot=robot_obj('MA2010_A0',def_path='../../../config/MA2010_A0_robot_default_config.yml',tool_file_path='../../../config/torch.csv',\
 	pulse2deg_file_path='../../../config/MA2010_A0_pulse2deg_real.csv',d=50)
 
 ms = MotionSend(robot)
