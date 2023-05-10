@@ -22,7 +22,7 @@ p_bp,q_bp=ms.extend(robot,q_bp,primitives,breakpoints,p_bp,extension_start=50,ex
 
 # speed=[100,150,200,250,300]
 # num_runs=[4,5,6]
-speed=[200]
+speed=[150]
 num_runs=[5]
 for N in num_runs:
 	for v in speed:

@@ -71,9 +71,11 @@ def main():
 	for i in range(iteration):
 
 		curve_exe, curve_exe_R, timestamp=average_N_exe_mocap(mpl_obj,ms,robot,primitives,breakpoints,p_bp,q_bp,v,z,curve,"recorded_data/iteration_%i" % i,N=N)
-		lam=calc_lam_cs(curve_exe)
+
 		speed=get_speed(curve_exe,timestamp)
-		
+		#############################chop extension off##################################
+		lam, curve_exe, curve_exe_R, speed, timestamp=ms.chop_extension_mocap(curve_exe, curve_exe_R, speed, timestamp,curve[0,:3],curve[-1,:3],p_bp[0][0])
+
 		ms.write_data_to_cmd('recorded_data/command%i.csv'%i,breakpoints,primitives, p_bp,q_bp)
 
 		##############################calcualte error########################################

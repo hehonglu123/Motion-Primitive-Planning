@@ -171,7 +171,8 @@ def average_N_exe_mocap(mpl_obj,ms,robot,primitives,breakpoints,p_bp,q_bp,v,z,cu
 
 		###throw bad curves
 		speed=get_speed(curve_exe,timestamp)
-		_, curve_exe_temp, curve_exe_w_temp, _, timestamp_temp=ms.chop_extension_mocap(curve_exe, curve_exe_w, speed, timestamp,curve[0,:3],curve[-1,:3],p_bp[0][0])
+		_, curve_exe_temp, curve_exe_R_temp, _, timestamp_temp=ms.chop_extension_mocap(curve_exe, curve_exe_R, speed, timestamp,curve[0,:3],curve[-1,:3],p_bp[0][0])
+		curve_exe_w_temp=smooth_w(R2w(curve_exe_R_temp,np.eye(3)))		###deal with Singularity
 
 		total_time_all.append(timestamp_temp[-1]-timestamp_temp[0])
 
