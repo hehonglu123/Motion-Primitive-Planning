@@ -160,7 +160,8 @@ def average_N_exe_mocap(mpl_obj,ms,robot,primitives,breakpoints,p_bp,q_bp,v,z,cu
 		
 		curve_exe_dict,curve_exe_R_dict,timestamp_dict = mpl_obj.get_robots_traj()
 		curve_exe,curve_exe_w,timestamp=ms.logged_data_analysis_mocap(robot,curve_exe_dict,curve_exe_R_dict,timestamp_dict)
-
+		curve_exe_R=w2R(curve_exe_w,np.eye(3))
+		
 		if safe_q is not None:
 			ms.jog_joint(safe_q)
 

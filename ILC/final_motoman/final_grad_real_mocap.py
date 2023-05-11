@@ -33,7 +33,7 @@ def main():
 	mpl_obj = MocapPoseListener(mocap_cli,[robot],collect_base_window=240)
 
 	
-	dataset='curve_2/'
+	dataset='curve_1/'
 	solution_dir='baseline_motoman/'
 	data_dir="../../data/"+dataset+solution_dir
 	cmd_dir="../../data/"+dataset+solution_dir+'100L/'
@@ -44,7 +44,7 @@ def main():
 
 	multi_peak_threshold=0.4
 
-	v=300
+	v=150
 	z=None
 
 	gamma_v_max=1
