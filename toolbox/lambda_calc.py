@@ -2,13 +2,14 @@ import numpy as np
 import scipy, copy, time
 from pandas import *
 import sys, traceback
+from collections import namedtuple
 from general_robotics_toolbox import *
 import matplotlib.pyplot as plt
-from robots_def import *
 from error_check import *
 from utils import * 
 from scipy.optimize import fminbound
 from scipy.signal import find_peaks
+from robot_def import *
 # from dual_arm import *
 
 def calc_curvature(curve):
@@ -323,8 +324,6 @@ def traj_speed_est(robot,curve_js,lam,vd,qdot_init=[]):
 				temp_arr=smooth_idx-large_drop_idx
 				back_trak_start_idx=min(len(curve_js)-2,smooth_idx[np.where(temp_arr > 0, temp_arr, np.inf).argmin()][0]+1) ###+/-1 here because used diff
 
-				# print('backtrak')
-				# print(back_trak_start_idx,large_drop_idx)
 				###traverse backward
 				for i in range(back_trak_start_idx,1,-1):
 
@@ -347,14 +346,11 @@ def traj_speed_est(robot,curve_js,lam,vd,qdot_init=[]):
 
 		else:
 			for large_drop_idx in large_drop_indices:
-			# large_drop_idx=np.argwhere(np.abs(np.diff(alpha_all))>alpha_jump_thresh)[0][0]
-
 				###find closet point to start forwardtracking, without jump in alpha
 				smooth_idx=np.argwhere(np.abs(np.diff(alpha_all))<alpha_smooth_thresh)
 				temp_arr=smooth_idx-large_drop_idx
 				trak_start_idx=max(0,smooth_idx[np.where(temp_arr < 0, temp_arr, -np.inf).argmax()][0]-1)
-				# print('forward')
-				# print(trak_start_idx,large_drop_idx)
+
 				###traverse backward
 				for i in range(trak_start_idx,len(curve_js)):
 
@@ -383,7 +379,6 @@ def traj_speed_est(robot,curve_js,lam,vd,qdot_init=[]):
 			qdot_act=0.9*qdot_act
 			if iteration_num>20:
 				break
-		# print(np.max(np.abs(np.diff(alpha_all))))
 
 
 	###smooth out trajectory
@@ -649,9 +644,9 @@ def main3():
 	###speed estimation
 	from MotionSend import MotionSend
 	from blending import form_traj_from_bp,blend_js_from_primitive
-	dataset='wood/'
+	dataset='curve_1/'
 	solution_dir='baseline/'
-	robot=abb6640(d=50, acc_dict_path='robot_info/6640acc_new.pickle')
+	robot=robot_obj('ABB_6640_180_255','../config/ABB_6640_180_255_robot_default_config.yml',tool_file_path='../config/paintgun.csv',d=50,acc_dict_path='../config/acceleration/6640acc_new.pickle')
 	curve = read_csv('../data/'+dataset+solution_dir+'/Curve_in_base_frame.csv',header=None).values
 
 	curve_js=read_csv('../data/'+dataset+solution_dir+'/Curve_js.csv',header=None).values
@@ -669,15 +664,16 @@ def main3():
 	curve_js_blended,curve_blended,curve_R_blended=blend_js_from_primitive(curve_interp, curve_js_interp, breakpoints_blended, primitives,robot,zone=10)
 	lam_blended=calc_lam_js(curve_js_blended,robot)
 
-	exe_dir='../simulation/robotstudio_sim/scripts/fitting_output/'+dataset+'/100L/'
+	exe_dir='../simulation/robotstudio_sim/scripts/fitting_output/'+dataset+'100L/'
 	v_cmds=[200,250,300,350,400,450,500]
 	# v_cmds=[1300]
 	# v_cmds=[800,900,1000,1100,1200,1300,1400]
 	for v_cmd in v_cmds:
 
 		###read actual exe file
-		df = read_csv(exe_dir+"curve_exe"+"_v"+str(v_cmd)+"_z10.csv")
-		lam_exe, curve_exe, curve_exe_R,curve_exe_js, act_speed, timestamp=ms.logged_data_analysis(robot,df,realrobot=True)
+		logged_results_struct=namedtuple("logged_data", ["data"])
+		logged_results = logged_results_struct(np.loadtxt(exe_dir+"curve_exe"+"_v"+str(v_cmd)+"_z10.csv",delimiter=',',skiprows=1))
+		lam_exe, curve_exe, curve_exe_R,curve_exe_js, act_speed, timestamp=ms.logged_data_analysis(robot,logged_results,realrobot=True)
 		lam_exe, curve_exe, curve_exe_R,curve_exe_js, act_speed, timestamp=ms.chop_extension(curve_exe, curve_exe_R,curve_exe_js, act_speed, timestamp,curve[0,:3],curve[-1,:3])
 
 		###get joint acceleration at each pose

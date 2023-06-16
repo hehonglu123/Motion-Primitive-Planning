@@ -21,7 +21,7 @@ class greedy_fit(fitting_toolbox):
 		self.max_error_threshold=max_error_threshold
 		self.max_ori_threshold=max_ori_threshold
 		self.step=int(len(curve_js)/25)
-		self.c_min_length=50
+		self.c_min_length=10
 		self.min_step=int(min_length/np.average(np.diff(self.lam)))
 		self.min_step_start_end=200
 
@@ -132,9 +132,12 @@ class greedy_fit(fitting_toolbox):
 				length[key]=len(curve_fit[key])
 			exit()
 			###find best primitive
-			if length['movec_fit']==length['movel_fit'] and length['movel_fit']==length['movej_fit']:
-				key=min(max_errors, key=max_errors.get)
-			else:
+			try:
+				if length['movec_fit']==length['movel_fit'] and length['movel_fit']==length['movej_fit']:
+					key=min(max_errors, key=max_errors.get)
+				else:
+					key=max(length, key=length.get)
+			except:
 				key=max(length, key=length.get)
 
 			###moveC length thresholding (>50mm)

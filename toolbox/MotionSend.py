@@ -3,7 +3,7 @@ from general_robotics_toolbox import *
 from pandas import read_csv
 import sys
 from abb_motion_program_exec import *
-from robots_def import *
+from robot_def import *
 from error_check import *
 from toolbox_circular_fit import *
 from lambda_calc import *
@@ -147,6 +147,11 @@ class MotionSend(object):
 		# print(mp.get_program_rapid())
 		log_results = self.client.execute_motion_program(mp)
 		return log_results
+
+	def parse_logged_data(self,log_results):		###convert packet to timestamp and joint angle in radians
+
+		return log_results.data[:,0], np.radians(log_results.data[:,2:8])
+
 
 	def exe_from_file(self,robot,filename,speed,zone):
 		breakpoints,primitives, p_bp,q_bp=self.extract_data_from_cmd(filename)
@@ -628,8 +633,8 @@ class MotionSend(object):
 
 			#find new end orientation
 			k,theta=R2rot(R_end@R_start.T)
-			slope_theta=theta/np.linalg.norm(p_end-p_start)
-			R_end_new=rot(k,extension_end*slope_theta)@R_end
+			theta_new=extension_end*theta/np.linalg.norm(p_end-p_start)
+			R_end_new=rot(k,theta_new)@R_end
 
 			#solve invkin for end point
 			q_bp_extended[-1][0]=car2js(robot,q_bp[-1][0],p_end_new,R_end_new)[0]

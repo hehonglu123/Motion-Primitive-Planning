@@ -9,14 +9,14 @@ from robots_def import *
 from utils import *
 from lambda_calc import *
 
-def pose_opt(robot,curve,curve_normal):
+def pose_opt(robot,curve,curve_normal,base_offset=0):
 
 	###get curve center and best place to center in robot frame
 	C=np.average(curve,axis=0)
 	p=robot.fwd(np.zeros(len(robot.joint_vel_limit))).p
 	#arbitrary best center point for curve
 	p[0]=p[0]/2
-	p[-1]=p[-1]/2
+	p[-1]=(p[-1]+base_offset)/2
 	###determine Vy by eig(cov)
 	curve_cov=np.cov(curve.T)
 	eigenValues, eigenVectors = np.linalg.eig(curve_cov)
@@ -57,7 +57,7 @@ def find_js(robot,curve,curve_normal):
 		try:
 			R_curve=direction2R(curve_normal[i],-curve[i+1]+curve[i])
 		except:
-			traceback.print_exc()
+			# traceback.print_exc()
 			pass	
 		curve_R.append(R_curve)
 
@@ -66,9 +66,10 @@ def find_js(robot,curve,curve_normal):
 
 	###get all possible initial config
 	try:
+		# print(curve[0],curve_R[0])
 		q_inits=np.array(robot.inv(curve[0],curve_R[0]))
 	except:
-		print('no solution available')
+		print('no init solution available')
 		return
 
 	# print(np.degrees(q_inits))
@@ -99,22 +100,26 @@ def find_js(robot,curve,curve_normal):
 
 	return curve_js_all
 
-def define_robot():
-	return abb6640(d=50)
 
 def main():
 	#select dataset
-	# data_dir='from_NX/'
-	data_dir='wood/'
+	data_dir='curve_1/'
+	output_dir=data_dir+'baseline_motoman/'
 
 	###read in curves
 	curve = read_csv(data_dir+"Curve_dense.csv",header=None).values
 	lam=calc_lam_cs(curve)
-	robot=abb6640(d=50)
-	print("OPTIMIZING ON CURVE POSE")
-	H=pose_opt(robot,curve[:,:3],curve[:,3:])
-	print(H)
 
+	# robot=robot_obj('ABB_6640_180_255','../config/abb_6640_180_255_robot_default_config.yml',tool_file_path='../config/paintgun.csv',d=50,acc_dict_path='')
+
+	robot=robot_obj('MA2010_A0',def_path='../config/MA2010_A0_robot_default_config.yml',tool_file_path='../config/weldgun2.csv',\
+	pulse2deg_file_path='../config/MA2010_A0_pulse2deg.csv',d=50)
+
+
+	print("OPTIMIZING ON CURVE POSE")
+	# H=pose_opt(robot,curve[:,:3],curve[:,3:])
+	H=pose_opt(robot,curve[:,:3],curve[:,3:],base_offset=-550)
+	print(H)
 	
 	curve_base,curve_normal_base=curve_frame_conversion(curve[:,:3],curve[:,3:],H)
 	# visualize_curve_w_normal(curve_base,curve_normal_base,equal_axis=True)
@@ -143,11 +148,10 @@ def main():
 	curve_js=curve_js_all[np.argmin(J_min.min(axis=1))]
 
 	###save file
-	df=DataFrame({'x':curve_base[:,0],'y':curve_base[:,1], 'z':curve_base[:,2],'x_dir':curve_normal_base[:,0],'y_dir':curve_normal_base[:,1], 'z_dir':curve_normal_base[:,2]})
-	df.to_csv(data_dir+'Curve_in_base_frame.csv',header=False,index=False)
-	DataFrame(curve_js).to_csv(data_dir+'Curve_js.csv',header=False,index=False)
-	with open(data_dir+'blade_pose.yaml', 'w') as file:
-		documents = yaml.dump({'H':H.tolist()}, file)
+	np.savetxt(output_dir+'Curve_in_base_frame.csv',np.hstack((curve_base,curve_normal_base)),delimiter=',')
+	np.savetxt(output_dir+'Curve_js.csv',curve_js,delimiter=',')
+	np.savetxt(output_dir+'curve_pose.csv',H,delimiter=',')
+
 
 if __name__ == "__main__":
 	main()

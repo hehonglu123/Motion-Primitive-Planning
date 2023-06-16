@@ -3,8 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.interpolate import interp1d
 from scipy import signal
-import scipy
-from robots_def import *
+import scipy, math
 
 def H_inverse(H):
 	return H_from_RT(H[:-1,:-1].T,-H[:-1,:-1].T@H[:-1,-1])
@@ -86,6 +85,14 @@ def direction2R_Y(v_norm,v_tang):
 
 	return R
 
+def direction2R_y(v_norm,v_tang):
+	v_norm=v_norm/np.linalg.norm(v_norm)
+	v_tang=VectorPlaneProjection(v_tang,v_norm)
+	x=np.cross(v_tang,v_norm)
+	x=x/np.linalg.norm(x)
+	R=np.vstack((x,v_tang,v_norm)).T
+	return R
+	
 def LinePlaneCollision(planeNormal, planePoint, rayDirection, rayPoint, epsilon=1e-6):
  
 	ndotu = planeNormal.dot(rayDirection)
@@ -128,6 +135,13 @@ def find_j_min(robot,curve_js):
 		sing_min.append(s[-1])
 
 	return sing_min
+
+def get_angle2(v1,v2,k=None):
+	#signed rotational angle from v1 to v2, rotation about k if provided
+	if k is not None:
+		return np.arctan2(np.dot(np.cross(v1, v2),k), np.dot(v1,v2))
+	else:
+		return np.arctan2(np.linalg.norm(np.cross(v1, v2)), np.dot(v1,v2))
 
 def get_angle(v1,v2,less90=False):
 	v1=v1/np.linalg.norm(v1)
@@ -259,6 +273,24 @@ def car2js(robot,q_init,curve_fit,curve_fit_R):
 			curve_fit_js.append(temp_q)
 
 	return curve_fit_js
+
+def smooth_w(curve_w):
+	###resolve crossing singularity issue (+/- pi) with k\theta
+	curve_w_new=[curve_w[0]]
+	for i in range(1,len(curve_w)):
+		theta_next=np.linalg.norm(curve_w[i])
+		theta_prev=np.linalg.norm(curve_w_new[-1])
+		k_next=curve_w[i]/theta_next
+
+		if (curve_w_new[-1]/theta_prev) @  k_next < -0.99:		###if rotation axis flipped
+			curve_w_new.append(-k_next*(2*np.pi-theta_next))
+		else:
+			curve_w_new.append(curve_w[i])
+		
+
+	return np.array(curve_w_new)
+
+
 
 def R2w(curve_R,R_constraint=[]):
 	if len(R_constraint)==0:

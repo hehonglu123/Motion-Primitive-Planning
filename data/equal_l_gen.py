@@ -1,20 +1,22 @@
 import numpy as np
 from pandas import *
-import sys, traceback
+import sys, traceback, os
 from general_robotics_toolbox import *
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
+sys.path.append('../toolbox/')
 from robots_def import *
 from utils import *
-from lambda_calc import *
 
 
+data_dir='curve_1/'
+solution_dir='curve_pose_opt3_motoman/'
 
-data_dir='curve_2/'
-solution_dir='curve_pose_opt2_2/'
+num_ls=[100]
+# robot=robot_obj('ABB_6640_180_255','../config/abb_6640_180_255_robot_default_config.yml',tool_file_path='../config/paintgun.csv',d=50,acc_dict_path='')
+robot=robot_obj('MA2010_A0',def_path='../config/MA2010_A0_robot_default_config.yml',tool_file_path='../config/weldgun2.csv',\
+	pulse2deg_file_path='../config/MA2010_A0_pulse2deg_real.csv',d=50)
 
-num_ls=[50]
-robot=robot_obj('ABB_6640_180_255','../config/abb_6640_180_255_robot_default_config.yml',tool_file_path='../config/paintgun.csv',d=50,acc_dict_path='')
 # curve_js = read_csv(data_dir+'Curve_js.csv',header=None).values
 curve_js = read_csv(data_dir+solution_dir+'Curve_js.csv',header=None).values
 curve = read_csv(data_dir+solution_dir+"Curve_in_base_frame.csv",header=None).values
@@ -48,6 +50,10 @@ for num_l in num_ls:
 	primitives_choices=['moveabsj']+['movel_fit']*num_l
 
 	breakpoints[1:]=breakpoints[1:]-1
+
+	if not os.path.exists(cmd_dir):
+		os.makedirs(cmd_dir)
+
 	df=DataFrame({'breakpoints':breakpoints,'primitives':primitives_choices,'p_bp':points,'q_bp':q_bp})
 	df.to_csv(cmd_dir+'command.csv',header=True,index=False)
 

@@ -126,7 +126,7 @@ joint_info:
     lower: -5.236
     upper: 5.236
     velocity: 3.316
-    acceleration: 20
+    acceleration: 42.5
   joint_type: revolute
   passive: false
 - default_effort_units: newton_meter
@@ -137,7 +137,7 @@ joint_info:
     lower: -2.094
     upper: 2.094
     velocity: 2.443
-    acceleration: 20
+    acceleration: 36.8
   joint_type: revolute
   passive: false
 - default_effort_units: newton_meter
@@ -148,6 +148,6 @@ joint_info:
     lower: -6.283
     upper: 6.283
     velocity: 3.316
-    acceleration: 20
+    acceleration: 50.5
   joint_type: revolute
   passive: false
