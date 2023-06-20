@@ -5,6 +5,7 @@ from general_robotics_toolbox import robotraconteur as rr_rox
 import numpy as np
 import yaml, copy, time
 import pickle
+from utils import *
 
 def Rx(theta):
 	return np.array([[1,0,0],[0,np.cos(theta),-np.sin(theta)],[0,np.sin(theta),np.cos(theta)]])
@@ -16,17 +17,11 @@ ex=np.array([[1.],[0.],[0.]])
 ey=np.array([[0.],[1.],[0.]])
 ez=np.array([[0.],[0.],[1.]])
 
-def unwrapped_angle_check(q_init,q_all):
-
-    temp_q=q_all-q_init
-    temp_q = np.unwrap(temp_q)
-    order=np.argsort(np.linalg.norm(temp_q,axis=1))
-    # return q_all[order[0]]
-    return temp_q[order[0]]+q_init
 
 class robot_obj(object):
 	###robot object class
-	def __init__(self,robot_name,def_path,tool_file_path='',base_transformation_file='',d=0,acc_dict_path='',j_compensation=[1,1,1,1,1,1]):
+	def __init__(self,robot_name,def_path,tool_file_path='',base_transformation_file='',d=0,acc_dict_path='',pulse2deg_file_path='',
+				base_marker_config_file='',tool_marker_config_file=''):
 		#def_path: robot 			definition yaml file, name must include robot vendor
 		#tool_file_path: 			tool transformation to robot flange csv file
 		#base_transformation_file: 	base transformation to world frame csv file
@@ -46,12 +41,16 @@ class robot_obj(object):
 			self.robot.R_tool=tool_H[:3,:3]
 			self.robot.p_tool=tool_H[:3,-1]+np.dot(tool_H[:3,:3],np.array([0,0,d]))
 			self.p_tool=self.robot.p_tool
-			self.R_tool=self.robot.R_tool
+			self.R_tool=self.robot.R_tool		
 
 		if len(base_transformation_file)>0:
 			self.base_H=np.loadtxt(base_transformation_file,delimiter=',')
 		else:
 			self.base_H=np.eye(4)
+
+		if len(pulse2deg_file_path)>0:
+			self.pulse2deg=np.abs(np.loadtxt(pulse2deg_file_path,delimiter=',')) #negate joint 2, 4, 6
+
 
 		###set attributes
 		self.upper_limit=self.robot.joint_upper_limit 
@@ -82,50 +81,85 @@ class robot_obj(object):
 			self.q2q3_config=np.array([q2_config,q3_config]).T
 			self.q1q2q3_acc=np.array([q1_acc_n,q1_acc_p,q2_acc_n,q2_acc_p,q3_acc_n,q3_acc_p]).T
 		
-		###initialize tesseract robot
-		self.initialize_tesseract_robot()
-
-		## joint H compensation
-		self.j_compensation=np.array(j_compensation)
-
-	def initialize_tesseract_robot(self):
-		if len(self.robot.joint_names)>6:	#redundant kinematic chain
-			tesseract_robot = rox_tesseract.TesseractRobot(self.robot, "robot", invkin_solver="KDL")
-		elif 'UR' in self.def_path:			#UR
-			tesseract_robot = rox_tesseract.TesseractRobot(self.robot, "robot", invkin_solver="URInvKin")
-		else:							#sepherical joint
-			tesseract_robot = rox_tesseract.TesseractRobot(self.robot, "robot", invkin_solver="OPWInvKin")
-		self.tesseract_robot=tesseract_robot
-
-	def __getstate__(self):
-		state = self.__dict__.copy()
-		del state['tesseract_robot']
-		return state
-
-	def __setstate__(self, state):
-		# Restore instance attributes (tesseract).
-		self.__dict__.update(state)
-		self.initialize_tesseract_robot()
-
-
-	# def get_acc_old(self,q_all,direction=[]):
-	# 	#if a single point
-	# 	if q_all.ndim==1:
-	# 		###find closest q2q3 config, along with constant last 3 joints acc
-	# 		idx=np.argmin(np.linalg.norm(self.q2q3_config-q_all[1:3],axis=1))
-	# 		return np.append(self.q1q2q3_acc[idx],self.joint_acc_limit[-3:])
-	# 	else:
-	# 		acc_limit_all=[]
-	# 		for q in q_all:
-	# 			idx=np.argmin(np.linalg.norm(self.q2q3_config-q[1:3],axis=1))
-	# 			acc_limit_all.append(np.append(self.q1q2q3_acc[idx],self.joint_acc_limit[-3:]))
-
-	# 	return np.array(acc_limit_all)
+		### load mocap marker config
+		self.base_marker_config_file=base_marker_config_file
+		self.T_base_basemarker = None # T^base_basemaker
+		self.T_base_mocap = None # T^base_mocap
+		self.T_tool_flange = None
+		self.calib_zero_config=np.zeros(self.robot.H.shape[1])
+		if len(base_marker_config_file)>0:
+			with open(base_marker_config_file,'r') as file:
+				marker_data = yaml.safe_load(file)
+				self.base_markers_id = marker_data['base_markers']
+				self.base_rigid_id = self.base_markers_id[0].split('_')[1]
+				self.calib_markers_id = marker_data['calibration_markers']
+				if 'calib_base_basemarker_pose' in marker_data.keys():
+					p = [marker_data['calib_base_basemarker_pose']['position']['x'],
+						marker_data['calib_base_basemarker_pose']['position']['y'],
+						marker_data['calib_base_basemarker_pose']['position']['z']]
+					q = [marker_data['calib_base_basemarker_pose']['orientation']['w'],
+						marker_data['calib_base_basemarker_pose']['orientation']['x'],
+						marker_data['calib_base_basemarker_pose']['orientation']['y'],
+						marker_data['calib_base_basemarker_pose']['orientation']['z']]
+					self.T_base_basemarker = Transform(q2R(q),p)
+				if 'calib_base_mocap_pose' in marker_data.keys():
+					p = [marker_data['calib_base_mocap_pose']['position']['x'],
+						marker_data['calib_base_mocap_pose']['position']['y'],
+						marker_data['calib_base_mocap_pose']['position']['z']]
+					q = [marker_data['calib_base_mocap_pose']['orientation']['w'],
+						marker_data['calib_base_mocap_pose']['orientation']['x'],
+						marker_data['calib_base_mocap_pose']['orientation']['y'],
+						marker_data['calib_base_mocap_pose']['orientation']['z']]
+					self.T_base_mocap = Transform(q2R(q),p)
+				if 'calib_tool_flange_pose' in marker_data.keys():
+					p = [marker_data['calib_tool_flange_pose']['position']['x'],
+						marker_data['calib_tool_flange_pose']['position']['y'],
+						marker_data['calib_tool_flange_pose']['position']['z']]
+					q = [marker_data['calib_tool_flange_pose']['orientation']['w'],
+						marker_data['calib_tool_flange_pose']['orientation']['x'],
+						marker_data['calib_tool_flange_pose']['orientation']['y'],
+						marker_data['calib_tool_flange_pose']['orientation']['z']]
+					self.T_tool_flange = Transform(q2R(q),p)
+				if 'P' in marker_data.keys():
+					self.calib_P = np.zeros(self.robot.P.shape)
+					for i in range(len(marker_data['P'])):
+						self.calib_P[0,i] = marker_data['P'][i]['x']
+						self.calib_P[1,i] = marker_data['P'][i]['y']
+						self.calib_P[2,i] = marker_data['P'][i]['z']
+				if 'H' in marker_data.keys():
+					self.calib_H = np.zeros(self.robot.H.shape)
+					for i in range(len(marker_data['H'])):
+						self.calib_H[0,i] = marker_data['H'][i]['x']
+						self.calib_H[1,i] = marker_data['H'][i]['y']
+						self.calib_H[2,i] = marker_data['H'][i]['z']
+				if 'zero_config' in marker_data.keys():
+					self.calib_zero_config = np.array(marker_data['zero_config'])
+					self.robot.joint_upper_limit = self.robot.joint_upper_limit-self.calib_zero_config
+					self.robot.joint_lower_limit = self.robot.joint_lower_limit-self.calib_zero_config
+		self.tool_marker_config_file=tool_marker_config_file
+		self.T_tool_toolmarker = None # T^tool_toolmarker
+		if len(tool_marker_config_file)>0:
+			with open(tool_marker_config_file,'r') as file:
+				marker_data = yaml.safe_load(file)
+				self.tool_markers = marker_data['tool_markers']
+				self.tool_markers_id = list(self.tool_markers.keys())
+				self.tool_rigid_id = self.tool_markers_id[0].split('_')[1]
+				if 'calib_tool_toolmarker_pose' in marker_data.keys():
+					p = [marker_data['calib_tool_toolmarker_pose']['position']['x'],
+						marker_data['calib_tool_toolmarker_pose']['position']['y'],
+						marker_data['calib_tool_toolmarker_pose']['position']['z']]
+					q = [marker_data['calib_tool_toolmarker_pose']['orientation']['w'],
+						marker_data['calib_tool_toolmarker_pose']['orientation']['x'],
+						marker_data['calib_tool_toolmarker_pose']['orientation']['y'],
+						marker_data['calib_tool_toolmarker_pose']['orientation']['z']]
+					self.T_tool_toolmarker = Transform(q2R(q),p)
+					# add d
+					T_d1_d2 = Transform(np.eye(3),p=[0,0,d-15])
+					self.T_tool_toolmarker = self.T_tool_toolmarker*T_d1_d2
 
 	def get_acc(self,q_all,direction=[]):
 		###get acceleration limit from q config, assume last 3 joints acc fixed direction is 3 length vector, 0 is -, 1 is +
 		#if a single point
-		q_all=np.multiply(q_all,self.j_compensation)
 		if q_all.ndim==1:
 			###find closest q2q3 config, along with constant last 3 joints acc
 			idx=np.argmin(np.linalg.norm(self.q2q3_config-q_all[1:3],axis=1))
@@ -157,10 +191,11 @@ class robot_obj(object):
 		###robot forworld kinematics
 		#q_all:			robot joint angles or list of robot joint angles
 		#world:			bool, if want to get coordinate in world frame or robot base frame
-		q_all=np.array(q_all)
+
 		if q_all.ndim==1:
 			q=q_all
-			pose_temp=self.tesseract_robot.fwdkin(np.multiply(q,self.j_compensation))	
+			q = np.array(q)-self.calib_zero_config
+			pose_temp=fwdkin(self.robot,q)
 
 			if world:
 				pose_temp.p=self.base_H[:3,:3]@pose_temp.p+self.base_H[:3,-1]
@@ -170,7 +205,7 @@ class robot_obj(object):
 			pose_p_all=[]
 			pose_R_all=[]
 			for q in q_all:
-				pose_temp=self.tesseract_robot.fwdkin(np.multiply(q,self.j_compensation))	
+				pose_temp=fwdkin(self.robot,q)
 				if world:
 					pose_temp.p=self.base_H[:3,:3]@pose_temp.p+self.base_H[:3,-1]
 					pose_temp.R=self.base_H[:3,:3]@pose_temp.R
@@ -180,1063 +215,291 @@ class robot_obj(object):
 
 			return Transform_all(pose_p_all,pose_R_all)
 	
-	def fwd_j456(self,q):
-		q = np.multiply(q,self.j_compensation)
-		if (self.robot.joint_lower_limit is not None and self.robot.joint_upper_limit is not None):
-			assert np.greater_equal(q, self.robot.joint_lower_limit).all(), "Specified joints out of range"
-			assert np.less_equal(q, self.robot.joint_upper_limit).all(), "Specified joints out of range"
-
-		p = self.robot.P[:,[1]]
-		R = np.identity(3)
-		for i in xrange(1,len(self.robot.joint_type)-1):
-			R = R.dot(rot(self.robot.H[:,[i]],q[i]))
-			p = p + R.dot(self.robot.P[:,[i+1]])
-		p=np.reshape(p,(3,))
-
-		return Transform(R, p)
-
 	def jacobian(self,q):
-		return self.tesseract_robot.jacobian(np.multiply(q,self.j_compensation))
+		return robotjacobian(self.robot,q)
 
-	def inv(self,p,R,last_joints=[]):
+	def inv(self,p,R=np.eye(3),last_joints=None):
+		pose=Transform(R,p)
+		q_all=robot6_sphericalwrist_invkin(self.robot,pose,last_joints)
 		
-		# self.check_tesseract_robot()
-		if len(last_joints)==0:
-			return self.tesseract_robot.invkin(Transform(R,p),np.zeros(len(self.joint_vel_limit)))
-		else:	###sort solutions
-			last_joints=last_joints
-			theta_v=self.tesseract_robot.invkin(Transform(R,p),last_joints)
-			eq_theta_v=equivalent_configurations(self.robot, theta_v, last_joints)
-			theta_v.extend(eq_theta_v)
-			theta_dist = np.linalg.norm(np.subtract(theta_v,last_joints), axis=1)
-			return [theta_v[i] for i in list(np.argsort(theta_dist))]
+		return q_all
 
-		# pose=Transform(R,p)
-		# q_all=robot6_sphericalwrist_invkin(self.robot,pose,last_joints)
-		# return q_all
+	###find a continous trajectory given Cartesion pose trajectory
+	def find_curve_js(self,curve,curve_R,q_seed=None):
+		q_inits=self.inv(curve[0],curve_R[0])
+		curve_js_all=[]
+		for q_init in q_inits:
+			curve_js=np.zeros((len(curve),6))
+			curve_js[0]=q_init
+			for i in range(1,len(curve)):
+				q_all=np.array(self.inv(curve[i],curve_R[i]))
+				if len(q_all)==0:
+					#if no solution
+					print('no solution available')
+					return
 
+				temp_q=q_all-curve_js[i-1]
+				order=np.argsort(np.linalg.norm(temp_q,axis=1))
+				if np.linalg.norm(q_all[order[0]]-curve_js[i-1])>0.5:
+					break	#if large changes in q, not continuous
+				else:
+					curve_js[i]=q_all[order[0]]
+
+			#check if all q found
+			if i==len(curve)-1:
+				curve_js_all.append(curve_js)
+		
+		if len(curve_js_all)==0:
+			raise Exception('No Solution Found') 
+		
+		if q_seed is None:
+			return curve_js_all
+		else:
+			if len(curve_js_all)==1:
+				return curve_js_all[0]
+			else:
+				diff_min=[]
+				for curve_js in curve_js_all:
+					diff_min.append(np.linalg.norm(curve_js[0]-q_seed))
+
+				return curve_js_all[np.argmin(diff_min)]
 			
-#ALL in mm
-class abb6640(object):
-	#default tool paintgun
-	def __init__(self,R_tool=Ry(np.radians(120)),p_tool=np.array([0.45,0,-0.05])*1000.,d=0,acc_dict_path=''):
-		###ABB IRB 6640 180/2.55 Robot Definition
-		self.H=np.concatenate((ez,ey,ey,ex,ey,ex),axis=1)
-		p0=np.array([[0],[0],[0.78]])
-		p1=np.array([[0.32],[0],[0]])
-		p2=np.array([[0.],[0],[1.075]])
-		p3=np.array([[0],[0],[0.2]])   
-		p4=np.array([[1.1425],[0],[0]])
-		p5=np.array([[0.2],[0],[0]])
-		p6=np.array([[0.0],[0],[0.0]])
-
-		###fake link for fitting
-		tcp_new=p_tool+np.dot(R_tool,np.array([0,0,d]))
-		
-		self.R_tool=R_tool
-		self.p_tool=tcp_new
 
 
-		self.P=np.concatenate((p0,p1,p2,p3,p4,p5,p6),axis=1)*1000.
-		self.joint_type=np.zeros(6)
-		
-		###updated range&vel limit
-		self.upper_limit=np.radians([170.,85.,70.,300.,120.,360.])
-		self.lower_limit=np.radians([-170.,-65.,-180.,-300.,-120.,-360.])
-		self.joint_vel_limit=np.radians([100,90,90,190,140,190])
-		self.joint_acc_limit=np.array([-1,-1,-1,42.49102688076435,36.84030926197994,50.45298947544431])
-		self.robot_def=Robot(self.H,self.P,self.joint_type,joint_lower_limit = self.lower_limit, joint_upper_limit = self.upper_limit, joint_vel_limit=self.joint_vel_limit,joint_acc_limit=self.joint_acc_limit, R_tool=R_tool,p_tool=tcp_new)
-		# self.robot_def_tess=tesseract.TesseractRobot(self.robot_def,invkin_solver = "OPWInvKin")
-		self.robot_def_nT=Robot(self.H,self.P,self.joint_type,joint_lower_limit = self.lower_limit, joint_upper_limit = self.upper_limit, joint_vel_limit=self.joint_vel_limit)
+class positioner_obj(object):
+	###robot object class
+	def __init__(self,robot_name,def_path,tool_file_path='',base_transformation_file='',d=0,acc_dict_path='',pulse2deg_file_path='',\
+				base_marker_config_file='',tool_marker_config_file=''):
+		#def_path: robot 			definition yaml file, name must include robot vendor
+		#tool_file_path: 			tool transformation to robot flange csv file
+		#base_transformation_file: 	base transformation to world frame csv file
+		#d: 						tool z extension
+		#acc_dict_path: 			accleration profile
 
-		###acceleration table
-		if len(acc_dict_path)>0:
-			acc_dict= pickle.load(open(acc_dict_path,'rb'))
-			q2_config=[]
-			q3_config=[]
-			q1_acc_n=[]
-			q1_acc_p=[]
-			q2_acc_n=[]
-			q2_acc_p=[]
-			q3_acc_n=[]
-			q3_acc_p=[]
-			for key, value in acc_dict.items():
-				q2_config.append(key[0])
-				q3_config.append(key[1])
-				q1_acc_n.append(value[0])
-				q1_acc_p.append(value[1])
-				q2_acc_n.append(value[2])
-				q2_acc_p.append(value[3])
-				q3_acc_n.append(value[4])
-				q3_acc_p.append(value[5])
-			self.q2q3_config=np.array([q2_config,q3_config]).T
-			self.q1q2q3_acc=np.array([q1_acc_n,q1_acc_p,q2_acc_n,q2_acc_p,q3_acc_n,q3_acc_p]).T
+		self.robot_name=robot_name
+		with open(def_path, 'r') as f:
+			self.robot = rr_rox.load_robot_info_yaml_to_robot(f)
 
-	def get_acc(self,q_all,direction=[]):
-		###get acceleration limit from q config, assume last 3 joints acc fixed direction is 3 length vector, 0 is -, 1 is +
-		#if a single point
+		self.def_path=def_path
+		#define robot without tool
+		self.robot_def_nT=Robot(self.robot.H,self.robot.P,self.robot.joint_type)
+
+		if len(tool_file_path)>0:
+			tool_H=np.loadtxt(tool_file_path,delimiter=',')
+			self.robot.R_tool=tool_H[:3,:3]
+			self.robot.p_tool=tool_H[:3,-1]+np.dot(tool_H[:3,:3],np.array([0,0,d]))
+			self.p_tool=self.robot.p_tool
+			self.R_tool=self.robot.R_tool		
+
+		if len(base_transformation_file)>0:
+			self.base_H=np.loadtxt(base_transformation_file,delimiter=',')
+		else:
+			self.base_H=np.eye(4)
+
+		if len(pulse2deg_file_path)>0:
+			self.pulse2deg=np.abs(np.loadtxt(pulse2deg_file_path,delimiter=',')) #negate joint 2, 4, 6
+
+
+		###set attributes
+		self.upper_limit=self.robot.joint_upper_limit 
+		self.lower_limit=self.robot.joint_lower_limit 
+		self.joint_vel_limit=self.robot.joint_vel_limit 
+		self.joint_acc_limit=self.robot.joint_acc_limit
+
+		### load mocap marker config
+		self.base_marker_config_file=base_marker_config_file
+		self.T_base_basemarker = None # T^base_basemaker
+		self.T_base_mocap = None # T^base_mocap
+		if len(base_marker_config_file)>0:
+			with open(base_marker_config_file,'r') as file:
+				marker_data = yaml.safe_load(file)
+				self.base_markers_id = marker_data['base_markers']
+				self.base_rigid_id = self.base_markers_id[0].split('_')[1]
+				self.calib_markers_id = marker_data['calibration_markers']
+				if 'calib_base_basemarker_pose' in marker_data.keys():
+					p = [marker_data['calib_base_basemarker_pose']['position']['x'],
+						marker_data['calib_base_basemarker_pose']['position']['y'],
+						marker_data['calib_base_basemarker_pose']['position']['z']]
+					q = [marker_data['calib_base_basemarker_pose']['orientation']['w'],
+						marker_data['calib_base_basemarker_pose']['orientation']['x'],
+						marker_data['calib_base_basemarker_pose']['orientation']['y'],
+						marker_data['calib_base_basemarker_pose']['orientation']['z']]
+					self.T_base_basemarker = Transform(q2R(q),p)
+				if 'calib_base_mocap_pose' in marker_data.keys():
+					p = [marker_data['calib_base_mocap_pose']['position']['x'],
+						marker_data['calib_base_mocap_pose']['position']['y'],
+						marker_data['calib_base_mocap_pose']['position']['z']]
+					q = [marker_data['calib_base_mocap_pose']['orientation']['w'],
+						marker_data['calib_base_mocap_pose']['orientation']['x'],
+						marker_data['calib_base_mocap_pose']['orientation']['y'],
+						marker_data['calib_base_mocap_pose']['orientation']['z']]
+					self.T_base_mocap = Transform(q2R(q),p)
+				if 'calib_tool_flange_pose' in marker_data.keys():
+					p = [marker_data['calib_tool_flange_pose']['position']['x'],
+						marker_data['calib_tool_flange_pose']['position']['y'],
+						marker_data['calib_tool_flange_pose']['position']['z']]
+					q = [marker_data['calib_tool_flange_pose']['orientation']['w'],
+						marker_data['calib_tool_flange_pose']['orientation']['x'],
+						marker_data['calib_tool_flange_pose']['orientation']['y'],
+						marker_data['calib_tool_flange_pose']['orientation']['z']]
+					self.T_tool_flange = Transform(q2R(q),p)
+				if 'P' in marker_data.keys():
+					self.calib_P = np.zeros(self.robot.P.shape)
+					for i in range(len(marker_data['P'])):
+						self.calib_P[0,i] = marker_data['P'][i]['x']
+						self.calib_P[1,i] = marker_data['P'][i]['y']
+						self.calib_P[2,i] = marker_data['P'][i]['z']
+				if 'H' in marker_data.keys():
+					self.calib_H = np.zeros(self.robot.H.shape)
+					for i in range(len(marker_data['H'])):
+						self.calib_H[0,i] = marker_data['H'][i]['x']
+						self.calib_H[1,i] = marker_data['H'][i]['y']
+						self.calib_H[2,i] = marker_data['H'][i]['z']
+				self.calib_zero_config=np.zeros(self.robot.H.shape[1])
+				if 'zero_config' in marker_data.keys():
+					self.calib_zero_config = np.array(marker_data['zero_config'])
+					self.robot.joint_upper_limit = self.robot.joint_upper_limit-self.calib_zero_config
+					self.robot.joint_lower_limit = self.robot.joint_lower_limit-self.calib_zero_config
+		self.tool_marker_config_file=tool_marker_config_file
+		self.T_tool_toolmarker = None # T^tool_toolmarker
+		if len(tool_marker_config_file)>0:
+			with open(tool_marker_config_file,'r') as file:
+				marker_data = yaml.safe_load(file)
+				self.tool_markers = marker_data['tool_markers']
+				self.tool_markers_id = list(self.tool_markers.keys())
+				self.tool_rigid_id = self.tool_markers_id[0].split('_')[1]
+				if 'calib_tool_toolmarker_pose' in marker_data.keys():
+					p = [marker_data['calib_tool_toolmarker_pose']['position']['x'],
+						marker_data['calib_tool_toolmarker_pose']['position']['y'],
+						marker_data['calib_tool_toolmarker_pose']['position']['z']]
+					q = [marker_data['calib_tool_toolmarker_pose']['orientation']['w'],
+						marker_data['calib_tool_toolmarker_pose']['orientation']['x'],
+						marker_data['calib_tool_toolmarker_pose']['orientation']['y'],
+						marker_data['calib_tool_toolmarker_pose']['orientation']['z']]
+					self.T_tool_toolmarker = Transform(q2R(q),p)
+					# add d
+					T_d1_d2 = Transform(np.eye(3),p=[0,0,d])
+					self.T_tool_toolmarker = self.T_tool_toolmarker*T_d1_d2
+
+	def fwd(self,q_all,world=False,qlim_override=False):
+		###robot forworld kinematics
+		#q_all:			robot joint angles or list of robot joint angles
+		#world:			bool, if want to get coordinate in world frame or robot base frame
+
 		if q_all.ndim==1:
-			###find closest q2q3 config, along with constant last 3 joints acc
-			idx=np.argmin(np.linalg.norm(self.q2q3_config-q_all[1:3],axis=1))
-			acc_lim=[]
-			for d in direction:
-				acc_lim.append(self.q1q2q3_acc[idx][2*len(acc_lim)+d])
+			q=q_all
+			pose_temp=fwdkin(self.robot,q)
 
-			return np.append(acc_lim,self.joint_acc_limit[-3:])
-		#if a list of points
+			if world:
+				pose_temp.p=self.base_H[:3,:3]@pose_temp.p+self.base_H[:3,-1]
+				pose_temp.R=self.base_H[:3,:3]@pose_temp.R
+			return pose_temp
 		else:
-			dq=np.gradient(q_all,axis=0)[:,:3]
-			direction=(np.sign(dq)+1)/2
-			direction=direction.astype(int)
-			acc_limit_all=[]
-			for i in range(len(q_all)):
-				idx=np.argmin(np.linalg.norm(self.q2q3_config-q_all[i][1:3],axis=1))
-				acc_lim=[]
-				for d in direction[i]:
-					acc_lim.append(self.q1q2q3_acc[idx][2*len(acc_lim)+d])
+			pose_p_all=[]
+			pose_R_all=[]
+			for q in q_all:
+				pose_temp=fwdkin(self.robot,q)
+				if world:
+					pose_temp.p=self.base_H[:3,:3]@pose_temp.p+self.base_H[:3,-1]
+					pose_temp.R=self.base_H[:3,:3]@pose_temp.R
 
-				acc_limit_all.append(np.append(acc_lim,self.joint_acc_limit[-3:]))
+				pose_p_all.append(pose_temp.p)
+				pose_R_all.append(pose_temp.R)
 
-		return np.array(acc_limit_all)
+			return Transform_all(pose_p_all,pose_R_all)
 
+	def fwd_rotation(self,q_all):
+		return Ry(-q_all[0])@Rz((-q_all[1]))
 
-	def jacobian(self,q):
-		return robotjacobian(self.robot_def,q)
-	def fwd(self,q,base_R=np.eye(3),base_p=np.array([0,0,0]),qlim_override=False):
-		if qlim_override:
-			robot_def=copy.deepcopy(self.robot_def)
-			robot_def.joint_upper_limit=999*np.ones(len(self.upper_limit))
-			robot_def.joint_lower_limit=-999*np.ones(len(self.lower_limit))
-			pose_temp=fwdkin(robot_def,q)
-			# pose_temp=self.robot_def_tess.fwdkin(q)
+	# def inv(self,n,q_seed=np.zeros(2)):
+	# 	###p_tcp: point of the desired tcp wrt. positioner eef
+	# 	###n: normal direction at the desired tcp wrt. positioner eef
+	# 	###[q1,q2]: result joint angles that brings n to [0,0,1]
+	# 	if n[2]==1:	##if already up, infinite solutions
+	# 		return np.array([0,q_seed[1]])
+	# 	q2=np.arctan2(-n[1],n[0])
+	# 	q1=np.arctan2(-n[0]*np.cos(q2)+n[1]*np.sin(q2),n[2])
+	# 	# q1=np.arcsin(1/(-n[0]*np.cos(q2)+n[1]*np.sin(q2)+n[2]))
+
+	# 	return np.array([-q1,-q2])		###2 solutions, 180 apart couple
+
+	def inv(self,n,q_seed=None):
+		###p_tcp: point of the desired tcp wrt. positioner eef
+		###n: normal direction at the desired tcp wrt. positioner eef
+		###[q1,q2]: result joint angles that brings n to [0,0,1]
+		if n[2]==1:	##if already up, infinite solutions
+			if q_seed is not None:
+				return np.array([0-np.radians(15),q_seed[1]])
+			else:
+				return np.array([0-np.radians(15),0])
+		q2=np.arctan2(n[1],n[0])
+		q1=np.arctan2(n[0]*np.cos(q2)+n[1]*np.sin(q2),n[2])
+
+		solutions = self.get_eq_solution([q1,q2])
+		for i in range(len(solutions)):
+			solutions[i][0]-=np.radians(15)		###manual adjustment for tilt angle
+
+		if q_seed is not None:
+			theta_dist = np.linalg.norm(np.subtract(solutions,q_seed), axis=1)
+			return solutions[np.argsort(theta_dist)[0]]
 		else:
-			pose_temp=fwdkin(self.robot_def,q)
-			# pose_temp=self.robot_def_tess.fwdkin(q)
-
-		pose_temp.p=base_R@pose_temp.p+base_p
-		pose_temp.R=base_R@pose_temp.R
-		return pose_temp
-
-	def fwd_all(self,q_all,base_R=np.eye(3),base_p=np.array([0,0,0])):
-		pose_p_all=[]
-		pose_R_all=[]
-		for q in q_all:
-			pose_temp=self.fwd(q,base_R,base_p)
-			pose_p_all.append(pose_temp.p)
-			pose_R_all.append(pose_temp.R)
-
-		return Transform_all(pose_p_all,pose_R_all)
-
-	def inv(self,p,R=np.eye(3),last_joints=None):
-		pose=Transform(R,p)
-		q_all=robot6_sphericalwrist_invkin(self.robot_def,pose,last_joints)
+			return solutions
+	def get_eq_solution(self,q):
+		solutions=[q]
+		if q[1]+2*np.pi<self.upper_limit[1]:
+			solutions.append([q[0],q[1]+2*np.pi])
+		if q[1]+np.pi<self.upper_limit[1]:
+			solutions.append([-q[0],q[1]+np.pi])
+		if q[1]-np.pi>self.lower_limit[1]:
+			solutions.append([-q[0],q[1]-np.pi])
+		if q[1]-2*np.pi>self.lower_limit[1]:
+			solutions.append([q[0],q[1]-2*np.pi])
 		
-		# q_all=self.robot_def.tess.invkin(pose,last_joints)
-		return q_all
-
-
-class abb1200(object):
-	#default tool paintgun
-	def __init__(self,R_tool=Ry(np.radians(90)),p_tool=np.zeros(3),d=0,acc_dict_path=''):
-		###ABB IRB 1200 5/0.9 Robot Definition
-		self.H=np.concatenate((ez,ey,ey,ex,ey,ex),axis=1)
-		p0=np.array([[0],[0],[0.3991]])
-		p1=np.array([[0],[0],[0]])
-		p2=np.array([[0.],[0],[0.448]])
-		p3=np.array([[0],[0],[0.042]])
-		p4=np.array([[0.451],[0],[0]])
-		p5=np.array([[0.082],[0],[0]])
-		p6=np.array([[0],[0],[0]])
-
-		###fake link for fitting
-		tcp_new=p_tool+np.dot(R_tool,np.array([0,0,d]))
-
-		self.R_tool=R_tool
-		self.p_tool=tcp_new
-
-		###updated range&vel limit
-		self.P=np.concatenate((p0,p1,p2,p3,p4,p5,p6),axis=1)*1000.
-		self.joint_type=np.zeros(6)
-		self.upper_limit=np.radians([170.,130.,70.,270.,130.,360.])
-		self.lower_limit=np.radians([-170.,-100.,-200.,-270.,-130.,-360.])
-		self.joint_vel_limit=np.radians([288,240,297,400,405,600])
-		self.joint_acc_limit=np.array([-1,-1,-1,85.73244187330907,126.59979534862278,167.56543454239707])
-		self.robot_def=Robot(self.H,self.P,self.joint_type,joint_lower_limit = self.lower_limit, joint_upper_limit = self.upper_limit, joint_vel_limit=self.joint_vel_limit, R_tool=R_tool,p_tool=tcp_new)
-		self.robot_def_nT=Robot(self.H,self.P,self.joint_type,joint_lower_limit = self.lower_limit, joint_upper_limit = self.upper_limit, joint_vel_limit=self.joint_vel_limit)
-
-		###acceleration table
-		if len(acc_dict_path)>0:
-			acc_dict= pickle.load(open(acc_dict_path,'rb'))
-			q2_config=[]
-			q3_config=[]
-			q1_acc_n=[]
-			q1_acc_p=[]
-			q2_acc_n=[]
-			q2_acc_p=[]
-			q3_acc_n=[]
-			q3_acc_p=[]
-			for key, value in acc_dict.items():
-				q2_config.append(key[0])
-				q3_config.append(key[1])
-				q1_acc_n.append(value[0])
-				q1_acc_p.append(value[1])
-				q2_acc_n.append(value[2])
-				q2_acc_p.append(value[3])
-				q3_acc_n.append(value[4])
-				q3_acc_p.append(value[5])
-			self.q2q3_config=np.array([q2_config,q3_config]).T
-			self.q1q2q3_acc=np.array([q1_acc_n,q1_acc_p,q2_acc_n,q2_acc_p,q3_acc_n,q3_acc_p]).T
-
-	def get_acc(self,q_all,direction=[]):
-		###get acceleration limit from q config, assume last 3 joints acc fixed direction is 3 length vector, 0 is -, 1 is +
-		#if a single point
-		if q_all.ndim==1:
-			###find closest q2q3 config, along with constant last 3 joints acc
-			idx=np.argmin(np.linalg.norm(self.q2q3_config-q_all[1:3],axis=1))
-			acc_lim=[]
-			for d in direction:
-				acc_lim.append(self.q1q2q3_acc[idx][2*len(acc_lim)+d])
-
-			return np.append(acc_lim,self.joint_acc_limit[-3:])
-		#if a list of points
-		else:
-			dq=np.gradient(q_all,axis=0)[:,:3]
-			direction=(np.sign(dq)+1)/2
-			direction=direction.astype(int)
-			acc_limit_all=[]
-			for i in range(len(q_all)):
-				idx=np.argmin(np.linalg.norm(self.q2q3_config-q_all[i][1:3],axis=1))
-				acc_lim=[]
-				for d in direction[i]:
-					acc_lim.append(self.q1q2q3_acc[idx][2*len(acc_lim)+d])
-
-				acc_limit_all.append(np.append(acc_lim,self.joint_acc_limit[-3:]))
-
-		return np.array(acc_limit_all)
-
-	def jacobian(self,q):
-		return robotjacobian(self.robot_def,q)
-	def fwd(self,q,base_R=np.eye(3),base_p=np.array([0,0,0]),qlim_override=False):
-		if qlim_override:
-			robot_def=copy.deepcopy(self.robot_def)
-			robot_def.joint_upper_limit=999*np.ones(len(self.upper_limit))
-			robot_def.joint_lower_limit=-999*np.ones(len(self.lower_limit))
-			pose_temp=fwdkin(robot_def,q)
-		else:
-			pose_temp=fwdkin(self.robot_def,q)
-
-		
-		pose_temp.p=base_R@pose_temp.p+base_p
-		pose_temp.R=base_R@pose_temp.R
-		return pose_temp
-
-	def fwd_all(self,q_all,base_R=np.eye(3),base_p=np.array([0,0,0])):
-		pose_p_all=[]
-		pose_R_all=[]
-		for q in q_all:
-			pose_temp=self.fwd(q,base_R,base_p)
-			pose_p_all.append(pose_temp.p)
-			pose_R_all.append(pose_temp.R)
-
-		return Transform_all(pose_p_all,pose_R_all)
-
-	def inv(self,p,R=np.eye(3),last_joints=None):
-		pose=Transform(R,p)
-		q_all=robot6_sphericalwrist_invkin(self.robot_def,pose,last_joints)
-		return q_all
-
-class m900ia(object):
-	#default tool paintgun
-	def __init__(self,R_tool=Ry(np.radians(120)),p_tool=np.array([0.45,0,-0.05])*1000.,d=0):
-		###FANUC m900iA 350 Robot Definition
-		self.H=np.concatenate((ez,ey,-ey,-ex,-ey,-ex),axis=1)
-		p0=np.array([[0],[0],[0.95]])
-		p1=np.array([[0.37],[0],[0]])
-		p2=np.array([[0.],[0],[1.050]])
-		p3=np.array([[0],[0],[0.2]])   
-		p4=np.array([[1.250],[0],[0]])
-		p5=np.array([[0.27],[0],[0]])
-		p6=np.array([[0.0],[0],[0.0]])
-
-		###fake link for fitting
-		tcp_new=p_tool+np.dot(R_tool,np.array([0,0,d]))
-
-		self.P=np.concatenate((p0,p1,p2,p3,p4,p5,p6),axis=1)*1000.
-		self.joint_type=np.zeros(6)
-		
-		###updated range&vel limit
-		self.upper_limit=np.radians([180.,75.,65.,360.,125.,360.])
-		self.lower_limit=np.radians([-180.,-75.,-58.,-360.,-125.,-360.])
-		self.joint_vel_limit=np.radians([100.,95.,95.,105.,105.,170.])
-		# self.joint_acc_limit=np.radians([300.,561.,743.,244.,319.,243.])
-		self.joint_acc_limit=np.radians([183.333,175,166.666,183.333,183.333,300])
-		# self.joint_jrk_limit=np.radians([1020.408,765.306,765.306,1434.949,1434.949,1434.949])
-		self.joint_jrk_limit=np.radians([611.111,583.333,555.555,611.111,611.111,1000])
-		self.robot_def=Robot(self.H,self.P,self.joint_type,joint_lower_limit = self.lower_limit, joint_upper_limit = self.upper_limit, joint_vel_limit=self.joint_vel_limit, R_tool=R_tool,p_tool=tcp_new)
-
-	def jacobian(self,q):
-		return robotjacobian(self.robot_def,q)
-	def fwd(self,q,base_R=np.eye(3),base_p=np.array([0,0,0])):
-		pose_temp=fwdkin(self.robot_def,q)
-		pose_temp.p=np.dot(base_R,pose_temp.p)+base_p
-		pose_temp.R=np.dot(base_R,pose_temp.R)
-		return pose_temp
+		return np.array(solutions)
 	
-	def fwd_j456(self,q):
-		if (self.robot_def.joint_lower_limit is not None and self.robot_def.joint_upper_limit is not None):
-			assert np.greater_equal(q, self.robot_def.joint_lower_limit).all(), "Specified joints out of range"
-			assert np.less_equal(q, self.robot_def.joint_upper_limit).all(), "Specified joints out of range"
-
-		p = self.robot_def.P[:,[1]]
-		R = np.identity(3)
-		for i in xrange(1,len(self.robot_def.joint_type)-1):
-			R = R.dot(rot(self.robot_def.H[:,[i]],q[i]))
-			p = p + R.dot(self.robot_def.P[:,[i+1]])
-		p=np.reshape(p,(3,))
-
-		return Transform(R, p)
-
-	def fwd_all(self,q_all,base_R=np.eye(3),base_p=np.array([0,0,0])):
-		pose_p_all=[]
-		pose_R_all=[]
-		for q in q_all:
-			pose_temp=fwd(q,base_R,base_p)
-			pose_p_all.append(pose_temp.p)
-			pose_R_all.append(pose_temp.R)
-
-		return Transform_all(pose_p_all,pose_R_all)
-
-	def inv(self,p,R=np.eye(3),last_joints=None):
-		pose=Transform(R,p)
-		q_all=robot6_sphericalwrist_invkin(self.robot_def,pose,last_joints)
-		return q_all
-
-class m710ic(object):
-	#default tool paintgun
-	def __init__(self,R_tool=Ry(np.radians(120)),p_tool=np.array([0.45,0,-0.05])*1000.,d=0):
-		###FANUC m710ic 70 Robot Definition
-		self.H=np.concatenate((ez,ey,-ey,-ex,-ey,-ex),axis=1)
-		p0=np.array([[0],[0],[0.565]])
-		p1=np.array([[0.15],[0],[0]])
-		p2=np.array([[0.],[0],[0.870]])
-		p3=np.array([[0],[0],[0.17]])   
-		p4=np.array([[1.016],[0],[0]])
-		p5=np.array([[0.175],[0],[0]])
-		p6=np.array([[0.0],[0],[0.0]])
-
-		###fake link for fitting
-		tcp_new=p_tool+np.dot(R_tool,np.array([0,0,d]))
-
-		self.P=np.concatenate((p0,p1,p2,p3,p4,p5,p6),axis=1)*1000.
-		self.joint_type=np.zeros(6)
-		
-		###updated range&vel limit
-		self.upper_limit=np.radians([180.,135,205.,360.,125.,360.])
-		self.lower_limit=np.radians([-180.,-90.,-80.,-360.,-125.,-360.])
-		self.joint_vel_limit=np.radians([160.,120.,120.,225.,225.,225.])
-		# self.joint_acc_limit=np.radians([640.,520.,700.,910.,910.,1207.])
-		self.joint_acc_limit=np.radians([285.741,214.286,214.286,401.786,401.786,401.786])
-		self.joint_jrk_limit=np.radians([1020.408,765.306,765.306,1434.949,1434.949,1434.949])
-		self.robot_def=Robot(self.H,self.P,self.joint_type,joint_lower_limit = self.lower_limit, joint_upper_limit = self.upper_limit, joint_vel_limit=self.joint_vel_limit, R_tool=R_tool,p_tool=tcp_new)
-
 	def jacobian(self,q):
-		return robotjacobian(self.robot_def,q)
-	def fwd(self,q,base_R=np.eye(3),base_p=np.array([0,0,0])):
-		pose_temp=fwdkin(self.robot_def,q)
-		pose_temp.p=np.dot(base_R,pose_temp.p)+base_p
-		pose_temp.R=np.dot(base_R,pose_temp.R)
-		return pose_temp
-	
-	def fwd_j456(self,q):
-		if (self.robot_def.joint_lower_limit is not None and self.robot_def.joint_upper_limit is not None):
-			assert np.greater_equal(q, self.robot_def.joint_lower_limit).all(), "Specified joints out of range"
-			assert np.less_equal(q, self.robot_def.joint_upper_limit).all(), "Specified joints out of range"
+		return robotjacobian(self.robot,q)
 
-		p = self.robot_def.P[:,[1]]
-		R = np.identity(3)
-		for i in xrange(1,len(self.robot_def.joint_type)-1):
-			R = R.dot(rot(self.robot_def.H[:,[i]],q[i]))
-			p = p + R.dot(self.robot_def.P[:,[i+1]])
-		p=np.reshape(p,(3,))
+	###find a continous trajectory given Cartesion tool normal trajectory
+	def find_curve_js(self,normals,q_seed=None):
+		q_inits=self.inv(normals[0])
+		curve_js_all=[]
+		for q_init in q_inits:
+			curve_js=np.zeros((len(normals),2))
+			curve_js[0]=q_init
+			for i in range(1,len(normals)):
+				q_all=np.array(self.inv(normals[i]))
+				if len(q_all)==0:
+					#if no solution
+					print('no solution available')
+					return
 
-		return Transform(R, p)
-
-	def fwd_all(self,q_all,base_R=np.eye(3),base_p=np.array([0,0,0])):
-		pose_p_all=[]
-		pose_R_all=[]
-		for q in q_all:
-			pose_temp=fwd(q,base_R,base_p)
-			pose_p_all.append(pose_temp.p)
-			pose_R_all.append(pose_temp.R)
-
-		return Transform_all(pose_p_all,pose_R_all)
-
-	def inv(self,p,R=np.eye(3),last_joints=None):
-		pose=Transform(R,p)
-		q_all=robot6_sphericalwrist_invkin(self.robot_def,pose,last_joints)
-		return q_all
-
-class m10ia(object):
-	#default tool paintgun
-	def __init__(self,R_tool=Ry(np.radians(120)),p_tool=np.array([0.45,0,-0.05])*1000.,d=0,acc_dict_path=''):
-		###FANUC m710ic 70 Robot Definition
-		self.H=np.concatenate((ez,ey,-ey,-ex,-ey,-ex),axis=1)
-		p0=np.array([[0],[0],[0.45]])
-		# p0=np.array([[0],[0],[0]])
-		p1=np.array([[0.15],[0],[0]])
-		p2=np.array([[0.],[0],[0.6]])
-		p3=np.array([[0],[0],[0.2]])   
-		p4=np.array([[0.64],[0],[0]])
-		p5=np.array([[0.1],[0],[0]])
-		p6=np.array([[0.0],[0],[0.0]])
-
-		###fake link for fitting
-		tcp_new=p_tool+np.dot(R_tool,np.array([0,0,d]))
-
-		self.P=np.concatenate((p0,p1,p2,p3,p4,p5,p6),axis=1)*1000.
-		self.joint_type=np.zeros(6)
-		
-		###updated range&vel limit
-		self.upper_limit=np.radians([170.,160,180.,190.,140.,360.])
-		self.lower_limit=np.radians([-170.,-90.,-89.,-190.,-140.,-360.])
-		self.joint_vel_limit=np.radians([210.,190.,210.,400.,400.,600.])
-		# self.joint_acc_limit=np.radians([640.,520.,700.,910.,910.,1207.])
-		self.joint_acc_limit=np.radians([285.741,214.286,214.286,401.786,401.786,401.786])
-		self.joint_jrk_limit=np.radians([1020.408,765.306,765.306,1434.949,1434.949,1434.949])
-		self.robot_def=Robot(self.H,self.P,self.joint_type,joint_lower_limit = self.lower_limit, joint_upper_limit = self.upper_limit, joint_vel_limit=self.joint_vel_limit, R_tool=R_tool,p_tool=tcp_new)
-
-		###acceleration table
-		if len(acc_dict_path)>0:
-			acc_dict= pickle.load(open(acc_dict_path,'rb'))
-			q2_config=[]
-			q3_config=[]
-			q1_acc_n=[]
-			q1_acc_p=[]
-			q2_acc_n=[]
-			q2_acc_p=[]
-			q3_acc_n=[]
-			q3_acc_p=[]
-			for key, value in acc_dict.items():
-				q2_config.append(key[0])
-				q3_config.append(key[1])
-
-				if len(value) > 3:
-					q1_acc_n.append(value[0])
-					q1_acc_p.append(value[1])
-					q2_acc_n.append(value[2])
-					q2_acc_p.append(value[3])
-					q3_acc_n.append(value[4])
-					q3_acc_p.append(value[5])
+				temp_q=q_all-curve_js[i-1]
+				order=np.argsort(np.linalg.norm(temp_q,axis=1))
+				if np.linalg.norm(q_all[order[0]]-curve_js[i-1])>np.pi/2:
+					break	#if large changes in q, not continuous
 				else:
-					q1_acc_n.append(value[0])
-					q1_acc_p.append(value[0])
-					q2_acc_n.append(value[1])
-					q2_acc_p.append(value[1])
-					q3_acc_n.append(value[2])
-					q3_acc_p.append(value[2])
-			self.q2q3_config=np.array([q2_config,q3_config]).T
-			self.q1q2q3_acc=np.array([q1_acc_n,q1_acc_p,q2_acc_n,q2_acc_p,q3_acc_n,q3_acc_p]).T
+					curve_js[i]=q_all[order[0]]
 
-	def get_acc(self,q_all,direction=[]):
-		###get acceleration limit from q config, assume last 3 joints acc fixed direction is 3 length vector, 0 is -, 1 is +
-		#if a single point
-		if q_all.ndim==1:
-			###find closest q2q3 config, along with constant last 3 joints acc
-			idx=np.argmin(np.linalg.norm(self.q2q3_config-q_all[1:3],axis=1))
-			acc_lim=[]
-			for d in direction:
-				acc_lim.append(self.q1q2q3_acc[idx][2*len(acc_lim)+d])
+			#check if all q found
+			if i==len(normals)-1:
+				curve_js_all.append(curve_js)
 
-			return np.append(acc_lim,self.joint_acc_limit[-3:])
-		#if a list of points
+		if len(curve_js_all)==0:
+			raise Exception('No Solution Found') 
+		
+		if q_seed is None:
+			return curve_js_all
 		else:
-			dq=np.gradient(q_all,axis=0)[:,:3]
-			direction=(np.sign(dq)+1)/2
-			direction=direction.astype(int)
-			acc_limit_all=[]
-			for i in range(len(q_all)):
-				idx=np.argmin(np.linalg.norm(self.q2q3_config-q_all[i][1:3],axis=1))
-				acc_lim=[]
-				for d in direction[i]:
-					acc_lim.append(self.q1q2q3_acc[idx][2*len(acc_lim)+d])
-
-				acc_limit_all.append(np.append(acc_lim,self.joint_acc_limit[-3:]))
-
-		return np.array(acc_limit_all)
-
-	def jacobian(self,q):
-		return robotjacobian(self.robot_def,q)
-	def fwd(self,q,base_R=np.eye(3),base_p=np.array([0,0,0])):
-		pose_temp=fwdkin(self.robot_def,q)
-		pose_temp.p=np.dot(base_R,pose_temp.p)+base_p
-		pose_temp.R=np.dot(base_R,pose_temp.R)
-		return pose_temp
-	
-	def fwd_j456(self,q):
-		if (self.robot_def.joint_lower_limit is not None and self.robot_def.joint_upper_limit is not None):
-			assert np.greater_equal(q, self.robot_def.joint_lower_limit).all(), "Specified joints out of range"
-			assert np.less_equal(q, self.robot_def.joint_upper_limit).all(), "Specified joints out of range"
-
-		p = self.robot_def.P[:,[1]]
-		R = np.identity(3)
-		for i in xrange(1,len(self.robot_def.joint_type)-1):
-			R = R.dot(rot(self.robot_def.H[:,[i]],q[i]))
-			p = p + R.dot(self.robot_def.P[:,[i+1]])
-		p=np.reshape(p,(3,))
-
-		return Transform(R, p)
-
-	def fwd_all(self,q_all,base_R=np.eye(3),base_p=np.array([0,0,0])):
-		pose_p_all=[]
-		pose_R_all=[]
-		for q in q_all:
-			pose_temp=fwd(q,base_R,base_p)
-			pose_p_all.append(pose_temp.p)
-			pose_R_all.append(pose_temp.R)
-
-		return Transform_all(pose_p_all,pose_R_all)
-
-	def inv(self,p,R=np.eye(3),last_joints=None):
-		pose=Transform(R,p)
-		q_all=robot6_sphericalwrist_invkin(self.robot_def,pose,last_joints)
-		return q_all
-
-class lrmate200id(object):
-	#default tool paintgun
-	def __init__(self,R_tool=Ry(np.radians(120)),p_tool=np.array([0.45,0,-0.05])*1000.,d=0,acc_dict_path=''):
-		###FANUC m710ic 70 Robot Definition
-		self.H=np.concatenate((ez,ey,-ey,-ex,-ey,-ex),axis=1)
-		p0=np.array([[0],[0],[0.33]])
-		# p0=np.array([[0],[0],[0]])
-		p1=np.array([[0.05],[0],[0]])
-		p2=np.array([[0.],[0],[0.33]])
-		p3=np.array([[0],[0],[0.035]])   
-		p4=np.array([[0.335],[0],[0]])
-		p5=np.array([[0.08],[0],[0]])
-		p6=np.array([[0.0],[0],[0.0]])
-
-		###fake link for fitting
-		tcp_new=p_tool+np.dot(R_tool,np.array([0,0,d]))
-
-		self.P=np.concatenate((p0,p1,p2,p3,p4,p5,p6),axis=1)*1000.
-		self.joint_type=np.zeros(6)
-		
-		###updated range&vel limit
-		self.upper_limit=np.radians([170.,145,205.,190.,125.,360.])
-		self.lower_limit=np.radians([-170.,-100.,-70.,-190.,-125.,-360.])
-		self.joint_vel_limit=np.radians([450.,380.,520.,550.,545.,1000.])
-		# self.joint_acc_limit=np.radians([640.,520.,700.,910.,910.,1207.])
-		self.joint_acc_limit=np.radians([285.741,214.286,214.286,401.786,401.786,401.786])
-		self.joint_jrk_limit=np.radians([1020.408,765.306,765.306,1434.949,1434.949,1434.949])
-		self.robot_def=Robot(self.H,self.P,self.joint_type,joint_lower_limit = self.lower_limit, joint_upper_limit = self.upper_limit, joint_vel_limit=self.joint_vel_limit, R_tool=R_tool,p_tool=tcp_new)
-
-		###acceleration table
-		if len(acc_dict_path)>0:
-			acc_dict= pickle.load(open(acc_dict_path,'rb'))
-			q2_config=[]
-			q3_config=[]
-			q1_acc_n=[]
-			q1_acc_p=[]
-			q2_acc_n=[]
-			q2_acc_p=[]
-			q3_acc_n=[]
-			q3_acc_p=[]
-			for key, value in acc_dict.items():
-				q2_config.append(key[0])
-				q3_config.append(key[1])
-
-				if len(value) > 3:
-					q1_acc_n.append(value[0])
-					q1_acc_p.append(value[1])
-					q2_acc_n.append(value[2])
-					q2_acc_p.append(value[3])
-					q3_acc_n.append(value[4])
-					q3_acc_p.append(value[5])
-				else:
-					q1_acc_n.append(value[0])
-					q1_acc_p.append(value[0])
-					q2_acc_n.append(value[1])
-					q2_acc_p.append(value[1])
-					q3_acc_n.append(value[2])
-					q3_acc_p.append(value[2])
-			self.q2q3_config=np.array([q2_config,q3_config]).T
-			self.q1q2q3_acc=np.array([q1_acc_n,q1_acc_p,q2_acc_n,q2_acc_p,q3_acc_n,q3_acc_p]).T
-
-	def get_acc(self,q_all,direction=[]):
-		###get acceleration limit from q config, assume last 3 joints acc fixed direction is 3 length vector, 0 is -, 1 is +
-		#if a single point
-		if q_all.ndim==1:
-			###find closest q2q3 config, along with constant last 3 joints acc
-			idx=np.argmin(np.linalg.norm(self.q2q3_config-q_all[1:3],axis=1))
-			acc_lim=[]
-			for d in direction:
-				acc_lim.append(self.q1q2q3_acc[idx][2*len(acc_lim)+d])
-
-			return np.append(acc_lim,self.joint_acc_limit[-3:])
-		#if a list of points
-		else:
-			dq=np.gradient(q_all,axis=0)[:,:3]
-			direction=(np.sign(dq)+1)/2
-			direction=direction.astype(int)
-			acc_limit_all=[]
-			for i in range(len(q_all)):
-				idx=np.argmin(np.linalg.norm(self.q2q3_config-q_all[i][1:3],axis=1))
-				acc_lim=[]
-				for d in direction[i]:
-					acc_lim.append(self.q1q2q3_acc[idx][2*len(acc_lim)+d])
-
-				acc_limit_all.append(np.append(acc_lim,self.joint_acc_limit[-3:]))
-
-		return np.array(acc_limit_all)
-
-	def jacobian(self,q):
-		return robotjacobian(self.robot_def,q)
-	def fwd(self,q,base_R=np.eye(3),base_p=np.array([0,0,0])):
-		pose_temp=fwdkin(self.robot_def,q)
-		pose_temp.p=np.dot(base_R,pose_temp.p)+base_p
-		pose_temp.R=np.dot(base_R,pose_temp.R)
-		return pose_temp
-	
-	def fwd_j456(self,q):
-		if (self.robot_def.joint_lower_limit is not None and self.robot_def.joint_upper_limit is not None):
-			assert np.greater_equal(q, self.robot_def.joint_lower_limit).all(), "Specified joints out of range"
-			assert np.less_equal(q, self.robot_def.joint_upper_limit).all(), "Specified joints out of range"
-
-		p = self.robot_def.P[:,[1]]
-		R = np.identity(3)
-		for i in xrange(1,len(self.robot_def.joint_type)-1):
-			R = R.dot(rot(self.robot_def.H[:,[i]],q[i]))
-			p = p + R.dot(self.robot_def.P[:,[i+1]])
-		p=np.reshape(p,(3,))
-
-		return Transform(R, p)
-
-	def fwd_all(self,q_all,base_R=np.eye(3),base_p=np.array([0,0,0])):
-		pose_p_all=[]
-		pose_R_all=[]
-		for q in q_all:
-			pose_temp=fwd(q,base_R,base_p)
-			pose_p_all.append(pose_temp.p)
-			pose_R_all.append(pose_temp.R)
-
-		return Transform_all(pose_p_all,pose_R_all)
-
-	def inv(self,p,R=np.eye(3),last_joints=None):
-		pose=Transform(R,p)
-		q_all=robot6_sphericalwrist_invkin(self.robot_def,pose,last_joints)
-		return q_all
-
-class arb_robot(object):
-	#R_tool make tool z pointing to +x at 0 config
-	def __init__(self, H,P,joint_type,upper_limit,lower_limit, joint_vel_limit,R_tool=Ry(np.radians(90)),p_tool=np.zeros(3),d=0,acc_dict_path=''):
-		###All in mm
-		self.H=H
-		self.P=P
-
-		###fake link for fitting
-		tcp_new=p_tool+np.dot(R_tool,np.array([0,0,d]))
-
-		self.P=np.concatenate((p0,p1,p2,p3,p4,p5,p6),axis=1)*1000.
-		self.joint_type=np.zeros(6)
-		
-		###updated range&vel limit
-		self.upper_limit=np.radians([180.,75.,65.,360.,125.,360.])
-		self.lower_limit=np.radians([-180.,-75.,-58.,-360.,-125.,-360.])
-		self.joint_vel_limit=np.radians([100.,95.,95.,105.,105.,170.])
-		# self.joint_acc_limit=np.radians([300.,561.,743.,244.,319.,243.])
-		self.joint_acc_limit=np.radians([183.333,175,166.666,183.333,183.333,300])
-		# self.joint_jrk_limit=np.radians([1020.408,765.306,765.306,1434.949,1434.949,1434.949])
-		self.joint_jrk_limit=np.radians([611.111,583.333,555.555,611.111,611.111,1000])
-		self.robot_def=Robot(self.H,self.P,self.joint_type,joint_lower_limit = self.lower_limit, joint_upper_limit = self.upper_limit, joint_vel_limit=self.joint_vel_limit, R_tool=R_tool,p_tool=tcp_new)
-
-	def jacobian(self,q):
-		return robotjacobian(self.robot_def,q)
-	def fwd(self,q,base_R=np.eye(3),base_p=np.array([0,0,0])):
-		pose_temp=fwdkin(self.robot_def,q)
-		pose_temp.p=np.dot(base_R,pose_temp.p)+base_p
-		pose_temp.R=np.dot(base_R,pose_temp.R)
-		return pose_temp
-	
-	def fwd_j456(self,q):
-		if (self.robot_def.joint_lower_limit is not None and self.robot_def.joint_upper_limit is not None):
-			assert np.greater_equal(q, self.robot_def.joint_lower_limit).all(), "Specified joints out of range"
-			assert np.less_equal(q, self.robot_def.joint_upper_limit).all(), "Specified joints out of range"
-
-		p = self.robot_def.P[:,[1]]
-		R = np.identity(3)
-		for i in xrange(1,len(self.robot_def.joint_type)-1):
-			R = R.dot(rot(self.robot_def.H[:,[i]],q[i]))
-			p = p + R.dot(self.robot_def.P[:,[i+1]])
-		p=np.reshape(p,(3,))
-
-		return Transform(R, p)
-
-	def fwd_all(self,q_all,base_R=np.eye(3),base_p=np.array([0,0,0])):
-		pose_p_all=[]
-		pose_R_all=[]
-		for q in q_all:
-			pose_temp=fwd(q,base_R,base_p)
-			pose_p_all.append(pose_temp.p)
-			pose_R_all.append(pose_temp.R)
-
-		return Transform_all(pose_p_all,pose_R_all)
-
-	def inv(self,p,R=np.eye(3),last_joints=None):
-		pose=Transform(R,p)
-		q_all=robot6_sphericalwrist_invkin(self.robot_def,pose,last_joints)
-		return q_all
-
-class m710ic(object):
-	#default tool paintgun
-	def __init__(self,R_tool=Ry(np.radians(120)),p_tool=np.array([0.45,0,-0.05])*1000.,d=0):
-		###FANUC m710ic 70 Robot Definition
-		self.H=np.concatenate((ez,ey,-ey,-ex,-ey,-ex),axis=1)
-		p0=np.array([[0],[0],[0.565]])
-		p1=np.array([[0.15],[0],[0]])
-		p2=np.array([[0.],[0],[0.870]])
-		p3=np.array([[0],[0],[0.17]])   
-		p4=np.array([[1.016],[0],[0]])
-		p5=np.array([[0.175],[0],[0]])
-		p6=np.array([[0.0],[0],[0.0]])
-
-		###fake link for fitting
-		tcp_new=p_tool+np.dot(R_tool,np.array([0,0,d]))
-
-		self.P=np.concatenate((p0,p1,p2,p3,p4,p5,p6),axis=1)*1000.
-		self.joint_type=np.zeros(6)
-		
-		###updated range&vel limit
-		self.upper_limit=np.radians([180.,135,205.,360.,125.,360.])
-		self.lower_limit=np.radians([-180.,-90.,-80.,-360.,-125.,-360.])
-		self.joint_vel_limit=np.radians([160.,120.,120.,225.,225.,225.])
-		# self.joint_acc_limit=np.radians([640.,520.,700.,910.,910.,1207.])
-		self.joint_acc_limit=np.radians([285.741,214.286,214.286,401.786,401.786,401.786])
-		self.joint_jrk_limit=np.radians([1020.408,765.306,765.306,1434.949,1434.949,1434.949])
-		self.robot_def=Robot(self.H,self.P,self.joint_type,joint_lower_limit = self.lower_limit, joint_upper_limit = self.upper_limit, joint_vel_limit=self.joint_vel_limit, R_tool=R_tool,p_tool=tcp_new)
-
-	def jacobian(self,q):
-		return robotjacobian(self.robot_def,q)
-	def fwd(self,q,base_R=np.eye(3),base_p=np.array([0,0,0])):
-		pose_temp=fwdkin(self.robot_def,q)
-		pose_temp.p=np.dot(base_R,pose_temp.p)+base_p
-		pose_temp.R=np.dot(base_R,pose_temp.R)
-		return pose_temp
-	
-	def fwd_j456(self,q):
-		if (self.robot_def.joint_lower_limit is not None and self.robot_def.joint_upper_limit is not None):
-			assert np.greater_equal(q, self.robot_def.joint_lower_limit).all(), "Specified joints out of range"
-			assert np.less_equal(q, self.robot_def.joint_upper_limit).all(), "Specified joints out of range"
-
-		p = self.robot_def.P[:,[1]]
-		R = np.identity(3)
-		for i in xrange(1,len(self.robot_def.joint_type)-1):
-			R = R.dot(rot(self.robot_def.H[:,[i]],q[i]))
-			p = p + R.dot(self.robot_def.P[:,[i+1]])
-		p=np.reshape(p,(3,))
-
-		return Transform(R, p)
-
-	def fwd_all(self,q_all,base_R=np.eye(3),base_p=np.array([0,0,0])):
-		pose_p_all=[]
-		pose_R_all=[]
-		for q in q_all:
-			pose_temp=fwd(q,base_R,base_p)
-			pose_p_all.append(pose_temp.p)
-			pose_R_all.append(pose_temp.R)
-
-		return Transform_all(pose_p_all,pose_R_all)
-
-	def inv(self,p,R=np.eye(3),last_joints=None):
-		pose=Transform(R,p)
-		q_all=robot6_sphericalwrist_invkin(self.robot_def,pose,last_joints)
-		return q_all
-
-class m10ia(object):
-	#default tool paintgun
-	def __init__(self,R_tool=Ry(np.radians(120)),p_tool=np.array([0.45,0,-0.05])*1000.,d=0,acc_dict_path=''):
-		###FANUC m710ic 70 Robot Definition
-		self.H=np.concatenate((ez,ey,-ey,-ex,-ey,-ex),axis=1)
-		p0=np.array([[0],[0],[0.45]])
-		# p0=np.array([[0],[0],[0]])
-		p1=np.array([[0.15],[0],[0]])
-		p2=np.array([[0.],[0],[0.6]])
-		p3=np.array([[0],[0],[0.2]])   
-		p4=np.array([[0.64],[0],[0]])
-		p5=np.array([[0.1],[0],[0]])
-		p6=np.array([[0.0],[0],[0.0]])
-
-		###fake link for fitting
-		tcp_new=p_tool+np.dot(R_tool,np.array([0,0,d]))
-
-		self.P=np.concatenate((p0,p1,p2,p3,p4,p5,p6),axis=1)*1000.
-		self.joint_type=np.zeros(6)
-		
-		###updated range&vel limit
-		self.upper_limit=np.radians([170.,160,180.,190.,140.,360.])
-		self.lower_limit=np.radians([-170.,-90.,-89.,-190.,-140.,-360.])
-		self.joint_vel_limit=np.radians([210.,190.,210.,400.,400.,600.])
-		# self.joint_acc_limit=np.radians([640.,520.,700.,910.,910.,1207.])
-		self.joint_acc_limit=np.radians([285.741,214.286,214.286,401.786,401.786,401.786])
-		self.joint_jrk_limit=np.radians([1020.408,765.306,765.306,1434.949,1434.949,1434.949])
-		self.robot_def=Robot(self.H,self.P,self.joint_type,joint_lower_limit = self.lower_limit, joint_upper_limit = self.upper_limit, joint_vel_limit=self.joint_vel_limit, R_tool=R_tool,p_tool=tcp_new)
-
-		###acceleration table
-		if len(acc_dict_path)>0:
-			acc_dict= pickle.load(open(acc_dict_path,'rb'))
-			q2_config=[]
-			q3_config=[]
-			q1_acc_n=[]
-			q1_acc_p=[]
-			q2_acc_n=[]
-			q2_acc_p=[]
-			q3_acc_n=[]
-			q3_acc_p=[]
-			for key, value in acc_dict.items():
-				q2_config.append(key[0])
-				q3_config.append(key[1])
-
-				if len(value) > 3:
-					q1_acc_n.append(value[0])
-					q1_acc_p.append(value[1])
-					q2_acc_n.append(value[2])
-					q2_acc_p.append(value[3])
-					q3_acc_n.append(value[4])
-					q3_acc_p.append(value[5])
-				else:
-					q1_acc_n.append(value[0])
-					q1_acc_p.append(value[0])
-					q2_acc_n.append(value[1])
-					q2_acc_p.append(value[1])
-					q3_acc_n.append(value[2])
-					q3_acc_p.append(value[2])
-			self.q2q3_config=np.array([q2_config,q3_config]).T
-			self.q1q2q3_acc=np.array([q1_acc_n,q1_acc_p,q2_acc_n,q2_acc_p,q3_acc_n,q3_acc_p]).T
-
-	def get_acc(self,q_all,direction=[]):
-		###get acceleration limit from q config, assume last 3 joints acc fixed direction is 3 length vector, 0 is -, 1 is +
-		#if a single point
-		if q_all.ndim==1:
-			###find closest q2q3 config, along with constant last 3 joints acc
-			idx=np.argmin(np.linalg.norm(self.q2q3_config-q_all[1:3],axis=1))
-			acc_lim=[]
-			for d in direction:
-				acc_lim.append(self.q1q2q3_acc[idx][2*len(acc_lim)+d])
-
-			return np.append(acc_lim,self.joint_acc_limit[-3:])
-		#if a list of points
-		else:
-			dq=np.gradient(q_all,axis=0)[:,:3]
-			direction=(np.sign(dq)+1)/2
-			direction=direction.astype(int)
-			acc_limit_all=[]
-			for i in range(len(q_all)):
-				idx=np.argmin(np.linalg.norm(self.q2q3_config-q_all[i][1:3],axis=1))
-				acc_lim=[]
-				for d in direction[i]:
-					acc_lim.append(self.q1q2q3_acc[idx][2*len(acc_lim)+d])
-
-				acc_limit_all.append(np.append(acc_lim,self.joint_acc_limit[-3:]))
-
-		return np.array(acc_limit_all)
-
-	def jacobian(self,q):
-		return robotjacobian(self.robot_def,q)
-	def fwd(self,q,base_R=np.eye(3),base_p=np.array([0,0,0])):
-		pose_temp=fwdkin(self.robot_def,q)
-		pose_temp.p=np.dot(base_R,pose_temp.p)+base_p
-		pose_temp.R=np.dot(base_R,pose_temp.R)
-		return pose_temp
-	
-	def fwd_j456(self,q):
-		if (self.robot_def.joint_lower_limit is not None and self.robot_def.joint_upper_limit is not None):
-			assert np.greater_equal(q, self.robot_def.joint_lower_limit).all(), "Specified joints out of range"
-			assert np.less_equal(q, self.robot_def.joint_upper_limit).all(), "Specified joints out of range"
-
-		p = self.robot_def.P[:,[1]]
-		R = np.identity(3)
-		for i in xrange(1,len(self.robot_def.joint_type)-1):
-			R = R.dot(rot(self.robot_def.H[:,[i]],q[i]))
-			p = p + R.dot(self.robot_def.P[:,[i+1]])
-		p=np.reshape(p,(3,))
-
-		return Transform(R, p)
-
-	def fwd_all(self,q_all,base_R=np.eye(3),base_p=np.array([0,0,0])):
-		pose_p_all=[]
-		pose_R_all=[]
-		for q in q_all:
-			pose_temp=fwd(q,base_R,base_p)
-			pose_p_all.append(pose_temp.p)
-			pose_R_all.append(pose_temp.R)
-
-		return Transform_all(pose_p_all,pose_R_all)
-
-	def inv(self,p,R=np.eye(3),last_joints=None):
-		pose=Transform(R,p)
-		q_all=robot6_sphericalwrist_invkin(self.robot_def,pose,last_joints)
-		return q_all
-
-class lrmate200id(object):
-	#default tool paintgun
-	def __init__(self,R_tool=Ry(np.radians(120)),p_tool=np.array([0.45,0,-0.05])*1000.,d=0,acc_dict_path=''):
-		###FANUC m710ic 70 Robot Definition
-		self.H=np.concatenate((ez,ey,-ey,-ex,-ey,-ex),axis=1)
-		p0=np.array([[0],[0],[0.33]])
-		# p0=np.array([[0],[0],[0]])
-		p1=np.array([[0.05],[0],[0]])
-		p2=np.array([[0.],[0],[0.33]])
-		p3=np.array([[0],[0],[0.035]])   
-		p4=np.array([[0.335],[0],[0]])
-		p5=np.array([[0.08],[0],[0]])
-		p6=np.array([[0.0],[0],[0.0]])
-
-		###fake link for fitting
-		tcp_new=p_tool+np.dot(R_tool,np.array([0,0,d]))
-
-		self.P=np.concatenate((p0,p1,p2,p3,p4,p5,p6),axis=1)*1000.
-		self.joint_type=np.zeros(6)
-		
-		###updated range&vel limit
-		self.upper_limit=np.radians([170.,145,205.,190.,125.,360.])
-		self.lower_limit=np.radians([-170.,-100.,-70.,-190.,-125.,-360.])
-		self.joint_vel_limit=np.radians([450.,380.,520.,550.,545.,1000.])
-		# self.joint_acc_limit=np.radians([640.,520.,700.,910.,910.,1207.])
-		self.joint_acc_limit=np.radians([285.741,214.286,214.286,401.786,401.786,401.786])
-		self.joint_jrk_limit=np.radians([1020.408,765.306,765.306,1434.949,1434.949,1434.949])
-		self.robot_def=Robot(self.H,self.P,self.joint_type,joint_lower_limit = self.lower_limit, joint_upper_limit = self.upper_limit, joint_vel_limit=self.joint_vel_limit, R_tool=R_tool,p_tool=tcp_new)
-
-		###acceleration table
-		if len(acc_dict_path)>0:
-			acc_dict= pickle.load(open(acc_dict_path,'rb'))
-			q2_config=[]
-			q3_config=[]
-			q1_acc_n=[]
-			q1_acc_p=[]
-			q2_acc_n=[]
-			q2_acc_p=[]
-			q3_acc_n=[]
-			q3_acc_p=[]
-			for key, value in acc_dict.items():
-				q2_config.append(key[0])
-				q3_config.append(key[1])
-
-				if len(value) > 3:
-					q1_acc_n.append(value[0])
-					q1_acc_p.append(value[1])
-					q2_acc_n.append(value[2])
-					q2_acc_p.append(value[3])
-					q3_acc_n.append(value[4])
-					q3_acc_p.append(value[5])
-				else:
-					q1_acc_n.append(value[0])
-					q1_acc_p.append(value[0])
-					q2_acc_n.append(value[1])
-					q2_acc_p.append(value[1])
-					q3_acc_n.append(value[2])
-					q3_acc_p.append(value[2])
-			self.q2q3_config=np.array([q2_config,q3_config]).T
-			self.q1q2q3_acc=np.array([q1_acc_n,q1_acc_p,q2_acc_n,q2_acc_p,q3_acc_n,q3_acc_p]).T
-
-	def get_acc(self,q_all,direction=[]):
-		###get acceleration limit from q config, assume last 3 joints acc fixed direction is 3 length vector, 0 is -, 1 is +
-		#if a single point
-		if q_all.ndim==1:
-			###find closest q2q3 config, along with constant last 3 joints acc
-			idx=np.argmin(np.linalg.norm(self.q2q3_config-q_all[1:3],axis=1))
-			acc_lim=[]
-			for d in direction:
-				acc_lim.append(self.q1q2q3_acc[idx][2*len(acc_lim)+d])
-
-			return np.append(acc_lim,self.joint_acc_limit[-3:])
-		#if a list of points
-		else:
-			dq=np.gradient(q_all,axis=0)[:,:3]
-			direction=(np.sign(dq)+1)/2
-			direction=direction.astype(int)
-			acc_limit_all=[]
-			for i in range(len(q_all)):
-				idx=np.argmin(np.linalg.norm(self.q2q3_config-q_all[i][1:3],axis=1))
-				acc_lim=[]
-				for d in direction[i]:
-					acc_lim.append(self.q1q2q3_acc[idx][2*len(acc_lim)+d])
-
-				acc_limit_all.append(np.append(acc_lim,self.joint_acc_limit[-3:]))
-
-		return np.array(acc_limit_all)
-
-	def jacobian(self,q):
-		return robotjacobian(self.robot_def,q)
-	def fwd(self,q,base_R=np.eye(3),base_p=np.array([0,0,0])):
-		pose_temp=fwdkin(self.robot_def,q)
-		pose_temp.p=np.dot(base_R,pose_temp.p)+base_p
-		pose_temp.R=np.dot(base_R,pose_temp.R)
-		return pose_temp
-	
-	def fwd_j456(self,q):
-		if (self.robot_def.joint_lower_limit is not None and self.robot_def.joint_upper_limit is not None):
-			assert np.greater_equal(q, self.robot_def.joint_lower_limit).all(), "Specified joints out of range"
-			assert np.less_equal(q, self.robot_def.joint_upper_limit).all(), "Specified joints out of range"
-
-		p = self.robot_def.P[:,[1]]
-		R = np.identity(3)
-		for i in xrange(1,len(self.robot_def.joint_type)-1):
-			R = R.dot(rot(self.robot_def.H[:,[i]],q[i]))
-			p = p + R.dot(self.robot_def.P[:,[i+1]])
-		p=np.reshape(p,(3,))
-
-		return Transform(R, p)
-
-	def fwd_all(self,q_all,base_R=np.eye(3),base_p=np.array([0,0,0])):
-		pose_p_all=[]
-		pose_R_all=[]
-		for q in q_all:
-			pose_temp=fwd(q,base_R,base_p)
-			pose_p_all.append(pose_temp.p)
-			pose_R_all.append(pose_temp.R)
-
-		return Transform_all(pose_p_all,pose_R_all)
-
-	def inv(self,p,R=np.eye(3),last_joints=None):
-		pose=Transform(R,p)
-		q_all=robot6_sphericalwrist_invkin(self.robot_def,pose,last_joints)
-		return q_all
-
-def yml2robdef(file):
-	robot_yml=yaml.full_load(file)
-	kin_chain=robot_yml['chains'][0]
-	joint_info=robot_yml['joint_info']
-	tool_pose=kin_chain['flange_pose']
-
-	###kin chain
-	H = []
-	P = []
-
-	for i in range(len(kin_chain['H'])):
-		H.append(list(kin_chain['H'][i].values()))
-		P.append(list(kin_chain['P'][i].values()))
-	P.append(list(kin_chain['P'][-1].values()))
-	H=np.array(H).reshape((len(kin_chain['H']),3)).T
-	P=np.array(P).reshape((len(kin_chain['P']),3)).T*1000	###make sure in mm
-
-	###joint info
-	joint_type=[]	
-	upper_limit=[]
-	lower_limit=[]
-	joint_vel_limit=[]
-	for i in range(len(joint_info)):
-		joint_type.append(0 if joint_info[i]['joint_type']=='revolute' else 1)
-		upper_limit.append(joint_info[i]['joint_limits']['upper'])
-		lower_limit.append(joint_info[i]['joint_limits']['lower'])
-		joint_vel_limit.append(joint_info[i]['joint_limits']['velocity'])
-
-	###tool pose
-	R_tool=q2R(list(tool_pose['orientation'].values()))
-	p_tool=np.array(list(tool_pose['position'].values()))*1000
-
-	###create a robot
-	robot=arb_robot(H,P,joint_type,upper_limit,lower_limit, joint_vel_limit,R_tool=R_tool,p_tool=p_tool)
-
-	return robot
+			if len(curve_js_all)==1:
+				return curve_js_all[0]
+			else:
+				diff_min=[]
+				for curve_js in curve_js_all:
+					diff_min.append(np.linalg.norm(curve_js[0]-q_seed))
+
+				return curve_js_all[np.argmin(diff_min)]
+			
 class Transform_all(object):
 	def __init__(self, p_all, R_all):
 		self.R_all=np.array(R_all)
@@ -1310,59 +573,46 @@ def jdot(q,qdot):
 	Jdotmat[-1]=Jdotmat[-1][:,:n]
 	return Jdotmat[-1]
 
-def main():
-	robot=abb6640(d=50)
-	p=np.array([1445.00688987, -248.17799722, 1037.37341832])
-	R=np.array([[-0.83395293, -0.1490643,  -0.53132131],
-				[ 0.17227772,  0.84437554, -0.50729709],
-				[ 0.52425461, -0.51459672, -0.678489  ]])
-	q = np.array([0.1, 0.11, 0.12, 0.13, 0.14, 0.15])
-	now=time.time()
-	for i in range(100):
-		# print(robot.fwd(q))
-		robot.fwd(q)
-	print(time.time()-now)
-	now=time.time()
-	for i in range(100):
-		# print(robot.inv(p,R,last_joints=[ 0.0859182,   0.09685281,  0.28419715,  2.56388261, -1.34470404, -3.0320356 ]))
-		robot.inv(p,R,last_joints=[ 0.0859182,   0.09685281,  0.28419715,  2.56388261, -1.34470404, -3.0320356 ])
-	print(time.time()-now)
-	return
 
-def invtest():
-	# robot=abb6640(d=50)
-	# last_joints=[-0.84190536,  0.61401203,  0.2305977,  -2.70622154, -0.74584949, -2.21577141]
-	# pose=robot.fwd(last_joints)
-	# print('correct: ',robot.inv(pose.p,pose.R,last_joints))
-	# robot2=robot_obj('../config/abb_6640_180_255_robot_default_config.yml',tool_file_path='../config/paintgun.csv',d=50,acc_dict_path='')
-	# theta_v=robot2.inv(pose.p,pose.R)
-	# print('passed to tes:',theta_v[0])
-	# print('equivalent_configurations: ',robot2.tesseract_robot.redundant_solutions(theta_v[0]))
+def main1():
+	###robot object class
+	robot_name='MA_1440_A0'
+	robot=robot_obj(robot_name,def_path='../config/'+robot_name+'_robot_default_config.yml',tool_file_path='../config/scanner_tcp.csv')
+	
+	pulse2deg_1440=np.array([1.435355447016790322e+03,1.300329111270902331e+03,1.422225409601069941e+03,9.699560942607320158e+02,9.802408285708806943e+02,4.547552630640436178e+02])
+	pulse2deg_2010=np.array([1.341416193724337745e+03,1.907685083229250267e+03,1.592916090846681982e+03,1.022871664227330484e+03,9.802549195016306385e+02,4.547554799861444508e+02])
+	pulse2deg=pulse2deg_1440
+	q_pulse=np.array([-26967,20050,-65667,-58160,-89688,-36278])
+	q=np.radians(q_pulse/pulse2deg)
+	print(q)
+	# q=np.radians([-70.11,41.39,44.30,27.01,28.79,0])
+	pose=robot.fwd(q)
+	print(pose)
+	print(np.degrees(rotationMatrixToEulerAngles(pose.R)))
 
-	robot=abb6640(d=50)
-	last_joints=[-0.84190536,  0.61401203,  0.2305977,  -2.70622154, -0.74584949, -2.21577141]
-	pose=robot.fwd(last_joints)
-	print('correct: ',robot.inv(pose.p,pose.R,last_joints))
-	theta_v=robot.inv(pose.p,pose.R)
-	print('inv solutions: ',theta_v)
-	print('equivalent_configurations: ',equivalent_configurations(robot.robot_def, theta_v, last_joints))
+	print(robot.inv(pose.p,pose.R,q))
 
-def invdebug():
-	from utils import car2js
-	dataset='curve_1/'
-	data_dir="../data/"+dataset
-	solution_dir=data_dir+'dual_arm/'+'diffevo_pose3/'
-	robot2=robot_obj('ABB_1200_5_90','../config/abb_1200_5_90_robot_default_config.yml',tool_file_path=solution_dir+'tcp.csv',base_transformation_file=solution_dir+'base.csv',acc_dict_path='')
-	q=np.array([-0.103733,   -0.49750235, -3.14216517,  0.61162475,  0.45628173,  0.57089247])
-	pose=robot2.fwd(q)
+def main2():
+	positioner=positioner_obj('D500B',def_path='../config/D500B_robot_default_config.yml',tool_file_path='../config/positioner_tcp.csv',\
+		pulse2deg_file_path='../config/D500B_pulse2deg.csv',base_transformation_file='../config/D500B_pose.csv')
+	
+	print(positioner.fwd(np.zeros(2)))
+	# q1=30
+	# q2=50
+	# q=np.radians([q1,q2])
+	# print(robot.fwd(q))
 
-	print(robot2.upper_limit)
-	print(robot2.lower_limit)
-	print(robot2.tesseract_robot.invkin(Transform(pose.R,pose.p),np.zeros(len(robot2.joint_vel_limit))))
-	print(robot6_sphericalwrist_invkin(robot2.robot,pose))
+	# # n=np.array([np.sqrt(2)/2,0,np.sqrt(2)/2])
+	# n=np.array([np.sqrt(3)/3,np.sqrt(3)/3,np.sqrt(3)/3])
+	# q_inv=robot.inv(n)
+	# print(np.degrees(q_inv))
+	# print(robot.fwd_rotation(q_inv))
+	# print(robot.fwd(q_inv).R@n)
 
-	# car2js(robot2,q,pose.p,pose.R)[0]
-
+	# q_temp=-2
+	# print(np.sin(q_temp))
+	# print(-np.cos(q_temp))
+	# print(robot.jacobian([q_temp,0]))
 
 if __name__ == '__main__':
-	invdebug()
+	main2()

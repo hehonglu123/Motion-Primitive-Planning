@@ -1,5 +1,6 @@
 import numpy as np
 import copy
+from copy import deepcopy
 from general_robotics_toolbox import *
 from utils import *
 ###calculate distance between point to line
@@ -192,6 +193,52 @@ def logged_data_analysis(robot,timestamp,curve_exe_js):
 
 	return lam, np.array(curve_exe), np.array(curve_exe_R), act_speed
 
+def logged_data_analysis_phparam(robot,timestamp,curve_exe_js,ph_param):
+
+	act_speed=[]
+	lam=[0]
+	curve_exe=[]
+	curve_exe_R=[]
+
+	# save nominal PH and tool
+	origin_Rtool=deepcopy(robot.robot.R_tool)
+	origin_ptool=deepcopy(robot.robot.p_tool)
+	origin_flange=deepcopy(robot.robot.T_flange)
+	origin_P=deepcopy(robot.robot.P)
+	origin_H=deepcopy(robot.robot.H)
+
+	## use opt ph param
+	robot.robot.R_tool = deepcopy(robot.T_tool_toolmarker.R)
+	robot.robot.p_tool = deepcopy(robot.T_tool_toolmarker.p)
+	robot.robot.T_flange = deepcopy(robot.T_tool_flange)
+
+	for i in range(len(curve_exe_js)):
+
+		opt_P,opt_H = ph_param.predict(curve_exe_js[i][1:3])
+		robot.robot.P=deepcopy(opt_P)
+		robot.robot.H=deepcopy(opt_H)
+
+		robot_pose=robot.fwd(curve_exe_js[i])
+
+		curve_exe.append(robot_pose.p)
+		curve_exe_R.append(robot_pose.R)
+		if i>0:
+			lam.append(lam[-1]+np.linalg.norm(curve_exe[i]-curve_exe[i-1]))
+		try:
+			act_speed.append(np.linalg.norm(curve_exe[-1]-curve_exe[-2])/(timestamp[i]-timestamp[i-1]))
+		except IndexError:
+			pass
+
+	act_speed=moving_average(act_speed,padding=True)
+
+	## switching back
+	robot.robot.R_tool = deepcopy(origin_Rtool)
+	robot.robot.p_tool = deepcopy(origin_ptool)
+	robot.robot.T_flange = deepcopy(origin_flange)
+	robot.robot.P=deepcopy(origin_P)
+	robot.robot.H=deepcopy(origin_H)
+
+	return lam, np.array(curve_exe), np.array(curve_exe_R), act_speed
 
 def logged_data_analysis_multimove(robot1,robot2,timestamp,curve_exe_js_dual):
 	curve_exe_js1=curve_exe_js_dual[:,:6]

@@ -88,7 +88,7 @@ def remove_traj_outlier_mocap(curve_exe_all,curve_exe_R_all,timestamp_all,total_
 def average_N_exe(ms,robot,primitives,breakpoints,p_bp,q_bp,v,z,curve,log_path='',N=5,safe_q=None):
 
 	if not os.path.exists(log_path):
-	   os.makedirs(log_path)
+		os.makedirs(log_path)
 
 	###N run execute
 	curve_exe_js_all=[]
@@ -142,11 +142,88 @@ def average_N_exe(ms,robot,primitives,breakpoints,p_bp,q_bp,v,z,curve,log_path='
 
 	return curve_js_all_new, avg_curve_js, timestamp_d
 
+def average_N_exe_mocap_log(mpl_obj,ms,robot,primitives,breakpoints,p_bp,q_bp,v,z,curve,log_path='',N=5,safe_q=None):
+
+	if not os.path.exists(log_path):
+		os.makedirs(log_path)
+
+	###N run execute
+	## robot info
+	curve_exe_js_all=[]
+	timestamp_all=[]
+	total_time_all=[]
+	## mocap info
+	curve_exe_mocap_all=[]
+	curve_exe_w_mocap_all=[]
+	timestamp_mocap_all=[]
+	total_time_mocap_all=[]
+	for r in range(N):
+
+		mpl_obj.run_pose_listener()
+		log_results=ms.exec_motions(robot,primitives,breakpoints,p_bp,q_bp,v,z)
+		mpl_obj.stop_pose_listener()
+
+		if safe_q is not None:
+			ms.jog_joint(safe_q)
+
+		###save 5 runs
+		if len(log_path)>0:
+			# Write log csv to file
+			timestamp,curve_exe_js,cmd_num=ms.parse_logged_data(log_results)
+			np.savetxt(log_path+'/run_'+str(r)+'.csv',np.hstack((timestamp.reshape((-1,1)),cmd_num.reshape((-1,1)),curve_exe_js)),delimiter=',',comments='')
+
+		##############################data analysis#####################################
+		lam, curve_exe, curve_exe_R,curve_exe_js, speed, timestamp=ms.logged_data_analysis(robot,log_results,realrobot=True)
+
+		###throw bad curves
+		_, _, _,_, _, timestamp_temp=ms.chop_extension(curve_exe, curve_exe_R,curve_exe_js, speed, timestamp,curve[0,:3],curve[-1,:3])
+		total_time_all.append(timestamp_temp[-1]-timestamp_temp[0])
+
+		timestamp=timestamp-timestamp[0]
+
+		curve_exe_js_all.append(curve_exe_js)
+		timestamp_all.append(timestamp)
+
+		##############################mocap data########################################
+		curve_exe_dict,curve_exe_R_dict,timestamp_dict = mpl_obj.get_robots_traj()
+		curve_exe_mocap,curve_exe_w_mocap,timestamp_mocap=ms.logged_data_analysis_mocap(robot,curve_exe_dict,curve_exe_R_dict,timestamp_dict)
+		curve_exe_R_mocap=w2R(curve_exe_w_mocap,np.eye(3))
+
+		###save 5 runs
+		if len(log_path)>0:
+			# Write log csv to file
+			np.savetxt(log_path+'/run_'+str(r)+'_mocap.csv',np.hstack((timestamp_mocap.reshape((-1,1)),curve_exe_mocap,curve_exe_w_mocap)),delimiter=',',comments='')
+
+		###throw bad curves
+		speed_mocap=get_speed(curve_exe_mocap,timestamp_mocap)
+		_, curve_exe_mocap_temp, curve_exe_R_mocap_temp, _, timestamp_mocap_temp=ms.chop_extension_mocap(curve_exe_mocap, curve_exe_R_mocap, speed_mocap, timestamp_mocap,curve[0,:3],curve[-1,:3],p_bp[0][0])
+		curve_exe_w_mocap_temp=smooth_w(R2w(curve_exe_R_mocap_temp,np.eye(3)))		###deal with Singularity
+
+		total_time_mocap_all.append(timestamp_mocap_temp[-1]-timestamp_mocap_temp[0])
+
+		timestamp_mocap=timestamp_mocap-timestamp_mocap[0]
+
+		curve_exe_mocap_all.append(curve_exe_mocap_temp)
+		curve_exe_w_mocap_all.append(curve_exe_w_mocap_temp)
+		timestamp_mocap_all.append(timestamp_mocap_temp)
+		
+		time.sleep(0.5)
+	###trajectory outlier detection, based on chopped time
+	curve_exe_js_all,timestamp_all=remove_traj_outlier(curve_exe_js_all,timestamp_all,total_time_all)
+	###infer average curve from linear interplateion
+	curve_js_all_new, avg_curve_js, timestamp_d=average_curve(curve_exe_js_all,timestamp_all)
+
+	###trajectory outlier detection, based on chopped time
+	curve_exe_mocap_all,curve_exe_w_mocap_all,timestamp_mocap_all=remove_traj_outlier_mocap(curve_exe_mocap_all,curve_exe_w_mocap_all,timestamp_mocap_all,total_time_mocap_all)
+	###infer average curve from linear interplateion
+	curve_exe_mocap_avg, curve_exe_w_mocap_avg, timestamp_d_mocap=average_curve_mocap(curve_exe_mocap_all,curve_exe_w_mocap_all,timestamp_mocap_all)
+
+	return curve_js_all_new, avg_curve_js, timestamp_d, curve_exe_mocap_avg, curve_exe_w_mocap_avg, timestamp_d_mocap
 
 def average_N_exe_mocap(mpl_obj,ms,robot,primitives,breakpoints,p_bp,q_bp,v,z,curve,log_path='',N=5,safe_q=None):
 
 	if not os.path.exists(log_path):
-	   os.makedirs(log_path)
+		os.makedirs(log_path)
 
 	###N run execute
 	timestamp_all=[]
@@ -186,7 +263,6 @@ def average_N_exe_mocap(mpl_obj,ms,robot,primitives,breakpoints,p_bp,q_bp,v,z,cu
 
 	###trajectory outlier detection, based on chopped time
 	curve_exe_all,curve_exe_w_all,timestamp_all=remove_traj_outlier_mocap(curve_exe_all,curve_exe_w_all,timestamp_all,total_time_all)
-
 	###infer average curve from linear interplateion
 	curve_exe_avg, curve_exe_w_avg, timestamp_d=average_curve_mocap(curve_exe_all,curve_exe_w_all,timestamp_all)
 
