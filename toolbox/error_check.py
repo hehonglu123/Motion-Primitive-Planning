@@ -214,7 +214,11 @@ def logged_data_analysis_phparam(robot,timestamp,curve_exe_js,ph_param):
 
 	for i in range(len(curve_exe_js)):
 
-		opt_P,opt_H = ph_param.predict(curve_exe_js[i][1:3])
+		if ph_param is None:
+			opt_P = deepcopy(robot.calib_P)
+			opt_H = deepcopy(robot.calib_H)
+		else:
+			opt_P,opt_H = ph_param.predict(curve_exe_js[i][1:3])
 		robot.robot.P=deepcopy(opt_P)
 		robot.robot.H=deepcopy(opt_H)
 
@@ -230,6 +234,7 @@ def logged_data_analysis_phparam(robot,timestamp,curve_exe_js,ph_param):
 			pass
 
 	act_speed=moving_average(act_speed,padding=True)
+	act_speed=np.append(act_speed[0],act_speed)
 
 	## switching back
 	robot.robot.R_tool = deepcopy(origin_Rtool)

@@ -18,7 +18,7 @@ sys.path.append('../')
 from ilc_toolbox import *
 
 def main():
-	curve_name='curve_1'
+	curve_name='curve_2'
 	dataset=curve_name+'/'
 	solution_dir='baseline_motoman/'
 	data_dir="../../data/"+dataset+solution_dir
@@ -35,14 +35,22 @@ def main():
 	config_dir='../../config/'
 	robot=robot_obj('MA2010_A0',def_path=config_dir+'MA2010_A0_robot_default_config.yml',tool_file_path=config_dir+'torch.csv',d=50,\
 		pulse2deg_file_path=config_dir+'MA2010_A0_pulse2deg_real.csv',\
-		base_marker_config_file=config_dir+'MA2010_marker_config.yaml',tool_marker_config_file=config_dir+'weldgun_marker_config.yaml')
+		base_marker_config_file=config_dir+'MA2010_0620_marker_config.yaml',tool_marker_config_file=config_dir+'weldgun_0620_marker_config.yaml')
 	
+	ph_param_lin=None
 	## load calibrated PH with q config
-	PH_data_dir=config_dir+'ph_param/test0516_R1/'
-	with open(PH_data_dir+'calib_PH_q.pickle','rb') as file:
-		PH_q=pickle.load(file)
-	ph_param_lin=PH_Param()
-	ph_param_lin.fit(PH_q,method='linear')
+	# PH_data_dir=config_dir+'ph_param/test0516_R1/'
+	# with open(PH_data_dir+'calib_PH_q.pickle','rb') as file:
+	# 	PH_q=pickle.load(file)
+	# ph_param_lin=PH_Param()
+	# ph_param_lin.fit(PH_q,method='linear')
+	## using rotated PH
+	# robot.robot.P=deepcopy(robot.calib_P)
+	# robot.robot.H=deepcopy(robot.calib_H)
+
+	## add tool
+	# robot.robot.R_tool = robot.T_tool_toolmarker.R
+	# robot.robot.p_tool = robot.T_tool_toolmarker.p
 	
 	mocap_url = 'rr+tcp://192.168.55.10:59823?service=optitrack_mocap'
 	mocap_url = mocap_url
@@ -50,8 +58,8 @@ def main():
 
 	mpl_obj = MocapPoseListener(mocap_cli,[robot],collect_base_window=240)
 
-	# v=333
-	v=150
+	v=300
+	# v=150
 	z=None
 
 	gamma_v_max=1
@@ -59,7 +67,7 @@ def main():
 	
 	ms = MotionSend(robot)
 	# breakpoints,primitives,p_bp,q_bp=ms.extract_data_from_cmd(cmd_dir+'command.csv')
-	breakpoints,primitives,p_bp,q_bp=ms.extract_data_from_cmd(cmd_dir+'command2.csv')
+	breakpoints,primitives,p_bp,q_bp=ms.extract_data_from_cmd(cmd_dir+'command1.csv')
 	###extension
 	# p_bp,q_bp=ms.extend(robot,q_bp,primitives,breakpoints,p_bp,extension_start=60,extension_end=60)
 	p_bp,q_bp=ms.extend(robot,q_bp,primitives,breakpoints,p_bp,extension_start=50,extension_end=50)
@@ -73,11 +81,14 @@ def main():
 	inserted_points=[]
 	iteration=50
 
+	max_error_draw=None
+	max_angerror_draw=None
+
 	N=5 	###N-run average
 
 	for i in range(iteration):
 
-		curve_js_all_new, avg_curve_js, timestamp_d, curve_exe_mocap_avg, curve_exe_w_mocap_avg, timestamp_d_mocap=\
+		curve_js_all_new, avg_curve_js, timestamp_d, curve_exe_mocap_avg, curve_exe_R_mocap_avg, timestamp_d_mocap=\
 			average_N_exe_mocap_log(mpl_obj,ms,robot,primitives,breakpoints,p_bp,q_bp,v,z,curve,log_path="recorded_data/iteration_%i" % i,N=N)
 
 		###calculat data with average curve
@@ -96,24 +107,30 @@ def main():
 		##############################calcualte error########################################
 		error_nominal,angle_error_nominal=calc_all_error_w_normal(curve_exe_nom,curve[:,:3],curve_exe_R_nom[:,:,-1],curve[:,3:]) ## error using nominal PH
 		error,angle_error=calc_all_error_w_normal(curve_exe,curve[:,:3],curve_exe_R[:,:,-1],curve[:,3:]) ## error using calibrated PH
-		error_mocap,angle_error_mocap=calc_all_error_w_normal(curve_exe,curve[:,:3],curve_exe_R[:,:,-1],curve[:,3:]) ## error using mocap
+		error_mocap,angle_error_mocap=calc_all_error_w_normal(curve_exe_mocap_avg,curve[:,:3],curve_exe_R_mocap_avg[:,:,-1],curve[:,3:]) ## error using mocap
 		print(max(error),np.std(speed)/np.average(speed))
 
 		#############################error peak detection###############################
 		peaks,_=find_peaks(error,height=multi_peak_threshold,prominence=0.2,distance=20/(lam[int(len(lam)/2)]-lam[int(len(lam)/2)-1]))		###only push down peaks higher than height, distance between each peak is 20mm, threshold to filter noisy peaks
-		
 		if len(peaks)==0 or np.argmax(error) not in peaks:
 			peaks=np.append(peaks,np.argmax(error))
+		peaks=np.array(peaks).astype(int)
 		##############################plot error#####################################
+		lam=np.array(lam)
+		error=np.array(error)
 
 		fig, ax1 = plt.subplots()
 		ax2 = ax1.twinx()
-		ax1.plot(lam, speed, 'g-', label='Speed')
-		ax2.plot(lam_nom, error_nominal, 'b-',label='Error (Nominal PH)')
+		ax1.plot(lam, speed, 'g-', label='Speed (Calib PH)')
+		ax2.plot(lam_nom, error_nominal, 'm-',label='Error (Nominal PH)')
 		ax2.plot(lam, error, 'b-',label='Error (Calib PH)')
-		ax2.plot(lam_mocap, error_mocap, 'b-',label='Error (Mocap)')
+		ax2.plot(lam_mocap, error_mocap, 'c-',label='Error (Mocap)')
 		ax2.scatter(lam[peaks],error[peaks],label='Peaks (Calib PH)')
-		# ax2.axis(ymin=0,ymax=5)
+		
+		if max_error_draw is None:
+			max_error_draw=1.05*max(error)
+		ax2.axis(ymin=0,ymax=max_error_draw)
+		
 		ax1.axis(ymin=0,ymax=1.2*v)
 
 		ax1.set_xlabel('lambda (mm)')
@@ -122,18 +139,22 @@ def main():
 		plt.title("Speed and Error Plot v=%f"%v)
 		h1, l1 = ax1.get_legend_handles_labels()
 		h2, l2 = ax2.get_legend_handles_labels()
-		ax1.legend(h1+h2, l1+l2, loc=1)
+		ax1.legend(h1+h2, l1+l2, loc=3)
 
 		plt.savefig('recorded_data/iteration_'+str(i)+'_error')
 		plt.clf()
 
 		fig, ax1 = plt.subplots()
 		ax2 = ax1.twinx()
-		ax1.plot(lam, speed, 'g-', label='Speed')
-		ax2.plot(lam_nom, np.degrees(angle_error_nominal), 'y-',label='Normal Error (Nominal PH)')
-		ax2.plot(lam, np.degrees(angle_error), 'y-',label='Normal Error (Calib PH)')
-		ax2.plot(lam_mocap, np.degrees(angle_error_mocap), 'y-',label='Normal Error (Mocap)')
-		# ax2.axis(ymin=0,ymax=5)
+		ax1.plot(lam, speed, 'g-', label='Speed (Calib PH)')
+		ax2.plot(lam_nom, np.degrees(angle_error_nominal), 'm-',label='Normal Error (Nominal PH)')
+		ax2.plot(lam, np.degrees(angle_error), 'b-',label='Normal Error (Calib PH)')
+		ax2.plot(lam_mocap, np.degrees(angle_error_mocap), 'c-',label='Normal Error (Mocap)')
+		
+		if max_angerror_draw is None:
+			max_angerror_draw=1.05*max(np.degrees(angle_error))
+		ax2.axis(ymin=0,ymax=max_angerror_draw)
+
 		ax1.axis(ymin=0,ymax=1.2*v)
 
 		ax1.set_xlabel('lambda (mm)')
@@ -142,7 +163,7 @@ def main():
 		plt.title("Speed and Error Plot v=%f"%v)
 		h1, l1 = ax1.get_legend_handles_labels()
 		h2, l2 = ax2.get_legend_handles_labels()
-		ax1.legend(h1+h2, l1+l2, loc=1)
+		ax1.legend(h1+h2, l1+l2, loc=3)
 
 		plt.savefig('recorded_data/iteration_'+str(i)+'_angerror')
 		plt.clf()

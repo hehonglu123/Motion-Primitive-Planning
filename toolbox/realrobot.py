@@ -218,7 +218,7 @@ def average_N_exe_mocap_log(mpl_obj,ms,robot,primitives,breakpoints,p_bp,q_bp,v,
 	###infer average curve from linear interplateion
 	curve_exe_mocap_avg, curve_exe_w_mocap_avg, timestamp_d_mocap=average_curve_mocap(curve_exe_mocap_all,curve_exe_w_mocap_all,timestamp_mocap_all)
 
-	return curve_js_all_new, avg_curve_js, timestamp_d, curve_exe_mocap_avg, curve_exe_w_mocap_avg, timestamp_d_mocap
+	return curve_js_all_new, avg_curve_js, timestamp_d, curve_exe_mocap_avg, w2R(curve_exe_w_mocap_avg,np.eye(3)), timestamp_d_mocap
 
 def average_N_exe_mocap(mpl_obj,ms,robot,primitives,breakpoints,p_bp,q_bp,v,z,curve,log_path='',N=5,safe_q=None):
 
