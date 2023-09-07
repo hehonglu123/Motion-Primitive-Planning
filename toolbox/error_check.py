@@ -208,9 +208,9 @@ def logged_data_analysis_phparam(robot,timestamp,curve_exe_js,ph_param):
 	origin_H=deepcopy(robot.robot.H)
 
 	## use opt ph param
-	robot.robot.R_tool = deepcopy(robot.T_tool_toolmarker.R)
-	robot.robot.p_tool = deepcopy(robot.T_tool_toolmarker.p)
-	robot.robot.T_flange = deepcopy(robot.T_tool_flange)
+	# robot.robot.R_tool = deepcopy(robot.T_tool_toolmarker.R)
+	# robot.robot.p_tool = deepcopy(robot.T_tool_toolmarker.p)
+	# robot.robot.T_flange = deepcopy(robot.T_tool_flange)
 
 	for i in range(len(curve_exe_js)):
 

@@ -31,6 +31,7 @@ class robot_obj(object):
 		self.robot_name=robot_name
 		with open(def_path, 'r') as f:
 			self.robot = rr_rox.load_robot_info_yaml_to_robot(f)
+   
 
 		self.def_path=def_path
 		#define robot without tool
@@ -132,10 +133,10 @@ class robot_obj(object):
 						self.calib_H[0,i] = marker_data['H'][i]['x']
 						self.calib_H[1,i] = marker_data['H'][i]['y']
 						self.calib_H[2,i] = marker_data['H'][i]['z']
-				if 'zero_config' in marker_data.keys():
-					self.calib_zero_config = np.array(marker_data['zero_config'])
-					self.robot.joint_upper_limit = self.robot.joint_upper_limit-self.calib_zero_config
-					self.robot.joint_lower_limit = self.robot.joint_lower_limit-self.calib_zero_config
+				# if 'zero_config' in marker_data.keys():
+				# 	self.calib_zero_config = np.array(marker_data['zero_config'])
+				# 	self.robot.joint_upper_limit = self.robot.joint_upper_limit-self.calib_zero_config
+				# 	self.robot.joint_lower_limit = self.robot.joint_lower_limit-self.calib_zero_config
 		self.tool_marker_config_file=tool_marker_config_file
 		self.T_tool_toolmarker = None # T^tool_toolmarker
 		if len(tool_marker_config_file)>0:
@@ -156,6 +157,15 @@ class robot_obj(object):
 					# add d
 					T_d1_d2 = Transform(np.eye(3),p=[0,0,d-15])
 					self.T_tool_toolmarker = self.T_tool_toolmarker*T_d1_d2
+				if 'calib_toolmarker_flange_pose' in marker_data.keys():
+					p = [marker_data['calib_toolmarker_flange_pose']['position']['x'],
+						marker_data['calib_toolmarker_flange_pose']['position']['y'],
+						marker_data['calib_toolmarker_flange_pose']['position']['z']]
+					q = [marker_data['calib_toolmarker_flange_pose']['orientation']['w'],
+						marker_data['calib_toolmarker_flange_pose']['orientation']['x'],
+						marker_data['calib_toolmarker_flange_pose']['orientation']['y'],
+						marker_data['calib_toolmarker_flange_pose']['orientation']['z']]
+					self.T_toolmarker_flange = Transform(q2R(q),p)
 
 	def get_acc(self,q_all,direction=[]):
 		###get acceleration limit from q config, assume last 3 joints acc fixed direction is 3 length vector, 0 is -, 1 is +
@@ -194,7 +204,7 @@ class robot_obj(object):
 
 		if q_all.ndim==1:
 			q=q_all
-			q = np.array(q)-self.calib_zero_config
+			# q = np.array(q)-self.calib_zero_config
 			pose_temp=fwdkin(self.robot,q)
 
 			if world:
@@ -217,6 +227,40 @@ class robot_obj(object):
 	
 	def jacobian(self,q):
 		return robotjacobian(self.robot,q)
+
+	def fwd_ph(self,q,ph_param):
+     
+		q=np.array(q)
+    
+		origin_P=copy.deepcopy(self.robot.P)
+		origin_H=copy.deepcopy(self.robot.H)
+    
+		opt_P,opt_H = ph_param.predict(q[1:3])
+		self.robot.P=copy.deepcopy(opt_P)
+		self.robot.H=copy.deepcopy(opt_H)
+		robot_T = fwdkin(self.robot,q)
+  
+		self.robot.P=copy.deepcopy(origin_P)
+		self.robot.H=copy.deepcopy(origin_H)
+  
+		return robot_T
+
+	def jacobian_ph(self,q,ph_param):
+     
+		q=np.array(q)
+    
+		origin_P=copy.deepcopy(self.robot.P)
+		origin_H=copy.deepcopy(self.robot.H)
+    
+		opt_P,opt_H = ph_param.predict(q[1:3])
+		self.robot.P=opt_P
+		self.robot.H=opt_H
+		J = robotjacobian(self.robot,q)
+  
+		self.robot.P=origin_P
+		self.robot.H=origin_H
+  
+		return J
 
 	def inv(self,p,R=np.eye(3),last_joints=None):
 		pose=Transform(R,p)
@@ -356,10 +400,10 @@ class positioner_obj(object):
 						self.calib_H[1,i] = marker_data['H'][i]['y']
 						self.calib_H[2,i] = marker_data['H'][i]['z']
 				self.calib_zero_config=np.zeros(self.robot.H.shape[1])
-				if 'zero_config' in marker_data.keys():
-					self.calib_zero_config = np.array(marker_data['zero_config'])
-					self.robot.joint_upper_limit = self.robot.joint_upper_limit-self.calib_zero_config
-					self.robot.joint_lower_limit = self.robot.joint_lower_limit-self.calib_zero_config
+				# if 'zero_config' in marker_data.keys():
+				# 	self.calib_zero_config = np.array(marker_data['zero_config'])
+				# 	self.robot.joint_upper_limit = self.robot.joint_upper_limit-self.calib_zero_config
+				# 	self.robot.joint_lower_limit = self.robot.joint_lower_limit-self.calib_zero_config
 		self.tool_marker_config_file=tool_marker_config_file
 		self.T_tool_toolmarker = None # T^tool_toolmarker
 		if len(tool_marker_config_file)>0:
@@ -431,13 +475,12 @@ class positioner_obj(object):
 			if q_seed is not None:
 				return np.array([0-np.radians(15),q_seed[1]])
 			else:
-				return np.array([0-np.radians(15),0])
+				return [np.array([0-np.radians(15),0])]
 		q2=np.arctan2(n[1],n[0])
 		q1=np.arctan2(n[0]*np.cos(q2)+n[1]*np.sin(q2),n[2])
 
 		solutions = self.get_eq_solution([q1,q2])
-		for i in range(len(solutions)):
-			solutions[i][0]-=np.radians(15)		###manual adjustment for tilt angle
+		solutions[:,0]=solutions[:,0]-np.radians(15)		###manual adjustment for tilt angle
 
 		if q_seed is not None:
 			theta_dist = np.linalg.norm(np.subtract(solutions,q_seed), axis=1)
@@ -445,6 +488,15 @@ class positioner_obj(object):
 		else:
 			return solutions
 	def get_eq_solution(self,q):
+		###inifinite solution stack
+		# solutions=np.vstack([np.linspace([q[0],q[1]-100*2*np.pi],[q[0],q[1]+100*2*np.pi],num=201),\
+		# 					np.linspace([-q[0],q[1]-np.pi-100*2*np.pi],[-q[0],q[1]-np.pi+100*2*np.pi],num=201)])
+
+		###extended 4pi solution stack
+		# solutions=np.vstack([np.linspace([q[0],q[1]-2*2*np.pi],[q[0],q[1]+2*2*np.pi],num=5),\
+		# 					np.linspace([-q[0],q[1]-np.pi-2*2*np.pi],[-q[0],q[1]-np.pi+2*2*np.pi],num=5)])
+
+		###regular solution stack
 		solutions=[q]
 		if q[1]+2*np.pi<self.upper_limit[1]:
 			solutions.append([q[0],q[1]+2*np.pi])
@@ -462,13 +514,19 @@ class positioner_obj(object):
 
 	###find a continous trajectory given Cartesion tool normal trajectory
 	def find_curve_js(self,normals,q_seed=None):
-		q_inits=self.inv(normals[0])
+		if normals[0][2]==1:# in case normal is already up, infinite solutions
+			q_inits=[self.inv(normals[0],q_seed)]
+		else:
+			q_inits=self.inv(normals[0])
 		curve_js_all=[]
 		for q_init in q_inits:
 			curve_js=np.zeros((len(normals),2))
 			curve_js[0]=q_init
 			for i in range(1,len(normals)):
-				q_all=np.array(self.inv(normals[i]))
+				if normals[i][2]==1:# in case normal is already up, infinite solutions
+					q_all=[np.array(self.inv(normals[i],curve_js[i-1]))]
+				else:
+					q_all=np.array(self.inv(normals[i]))
 				if len(q_all)==0:
 					#if no solution
 					print('no solution available')
@@ -494,11 +552,19 @@ class positioner_obj(object):
 			if len(curve_js_all)==1:
 				return curve_js_all[0]
 			else:
-				diff_min=[]
-				for curve_js in curve_js_all:
-					diff_min.append(np.linalg.norm(curve_js[0]-q_seed))
+				curve_js_all=np.array(curve_js_all)
 
-				return curve_js_all[np.argmin(diff_min)]
+				diff_q0=np.abs(curve_js_all[:,0,0]-q_seed[0])
+				diff_q0_min_ind=np.nonzero(diff_q0==np.min(diff_q0))[0]
+				diff_q1=np.abs(curve_js_all[diff_q0_min_ind,0,1]-q_seed[1])
+				diff_q1_min_ind=np.nonzero(diff_q1==np.min(diff_q1))[0]
+				index=diff_q0_min_ind[diff_q1_min_ind[0]]
+				return curve_js_all[index]
+
+				# diff_min=[]
+				# for curve_js in curve_js_all:
+				# 	diff_min.append(np.linalg.norm(curve_js[0]-q_seed))
+				# return curve_js_all[np.argmin(diff_min)]
 			
 class Transform_all(object):
 	def __init__(self, p_all, R_all):
