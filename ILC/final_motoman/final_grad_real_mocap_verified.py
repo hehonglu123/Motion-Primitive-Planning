@@ -18,11 +18,13 @@ sys.path.append('../')
 from ilc_toolbox import *
 
 def main():
-    curve_name='curve_2'
+    curve_name='curve_1'
     dataset=curve_name+'/'
     solution_dir='baseline_motoman/'
     data_dir="../../data/"+dataset+solution_dir
     # cmd_dir="../../data/"+dataset+solution_dir+'100L/'
+
+    ph_dataset_date='0801'
 
     cmd_dir=curve_name+"_baseline_100L_nPL/"
 
@@ -35,11 +37,11 @@ def main():
     config_dir='../../config/'
     robot=robot_obj('MA2010_A0',def_path=config_dir+'MA2010_A0_robot_default_config.yml',tool_file_path=config_dir+'torch.csv',d=50,\
         pulse2deg_file_path=config_dir+'MA2010_A0_pulse2deg_real.csv',\
-        base_marker_config_file=config_dir+'MA2010_0620_marker_config.yaml',tool_marker_config_file=config_dir+'weldgun_0620_marker_config.yaml')
+        base_marker_config_file=config_dir+'MA2010_'+ph_dataset_date+'_marker_config.yaml',tool_marker_config_file=config_dir+'weldgun_'+ph_dataset_date+'_marker_config.yaml')
     
     # ph_param=None
     ## load calibrated PH with q config
-    PH_data_dir=config_dir+'ph_param/test0516_R1/'
+    PH_data_dir=config_dir+'ph_param/test'+ph_dataset_date+'_R1/train_data_'
     with open(PH_data_dir+'calib_PH_q.pickle','rb') as file:
         PH_q=pickle.load(file)
     nom_P=np.array([[0,0,0],[150,0,0],[0,0,760],\
@@ -55,6 +57,8 @@ def main():
     ## add tool
     # robot.robot.R_tool = robot.T_tool_toolmarker.R
     # robot.robot.p_tool = robot.T_tool_toolmarker.p
+    # robot.robot.R_tool = robot.T_toolmarker_flange.R
+    # robot.robot.p_tool = robot.T_toolmarker_flange.p
     
     mocap_url = 'rr+tcp://192.168.55.10:59823?service=optitrack_mocap'
     mocap_url = mocap_url
@@ -62,8 +66,8 @@ def main():
 
     mpl_obj = MocapPoseListener(mocap_cli,[robot],collect_base_window=240)
 
-    v=300
-    # v=150
+    # v=300
+    v=150
     z=None
 
     gamma_v_max=1
@@ -88,7 +92,7 @@ def main():
     max_error_draw=None
     max_angerror_draw=None
 
-    N=5 	###N-run average
+    N=2 	###N-run average
 
     for i in range(iteration):
 
