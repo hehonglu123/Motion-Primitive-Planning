@@ -53,7 +53,9 @@ def remove_traj_outlier(curve_exe_js_all,timestamp_all,total_time_all):
 	km = KMeans(n_clusters=2)
 	index=km.fit_predict(np.array(total_time_all).reshape(-1,1))
 	cluster=km.cluster_centers_
-	major_index=scipy.stats.mode(index)[0][0]       ###mostly appeared index
+	# print(scipy.stats.mode(index))
+	# major_index=scipy.stats.mode(index)[0][0]       ###mostly appeared index
+	major_index=scipy.stats.mode(index)[0]       ###mostly appeared index
 	major_indices=np.where(index==major_index)[0]
 	time_mode_avg=cluster[major_index]
 
@@ -71,7 +73,8 @@ def remove_traj_outlier_mocap(curve_exe_all,curve_exe_R_all,timestamp_all,total_
 	km = KMeans(n_clusters=2)
 	index=km.fit_predict(np.array(total_time_all).reshape(-1,1))
 	cluster=km.cluster_centers_
-	major_index=scipy.stats.mode(index)[0][0]       ###mostly appeared index
+	# major_index=scipy.stats.mode(index)[0][0]       ###mostly appeared index
+	major_index=scipy.stats.mode(index)[0]       ###mostly appeared index
 	major_indices=np.where(index==major_index)[0]
 	time_mode_avg=cluster[major_index]
 
@@ -209,6 +212,7 @@ def average_N_exe_mocap_log(mpl_obj,ms,robot,primitives,breakpoints,p_bp,q_bp,v,
 		
 		time.sleep(0.5)
 	###trajectory outlier detection, based on chopped time
+	print(total_time_all)
 	curve_exe_js_all,timestamp_all=remove_traj_outlier(curve_exe_js_all,timestamp_all,total_time_all)
 	###infer average curve from linear interplateion
 	curve_js_all_new, avg_curve_js, timestamp_d=average_curve(curve_exe_js_all,timestamp_all)
