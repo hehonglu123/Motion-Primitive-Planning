@@ -3,6 +3,7 @@ from sklearn.cluster import KMeans
 import numpy as np
 import scipy, os, time
 from utils import *
+import copy
 
 def average_curve(curve_all,timestamp_all):
 	###get desired synced timestamp first
@@ -50,7 +51,7 @@ def average_curve_mocap(curve_exe_all,curve_exe_w_all,timestamp_all):
 
 def remove_traj_outlier(curve_exe_js_all,timestamp_all,total_time_all):
 
-	km = KMeans(n_clusters=2)
+	km = KMeans(n_clusters=2,n_init=10)
 	index=km.fit_predict(np.array(total_time_all).reshape(-1,1))
 	cluster=km.cluster_centers_
 	# print(scipy.stats.mode(index))
@@ -70,7 +71,7 @@ def remove_traj_outlier(curve_exe_js_all,timestamp_all,total_time_all):
 
 def remove_traj_outlier_mocap(curve_exe_all,curve_exe_R_all,timestamp_all,total_time_all):
 
-	km = KMeans(n_clusters=2)
+	km = KMeans(n_clusters=2,n_init=10)
 	index=km.fit_predict(np.array(total_time_all).reshape(-1,1))
 	cluster=km.cluster_centers_
 	# major_index=scipy.stats.mode(index)[0][0]       ###mostly appeared index
@@ -223,6 +224,42 @@ def average_N_exe_mocap_log(mpl_obj,ms,robot,primitives,breakpoints,p_bp,q_bp,v,
 	curve_exe_mocap_avg, curve_exe_w_mocap_avg, timestamp_d_mocap=average_curve_mocap(curve_exe_mocap_all,curve_exe_w_mocap_all,timestamp_mocap_all)
 
 	return curve_js_all_new, avg_curve_js, timestamp_d, curve_exe_mocap_avg, w2R(curve_exe_w_mocap_avg,np.eye(3)), timestamp_d_mocap
+
+def average_N_exe_mocap_read(ms,p_bp,curve,data_path='',N=5):
+
+	###N run execute
+	timestamp_all=[]
+	total_time_all=[]
+	curve_exe_all=[]
+	curve_exe_w_all=[]
+	for r in range(N):
+   
+		data_array = np.loadtxt(data_path+'run_'+str(r)+'.csv',delimiter=',')
+		timestamp = copy.deepcopy(data_array[:,0])
+		curve_exe = copy.deepcopy(data_array[:,1:4])
+		curve_exe_w = copy.deepcopy(data_array[:,4:7])
+		curve_exe_R=w2R(curve_exe_w,np.eye(3))
+
+		###throw bad curves
+		speed=get_speed(curve_exe,timestamp)
+		_, curve_exe_temp, curve_exe_R_temp, _, timestamp_temp=ms.chop_extension_mocap(curve_exe, curve_exe_R, speed, timestamp,curve[0,:3],curve[-1,:3],p_bp[0][0])
+		curve_exe_w_temp=smooth_w(R2w(curve_exe_R_temp,np.eye(3)))		###deal with Singularity
+
+		total_time_all.append(timestamp_temp[-1]-timestamp_temp[0])
+
+		timestamp=timestamp-timestamp[0]
+
+		curve_exe_all.append(curve_exe_temp)
+		curve_exe_w_all.append(curve_exe_w_temp)
+		timestamp_all.append(timestamp_temp)
+		time.sleep(0.1)
+
+	###trajectory outlier detection, based on chopped time
+	curve_exe_all,curve_exe_w_all,timestamp_all=remove_traj_outlier_mocap(curve_exe_all,curve_exe_w_all,timestamp_all,total_time_all)
+	###infer average curve from linear interplateion
+	curve_exe_avg, curve_exe_w_avg, timestamp_d=average_curve_mocap(curve_exe_all,curve_exe_w_all,timestamp_all)
+
+	return curve_exe_avg, w2R(curve_exe_w_avg,np.eye(3)), timestamp_d
 
 def average_N_exe_mocap(mpl_obj,ms,robot,primitives,breakpoints,p_bp,q_bp,v,z,curve,log_path='',N=5,safe_q=None):
 
