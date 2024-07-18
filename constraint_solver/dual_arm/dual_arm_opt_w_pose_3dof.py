@@ -1,5 +1,6 @@
 import sys
 sys.path.append('../')
+sys.path.append('../../toolbox/')
 from constraint_solver import *
 from MotionSend import *
 class Geeks:
@@ -11,6 +12,7 @@ def main():
 	relative_path=read_csv(data_dir+"Curve_dense.csv",header=None).values
 
 	v_cmd=3666
+	# v_cmd=1333
 
 	H_1200=np.loadtxt(data_dir+'dual_arm/abb1200.csv',delimiter=',')
 
@@ -19,8 +21,8 @@ def main():
 
 	base2_k,base2_theta=R2rot(base2_R)
 
-	robot1=robot_obj('ABB_6640_180_255','../../config/abb_6640_180_255_robot_default_config.yml',tool_file_path='../../config/paintgun.csv',d=50,acc_dict_path='../../toolbox/robot_info/6640acc_new.pickle')
-	robot2=robot_obj('ABB_1200_5_90','../../config/abb_1200_5_90_robot_default_config.yml',tool_file_path=data_dir+'dual_arm/tcp.csv',acc_dict_path='../../toolbox/robot_info/1200acc_new.pickle')
+	robot1=robot_obj('ABB_6640_180_255','../../config/abb_6640_180_255_robot_default_config.yml',tool_file_path='../../config/paintgun.csv',d=50,acc_dict_path='../../config/acceleration/6640acc_new.pickle')
+	robot2=robot_obj('ABB_1200_5_90','../../config/abb_1200_5_90_robot_default_config.yml',tool_file_path=data_dir+'dual_arm/tcp.csv',acc_dict_path='../../config/acceleration/1200acc_new.pickle')
 
 	opt=lambda_opt(relative_path[:,:3],relative_path[:,3:],robot1=robot1,robot2=robot2,steps=500,v_cmd=v_cmd)
 

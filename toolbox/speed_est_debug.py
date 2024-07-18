@@ -3,7 +3,7 @@ from MotionSend import MotionSend
 from lambda_calc import *
 from dual_arm import *
 
-dataset='wood/'
+dataset='curve1/'
 solution_dir='baseline/'
 robot=abb6640(d=50, acc_dict_path='robot_info/6640acc.pickle')
 curve = read_csv('../data/'+dataset+solution_dir+'/Curve_in_base_frame.csv',header=None).values

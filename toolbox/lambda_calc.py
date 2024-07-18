@@ -593,6 +593,38 @@ def traj_speed_est_dual(robot1,robot2,curve_js1,curve_js2,lam,vd,qdot_init1=[],q
 
 	return speed, speed1, speed2
 
+def find_lmax(lamddot,joint_acc_limit,ddq2dlam2,dqdlam):
+	###linesearch for max l_max with lamddot
+	return -np.min(np.divide(joint_acc_limit-lamddot*dqdlam,np.abs(ddq2dlam2)))
+	
+def lambdadot_qlambda(robot,curve_js,lam):
+	joint_acc_limit=robot.get_acc(curve_js)
+	################################################Find Lambdadot on qdot constraint##############################################################################################
+	###find desired qdot at each step
+	dq=np.gradient(curve_js,axis=0)
+	dlam=np.gradient(lam)
+	dqdlam=np.divide(dq.T,dlam).T
+	
+	lamdot_max_from_qdot=np.min(np.divide(robot.joint_vel_limit,np.abs(dqdlam)),axis=1)
+	################################################Find Lambdadot on qddot constraint##############################################################################################
+	lamdot_max_from_qddot = []
+	ddq2dlam2=np.divide(np.gradient(dqdlam,axis=0).T,dlam).T
+	#search for the maximum l_max through line search of lamddot
+	for i in range(len(curve_js)):
+		best_lamddot, l_max, _, _ = fminbound(find_lmax,-9999,9999,args=(joint_acc_limit[i],ddq2dlam2[i],dqdlam[i]),full_output=1)
+		lamdot_max_from_qddot.append(np.sqrt(-l_max))
+	
+	lamdot_max = np.minimum(lamdot_max_from_qdot,lamdot_max_from_qddot)
+	plt.plot(lam,lamdot_max,label=r'$\dot{\lambda}_{max}$ all')
+	plt.plot(lam,lamdot_max_from_qdot,label=r'$\dot{\lambda}_{max}$ from $\dot{q}$ constraint')
+	plt.plot(lam,lamdot_max_from_qddot,label=r'$\dot{\lambda}_{max}$ from $\ddot{q}$ constraint')
+	plt.xlabel(r'$\lambda$ (mm)')
+	plt.ylabel(r'$\dot{\lambda}$')
+	plt.legend()
+	plt.show()
+
+	return lamdot_max
+		
 
 def main():
 	###lamdot calculation
@@ -644,7 +676,7 @@ def main3():
 	###speed estimation
 	from MotionSend import MotionSend
 	from blending import form_traj_from_bp,blend_js_from_primitive
-	dataset='curve_1/'
+	dataset='curve_2/'
 	solution_dir='baseline/'
 	robot=robot_obj('ABB_6640_180_255','../config/ABB_6640_180_255_robot_default_config.yml',tool_file_path='../config/paintgun.csv',d=50,acc_dict_path='../config/acceleration/6640acc_new.pickle')
 	curve = read_csv('../data/'+dataset+solution_dir+'/Curve_in_base_frame.csv',header=None).values
@@ -665,8 +697,8 @@ def main3():
 	lam_blended=calc_lam_js(curve_js_blended,robot)
 
 	exe_dir='../simulation/robotstudio_sim/scripts/fitting_output/'+dataset+'100L/'
-	v_cmds=[200,250,300,350,400,450,500]
-	# v_cmds=[1300]
+	# v_cmds=[200,250,300,350,400,450,500]
+	v_cmds=[1400]
 	# v_cmds=[800,900,1000,1100,1200,1300,1400]
 	for v_cmd in v_cmds:
 
@@ -698,7 +730,7 @@ def main3():
 		plt.legend()
 		plt.ylim([0,1.2*v_cmd])
 		plt.xlabel('lambda (mm)')
-		plt.ylabel('Speed (mm/s)')
+		plt.ylabel(r'$\lambda$')
 		plt.title('Speed Estimation for v'+str(v_cmd))
 		plt.show()
 
@@ -710,8 +742,81 @@ def main3():
 		plt.show()
 
 
+
+def main_speed_est_q_lambda():
+	###speed estimation
+	from MotionSend import MotionSend
+	from blending import form_traj_from_bp,blend_js_from_primitive
+	dataset='curve_2/'
+	solution_dir='baseline/'
+	robot=robot_obj('ABB_6640_180_255','../config/ABB_6640_180_255_robot_default_config.yml',tool_file_path='../config/paintgun.csv',d=50,acc_dict_path='../config/acceleration/6640acc_new.pickle')
+	curve = read_csv('../data/'+dataset+solution_dir+'/Curve_in_base_frame.csv',header=None).values
+
+	curve_js=read_csv('../data/'+dataset+solution_dir+'/Curve_js.csv',header=None).values
+	curve=curve[::1000]
+	curve_js=curve_js[::1000]
+	lam_original=calc_lam_cs(curve)
+
+	# lamdot_boundary=lambdadot_qlambda(robot,curve_js,lam_original)
+
+	ms = MotionSend()
+	
+	breakpoints,primitives,p_bp,q_bp=ms.extract_data_from_cmd('../data/'+dataset+'baseline/100L/command.csv')
+	# breakpoints,primitives,p_bp,q_bp=ms.extract_data_from_cmd('../ILC/max_gradient/curve1_250_100L_multipeak/command.csv')
+	# breakpoints,primitives,p_bp,q_bp=ms.extract_data_from_cmd('../ILC/max_gradient/curve2_1100_100L_multipeak/command.csv')
+
+	curve_interp, curve_R_interp, curve_js_interp, breakpoints_blended=form_traj_from_bp(q_bp,primitives,robot)
+	curve_js_blended,curve_blended,curve_R_blended=blend_js_from_primitive(curve_interp, curve_js_interp, breakpoints_blended, primitives,robot,zone=10)
+	lam_blended=calc_lam_js(curve_js_blended,robot)
+
+	exe_dir='../simulation/robotstudio_sim/scripts/fitting_output/'+dataset+'100L/'
+	# v_cmds=[200,250,300,350,400,450,500]
+	v_cmds=[1400]
+	# v_cmds=[800,900,1000,1100,1200,1300,1400]
+	for v_cmd in v_cmds:
+
+		###read actual exe file
+		logged_results_struct=namedtuple("logged_data", ["data"])
+		logged_results = logged_results_struct(np.loadtxt(exe_dir+"curve_exe"+"_v"+str(v_cmd)+"_z10.csv",delimiter=',',skiprows=1))
+		lam_exe, curve_exe, curve_exe_R,curve_exe_js, act_speed, timestamp=ms.logged_data_analysis(robot,logged_results,realrobot=True)
+		lam_exe, curve_exe, curve_exe_R,curve_exe_js, act_speed, timestamp=ms.chop_extension(curve_exe, curve_exe_R,curve_exe_js, act_speed, timestamp,curve[0,:3],curve[-1,:3])
+
+		###get joint acceleration at each pose
+		joint_acc_limit=robot.get_acc(curve_exe_js)
+
+		speed_est=traj_speed_est(robot,curve_exe_js,lam_exe,v_cmd)
+		lamdot_boundary=lambdadot_qlambda(robot,curve_exe_js,lam_exe)
+
+
+		qdot_all=np.gradient(curve_exe_js,axis=0)/np.tile([np.gradient(timestamp)],(6,1)).T
+		qddot_all=np.gradient(qdot_all,axis=0)/np.tile([np.gradient(timestamp)],(6,1)).T
+		qddot_violate_idx=np.array([])
+		for i in range(len(curve_exe_js[0])):
+			qddot_violate_idx=np.append(qddot_violate_idx,np.argwhere(np.abs(qddot_all[:,i])>joint_acc_limit[:,i]))
+		qddot_violate_idx=np.unique(qddot_violate_idx).astype(int)
+		# for idx in qddot_violate_idx:
+		# 	plt.axvline(x=lam_exe[idx],c='orange')
 		
+
+		plt.plot(lam_exe,lamdot_boundary,label=r'$\dot{\lambda}$ boundary')
+		plt.plot(lam_exe,speed_est,label=r'estimated $\dot{\lambda}$')
+		plt.plot(lam_exe,act_speed,label=r'actual $\dot{\lambda}$')
+
+		plt.legend()
+		# plt.ylim([0,1.2*v_cmd])
+		plt.ylim([0,3000])
+		plt.xlabel(r'$\lambda$ (mm)')
+		plt.ylabel(r'$\dot{\lambda}$')
+		plt.title('Speed Estimation for v'+str(v_cmd))
+		plt.show()
+
+		plt.figure()
+		ax = plt.axes(projection='3d')
+		ax.plot3D(curve[:,0], curve[:,1], curve[:,2], c='gray',label='original')
+		ax.plot3D(curve_exe[:,0], curve_exe[:,1], curve_exe[:,2], c='red',label='execution')
+		ax.scatter3D(curve_exe[qddot_violate_idx,0], curve_exe[qddot_violate_idx,1], curve_exe[qddot_violate_idx,2], c=curve_exe[qddot_violate_idx,2], cmap='Greens',label='commanded points')
+		plt.show()	
 
 
 if __name__ == "__main__":
-	main3()
+	main_speed_est_q_lambda()

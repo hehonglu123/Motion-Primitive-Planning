@@ -5,9 +5,10 @@ import matplotlib.pyplot as plt
 from pandas import *
 from fitting_toolbox_dual import *
 import sys, yaml
+sys.path.append('../toolbox')
 
 from toolbox_circular_fit import *
-from robots_def import *
+from robots_def_old import *
 from general_robotics_toolbox import *
 from error_check import *
 from MotionSend import *
@@ -217,9 +218,13 @@ class greedy_fit(fitting_toolbox):
 
 def main():
 	###read in points
-	dataset='curve_2/'
+	# dataset='curve_2/'
+	# data_dir="../data/"+dataset
+	# solution_dir=data_dir+'dual_arm/'+'diffevo_pose6/'
+
+	dataset='curve_1/'
 	data_dir="../data/"+dataset
-	solution_dir=data_dir+'dual_arm/'+'diffevo_pose6/'
+	solution_dir=data_dir+'dual_arm/'+'diffevo_pose3/'
 	
 	robot1=robot_obj('ABB_6640_180_255','../config/abb_6640_180_255_robot_default_config.yml',tool_file_path='../config/paintgun.csv',d=50,acc_dict_path='')
 	robot2=robot_obj('ABB_1200_5_90','../config/abb_1200_5_90_robot_default_config.yml',tool_file_path=solution_dir+'tcp.csv',base_transformation_file=solution_dir+'base.csv',acc_dict_path='')
@@ -228,11 +233,11 @@ def main():
 	relative_path,lam_relative_path,lam1,lam2,curve_js1,curve_js2=initialize_data(dataset,data_dir,solution_dir,robot1,robot2)
 
 	min_length=20
-	greedy_fit_obj=greedy_fit(robot1,robot2,curve_js1[::1],curve_js2[::1],min_length,0.1)
+	greedy_fit_obj=greedy_fit(robot1,robot2,curve_js1[::1],curve_js2[::1],min_length,0.5)
 
 
 	###set primitive choices, defaults are all 3
-	greedy_fit_obj.primitives={'movel_fit':greedy_fit_obj.movel_fit,'movec_fit':greedy_fit_obj.movec_fit}
+	greedy_fit_obj.primitives={'movel_fit':greedy_fit_obj.movel_fit,'movec_fit':greedy_fit_obj.movec_fit,'movej_fit':greedy_fit_obj.movej_fit}
 	# greedy_fit_obj.primitives={'movel_fit':greedy_fit_obj.movel_fit}
 
 	breakpoints,primitives_choices1,points1,q_bp1,primitives_choices2,points2,q_bp2=greedy_fit_obj.fit_under_error()
@@ -241,8 +246,17 @@ def main():
 	###3D plot in global frame
 	plt.figure()
 	ax = plt.axes(projection='3d')
-	ax.plot3D(greedy_fit_obj.curve_fit1[:,0], greedy_fit_obj.curve_fit1[:,1],greedy_fit_obj.curve_fit1[:,2], 'gray', label='arm1')
-	ax.plot3D(greedy_fit_obj.curve_fit2_global[:,0], greedy_fit_obj.curve_fit2_global[:,1],greedy_fit_obj.curve_fit2_global[:,2], 'green', label='arm2')
+	ax.plot3D(greedy_fit_obj.curve_fit1[:,0], greedy_fit_obj.curve_fit1[:,1],greedy_fit_obj.curve_fit1[:,2], 'gray', label='robot1')
+	ax.plot3D(greedy_fit_obj.curve_fit2_global[:,0], greedy_fit_obj.curve_fit2_global[:,1],greedy_fit_obj.curve_fit2_global[:,2], 'green', label='robot2')
+	ax.scatter3D(greedy_fit_obj.curve_fit1[0,0], greedy_fit_obj.curve_fit1[0,1],greedy_fit_obj.curve_fit1[0,2], c='r',label='start')
+	ax.scatter3D(greedy_fit_obj.curve_fit2_global[0,0], greedy_fit_obj.curve_fit2_global[0,1],greedy_fit_obj.curve_fit2_global[0,2], c='r')
+	ax.scatter3D(greedy_fit_obj.curve_fit1[-1,0], greedy_fit_obj.curve_fit1[-1,1],greedy_fit_obj.curve_fit1[-1,2], c='b',label='end')
+	ax.scatter3D(greedy_fit_obj.curve_fit2_global[-1,0], greedy_fit_obj.curve_fit2_global[-1,1],greedy_fit_obj.curve_fit2_global[-1,2], c='b')
+	#set axis label
+	ax.set_xlabel('X (mm)')
+	ax.set_ylabel('Y (mm)')
+	ax.set_zlabel('Z (mm)')
+
 	plt.legend()
 
 	###3D plot in robot2 tool frame
@@ -254,7 +268,20 @@ def main():
 	# 	pose2_world_now_p=greedy_fit_obj.base2_R@greedy_fit_obj.curve_fit2[i]+greedy_fit_obj.base2_p
 	# 	relative_path_fit.append(pose2_world_now_R.T@(greedy_fit_obj.curve_fit1[i]-pose2_world_now_p))
 
-	# relative_path_fit=np.array(relative_path_fit)
+	#project the path on to a plane
+	from sklearn.decomposition import PCA
+
+	# Assuming curve is a numpy array of shape (n_points, 3)
+	pca = PCA(n_components=2)
+	curve_2d = pca.fit_transform(greedy_fit_obj.relative_path)
+	curve_2d_fit = pca.transform(relative_path_fit)
+	plt.figure()
+	plt.plot(curve_2d[:, 0], curve_2d[:, 1], label='2D Projection')
+	plt.plot(curve_2d_fit[:, 0], curve_2d_fit[:, 1], label='2D Projection greedy')
+	plt.legend()
+	plt.show()
+
+
 	plt.figure()
 	ax = plt.axes(projection='3d')
 	ax.plot3D(greedy_fit_obj.relative_path[:,0], greedy_fit_obj.relative_path[:,1],greedy_fit_obj.relative_path[:,2], 'gray', label='original')
