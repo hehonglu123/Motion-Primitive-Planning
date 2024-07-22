@@ -1,11 +1,27 @@
 import numpy as np
+from tqdm import tqdm
 from pandas import *
 import sys, traceback, time, copy
 from general_robotics_toolbox import *
 import matplotlib.pyplot as plt
 from scipy.optimize import differential_evolution, shgo, NonlinearConstraint, minimize, fminbound
+from scipy.linalg import qr
 from qpsolvers import solve_qp
-from lambda_calc import *
+from lambda_calc_old import *
+
+def reduce2full_row_rank(A, b):
+	# Perform QR decomposition with pivoting
+	Q, R, P = qr(A.T, pivoting=True)
+
+	# Determine the rank and select the first 5 independent rows
+	rank = np.linalg.matrix_rank(A)
+	independent_rows = P[:rank]
+
+	# Select the first 5 linearly independent rows from A and corresponding entries from b
+	A_reduced = A[independent_rows[:5], :]
+	b_reduced = b[independent_rows[:5]]
+
+	return A_reduced, b_reduced
 
 class lambda_opt(object):
 	###robot1 hold paint gun, robot2 hold part
@@ -44,6 +60,8 @@ class lambda_opt(object):
 			self.breakpoints=np.linspace(0,len(curve_normal),steps).astype(int)
 			self.act_breakpoints=copy.deepcopy(self.breakpoints)
 			self.act_breakpoints[1:]=self.breakpoints[1:]-1
+			#get rid of duplicates
+			self.act_breakpoints=np.unique(self.act_breakpoints)
 			self.curve=curve[self.act_breakpoints]
 			self.curve_normal=curve_normal[self.act_breakpoints]
 
@@ -113,7 +131,7 @@ class lambda_opt(object):
 					ezdotd=(curve_normal[i]-pose_now.R[:,-1])
 
 					f=-np.dot(np.transpose(Jp),vd)-Kw*np.dot(np.transpose(JR_mod),ezdotd)
-					qdot=solve_qp(H,f,lb=(self.robot1.lower_limit+0.1)-q_all[-1]+self.lim_factor*np.ones(6),ub=(self.robot1.upper_limit-0.1)-q_all[-1]-self.lim_factor*np.ones(6))
+					qdot=solve_qp(H,f,lb=(self.robot1.lower_limit+0.1)-q_all[-1]+self.lim_factor*np.ones(6),ub=(self.robot1.upper_limit-0.1)-q_all[-1]-self.lim_factor*np.ones(6),solver='cvxopt')
 
 					#avoid getting stuck
 					if abs(error_fb-error_fb_prev)<0.0001:
@@ -138,84 +156,112 @@ class lambda_opt(object):
 		return q_out
 
 	def single_arm_stepwise_optimize2(self,q_init,lamdot_des,curve=[],curve_normal=[]):
+		### redundancy resolution with qdot and qddot constraint, 7/21/2024
+		# q_init: initial joint position
+		# lamdot_des: desired lambdadot (\mu)
+
 		if len(curve)==0:
 			curve=self.curve
 			curve_normal=self.curve_normal
 		lam=self.lam
 
 		q_all=[q_init]
-		lam_out=[0]
-		curve_out=[curve[0]]
-		curve_normal_out=[curve_normal[0]]
-		ts=0.01
-		total_time=lam[-1]/lamdot_des
-		total_timestep=int(total_time/ts)
-		idx=0
-		lam_qp=0
-		K_trak=100
-		qdot_prev=[]
-		act_speed=[]
-		# for i in range(1,total_timestep):
-		while lam_qp<lam[-1] and idx<len(curve)-1:
-			#find corresponding idx in curve & curve normal
-			prev_idx=np.abs(lam-lam_qp).argmin()
-			idx=np.abs(lam-(lam_qp+ts*lamdot_des)).argmin()
+		
+		qdot_all=[]
 
+		for i in tqdm(range(len(curve)-1)):
+
+			dt=(lam[i+1]-lam[i])/lamdot_des
 			pose_now=self.robot1.fwd(q_all[-1])
 			
-			Kw=10
-			Kq=.01*np.eye(6)    #small value to make sure positive definite
-			KR=np.eye(3)        #gains for position and orientation error
 
 			J=self.robot1.jacobian(q_all[-1])        #calculate current Jacobian
 			Jp=J[3:,:]
 			JR=J[:3,:]
 			JR_mod=-np.dot(hat(pose_now.R[:,-1]),JR)
-
-			H=np.dot(np.transpose(Jp),Jp)+Kq+Kw*np.dot(np.transpose(JR_mod),JR_mod)
-			H=(H+np.transpose(H))/2
-			#####vd = - v_des - K ( x - x_des)
-			v_des=(curve[idx]-curve[prev_idx])/ts
-			vd=v_des+K_trak*(curve[prev_idx]-pose_now.p)
-			ezdot_des=(curve_normal[idx]-curve_normal[prev_idx])/ts
-			ezdotd=ezdot_des+K_trak*(curve_normal[prev_idx]-pose_now.R[:,-1])
-
-			#####vd = K ( x_des_next - x_cur)
-			# vd=(curve[idx]-pose_now.p)/ts
-			# vd=lamdot_des*vd/np.linalg.norm(vd)
-			# ezdotd=(curve_normal[idx]-pose_now.R[:,-1])/ts
-
-			# print(np.linalg.norm(vd))
-
-			f=-np.dot(np.transpose(Jp),vd)-Kw*np.dot(np.transpose(JR_mod),ezdotd)
-			if len(qdot_prev)==0:
-				lb=-self.robot1.joint_vel_limit
-				ub=self.robot1.joint_vel_limit
-			else:
-				lb=np.maximum(-self.robot1.joint_vel_limit,(qdot_prev-self.robot1.joint_acc_limit)*ts)
-				ub=np.minimum(self.robot1.joint_vel_limit,(qdot_prev+self.robot1.joint_acc_limit)*ts)
-				# lb=-robot.joint_vel_limit
-				# ub=robot.joint_vel_limit
-
-			qdot=solve_qp(H,f,lb=lb,ub=ub)
-			qdot_prev=qdot
-
-			q_all.append(q_all[-1]+ts*qdot)
-
-			curve_out.append(pose_now.p)
-			curve_normal_out.append(pose_now.R[:,-1])
+			J_mod=np.vstack((Jp,JR_mod))
+			Ka=0.1*np.eye(6)    #qddot opt weights
 
 			
-			lam_qp+=np.linalg.norm(self.robot1.fwd(q_all[-1]).p-pose_now.p)
-			lam_out.append(lam_qp)
 
-			act_speed.append(np.linalg.norm(np.dot(Jp,qdot)))
+			v_des=(curve[i+1]-curve[i])/dt
+			ezdot_des=(curve_normal[i+1]-curve_normal[i])/dt
+
+			A, b = reduce2full_row_rank(J_mod, np.hstack((v_des,ezdot_des)))
+
+			if len(qdot_all)<2:
+				H=np.eye(6)
+				lb = np.maximum(-self.robot1.joint_vel_limit, (self.robot1.lower_limit + self.lim_factor * np.ones(6) - q_all[-1])/dt)
+				ub = np.minimum(self.robot1.joint_vel_limit, (self.robot1.upper_limit - self.lim_factor * np.ones(6) - q_all[-1])/dt)
+				f=np.zeros(6)
+
+			else:
+				H=np.eye(6)+Ka
+				f=-2*Ka@qdot_all[-1]
+				qddot_lim=self.robot1.get_acc(q_all[-1],direction=np.array((1+np.sign(qdot_all[-1]-qdot_all[-2]))/2).astype(int)[:3])
+				lb = np.maximum(np.maximum(-self.robot1.joint_vel_limit, (self.robot1.lower_limit + self.lim_factor * np.ones(6) - q_all[-1])/dt), qdot_all[-1] - qddot_lim * dt)
+				ub = np.minimum(np.minimum(self.robot1.joint_vel_limit, (self.robot1.upper_limit - self.lim_factor * np.ones(6) - q_all[-1])/dt), qdot_all[-1] + qddot_lim * dt)
+			
+			qdot=solve_qp(H,f,A=A,b=b,lb=lb,ub=ub,solver='cvxopt')
+			
+			if qdot is None:
+				raise AssertionError('no solution available')
+
+			q_seed=q_all[-1]+qdot*dt
+
+			###Iterative till exact solution
+			try:
+				now=time.time()
+				error_fb=999
+				error_fb_prev=999
+
+				while error_fb>0.01:
+					if time.time()-now>10:
+						print('qp timeout')
+						raise AssertionError
+					
+					# print(np.all(q_seed>self.robot1.lower_limit) & np.all(q_seed<self.robot1.upper_limit))
+					pose_now=self.robot1.fwd(q_seed)
+					error_fb=np.linalg.norm(pose_now.p-curve[i])+np.linalg.norm(pose_now.R[:,-1]-curve_normal[i])
+					
+					Kq=.01*np.eye(6)    #small value to make sure positive definite
+
+					J=self.robot1.jacobian(q_seed)        #calculate current Jacobian
+					Jp=J[3:,:]
+					JR=J[:3,:]
+					JR_mod=-np.dot(hat(pose_now.R[:,-1]),JR)
+
+					H=np.dot(np.transpose(Jp),Jp)+Kq+np.dot(np.transpose(JR_mod),JR_mod)
+					H=(H+np.transpose(H))/2
+
+					vd=curve[i]-pose_now.p
+					ezdotd=(curve_normal[i]-pose_now.R[:,-1])
+
+					f=-np.dot(np.transpose(Jp),vd)-np.dot(np.transpose(JR_mod),ezdotd)
+					qdot=solve_qp(H,f,lb=self.robot1.lower_limit+self.lim_factor*np.ones(6)-q_seed,ub=self.robot1.upper_limit-self.lim_factor*np.ones(6)-q_seed,solver='cvxopt')
+
+					#avoid getting stuck
+					if abs(error_fb-error_fb_prev)<0.0001:
+						break
+					error_fb_prev=error_fb
+
+					###line search
+					# alpha=fminbound(self.error_calc,0,0.999999999999999999999,args=(q_seed,qdot,curve[i],curve_normal[i],))
+					# if alpha<0.01:
+					# 	break
+
+					q_seed+=qdot
+			except:
+				traceback.print_exc()
+				raise AssertionError
+
+			qdot_all.append((q_seed-q_all[-1])/dt)
+			q_all.append(q_seed)
 
 		q_all=np.array(q_all)
-		curve_out=np.array(curve_out)
-		curve_normal_out=np.array(curve_normal_out)
 
-		return q_all,lam_out,curve_out,curve_normal_out,act_speed
+
+		return q_all
 
 
 	def error_calc2(self,alpha,q1,qdot1,pose2_world_now,curve,curve_normal):
@@ -301,7 +347,7 @@ class lambda_opt(object):
 		lower_limit=np.hstack((self.robot1.lower_limit,self.robot2.lower_limit))
 		joint_acc_limit=np.hstack((self.robot1.joint_acc_limit,self.robot2.joint_acc_limit))
 
-		for i in range(len(self.curve)):
+		for i in tqdm(range(len(self.curve))):
 			try:
 				now=time.time()
 				error_fb=999
@@ -348,7 +394,7 @@ class lambda_opt(object):
 					ezdotd=self.curve_normal[i]-np.dot(pose2_world_now.R.T,pose1_now.R[:,-1])
 
 					f=-np.dot(np.transpose(J_all_p),vd)-Kw*np.dot(np.transpose(J_all_R),ezdotd)
-					qdot=solve_qp(H,f,lb=lower_limit-np.hstack((q_all1[-1],q_all2[-1]))+self.lim_factor*np.ones(12),ub=upper_limit-np.hstack((q_all1[-1],q_all2[-1]))-self.lim_factor*np.ones(12))
+					qdot=solve_qp(H,f,lb=lower_limit-np.hstack((q_all1[-1],q_all2[-1]))+self.lim_factor*np.ones(12),ub=upper_limit-np.hstack((q_all1[-1],q_all2[-1]))-self.lim_factor*np.ones(12),solver='cvxopt')
 
 					# alpha=fminbound(self.error_calc4,0,0.999999999999999999999,args=(q_all1[-1],q_all2[-1],qdot,self.curve[i],self.curve_normal[i],))
 					# print(alpha)
@@ -431,7 +477,7 @@ class lambda_opt(object):
 					f=-np.transpose(J1R_mod)@ezdotd
 
 
-					q1dot=solve_qp(H,f,A=J1p,b=np.zeros(3),lb=self.robot1.lower_limit-q_all1[-1]+self.lim_factor*np.ones(6),ub=self.robot1.upper_limit-q_all1[-1]-self.lim_factor*np.ones(6))
+					q1dot=solve_qp(H,f,A=J1p,b=np.zeros(3),lb=self.robot1.lower_limit-q_all1[-1]+self.lim_factor*np.ones(6),ub=self.robot1.upper_limit-q_all1[-1]-self.lim_factor*np.ones(6),solver='cvxopt')
 
 
 					###Robot 1 QP, only for position
@@ -442,7 +488,7 @@ class lambda_opt(object):
 
 					#negate vd here for second arm due to relative motion
 					f=-np.dot(np.transpose(J2p),-vd)
-					q2dot=solve_qp(H,f,A=J2R,b=np.zeros(3),lb=self.robot2.lower_limit-q_all2[-1]+self.lim_factor*np.ones(6),ub=self.robot2.upper_limit-q_all2[-1]-self.lim_factor*np.ones(6))
+					q2dot=solve_qp(H,f,A=J2R,b=np.zeros(3),lb=self.robot2.lower_limit-q_all2[-1]+self.lim_factor*np.ones(6),ub=self.robot2.upper_limit-q_all2[-1]-self.lim_factor*np.ones(6),solver='cvxopt')
 
 					
 					alpha=1
@@ -462,7 +508,158 @@ class lambda_opt(object):
 		q_out2=np.array(q_out2)[1:]
 		return q_out1, q_out2
 
+	def dual_arm_stepwise_optimize2(self,q_init1,q_init2,base2_R,base2_p,lamdot_des,w1=0.01,w2=0.01):
+		### redundancy resolution with qdot and qddot constraint, 7/21/2024
+		# q_init: initial joint position
+		# lamdot_des: desired lambdadot (\mu)
 
+		###w1: weight for first robot
+		###w2: weight for second robot (larger weight path shorter)
+		#curve_normal: expressed in second robot tool frame
+		###all (jacobian) in robot2 tool frame
+
+		lam=self.lam
+
+		q_all1=[q_init1]
+		q_all2=[q_init2]
+		j_all1=[self.robot1.jacobian(q_all1[-1])]
+		j_all2=[self.robot2.jacobian(q_all2[-1])]
+		qdot_all1=[]
+		qdot_all2=[]
+
+		#####weights
+		Kw=0.1
+		Kq=w1*np.eye(12)    #small value to make sure positive definite
+		Kq[6:,6:]=w2*np.eye(6)		#larger weights for second robot for it moves slower
+
+		###concatenated bounds
+		joint_vel_limit=np.hstack((self.robot1.joint_vel_limit,self.robot2.joint_vel_limit))
+		upper_limit=np.hstack((self.robot1.upper_limit,self.robot2.upper_limit))
+		lower_limit=np.hstack((self.robot1.lower_limit,self.robot2.lower_limit))
+
+		for i in tqdm(range(len(self.curve)-1)):
+
+			dt=(lam[i+1]-lam[i])/lamdot_des
+
+			pose1_now=self.robot1.fwd(q_all1[-1])
+			pose2_now=self.robot2.fwd(q_all2[-1])
+
+			self.robot2.base_H=H_from_RT(base2_R,base2_p)
+			pose2_world_now=self.robot2.fwd(q_all2[-1],world=True)
+
+			########################################################QP formation###########################################
+			
+			J1=j_all1[-1]        #current Jacobian
+			J1p=np.dot(pose2_world_now.R.T,J1[3:,:])
+			J1R=np.dot(pose2_world_now.R.T,J1[:3,:])
+			J1R_mod=-np.dot(hat(np.dot(pose2_world_now.R.T,pose1_now.R[:,-1])),J1R)
+
+			J2=j_all2[-1]        #current Jacobian        #calculate current Jacobian, mapped to robot2 tool frame
+			J2p=np.dot(pose2_now.R.T,J2[3:,:])
+			J2R=np.dot(pose2_now.R.T,J2[:3,:])
+			J2R_mod=-np.dot(hat(np.dot(pose2_world_now.R.T,pose1_now.R[:,-1])),J2R)
+
+			p12_2=pose2_world_now.R.T@(pose1_now.p-pose2_world_now.p)
+			
+			#form 6x12 jacobian with weight distribution, velocity propogate from rotation of TCP2
+			J_all_p=np.hstack((J1p,-J2p+hat(p12_2)@J2R))
+			J_all_R=np.hstack((J1R_mod,-J2R_mod))
+
+			J_all_mod=np.vstack((J_all_p,J_all_R))
+			
+			Ka=0.1*np.eye(12)    #qddot opt weights
+			
+			v_des=(self.curve[i+1]-self.curve[i])/dt
+			ezdot_des=(self.curve_normal[i+1]-self.curve_normal[i])/dt
+			# ezdot_des=np.zeros(3)
+
+			A, b = reduce2full_row_rank(J_all_mod, np.hstack((v_des,ezdot_des)))
+
+			if len(qdot_all1)<2:
+				H=np.eye(12)
+				f=np.zeros(12)
+				
+				lb = np.maximum(-joint_vel_limit, (lower_limit + self.lim_factor * np.ones(12) - np.hstack((q_all1[-1],q_all2[-1])))/dt)
+				ub = np.minimum(joint_vel_limit, (upper_limit - self.lim_factor * np.ones(12) - np.hstack((q_all1[-1],q_all2[-1])))/dt)	
+				
+			else:
+				H=np.eye(12)+Ka
+				f=-2*Ka@np.hstack((qdot_all1[-1],qdot_all2[-1]))
+				qddot_lim1=self.robot1.get_acc(q_all1[-1],direction=np.array((1+np.sign(qdot_all1[-1]-qdot_all1[-2]))/2).astype(int)[:3])
+				qddot_lim2=self.robot2.get_acc(q_all2[-1],direction=np.array((1+np.sign(qdot_all2[-1]-qdot_all2[-2]))/2).astype(int)[:3])
+				qddot_lim=np.hstack((qddot_lim1,qddot_lim2))
+				lb = np.maximum(np.maximum(-joint_vel_limit, (lower_limit + self.lim_factor * np.ones(12) - np.hstack((q_all1[-1],q_all2[-1])))/dt), np.hstack((qdot_all1[-1],qdot_all2[-1])) - qddot_lim * dt)
+				ub = np.minimum(np.minimum(joint_vel_limit, (upper_limit - self.lim_factor * np.ones(12) - np.hstack((q_all1[-1],q_all2[-1])))/dt), np.hstack((qdot_all1[-1],qdot_all2[-1])) + qddot_lim * dt)
+			
+
+			qdot=solve_qp(H,f,A=A,b=b,solver='cvxopt',lb=lb,ub=ub)
+
+			if qdot is None:
+				raise AssertionError('no solution available')
+
+			q_seed1=q_all1[-1]+qdot[:6]*dt
+			q_seed2=q_all2[-1]+qdot[6:]*dt
+
+			try:
+				now=time.time()
+				error_fb=999
+				while error_fb>0.01:
+					###timeout guard
+					if time.time()-now>10:
+						print('qp timeout')
+						raise AssertionError
+
+					pose1_now=self.robot1.fwd(q_seed1)
+					pose2_now=self.robot2.fwd(q_seed2)
+
+					self.robot2.base_H=H_from_RT(base2_R,base2_p)
+					pose2_world_now=self.robot2.fwd(q_seed2,world=True)
+
+					error_fb=np.linalg.norm(np.dot(pose2_world_now.R.T,pose1_now.p-pose2_world_now.p)-self.curve[i])+np.linalg.norm(np.dot(pose2_world_now.R.T,pose1_now.R[:,-1])-self.curve_normal[i])	
+
+					########################################################QP formation###########################################
+					
+					J1=self.robot1.jacobian(q_seed1)
+					J1p=np.dot(pose2_world_now.R.T,J1[3:,:])
+					J1R=np.dot(pose2_world_now.R.T,J1[:3,:])
+					J1R_mod=-np.dot(hat(np.dot(pose2_world_now.R.T,pose1_now.R[:,-1])),J1R)
+
+					J2=self.robot2.jacobian(q_seed2)        #current Jacobian        #calculate current Jacobian, mapped to robot2 tool frame
+					J2p=np.dot(pose2_now.R.T,J2[3:,:])
+					J2R=np.dot(pose2_now.R.T,J2[:3,:])
+					J2R_mod=-np.dot(hat(np.dot(pose2_world_now.R.T,pose1_now.R[:,-1])),J2R)
+
+					p12_2=pose2_world_now.R.T@(pose1_now.p-pose2_world_now.p)
+					
+					#form 6x12 jacobian with weight distribution, velocity propogate from rotation of TCP2
+					J_all_p=np.hstack((J1p,-J2p+hat(p12_2)@J2R))
+					J_all_R=np.hstack((J1R_mod,-J2R_mod))
+					
+					H=np.dot(np.transpose(J_all_p),J_all_p)+Kq+Kw*np.dot(np.transpose(J_all_R),J_all_R)
+					H=(H+np.transpose(H))/2
+
+					vd=self.curve[i]-np.dot(pose2_world_now.R.T,pose1_now.p-pose2_world_now.p)  
+					ezdotd=self.curve_normal[i]-np.dot(pose2_world_now.R.T,pose1_now.R[:,-1])
+
+					f=-np.dot(np.transpose(J_all_p),vd)-Kw*np.dot(np.transpose(J_all_R),ezdotd)
+					qdot=solve_qp(H,f,lb=lower_limit-np.hstack((q_all1[-1],q_all2[-1]))+self.lim_factor*np.ones(12),ub=upper_limit-np.hstack((q_all1[-1],q_all2[-1]))-self.lim_factor*np.ones(12),solver='cvxopt')
+
+					q_seed1+=qdot[:6]*dt
+					q_seed2+=qdot[6:]*dt
+
+			except:
+				traceback.print_exc()	
+				raise AssertionError
+		
+			qdot_all1.append((q_seed1-q_all1[-1])/dt)
+			qdot_all2.append((q_seed2-q_all2[-1])/dt)
+			q_all1.append(q_seed1)
+			q_all2.append(q_seed2)
+			j_all1.append(self.robot1.jacobian(q_seed1))
+			j_all2.append(self.robot2.jacobian(q_seed2))
+
+
+		return np.array(q_all1), np.array(q_all2), np.array(j_all1), np.array(j_all2)
 
 	def orientation_interp(self,R_init,R_end,steps):
 		curve_fit_R=[]

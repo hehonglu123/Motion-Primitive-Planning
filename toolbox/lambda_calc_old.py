@@ -615,13 +615,42 @@ def lambdadot_qlambda(robot,curve_js,lam):
 		lamdot_max_from_qddot.append(np.sqrt(-l_max))
 	
 	lamdot_max = np.minimum(lamdot_max_from_qdot,lamdot_max_from_qddot)
-	plt.plot(lam,lamdot_max,label=r'$\dot{\lambda}_{max}$ all')
-	plt.plot(lam,lamdot_max_from_qdot,label=r'$\dot{\lambda}_{max}$ from $\dot{q}$ constraint')
-	plt.plot(lam,lamdot_max_from_qddot,label=r'$\dot{\lambda}_{max}$ from $\ddot{q}$ constraint')
-	plt.xlabel(r'$\lambda$ (mm)')
-	plt.ylabel(r'$\dot{\lambda}$')
-	plt.legend()
-	plt.show()
+	# plt.plot(lam,lamdot_max,label=r'$\dot{\lambda}_{max}$ all')
+	# plt.plot(lam,lamdot_max_from_qdot,label=r'$\dot{\lambda}_{max}$ from $\dot{q}$ constraint')
+	# plt.plot(lam,lamdot_max_from_qddot,label=r'$\dot{\lambda}_{max}$ from $\ddot{q}$ constraint')
+	# plt.xlabel(r'$\lambda$ (mm)')
+	# plt.ylabel(r'$\dot{\lambda}$')
+	# plt.legend()
+	# plt.show()
+
+	return lamdot_max
+
+def lambdadot_qlambda_dual(robot1,robot2,curve_js1,curve_js2,lam):
+	joint_vel_limit=np.hstack((robot1.joint_vel_limit,robot2.joint_vel_limit))
+	joint_acc_limit=np.hstack((robot1.get_acc(curve_js1),robot2.get_acc(curve_js2)))
+	################################################Find Lambdadot on qdot constraint##############################################################################################
+	###find desired qdot at each step
+	dq=np.gradient(np.hstack((curve_js1,curve_js2)),axis=0)
+	dlam=np.gradient(lam)
+	dqdlam=np.divide(dq.T,dlam).T
+	
+	lamdot_max_from_qdot=np.min(np.divide(joint_vel_limit,np.abs(dqdlam)),axis=1)
+	################################################Find Lambdadot on qddot constraint##############################################################################################
+	lamdot_max_from_qddot = []
+	ddq2dlam2=np.divide(np.gradient(dqdlam,axis=0).T,dlam).T
+	#search for the maximum l_max through line search of lamddot
+	for i in range(len(lam)):
+		best_lamddot, l_max, _, _ = fminbound(find_lmax,-9999,9999,args=(joint_acc_limit[i],ddq2dlam2[i],dqdlam[i]),full_output=1)
+		lamdot_max_from_qddot.append(np.sqrt(-l_max))
+	
+	lamdot_max = np.minimum(lamdot_max_from_qdot,lamdot_max_from_qddot)
+	# plt.plot(lam,lamdot_max,label=r'$\dot{\lambda}_{max}$ all')
+	# plt.plot(lam,lamdot_max_from_qdot,label=r'$\dot{\lambda}_{max}$ from $\dot{q}$ constraint')
+	# plt.plot(lam,lamdot_max_from_qddot,label=r'$\dot{\lambda}_{max}$ from $\ddot{q}$ constraint')
+	# plt.xlabel(r'$\lambda$ (mm)')
+	# plt.ylabel(r'$\dot{\lambda}$')
+	# plt.legend()
+	# plt.show()
 
 	return lamdot_max
 		
