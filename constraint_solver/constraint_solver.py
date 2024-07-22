@@ -23,6 +23,35 @@ def reduce2full_row_rank(A, b):
 
 	return A_reduced, b_reduced
 
+def dndspherical_Jacobian(n,JR_mod):
+	# Calculate the Jacobian of the spherical coordinates
+	##Given a unit vector n, compute updated reduced DoF Jacobian
+	# J_spherical = np.zeros((3, 3))
+	# J_spherical[0]=n
+	# J_spherical[1]=np.array([n[0]*n[2],n[1]*n[2],-n[0]**2-n[1]**2])/np.sqrt(n[0]**2+n[1]**2)
+	# J_spherical[2]=np.array([-n[1],n[0],0])/np.sqrt(n[0]**2+n[1]**2)
+
+	spherical=Cartesian2Spherical(n)
+	J_spherical=np.array([[np.sin(spherical[0])*np.cos(spherical[1]),np.cos(spherical[0])*np.cos(spherical[1]),-np.sin(spherical[0])*np.sin(spherical[1])],
+		[np.sin(spherical[1])*np.sin(spherical[0]),np.cos(spherical[0])*np.sin(spherical[1]),np.sin(spherical[0])*np.cos(spherical[1])],
+		[np.cos(spherical[0]),-np.sin(spherical[0]),0]])
+	J_spherical=np.linalg.inv(J_spherical)
+
+	J_reduced = J_spherical @ JR_mod
+	return J_reduced[1:]
+
+def Cartesian2Spherical(n):
+	# Convert Cartesian coordinates to spherical coordinates
+	
+	theta = np.arctan2(np.sqrt(n[0]**2 + n[1]**2), n[2])
+	if n[1]==0:
+		phi=0
+	else:
+		phi = np.arctan2(n[1], n[0])
+
+	return np.array([theta, phi])
+
+
 class lambda_opt(object):
 	###robot1 hold paint gun, robot2 hold part
 	def __init__(self,curve,curve_normal,robot1,robot2=None,urdf_path=None,curve_name='',steps=50,breakpoints=[],primitives=[],v_cmd=1000):
@@ -44,7 +73,7 @@ class lambda_opt(object):
 
 		self.steps=steps
 
-		self.lim_factor=0.0000001###avoid fwd error on joint limit
+		self.lim_factor=0.0001###avoid fwd error on joint limit
 
 		#prespecified primitives
 		self.primitives=primitives
@@ -93,21 +122,22 @@ class lambda_opt(object):
 		pose_next=self.robot1.fwd(q_next)
 		return np.linalg.norm(pose_next.p-pd)+np.linalg.norm(pose_next.R[:,-1]-pd_normal)
 
-	def single_arm_stepwise_optimize(self,q_init,curve=[],curve_normal=[]):
+	def single_arm_stepwise_optimize(self,q_init,curve=[],curve_normal=[], using_spherical=False):
 		if len(curve)==0:
 			curve=self.curve
 			curve_normal=self.curve_normal
 		q_all=[q_init]
 		q_out=[q_init]
 		Kw=1
-		for i in range(len(curve)):
+		for i in tqdm(range(len(curve))):
 			# print(i)
 			try:
 				now=time.time()
 				error_fb=999
 				error_fb_prev=999
+				error_fb_w=999
 
-				while error_fb>0.01:
+				while error_fb>0.0001 and error_fb_w>0.0000000001:
 					if time.time()-now>10:
 						print('qp timeout')
 						raise AssertionError
@@ -115,27 +145,36 @@ class lambda_opt(object):
 
 					pose_now=self.robot1.fwd(q_all[-1])
 					error_fb=np.linalg.norm(pose_now.p-curve[i])+Kw*np.linalg.norm(pose_now.R[:,-1]-curve_normal[i])
+					error_fb_w=np.linalg.norm(pose_now.R[:,-1]-curve_normal[i])
 					
 					Kq=.01*np.eye(6)    #small value to make sure positive definite
 					KR=np.eye(3)        #gains for position and orientation error
 
+					vd=curve[i]-pose_now.p
 					J=self.robot1.jacobian(q_all[-1])        #calculate current Jacobian
 					Jp=J[3:,:]
 					JR=J[:3,:]
 					JR_mod=-np.dot(hat(pose_now.R[:,-1]),JR)
 
+					
+					if using_spherical:
+						###using spherical coordinates
+						JR_mod=dndspherical_Jacobian(pose_now.R[:,-1],JR_mod)
+						dspherical_des=Cartesian2Spherical(curve_normal[i])-Cartesian2Spherical(pose_now.R[:,-1])
+						f=-np.dot(np.transpose(Jp),vd)-Kw*np.dot(np.transpose(JR_mod),dspherical_des)
+					else:
+						###using ezcross
+						ezdotd=(curve_normal[i]-pose_now.R[:,-1])
+						f=-np.dot(np.transpose(Jp),vd)-Kw*np.dot(np.transpose(JR_mod),ezdotd)
+
 					H=np.dot(np.transpose(Jp),Jp)+Kq+Kw*np.dot(np.transpose(JR_mod),JR_mod)
 					H=(H+np.transpose(H))/2
-
-					vd=curve[i]-pose_now.p
-					ezdotd=(curve_normal[i]-pose_now.R[:,-1])
-
-					f=-np.dot(np.transpose(Jp),vd)-Kw*np.dot(np.transpose(JR_mod),ezdotd)
 					qdot=solve_qp(H,f,lb=(self.robot1.lower_limit+0.1)-q_all[-1]+self.lim_factor*np.ones(6),ub=(self.robot1.upper_limit-0.1)-q_all[-1]-self.lim_factor*np.ones(6),solver='cvxopt')
-
+					
 					#avoid getting stuck
 					if abs(error_fb-error_fb_prev)<0.0001:
-						break
+						raise AssertionError("Stuck")
+
 					error_fb_prev=error_fb
 
 					###line search
@@ -155,7 +194,7 @@ class lambda_opt(object):
 		q_out=np.array(q_out)[1:]
 		return q_out
 
-	def single_arm_stepwise_optimize2(self,q_init,lamdot_des,curve=[],curve_normal=[]):
+	def single_arm_stepwise_optimize2(self,q_init,lamdot_des,curve=[],curve_normal=[],using_spherical=False):
 		### redundancy resolution with qdot and qddot constraint, 7/21/2024
 		# q_init: initial joint position
 		# lamdot_des: desired lambdadot (\mu)
@@ -179,15 +218,24 @@ class lambda_opt(object):
 			Jp=J[3:,:]
 			JR=J[:3,:]
 			JR_mod=-np.dot(hat(pose_now.R[:,-1]),JR)
-			J_mod=np.vstack((Jp,JR_mod))
+			
+			
 			Ka=0.1*np.eye(6)    #qddot opt weights
+			v_des=(curve[i+1]-curve[i])/dt
+
+			J_mod=np.vstack((Jp,JR_mod))
 
 			
-
-			v_des=(curve[i+1]-curve[i])/dt
-			ezdot_des=(curve_normal[i+1]-curve_normal[i])/dt
-
-			A, b = reduce2full_row_rank(J_mod, np.hstack((v_des,ezdot_des)))
+			if using_spherical:
+			###using spherical coordinates
+				JR_mod=dndspherical_Jacobian(pose_now.R[:,-1],JR_mod)
+				dspherical_des=(Cartesian2Spherical(curve_normal[i+1])-Cartesian2Spherical(curve_normal[i]))/dt
+				A = np.vstack((Jp,JR_mod))
+				b = np.hstack((v_des,dspherical_des))
+			###using ezcross
+			else:
+				ezdot_des=(curve_normal[i+1]-curve_normal[i])/dt
+				A, b = reduce2full_row_rank(J_mod, np.hstack((v_des,ezdot_des)))
 
 			if len(qdot_all)<2:
 				H=np.eye(6)
@@ -206,7 +254,7 @@ class lambda_opt(object):
 			
 			if qdot is None:
 				raise AssertionError('no solution available')
-
+			
 			q_seed=q_all[-1]+qdot*dt
 
 			###Iterative till exact solution
@@ -231,13 +279,24 @@ class lambda_opt(object):
 					JR=J[:3,:]
 					JR_mod=-np.dot(hat(pose_now.R[:,-1]),JR)
 
+					vd=curve[i]-pose_now.p
+
+					if using_spherical:
+						###using spherical coordinates
+						JR_mod=dndspherical_Jacobian(pose_now.R[:,-1],JR_mod)
+						dspherical_des=Cartesian2Spherical(curve_normal[i])-Cartesian2Spherical(pose_now.R[:,-1])
+						f=-np.dot(np.transpose(Jp),vd)-np.dot(np.transpose(JR_mod),dspherical_des)
+					
+					else:
+						###using ezcross
+						ezdotd=(curve_normal[i]-pose_now.R[:,-1])
+						f=-np.dot(np.transpose(Jp),vd)-np.dot(np.transpose(JR_mod),ezdotd)
+
+
+
 					H=np.dot(np.transpose(Jp),Jp)+Kq+np.dot(np.transpose(JR_mod),JR_mod)
 					H=(H+np.transpose(H))/2
 
-					vd=curve[i]-pose_now.p
-					ezdotd=(curve_normal[i]-pose_now.R[:,-1])
-
-					f=-np.dot(np.transpose(Jp),vd)-np.dot(np.transpose(JR_mod),ezdotd)
 					qdot=solve_qp(H,f,lb=self.robot1.lower_limit+self.lim_factor*np.ones(6)-q_seed,ub=self.robot1.upper_limit-self.lim_factor*np.ones(6)-q_seed,solver='cvxopt')
 
 					#avoid getting stuck
@@ -320,7 +379,7 @@ class lambda_opt(object):
 			if np.linalg.norm(curve_js[-1])>0:
 				break
 		return curve_js
-	def dual_arm_stepwise_optimize(self,q_init1,q_init2,base2_R,base2_p,w1=0.01,w2=0.01):
+	def dual_arm_stepwise_optimize(self,q_init1,q_init2,base2_R,base2_p,w1=0.01,w2=0.01,using_spherical=False):
 
 		###w1: weight for first robot
 		###w2: weight for second robot (larger weight path shorter)
@@ -390,11 +449,23 @@ class lambda_opt(object):
 					H=np.dot(np.transpose(J_all_p),J_all_p)+Kq+Kw*np.dot(np.transpose(J_all_R),J_all_R)
 					H=(H+np.transpose(H))/2
 
-					vd=self.curve[i]-np.dot(pose2_world_now.R.T,pose1_now.p-pose2_world_now.p)  
-					ezdotd=self.curve_normal[i]-np.dot(pose2_world_now.R.T,pose1_now.R[:,-1])
+					vd=self.curve[i]-np.dot(pose2_world_now.R.T,pose1_now.p-pose2_world_now.p)
 
-					f=-np.dot(np.transpose(J_all_p),vd)-Kw*np.dot(np.transpose(J_all_R),ezdotd)
-					qdot=solve_qp(H,f,lb=lower_limit-np.hstack((q_all1[-1],q_all2[-1]))+self.lim_factor*np.ones(12),ub=upper_limit-np.hstack((q_all1[-1],q_all2[-1]))-self.lim_factor*np.ones(12),solver='cvxopt')
+					if using_spherical:
+						###using spherical coordinates
+						J_all_R=dndspherical_Jacobian(np.dot(pose2_world_now.R.T,pose1_now.R[:,-1]),J_all_R)
+						dspherical_des=(Cartesian2Spherical(self.curve_normal[i])-Cartesian2Spherical(np.dot(pose2_world_now.R.T,pose1_now.R[:,-1])))
+						f=-np.dot(np.transpose(J_all_p),vd)-Kw*np.dot(np.transpose(J_all_R),dspherical_des)
+					else:
+						ezdotd=self.curve_normal[i]-np.dot(pose2_world_now.R.T,pose1_now.R[:,-1])
+						f=-np.dot(np.transpose(J_all_p),vd)-Kw*np.dot(np.transpose(J_all_R),ezdotd)
+					
+					# print("SPHERICAL: ",i,Cartesian2Spherical(self.curve_normal[i]),Cartesian2Spherical(np.dot(pose2_world_now.R.T,pose1_now.R[:,-1])))
+					# print("NORMAL: ",i,self.curve_normal[i],np.dot(pose2_world_now.R.T,pose1_now.R[:,-1]))
+					# print("SPHERICAL ERROR: ",np.linalg.norm(dspherical_des))
+					# print("ORIENTATION ERROR: ",np.linalg.norm(self.curve_normal[i]-np.dot(pose2_world_now.R.T,pose1_now.R[:,-1])))
+
+					qdot=solve_qp(H,f,lb=lower_limit+self.lim_factor*np.ones(12)-np.hstack((q_all1[-1],q_all2[-1])),ub=upper_limit-self.lim_factor*np.ones(12)-np.hstack((q_all1[-1],q_all2[-1])),solver='cvxopt')
 
 					# alpha=fminbound(self.error_calc4,0,0.999999999999999999999,args=(q_all1[-1],q_all2[-1],qdot,self.curve[i],self.curve_normal[i],))
 					# print(alpha)
@@ -508,7 +579,7 @@ class lambda_opt(object):
 		q_out2=np.array(q_out2)[1:]
 		return q_out1, q_out2
 
-	def dual_arm_stepwise_optimize2(self,q_init1,q_init2,base2_R,base2_p,lamdot_des,w1=0.01,w2=0.01):
+	def dual_arm_stepwise_optimize2(self,q_init1,q_init2,base2_R,base2_p,lamdot_des,w1=0.01,w2=0.01,using_spherical=False):
 		### redundancy resolution with qdot and qddot constraint, 7/21/2024
 		# q_init: initial joint position
 		# lamdot_des: desired lambdadot (\mu)
@@ -570,10 +641,20 @@ class lambda_opt(object):
 			Ka=0.1*np.eye(12)    #qddot opt weights
 			
 			v_des=(self.curve[i+1]-self.curve[i])/dt
-			ezdot_des=(self.curve_normal[i+1]-self.curve_normal[i])/dt
-			# ezdot_des=np.zeros(3)
 
-			A, b = reduce2full_row_rank(J_all_mod, np.hstack((v_des,ezdot_des)))
+			if using_spherical:
+				###using spherical coordinates
+				JR_mod=dndspherical_Jacobian(self.curve_normal[i],J_all_R)
+				dspherical_des=(Cartesian2Spherical(self.curve_normal[i+1])-Cartesian2Spherical(self.curve_normal[i]))/dt
+				A = np.vstack((J_all_p,JR_mod))
+				b = np.hstack((v_des,dspherical_des))
+
+			else:
+				ezdot_des=(self.curve_normal[i+1]-self.curve_normal[i])/dt
+				b=np.hstack((v_des,ezdot_des))
+				# augmented_matrix = np.hstack((J_all_mod, b.reshape(-1,1)))
+				# print('RANK COMPRIONSON: ', np.linalg.matrix_rank(J_all_mod),np.linalg.matrix_rank(augmented_matrix))
+				A, b = reduce2full_row_rank(J_all_mod, np.hstack((v_des,ezdot_des)))
 
 			if len(qdot_all1)<2:
 				H=np.eye(12)
@@ -638,14 +719,21 @@ class lambda_opt(object):
 					H=np.dot(np.transpose(J_all_p),J_all_p)+Kq+Kw*np.dot(np.transpose(J_all_R),J_all_R)
 					H=(H+np.transpose(H))/2
 
-					vd=self.curve[i]-np.dot(pose2_world_now.R.T,pose1_now.p-pose2_world_now.p)  
-					ezdotd=self.curve_normal[i]-np.dot(pose2_world_now.R.T,pose1_now.R[:,-1])
+					vd=self.curve[i]-np.dot(pose2_world_now.R.T,pose1_now.p-pose2_world_now.p)
 
-					f=-np.dot(np.transpose(J_all_p),vd)-Kw*np.dot(np.transpose(J_all_R),ezdotd)
+					if using_spherical:
+						###using spherical coordinates
+						J_all_R=dndspherical_Jacobian(np.dot(pose2_world_now.R.T,pose1_now.R[:,-1]),J_all_R)
+						dspherical_des=(Cartesian2Spherical(self.curve_normal[i])-Cartesian2Spherical(np.dot(pose2_world_now.R.T,pose1_now.R[:,-1])))
+						f=-np.dot(np.transpose(J_all_p),vd)-Kw*np.dot(np.transpose(J_all_R),dspherical_des)
+					else:
+						ezdotd=self.curve_normal[i]-np.dot(pose2_world_now.R.T,pose1_now.R[:,-1])
+						f=-np.dot(np.transpose(J_all_p),vd)-Kw*np.dot(np.transpose(J_all_R),ezdotd)
+
 					qdot=solve_qp(H,f,lb=lower_limit-np.hstack((q_all1[-1],q_all2[-1]))+self.lim_factor*np.ones(12),ub=upper_limit-np.hstack((q_all1[-1],q_all2[-1]))-self.lim_factor*np.ones(12),solver='cvxopt')
 
-					q_seed1+=qdot[:6]*dt
-					q_seed2+=qdot[6:]*dt
+					q_seed1+=qdot[:6]
+					q_seed2+=qdot[6:]
 
 			except:
 				traceback.print_exc()	

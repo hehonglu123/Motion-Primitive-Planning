@@ -34,7 +34,7 @@ def calc_theta_from_js(curve,curve_js,robot):
 	return theta_all
 
 def main():
-	dataset='curve_1/'
+	dataset='curve_2/'
 	data_dir='../../data/'+dataset+'/'
 	solution_dir='baseline/'
 	curve = read_csv(data_dir+solution_dir+"Curve_in_base_frame.csv",header=None).values
@@ -68,33 +68,33 @@ def main():
 	plt.clf()
 	# plt.show()
 
-	###calc theta at all points
-	theta_all=calc_theta_from_js(opt.curve,q_out,robot)
+	# ###calc theta at all points
+	# theta_all=calc_theta_from_js(opt.curve,q_out,robot)
 	
-	dtheta_all=np.random.uniform(low=-0.1,high=0.1,size=len(theta_all))
-	dv_all=[]
-	dtheta_all=[]
+	# dtheta_all=np.random.uniform(low=-0.1,high=0.1,size=len(theta_all))
+	# dv_all=[]
+	# dtheta_all=[]
 	
-	for k in range(10):
-		dtheta=np.random.uniform(low=-0.01,high=0.01,size=len(theta_all))
-		theta_all_temp=copy.deepcopy(theta_all)
-		theta_all_temp+=dtheta
-		curve_js_reform=calc_js_from_theta(opt.curve,opt.curve_normal,theta_all_temp,robot,q_out[0])
-		speed_temp=traj_speed_est(opt.robot1,curve_js_reform,opt.lam,opt.v_cmd)
-		dv_all.append(speed_temp-speed)
-		dtheta_all.append(dtheta)
+	# for k in range(10):
+	# 	dtheta=np.random.uniform(low=-0.01,high=0.01,size=len(theta_all))
+	# 	theta_all_temp=copy.deepcopy(theta_all)
+	# 	theta_all_temp+=dtheta
+	# 	curve_js_reform=calc_js_from_theta(opt.curve,opt.curve_normal,theta_all_temp,robot,q_out[0])
+	# 	speed_temp=traj_speed_est(opt.robot1,curve_js_reform,opt.lam,opt.v_cmd)
+	# 	dv_all.append(speed_temp-speed)
+	# 	dtheta_all.append(dtheta)
 
-	dtheta_all=np.array(dtheta_all)
-	dv_all=np.array(dv_all)
+	# dtheta_all=np.array(dtheta_all)
+	# dv_all=np.array(dv_all)
 
-	G=dv_all.T@np.linalg.pinv(dtheta_all.T)
+	# G=dv_all.T@np.linalg.pinv(dtheta_all.T)
 	
-	plt.figure()
-	im=plt.imshow(G, cmap='hot', interpolation='nearest')
-	plt.colorbar(im)
-	plt.title("Numerical Gradient")
-	plt.xlabel('d_theta')
-	plt.ylabel('d_vmin')
-	plt.show()
+	# plt.figure()
+	# im=plt.imshow(G, cmap='hot', interpolation='nearest')
+	# plt.colorbar(im)
+	# plt.title("Numerical Gradient")
+	# plt.xlabel('d_theta')
+	# plt.ylabel('d_vmin')
+	# plt.show()
 if __name__ == "__main__":
 	main()
