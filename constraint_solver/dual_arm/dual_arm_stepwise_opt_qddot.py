@@ -6,10 +6,10 @@ from MotionSend import *
 
 def main():
 
-	# data_dir='../../data/curve_2/'
-	# solution_dir=data_dir+'dual_arm/diffevo_pose6_3/'
-	data_dir='../../data/curve_1/'
-	solution_dir=data_dir+'dual_arm/diffevo_pose3_2/'
+	data_dir='../../data/curve_2/'
+	solution_dir=data_dir+'dual_arm/diffevo_pose6_3/'
+	# data_dir='../../data/curve_1/'
+	# solution_dir=data_dir+'dual_arm/diffevo_pose3_2/'
 	relative_path=read_csv(data_dir+"Curve_dense.csv",header=None).values
 
 	v_cmd=3666
@@ -37,12 +37,12 @@ def main():
 	lam=calc_lam_cs(relative_path[:,:3])
 
 	# lamdot_des_all=np.linspace(100,1000,10)
-	lamdot_des_all=[2]
+	lamdot_des_all=np.linspace(1000,4000,10)
 	for lamdot_des in lamdot_des_all:
 
 		try:
-			q_out1_new,q_out2_new,_,_=opt.dual_arm_stepwise_optimize2(q_init1,q_init2,base2_R=base2_R,base2_p=base2_p,lamdot_des=lamdot_des,w1=0.01,w2=0.01,using_spherical=True)
-
+			# q_out1_new,q_out2_new,_,_=opt.dual_arm_stepwise_optimize2(q_init1,q_init2,base2_R=base2_R,base2_p=base2_p,lamdot_des=lamdot_des,w1=0.01,w2=0.01,using_spherical=True)
+			q_out1_new,q_out2_new,_,_=opt.dual_arm_stepwise_optimize3(q_init1,q_init2,base2_R=base2_R,base2_p=base2_p,lamdot_des=lamdot_des,w1=0.01,w2=0.01)
 
 			###dual lambda_dot calc
 			lamdot_boundary_new=lambdadot_qlambda_dual(robot1,robot2,q_out1_new,q_out2_new,opt.lam)

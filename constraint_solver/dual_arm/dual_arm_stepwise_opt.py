@@ -2,9 +2,6 @@ import sys
 sys.path.append('../')
 sys.path.append('../../toolbox/')
 from constraint_solver import *
-from MotionSend import *
-class Geeks:
-	pass
 
 def main():
 
@@ -39,15 +36,23 @@ def main():
 	lam=calc_lam_cs(relative_path[:,:3])
 
 	q_out1,q_out2,_,_=opt.dual_arm_stepwise_optimize(q_init1,q_init2,base2_R=base2_R,base2_p=base2_p,w1=0.01,w2=0.01,using_spherical=True)
-	q_out1_new,q_out2_new,_,_=opt.dual_arm_stepwise_optimize2(q_init1,q_init2,base2_R=base2_R,base2_p=base2_p,lamdot_des=777,w1=0.01,w2=0.01,using_spherical=True)
+	# q_out1_new,q_out2_new,_,_=opt.dual_arm_stepwise_optimize2(q_init1,q_init2,base2_R=base2_R,base2_p=base2_p,lamdot_des=777,w1=0.01,w2=0.01,using_spherical=False)
+	q_out1_new,q_out2_new,_,_=opt.dual_arm_stepwise_optimize3(q_init1,q_init2,base2_R=base2_R,base2_p=base2_p,lamdot_des=1000,w1=0.01,w2=0.01)
 
 
 	###dual lambda_dot calc
 	lamdot_boundary=lambdadot_qlambda_dual(robot1,robot2,q_out1,q_out2,opt.lam)
 	lamdot_boundary_new=lambdadot_qlambda_dual(robot1,robot2,q_out1_new,q_out2_new,opt.lam)
 
+	print(opt.v_cmd)
+	speed, _, _=traj_speed_est_dual(opt.robot1,opt.robot2,q_out1,q_out2,opt.lam,v_cmd)
+	speed_new, _, _=traj_speed_est_dual(opt.robot1,opt.robot2,q_out1_new,q_out2_new,opt.lam,v_cmd)
+
 	plt.plot(opt.lam,lamdot_boundary,label=r'$\dot{\lambda}$ boundary old')
 	plt.plot(opt.lam,lamdot_boundary_new,label=r'$\dot{\lambda}$ boundary new')
+
+	plt.plot(opt.lam,speed,label=r'speed estimation old')
+	plt.plot(opt.lam,speed_new,label=r'speed estimation new')
 
 	plt.legend()
 	plt.xlabel(r'$\lambda$ (mm)')
