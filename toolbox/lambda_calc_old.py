@@ -10,7 +10,7 @@ from utils import *
 from scipy.optimize import fminbound
 from scipy.signal import find_peaks
 from robot_def import *
-# from dual_arm import *
+from dual_arm import form_relative_path
 
 def calc_curvature(curve):
 	lam=calc_lam_cs(curve)
@@ -597,7 +597,7 @@ def find_lmax(lamddot,joint_acc_limit,ddq2dlam2,dqdlam):
 	###linesearch for max l_max with lamddot
 	return -np.min(np.divide(joint_acc_limit-lamddot*dqdlam,np.abs(ddq2dlam2)))
 	
-def lambdadot_qlambda(robot,curve_js,lam):
+def lambdadot_qlambda(robot,curve_js,lam,plot=False):
 	joint_acc_limit=robot.get_acc(curve_js)
 	################################################Find Lambdadot on qdot constraint##############################################################################################
 	###find desired qdot at each step
@@ -615,17 +615,20 @@ def lambdadot_qlambda(robot,curve_js,lam):
 		lamdot_max_from_qddot.append(np.sqrt(-l_max))
 	
 	lamdot_max = np.minimum(lamdot_max_from_qdot,lamdot_max_from_qddot)
-	# plt.plot(lam,lamdot_max,label=r'$\dot{\lambda}_{max}$ all')
-	# plt.plot(lam,lamdot_max_from_qdot,label=r'$\dot{\lambda}_{max}$ from $\dot{q}$ constraint')
-	# plt.plot(lam,lamdot_max_from_qddot,label=r'$\dot{\lambda}_{max}$ from $\ddot{q}$ constraint')
-	# plt.xlabel(r'$\lambda$ (mm)')
-	# plt.ylabel(r'$\dot{\lambda}$')
-	# plt.legend()
-	# plt.show()
+
+	if plot:
+		plt.plot(lam,lamdot_max_from_qdot,label=r'$\dot{\lambda}_{max}$ from $\dot{q}$ constraint')
+		plt.plot(lam,lamdot_max_from_qddot,label=r'$\dot{\lambda}_{max}$ from $\ddot{q}$ constraint')
+		plt.xlabel(r'$\lambda$ (mm)')
+		plt.ylabel(r'$\dot{\lambda}$ (mm/s)')
+		plt.title(r'$\dot{\lambda}$ Boundary Profile' )
+		plt.legend()
+		plt.show()
+
 
 	return lamdot_max
 
-def lambdadot_qlambda_dual(robot1,robot2,curve_js1,curve_js2,lam):
+def lambdadot_qlambda_dual(robot1,robot2,curve_js1,curve_js2,lam,plot=False):
 	joint_vel_limit=np.hstack((robot1.joint_vel_limit,robot2.joint_vel_limit))
 	joint_acc_limit=np.hstack((robot1.get_acc(curve_js1),robot2.get_acc(curve_js2)))
 	################################################Find Lambdadot on qdot constraint##############################################################################################
@@ -644,13 +647,15 @@ def lambdadot_qlambda_dual(robot1,robot2,curve_js1,curve_js2,lam):
 		lamdot_max_from_qddot.append(np.sqrt(-l_max))
 	
 	lamdot_max = np.minimum(lamdot_max_from_qdot,lamdot_max_from_qddot)
-	# plt.plot(lam,lamdot_max,label=r'$\dot{\lambda}_{max}$ all')
-	# plt.plot(lam,lamdot_max_from_qdot,label=r'$\dot{\lambda}_{max}$ from $\dot{q}$ constraint')
-	# plt.plot(lam,lamdot_max_from_qddot,label=r'$\dot{\lambda}_{max}$ from $\ddot{q}$ constraint')
-	# plt.xlabel(r'$\lambda$ (mm)')
-	# plt.ylabel(r'$\dot{\lambda}$')
-	# plt.legend()
-	# plt.show()
+
+	if plot:
+		plt.plot(lam,lamdot_max_from_qdot,label=r'$\dot{\lambda}_{max}$ from $\dot{q}$ constraint')
+		plt.plot(lam,lamdot_max_from_qddot,label=r'$\dot{\lambda}_{max}$ from $\ddot{q}$ constraint')
+		plt.xlabel(r'$\lambda$ (mm)')
+		plt.ylabel(r'$\dot{\lambda}$ (mm/s)')
+		plt.title(r'$\dot{\lambda}$ Boundary Profile' )
+		plt.legend()
+		plt.show()
 
 	return lamdot_max
 		
@@ -847,5 +852,143 @@ def main_speed_est_q_lambda():
 		plt.show()	
 
 
+def main_q_lambda_dual():
+
+	# data_dir='../data/curve_1/'
+	# solution_dir=data_dir+'dual_arm/diffevo_pose_newlam/'
+
+	data_dir='../data/curve_2/'
+	solution_dir=data_dir+'dual_arm/diffevo_pose6_3/'
+	relative_path=read_csv(data_dir+"Curve_dense.csv",header=None).values
+
+
+	robot1=robot_obj('ABB_6640_180_255','../config/abb_6640_180_255_robot_default_config.yml',tool_file_path='../config/paintgun.csv',d=50,acc_dict_path='../config/acceleration/6640acc_new.pickle')
+	robot2=robot_obj('ABB_1200_5_90','../config/abb_1200_5_90_robot_default_config.yml',tool_file_path=data_dir+'dual_arm/tcp.csv',acc_dict_path='../config/acceleration/1200acc_new.pickle',base_transformation_file=solution_dir+'base.csv')
+
+	step=500
+	lam=calc_lam_cs(relative_path)[::step]
+
+	q1_all=np.loadtxt(solution_dir+'arm1.csv',delimiter=',')[::step]
+	q2_all=np.loadtxt(solution_dir+'arm2.csv',delimiter=',')[::step]
+
+	lamdot_boundary=lambdadot_qlambda_dual(robot1,robot2,q1_all,q2_all,lam,plot=False)
+
+	#reverse the trajectory and run again
+	lamdot_boundary_rev=lambdadot_qlambda_dual(robot1,robot2,q1_all[::-1],q2_all[::-1],lam[::-1],plot=False)
+
+	plt.plot(lam,lamdot_boundary,label='forward')
+	plt.plot(lam,lamdot_boundary_rev[::-1],label='backward')
+	plt.legend()
+	plt.title("Forward vs. Backward")
+	plt.show()
+
+	###Extension
+	dq1_start=q1_all[0]-q1_all[1]
+	dq1_end=q1_all[-1]-q1_all[-2]
+	dq2_start=q2_all[0]-q2_all[1]
+	dq2_end=q2_all[-1]-q2_all[-2]
+
+	num_points_ext=10
+	q1_all_ext=np.vstack((np.linspace(num_points_ext*dq1_start+q1_all[0],q1_all[0],num_points_ext,endpoint=False),q1_all,np.linspace(q1_all[-1],num_points_ext*dq1_end+q1_all[-1],num_points_ext,endpoint=False)))
+	q2_all_ext=np.vstack((np.linspace(num_points_ext*dq2_start+q2_all[0],q2_all[0],num_points_ext,endpoint=False),q2_all,np.linspace(q2_all[-1],num_points_ext*dq2_end+q2_all[-1],num_points_ext,endpoint=False)))
+	
+	
+	_,_,_,_,relative_path_ext,_=form_relative_path(q1_all_ext,q2_all_ext,robot1,robot2)
+	lam_ext=calc_lam_cs(relative_path_ext[:,:3])
+	lamdot_boundary_ext=lambdadot_qlambda_dual(robot1,robot2,q1_all_ext,q2_all_ext,lam_ext,plot=False)
+
+	plt.plot(lam,lamdot_boundary,label='forward')
+	plt.plot(lam_ext,lamdot_boundary_ext,label='extension')
+	plt.legend()
+	plt.title("Raw vs. Extended")
+	plt.show()
+
+
+def lamdot_stage_comparison():
+	data_dir='../data/curve_1/'
+	baseline_solution_dir=data_dir+'baseline/'
+	single_solution_dir=data_dir+'curve_pose_opt7/'
+	dual_solution_dir=data_dir+'dual_arm/diffevo_pose_newlam/'
+	
+	# data_dir='../data/curve_2/'
+	# solution_dir=data_dir+'dual_arm/diffevo_pose6_3/'
+
+
+	robot1=robot_obj('ABB_6640_180_255','../config/abb_6640_180_255_robot_default_config.yml',tool_file_path='../config/paintgun.csv',d=50,acc_dict_path='../config/acceleration/6640acc_new.pickle')
+	robot2=robot_obj('ABB_1200_5_90','../config/abb_1200_5_90_robot_default_config.yml',tool_file_path=data_dir+'dual_arm/tcp.csv',acc_dict_path='../config/acceleration/1200acc_new.pickle',base_transformation_file=dual_solution_dir+'base.csv')
+
+
+	relative_path=read_csv(data_dir+"Curve_dense.csv",header=None).values
+	curve_js_baseline=read_csv(baseline_solution_dir+'Curve_js.csv',header=None).values
+	curve_js_single=read_csv(single_solution_dir+'Curve_js.csv',header=None).values
+	curve_js_dual1=read_csv(dual_solution_dir+'arm1.csv',header=None).values
+	curve_js_dual2=read_csv(dual_solution_dir+'arm2.csv',header=None).values
+	lam=calc_lam_cs(relative_path)
+
+	step=500
+	curve_js_baseline=curve_js_baseline[::step]
+	curve_js_single=curve_js_single[::step]
+	curve_js_dual1=curve_js_dual1[::step]
+	curve_js_dual2=curve_js_dual2[::step]
+
+	lamdot_boundary_baseline=lambdadot_qlambda(robot1,curve_js_baseline,lam[::step])
+	lamdot_boundary_single=lambdadot_qlambda(robot1,curve_js_single,lam[::step])
+	lamdot_boundary_dual=lambdadot_qlambda_dual(robot1,robot2,curve_js_dual1,curve_js_dual2,lam[::step])
+
+	plt.plot(lam[::step],lamdot_boundary_baseline,label='Baseline')
+	plt.plot(lam[::step],lamdot_boundary_single,label='Single opt')
+	plt.plot(lam[::step],lamdot_boundary_dual,label='Dual opt')
+	plt.legend()
+	plt.xlabel(r'$\lambda$ (mm)')
+	plt.ylabel(r'$\dot{\lambda}$ (mm/s)')
+	plt.title(r'$\dot{\lambda}$ Boundary Profile')
+	plt.show()
+	
+
+
+def lamdot_diffevo_comparison():
+	# data_dir='../data/curve_1/'
+	# dual_solution_dir=data_dir+'dual_arm/diffevo_pose_newlam/'
+	
+	data_dir='../data/curve_2/'
+	dual_solution_dir=data_dir+'dual_arm/diffevo_pose6/'
+
+	first_iter_solution_dir=data_dir+'dual_arm/diffevo_1iter/'
+
+	robot1=robot_obj('ABB_6640_180_255','../config/abb_6640_180_255_robot_default_config.yml',tool_file_path='../config/paintgun.csv',d=50,acc_dict_path='../config/acceleration/6640acc_new.pickle')
+	robot2=robot_obj('ABB_1200_5_90','../config/abb_1200_5_90_robot_default_config.yml',tool_file_path=data_dir+'dual_arm/tcp.csv',acc_dict_path='../config/acceleration/1200acc_new.pickle',base_transformation_file=dual_solution_dir+'base.csv')
+
+
+	relative_path=read_csv(data_dir+"Curve_dense.csv",header=None).values
+	curve_js_1iter1=read_csv(first_iter_solution_dir+'arm1.csv',header=None).values
+	curve_js_1iter2=read_csv(first_iter_solution_dir+'arm2.csv',header=None).values
+	curve_js_dual1=read_csv(dual_solution_dir+'arm1.csv',header=None).values
+	curve_js_dual2=read_csv(dual_solution_dir+'arm2.csv',header=None).values
+	lam=calc_lam_cs(relative_path)
+
+	step=500
+	curve_js_1iter1=curve_js_1iter1[::step]
+	curve_js_1iter2=curve_js_1iter2[::step]
+	curve_js_dual1=curve_js_dual1[::step]
+	curve_js_dual2=curve_js_dual2[::step]
+
+	lamdot_boundary_1iter=lambdadot_qlambda_dual(robot1,robot2,curve_js_1iter1,curve_js_dual2,lam[::step])
+	lamdot_boundary_dual=lambdadot_qlambda_dual(robot1,robot2,curve_js_dual1,curve_js_dual2,lam[::step])
+
+	plt.plot(lam[::step],lamdot_boundary_1iter,label='First Iteration',c='blue')
+	plt.axhline(y=np.min(lamdot_boundary_1iter), linestyle='--',c='blue')
+	plt.plot(lam[::step],lamdot_boundary_dual,label='Final Iteration',c='orange')
+	plt.axhline(y=np.min(lamdot_boundary_dual), linestyle='--',c='orange')	
+	plt.legend()
+	plt.xlabel(r'$\lambda$ (mm)')
+	plt.ylabel(r'$\dot{\lambda}$ (mm/s)')
+	plt.title(r'$\dot{\lambda}$ Boundary Profile')
+	plt.show()
+	
+
+
 if __name__ == "__main__":
-	main_speed_est_q_lambda()
+	# main_speed_est_q_lambda()
+	# main_q_lambda_dual()
+	# lamdot_stage_comparison()
+	lamdot_diffevo_comparison()

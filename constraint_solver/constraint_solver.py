@@ -4,7 +4,7 @@ from pandas import *
 import sys, traceback, time, copy
 from general_robotics_toolbox import *
 import matplotlib.pyplot as plt
-from scipy.optimize import differential_evolution, shgo, NonlinearConstraint, minimize, fminbound
+from scipy.optimize import differential_evolution, shgo, NonlinearConstraint, minimize, fminbound, Bounds
 from scipy.linalg import qr
 from qpsolvers import solve_qp
 from lambda_calc_old import *
@@ -138,7 +138,7 @@ class lambda_opt(object):
 				error_fb_w=999
 
 				while error_fb>0.0001 and error_fb_w>0.0000000001:
-					if time.time()-now>10:
+					if time.time()-now>1:
 						print('qp timeout')
 						raise AssertionError
 						break
@@ -264,7 +264,7 @@ class lambda_opt(object):
 				error_fb_prev=999
 
 				while error_fb>0.01:
-					if time.time()-now>10:
+					if time.time()-now>1:
 						print('qp timeout')
 						raise AssertionError
 					
@@ -382,7 +382,7 @@ class lambda_opt(object):
 				Kq=.01*np.eye(6)    #small value to make sure positive definite
 
 				while error_fb>0.01:
-					if time.time()-now>10:
+					if time.time()-now>1:
 						print('qp timeout')
 						raise AssertionError
 					
@@ -508,13 +508,13 @@ class lambda_opt(object):
 		lower_limit=np.hstack((self.robot1.lower_limit,self.robot2.lower_limit))
 		joint_acc_limit=np.hstack((self.robot1.joint_acc_limit,self.robot2.joint_acc_limit))
 
-		for i in tqdm(range(len(self.curve))):
+		for i in range(len(self.curve)):
 			try:
 				now=time.time()
 				error_fb=999
 				while error_fb>0.1:
 					###timeout guard
-					if time.time()-now>10:
+					if time.time()-now>1:
 						print('qp timeout')
 						raise AssertionError
 						break
@@ -788,7 +788,7 @@ class lambda_opt(object):
 				error_fb=999
 				while error_fb>0.01:
 					###timeout guard
-					if time.time()-now>10:
+					if time.time()-now>1:
 						print('qp timeout')
 						raise AssertionError
 
@@ -948,7 +948,7 @@ class lambda_opt(object):
 				error_fb=999
 				while error_fb>0.01:
 					###timeout guard
-					if time.time()-now>10:
+					if time.time()-now>1:
 						print('qp timeout')
 						raise AssertionError
 
@@ -1126,6 +1126,34 @@ class lambda_opt(object):
 
 		return -min(speed)
 
+	def single_arm_constraint(self,q_flat):
+		###Formulate Equality Constraint (Tracking IK) for single arm
+		try:
+			q_all=np.reshape(q_flat,(len(q_flat)//6,6))
+			error_all=[]
+			for i in range(len(q_all)):
+				pose_now=self.robot1.fwd(q_all[i])
+				error_p=np.linalg.norm(pose_now.p-self.curve[i])
+				error_w=np.linalg.norm(pose_now.R[:,-1]-self.curve_normal[i])
+				
+				error_all.append(error_p+error_w)
+		except:
+			# traceback.print_exc()
+			# raise AssertionError
+			return 999
+		
+		return np.mean(error_all)
+
+	def single_arm_objective(self,q_flat):
+		### Formulate Objective Function for single arm, minimum lamdot
+		try:
+			lamdot_boundary=lambdadot_qlambda(self.robot1,np.reshape(q_flat,(len(q_flat)//6,6)),self.lam)
+		except:
+			traceback.print_exc()
+			raise AssertionError
+		
+		return -np.min(lamdot_boundary)
+
 
 	def dual_arm_init_opt(self,x):
 		q_init2=x[:-1]
@@ -1216,30 +1244,31 @@ class lambda_opt(object):
 		if np.min(self.robot2.upper_limit-q_out2[0])<joint_margin or  np.min(q_out2[0]-self.robot2.lower_limit)<joint_margin or np.min(self.robot2.upper_limit-q_out2[-1])<joint_margin or  np.min(q_out2[-1]-self.robot2.lower_limit)<joint_margin:
 			return 999
 		
-		jacobian_margin=0.1
-		jac_check_count=int(len(j_out1)/100)
-		### J1
-		for J in j_out1[::jac_check_count]:
-			_,sv,_=np.linalg.svd(J)
-			if np.min(sv)<jacobian_margin:
-				# print("min svd of J1 too small")
-				return 999
-		_,sv,_=np.linalg.svd(j_out1[-1])
-		if np.min(sv)<jacobian_margin:
-			# print("min svd of J1 too small")
-			return 999
-		### J2
-		for J in j_out2[::jac_check_count]:
-			_,sv,_=np.linalg.svd(J)
-			if np.min(sv)<jacobian_margin:
-				# print("min svd of J2 too small")
-				return 999
-		_,sv,_=np.linalg.svd(j_out2[-1])
-		if np.min(sv)<jacobian_margin:
-			# print("min svd of J1 too small")
-			return 999
+		# jacobian_margin=0.1
+		# jac_check_count=int(len(j_out1)/100)
+		# ### J1
+		# for J in j_out1[::jac_check_count]:
+		# 	_,sv,_=np.linalg.svd(J)
+		# 	if np.min(sv)<jacobian_margin:
+		# 		# print("min svd of J1 too small")
+		# 		return 999
+		# _,sv,_=np.linalg.svd(j_out1[-1])
+		# if np.min(sv)<jacobian_margin:
+		# 	# print("min svd of J1 too small")
+		# 	return 999
+		# ### J2
+		# for J in j_out2[::jac_check_count]:
+		# 	_,sv,_=np.linalg.svd(J)
+		# 	if np.min(sv)<jacobian_margin:
+		# 		# print("min svd of J2 too small")
+		# 		return 999
+		# _,sv,_=np.linalg.svd(j_out2[-1])
+		# if np.min(sv)<jacobian_margin:
+		# 	# print("min svd of J1 too small")
+		# 	return 999
 
-		speed,_,_=traj_speed_est_dual(self.robot1,self.robot2,q_out1,q_out2,self.lam,self.v_cmd)
+		# speed,_,_=traj_speed_est_dual(self.robot1,self.robot2,q_out1,q_out2,self.lam,self.v_cmd)
+		speed=lambdadot_qlambda_dual(self.robot1,self.robot2,q_out1,q_out2,self.lam)
 
 		return -min(speed)
 

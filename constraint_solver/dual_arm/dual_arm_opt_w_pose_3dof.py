@@ -31,13 +31,13 @@ def main():
 	lower_limit=np.hstack((robot2.lower_limit,[0,0],[-np.pi],[-np.pi]))
 	upper_limit=np.hstack((robot2.upper_limit,[3000,3000],[np.pi],[np.pi]))
 	bnds=tuple(zip(lower_limit,upper_limit))
-	res = differential_evolution(opt.dual_arm_opt_w_pose_3dof, bnds, args=None,workers=-1,
+	res = differential_evolution(opt.dual_arm_opt_w_pose_3dof, bnds, args=None,workers=10,
 									x0 = np.hstack((np.zeros(6),base2_p[0],base2_p[1],base2_theta,[0])),
 									strategy='best1bin', maxiter=3000,
 									popsize=15, tol=1e-10,
 									mutation=(0.5, 1), recombination=0.7,
 									seed=None, callback=None, disp=True,
-									polish=True, init='latinhypercube',
+									polish=False, init='latinhypercube',
 									atol=0)
 	print(res)
 
@@ -78,7 +78,8 @@ def main():
 	np.savetxt('trajectory/base.csv', H, delimiter=',')
 
 	###dual lambda_dot calc
-	speed,speed1,speed2=traj_speed_est_dual(robot1,robot2,q_out1[::100],q_out2[::100],opt.lam[::100],v_cmd)
+	# speed,speed1,speed2=traj_speed_est_dual(robot1,robot2,q_out1[::100],q_out2[::100],opt.lam[::100],v_cmd)
+	speed=lambdadot_qlambda_dual(robot1,robot2,q_out1[::100],q_out2[::100],opt.lam[::100])
 
 	print('speed min: ', min(speed))
 
